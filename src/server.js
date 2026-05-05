@@ -1,0 +1,54 @@
+import 'dotenv/config' 
+import Fastify from 'fastify' 
+import fastifyJwt from '@fastify/jwt' 
+import fastifyStatic from '@fastify/static' 
+import fastifyCors from '@fastify/cors' 
+import { join, dirname } from 'path' 
+import { fileURLToPath } from 'url' 
+ 
+import { initDB } from './db.js' 
+import { initBot } from './telegram.js' 
+import { initScheduler } from './scheduler.js' 
+import authRoutes from './routes/auth.js' 
+import driversRoutes from './routes/drivers.js' 
+import ridesRoutes from './routes/rides.js' 
+import publicRoutes from './routes/public.js' 
+ 
+const __dirname = dirname(fileURLToPath(import.meta.url)) 
+ 
+const fastify = Fastify({ logger: true }) 
+ 
+await fastify.register(fastifyCors, { origin: true }) 
+await fastify.register(import('@fastify/formbody')) 
+await fastify.register(fastifyJwt, { secret: process.env.JWT_SECRET }) 
+await fastify.register(fastifyStatic, { 
+  root: join(__dirname, '..', 'public'), 
+  prefix: '/' 
+}) 
+ 
+// Rotas HTML 
+fastify.get('/', (req, reply) => reply.redirect('/admin/dashboard')) 
+fastify.get('/login', (req, reply) => reply.redirect('/admin/login')) 
+fastify.get('/admin', (req, reply) => reply.sendFile('admin/index.html')) 
+fastify.get('/admin/dashboard', (req, reply) => reply.sendFile('admin/dashboard.html')) 
+fastify.get('/admin/login', (req, reply) => reply.sendFile('admin/login.html')) 
+fastify.get('/admin/nova-corrida', (req, reply) => reply.sendFile('admin/nova-corrida.html')) 
+fastify.get('/admin/motoristas', (req, reply) => reply.sendFile('admin/motoristas.html')) 
+fastify.get('/admin/tarifas', (req, reply) => reply.sendFile('admin/tarifas.html')) 
+fastify.get('/solicitar', (req, reply) => reply.sendFile('solicitar/index.html')) 
+fastify.get('/r/:token', (req, reply) => reply.sendFile('ride/index.html')) 
+ 
+// Rotas API 
+await fastify.register(authRoutes) 
+await fastify.register(driversRoutes) 
+await fastify.register(ridesRoutes) 
+await fastify.register(publicRoutes) 
+ 
+// Inicializa 
+initDB() 
+initBot() 
+initScheduler() 
+ 
+const port = parseInt(process.env.PORT || '3000') 
+await fastify.listen({ port, host: '0.0.0.0' }) 
+console.log(`[SERVER] MobiHub rodando em http://localhost:${port}`)

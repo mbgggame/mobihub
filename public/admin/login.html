@@ -1,0 +1,54 @@
+<!DOCTYPE html> 
+<html lang="pt-BR"> 
+<head> 
+  <meta charset="UTF-8"/> 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
+  <title>MobiHub — Admin</title> 
+  <script src="https://cdn.tailwindcss.com"></script> 
+</head> 
+<body class="bg-gray-100 min-h-screen flex items-center justify-center"> 
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 w-full max-w-sm"> 
+    <div class="text-center mb-6"> 
+      <div class="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center mx-auto mb-3"> 
+        <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/></svg> 
+      </div> 
+      <h1 class="text-xl font-semibold text-gray-900">MobiHub</h1> 
+      <p class="text-sm text-gray-500 mt-1">Painel administrativo</p> 
+    </div> 
+    <div id="erro" class="hidden bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2.5 mb-4"></div> 
+    <div class="space-y-3"> 
+      <input id="email" type="email" placeholder="Email" 
+        class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+      <input id="senha" type="password" placeholder="Senha" 
+        class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+      <button onclick="login()" 
+        class="w-full bg-green-600 hover:bg-green-700 text-white rounded-lg py-2.5 font-semibold text-sm transition-colors"> 
+        Entrar 
+      </button> 
+    </div> 
+  </div> 
+<script> 
+if (localStorage.getItem('mobihub_token')) location.href = '/admin' 
+ 
+async function login() { 
+  const email = document.getElementById('email').value 
+  const senha = document.getElementById('senha').value 
+  const erro = document.getElementById('erro') 
+  erro.classList.add('hidden') 
+  try { 
+    const r = await fetch('/api/login', { 
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify({ email, senha }) 
+    }) 
+    const d = await r.json() 
+    if (!r.ok) { erro.textContent = d.error; erro.classList.remove('hidden'); return } 
+    localStorage.setItem('mobihub_token', d.token) 
+    location.href = '/admin' 
+  } catch { erro.textContent = 'Erro de conexão.'; erro.classList.remove('hidden') } 
+} 
+ 
+document.getElementById('senha').addEventListener('keydown', e => { if (e.key === 'Enter') login() }) 
+</script> 
+</body> 
+</html>

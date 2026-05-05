@@ -1,0 +1,439 @@
+<!DOCTYPE html> 
+<html lang="pt-BR"> 
+<head> 
+  <meta charset="UTF-8"/> 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
+  <title>MobiHub — Nova corrida</title> 
+  <script src="https://cdn.tailwindcss.com"></script> 
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBz0TOxlMbWgEQuDoMSqneGN0UFywnX-7s&libraries=places&language=pt-BR"></script> 
+</head> 
+<body class="bg-gray-50 min-h-screen"> 
+<div class="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between"> 
+  <div class="flex items-center gap-3"> 
+    <a href="/admin" class="text-gray-500 hover:text-gray-700">← Voltar</a> 
+    <span class="font-semibold text-gray-900">Nova corrida</span> 
+  </div> 
+  <div class="flex gap-2"> 
+    <a href="/admin/dashboard" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors">📊 Dashboard</a> 
+  </div> 
+</div> 
+ 
+<div class="max-w-lg mx-auto px-4 pt-4"> 
+  <details class="bg-white border border-gray-200 rounded-xl mb-4"> 
+    <summary class="px-4 py-3 cursor-pointer font-medium text-gray-700 text-sm"> 
+      ⚙️ Configurar tabela de preços 
+    </summary> 
+    <div class="px-4 pb-4 grid grid-cols-3 gap-3 mt-2"> 
+      <div> 
+        <label class="text-xs text-gray-500">Valor mínimo (R$)</label> 
+        <input id="cfg-valor-minimo" type="number" step="0.50" 
+          class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+      </div> 
+      <div> 
+        <label class="text-xs text-gray-500">Km do mínimo</label> 
+        <input id="cfg-km-minimo" type="number" step="0.5" 
+          class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+      </div> 
+      <div> 
+        <label class="text-xs text-gray-500">R$ por km excedente</label> 
+        <input id="cfg-valor-km" type="number" step="0.10" 
+          class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+      </div> 
+    </div> 
+    <div class="px-4 pb-4"> 
+      <button onclick="salvarConfig()" 
+        class="w-full bg-green-600 text-white rounded-lg py-2 text-sm font-medium"> 
+        Salvar configurações 
+      </button> 
+    </div> 
+  </details> 
+</div> 
+ 
+<div class="max-w-lg mx-auto px-4 py-4 space-y-4"> 
+ 
+  <div id="sucesso" class="hidden bg-green-50 border border-green-200 rounded-xl p-4"> 
+    <p class="font-semibold text-green-800 mb-1">✅ Corrida criada e enviada para o grupo!</p> 
+    <p class="text-sm text-green-700 mb-2">Link para o cliente:</p> 
+    <div class="bg-white rounded-lg px-3 py-2 font-mono text-xs break-all border border-green-100" id="link-gerado"></div> 
+    <div class="flex gap-2 mt-3"> 
+      <button onclick="copiarLink()" class="flex-1 bg-green-600 text-white rounded-lg py-2 text-sm font-medium">Copiar link</button> 
+      <button onclick="novaCorrida()" class="flex-1 border border-green-300 text-green-700 rounded-lg py-2 text-sm font-medium">Nova corrida</button> 
+    </div> 
+  </div> 
+ 
+  <div id="formulario" class="space-y-4"> 
+    <div> 
+      <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Tipo de corrida</label> 
+      <div class="flex gap-2 mt-1 mb-4"> 
+        <button id="btn-tipo-normal" onclick="setTipoAdmin('normal')" 
+          class="flex-1 bg-green-600 text-white rounded-xl py-2.5 font-semibold text-sm transition-all"> 
+          Corrida normal 
+        </button> 
+        <button id="btn-tipo-agendada" onclick="setTipoAdmin('agendada')" 
+          class="flex-1 bg-white border border-green-600 text-green-600 rounded-xl py-2.5 font-semibold text-sm transition-all"> 
+          Corrida agendada 
+        </button> 
+      </div> 
+    </div> 
+ 
+    <div id="campo-agendamento-admin" class="hidden bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4 transition-all"> 
+      <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Data e hora da corrida</label> 
+      <input id="data-agendamento-admin" type="datetime-local" 
+        class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+      <p id="txt-tarifa-aplicada" class="text-xs text-green-600 mt-2 font-medium"></p> 
+    </div> 
+ 
+    <div> 
+      <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Telefone do cliente</label> 
+      <input id="telefone" type="tel" placeholder="55279999999999" 
+        class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+    </div> 
+ 
+    <div class="bg-white rounded-xl border border-gray-200 p-4 space-y-3"> 
+      <p class="text-sm font-medium text-gray-700">Origem e destino</p> 
+      <div class="relative"> 
+        <input id="busca-orig" type="text" placeholder="Ex: Aeroporto de Vitória, Shopping, Rua X número Y..." 
+          class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+      </div> 
+      <div class="relative"> 
+        <input id="busca-dest" type="text" placeholder="Ex: Aeroporto de Vitória, Shopping, Rua X número Y..." 
+          class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+      </div> 
+      <div class="rounded-lg overflow-hidden border border-gray-100"> 
+        <div id="map" style="height: 320px; width: 100%; border-radius: 12px;"></div> 
+      </div> 
+      <div id="distancia-info" class="hidden text-xs text-gray-500 font-medium text-center"> 
+        <span id="txt-distancia" class="text-green-600">0</span> 
+      </div> 
+ 
+      <div id="resumo-valor" class="hidden bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 space-y-1"> 
+        <p id="txt-distancia-resumo" class="text-sm text-gray-600"></p> 
+        <p id="txt-valor-motorista" class="text-sm font-medium text-green-700"></p> 
+        <p id="txt-valor-mobihub" class="text-sm font-medium text-blue-700"></p> 
+      </div> 
+    </div> 
+ 
+    <div class="grid grid-cols-2 gap-4"> 
+      <div> 
+        <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Valor por km (R$)</label> 
+        <input id="valor-km" type="number" step="0.01" min="0" placeholder="0,00" 
+          class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+      </div> 
+      <div> 
+        <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Valor total (R$)</label> 
+        <input id="valor" type="number" step="0.01" min="0" placeholder="0,00" 
+          class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+      </div> 
+    </div> 
+ 
+    <div id="erro" class="hidden bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2.5"></div> 
+ 
+    <button id="btn-criar" onclick="criar()" 
+      class="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl py-3.5 font-semibold text-base transition-colors"> 
+      Criar e enviar para motoristas 
+    </button> 
+  </div> 
+</div> 
+ 
+<script> 
+const token = () => localStorage.getItem('mobihub_token') 
+const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` }) 
+if (!token()) location.href = '/admin/login' 
+ 
+let map, geocoder 
+let marcadores = { origem: null, destino: null } 
+let pontos = { origem: null, destino: null } 
+let proximoPonto = 'origem' 
+ 
+function initMap() { 
+  map = new google.maps.Map(document.getElementById('map'), { 
+    center: { lat: -20.3222, lng: -40.3381 }, 
+    zoom: 13, 
+    mapTypeControl: false, 
+    streetViewControl: false, 
+    fullscreenControl: false 
+  }) 
+  geocoder = new google.maps.Geocoder() 
+ 
+  map.addListener('click', (e) => { 
+    const lat = e.latLng.lat() 
+    const lng = e.latLng.lng() 
+    const tipo = pontos.origem ? 'destino' : 'origem' 
+    geocoder.geocode({ location: { lat, lng } }, (results, status) => { 
+      if (status === 'OK' && results[0]) { 
+        marcarPonto(lat, lng, results[0].formatted_address, tipo) 
+      } 
+    }) 
+  }) 
+} 
+ 
+function setTipoAdmin(tipo) { 
+  const btnNormal = document.getElementById('btn-tipo-normal') 
+  const btnAgendada = document.getElementById('btn-tipo-agendada') 
+  const campoAg = document.getElementById('campo-agendamento-admin') 
+ 
+  if (tipo === 'agendada') { 
+    btnNormal.className = 'flex-1 bg-white border border-green-600 text-green-600 rounded-xl py-2.5 font-semibold text-sm transition-all' 
+    btnAgendada.className = 'flex-1 bg-green-600 text-white rounded-xl py-2.5 font-semibold text-sm transition-all' 
+    campoAg.classList.remove('hidden') 
+     
+    // Set default min date/time (2 hours from now) 
+    const input = document.getElementById('data-agendamento-admin') 
+    const agora = new Date() 
+    const min = new Date(agora.getTime() + 2 * 60 * 60 * 1000) 
+    input.min = min.toISOString().slice(0, 16) 
+    if (!input.value) input.value = min.toISOString().slice(0, 16) 
+    input.addEventListener('change', recalcular) 
+  } else { 
+    btnNormal.className = 'flex-1 bg-green-600 text-white rounded-xl py-2.5 font-semibold text-sm transition-all' 
+    btnAgendada.className = 'flex-1 bg-white border border-green-600 text-green-600 rounded-xl py-2.5 font-semibold text-sm transition-all' 
+    campoAg.classList.add('hidden') 
+  } 
+  recalcular() 
+} 
+ 
+function setupAutocomplete(inputId, tipo) { 
+  const input = document.getElementById(inputId) 
+  const autocomplete = new google.maps.places.Autocomplete(input, { 
+    componentRestrictions: { country: 'br' }, 
+    fields: ['geometry', 'formatted_address', 'name'], 
+    bounds: new google.maps.LatLngBounds( 
+      new google.maps.LatLng(-21.5, -41.5), 
+      new google.maps.LatLng(-19.5, -39.5) 
+    ), 
+    strictBounds: false 
+  }) 
+ 
+  autocomplete.addListener('place_changed', () => { 
+    const place = autocomplete.getPlace() 
+    if (!place.geometry) return 
+    const lat = place.geometry.location.lat() 
+    const lng = place.geometry.location.lng() 
+    const endereco = place.formatted_address || place.name 
+    marcarPonto(lat, lng, endereco, tipo) 
+    map.setCenter({ lat, lng }) 
+    map.setZoom(15) 
+  }) 
+} 
+ 
+function marcarPonto(lat, lng, endereco, tipo) { 
+  if (marcadores[tipo]) marcadores[tipo].setMap(null) 
+ 
+  marcadores[tipo] = new google.maps.Marker({ 
+    position: { lat, lng }, 
+    map, 
+    label: tipo === 'origem' ? 'A' : 'B', 
+    title: tipo === 'origem' ? 'Origem' : 'Destino' 
+  }) 
+ 
+  pontos[tipo] = { lat, lng, endereco } 
+ 
+  if (tipo === 'origem') { 
+    document.getElementById('busca-orig').value = endereco.split(',').slice(0,3).join(', ') 
+  } else { 
+    document.getElementById('busca-dest').value = endereco.split(',').slice(0,3).join(', ') 
+  } 
+ 
+  if (pontos.origem && pontos.destino) { 
+    const bounds = new google.maps.LatLngBounds() 
+    bounds.extend(new google.maps.LatLng(pontos.origem.lat, pontos.origem.lng)) 
+    bounds.extend(new google.maps.LatLng(pontos.destino.lat, pontos.destino.lng)) 
+    map.fitBounds(bounds, { padding: 60 }) 
+    calcularDistancia() 
+  } 
+} 
+ 
+async function calcularDistancia() { 
+  if (!pontos.origem || !pontos.destino) return 
+  const service = new google.maps.DistanceMatrixService() 
+   
+  // Captura data para cálculo de tarifa 
+  const tipoAdmin = document.getElementById('btn-tipo-agendada').classList.contains('bg-green-600') ? 'agendada' : 'normal' 
+  const dataHora = tipoAdmin === 'agendada' ? document.getElementById('data-agendamento-admin').value : new Date().toISOString() 
+ 
+  service.getDistanceMatrix({ 
+    origins: [new google.maps.LatLng(pontos.origem.lat, pontos.origem.lng)], 
+    destinations: [new google.maps.LatLng(pontos.destino.lat, pontos.destino.lng)], 
+    travelMode: google.maps.TravelMode.DRIVING, 
+    unitSystem: google.maps.UnitSystem.METRIC, 
+    region: 'br' 
+  }, async (response, status) => { 
+    if (status === 'OK') { 
+      const element = response.rows[0].elements[0] 
+      if (element.status === 'OK') { 
+        const distanciaKm = element.distance.value / 1000 
+        const duracaoMin = Math.round(element.duration.value / 60) 
+        document.getElementById('txt-distancia').textContent = 
+          `Distância: ${distanciaKm.toFixed(1)} km • Tempo estimado: ${duracaoMin} min` 
+        document.getElementById('distancia-info').classList.remove('hidden') 
+         
+        // Busca tarifa dinâmica do servidor 
+        try { 
+          const r = await fetch(`/api/tarifas/calcular?data_hora=${encodeURIComponent(dataHora)}&distancia_km=${distanciaKm.toFixed(2)}`) 
+          const d = await r.json() 
+          if (r.ok) { 
+            document.getElementById('txt-tarifa-aplicada').textContent = `Tarifa aplicada: ${d.tarifa}` 
+            document.getElementById('txt-distancia-resumo').textContent = `Distância: ${distanciaKm.toFixed(2)} km` 
+            document.getElementById('valor').value = d.valor.toFixed(2) 
+            document.getElementById('txt-valor-motorista').textContent = `Motorista (70%): R$ ${d.valor_motorista.toFixed(2)}` 
+            document.getElementById('txt-valor-mobihub').textContent = `MobiHub (30%): R$ ${d.valor_mobihub.toFixed(2)}` 
+            document.getElementById('resumo-valor').classList.remove('hidden') 
+          } 
+        } catch (e) { 
+          // Fallback se a API falhar 
+          calcularValor(distanciaKm) 
+        } 
+      } 
+    } 
+  }) 
+} 
+ 
+function calcularValor(distanciaKm) { 
+  const config = getConfig() 
+  let valor 
+  if (distanciaKm <= config.kmMinimo) { 
+    valor = config.valorMinimo 
+  } else { 
+    const excedente = distanciaKm - config.kmMinimo 
+    valor = config.valorMinimo + (excedente * config.valorKm) 
+  } 
+  const valorMotorista = valor * 0.70 
+  const valorMobihub = valor * 0.30 
+ 
+  document.getElementById('txt-distancia-resumo').textContent = 
+    `Distância: ${distanciaKm.toFixed(2)} km` 
+  document.getElementById('valor').value = valor.toFixed(2) 
+  document.getElementById('txt-valor-motorista').textContent = 
+    `Motorista (70%): R$ ${valorMotorista.toFixed(2)}` 
+  document.getElementById('txt-valor-mobihub').textContent = 
+    `MobiHub (30%): R$ ${valorMobihub.toFixed(2)}` 
+  document.getElementById('resumo-valor').classList.remove('hidden') 
+ 
+  return { valor, valorMotorista, valorMobihub } 
+} 
+ 
+function getConfig() { 
+  return { 
+    valorMinimo: parseFloat(localStorage.getItem('mobihub_valor_minimo') || '15'), 
+    kmMinimo: parseFloat(localStorage.getItem('mobihub_km_minimo') || '7.5'), 
+    valorKm: parseFloat(localStorage.getItem('mobihub_valor_km') || '2') 
+  } 
+} 
+ 
+function salvarConfig() { 
+  localStorage.setItem('mobihub_valor_minimo', document.getElementById('cfg-valor-minimo').value) 
+  localStorage.setItem('mobihub_km_minimo', document.getElementById('cfg-km-minimo').value) 
+  localStorage.setItem('mobihub_valor_km', document.getElementById('cfg-valor-km').value) 
+  alert('Configurações salvas!') 
+  recalcular() 
+} 
+ 
+function recalcular() { 
+  if (pontos.origem && pontos.destino) calcularDistancia() 
+} 
+ 
+function carregarConfig() { 
+  const config = getConfig() 
+  document.getElementById('cfg-valor-minimo').value = config.valorMinimo 
+  document.getElementById('cfg-km-minimo').value = config.kmMinimo 
+  document.getElementById('cfg-valor-km').value = config.valorKm 
+} 
+ 
+function atualizarValorTotal(distanciaKm) { 
+  calcularValor(distanciaKm) 
+} 
+ 
+document.getElementById('valor-km').addEventListener('input', (e) => { 
+  // Mantemos o evento antigo apenas para atualizar o campo do config se o usuário mexer aqui
+  document.getElementById('cfg-valor-km').value = e.target.value
+  localStorage.setItem('mobihub_valor_km', e.target.value) 
+  if (pontos.origem && pontos.destino) recalcular() 
+}) 
+ 
+window.onload = () => { 
+  initMap() 
+  setupAutocomplete('busca-orig', 'origem') 
+  setupAutocomplete('busca-dest', 'destino') 
+  carregarConfig() 
+} 
+ 
+let linkGerado = '' 
+ 
+async function criar() { 
+  const telefone = document.getElementById('telefone').value.trim() 
+  const erro = document.getElementById('erro') 
+  erro.classList.add('hidden') 
+ 
+  if (!pontos.origem || !pontos.destino) { erro.textContent = 'Marque origem e destino.'; erro.classList.remove('hidden'); return } 
+ 
+  const distanciaKm = parseFloat(document.getElementById('txt-distancia-resumo') 
+    .textContent.replace('Distância: ','').replace(' km','')) || 0 
+  let valor = parseFloat(document.getElementById('valor').value) 
+ 
+  if (!valor || valor <= 0) { erro.textContent = 'Informe o valor da corrida.'; erro.classList.remove('hidden'); return } 
+ 
+  const valorMotorista = parseFloat((valor * 0.70).toFixed(2)) 
+  const valorMobihub = parseFloat((valor * 0.30).toFixed(2)) 
+ 
+  const tipoAdmin = document.getElementById('btn-tipo-agendada') 
+    .classList.contains('bg-green-600') ? 'agendada' : 'normal' 
+  const agendadaPara = tipoAdmin === 'agendada' 
+    ? document.getElementById('data-agendamento-admin').value 
+    : null 
+ 
+  if (tipoAdmin === 'agendada' && !agendadaPara) { 
+    erro.textContent = 'Informe a data e hora do agendamento.'; 
+    erro.classList.remove('hidden'); 
+    return; 
+  } 
+ 
+  const btn = document.getElementById('btn-criar') 
+  btn.textContent = 'Enviando...' 
+  btn.disabled = true 
+ 
+  try { 
+    const r = await fetch('/api/rides', { 
+      method: 'POST', 
+      headers: headers(), 
+      body: JSON.stringify({ 
+        origem: pontos.origem.endereco, origem_lat: pontos.origem.lat, origem_lng: pontos.origem.lng, 
+        destino: pontos.destino.endereco, destino_lat: pontos.destino.lat, destino_lng: pontos.destino.lng, 
+        valor, valor_motorista: valorMotorista, valor_mobihub: valorMobihub, 
+        client_telefone: telefone || null, 
+        tipo: tipoAdmin, 
+        agendada_para: agendadaPara 
+      }) 
+    }) 
+    const d = await r.json() 
+    if (!r.ok) { erro.textContent = d.error; erro.classList.remove('hidden'); btn.textContent = 'Criar e enviar para motoristas'; btn.disabled = false; return } 
+    linkGerado = d.link 
+    document.getElementById('link-gerado').textContent = d.link 
+    document.getElementById('formulario').classList.add('hidden') 
+    document.getElementById('sucesso').classList.remove('hidden') 
+  } catch { erro.textContent = 'Erro de conexão.'; erro.classList.remove('hidden'); btn.textContent = 'Criar e enviar para motoristas'; btn.disabled = false } 
+} 
+ 
+function copiarLink() { 
+  navigator.clipboard.writeText(linkGerado) 
+  alert('Link copiado!') 
+} 
+ 
+function novaCorrida() { 
+  document.getElementById('formulario').classList.remove('hidden') 
+  document.getElementById('sucesso').classList.add('hidden') 
+  document.getElementById('telefone').value = '' 
+  document.getElementById('busca-orig').value = '' 
+  document.getElementById('busca-dest').value = '' 
+  document.getElementById('valor').value = '' 
+  document.getElementById('btn-criar').textContent = 'Criar e enviar para motoristas' 
+  document.getElementById('btn-criar').disabled = false 
+  document.getElementById('distancia-info').classList.add('hidden') 
+  if (marcadores.origem) marcadores.origem.setMap(null) 
+  if (marcadores.destino) marcadores.destino.setMap(null) 
+  marcadores = { origem: null, destino: null } 
+  pontos = { origem: null, destino: null } 
+  proximoPonto = 'origem' 
+} 
+</script> 
+</body> 
+</html>

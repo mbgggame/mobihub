@@ -1,0 +1,185 @@
+<!DOCTYPE html> 
+<html lang="pt-BR"> 
+<head> 
+  <meta charset="UTF-8"/> 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
+  <title>MobiHub — Painel</title> 
+  <script src="https://cdn.tailwindcss.com"></script> 
+</head> 
+<body class="bg-gray-50 min-h-screen"> 
+ 
+<!-- HEADER --> 
+<div class="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between"> 
+  <span class="font-bold text-green-700 text-lg">MobiHub</span> 
+  <div class="flex gap-2"> 
+    <a href="/admin/dashboard" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors">📊 Dashboard</a> 
+    <a href="/admin/tarifas" class="bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors">⚙️ Tarifas</a> 
+    <a href="/admin/motoristas" class="bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors">🚖 Motoristas</a> 
+    <a href="/admin/nova-corrida" class="bg-green-600 hover:bg-green-700 text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors">+ Nova Corrida</a> 
+  </div> 
+</div> 
+ 
+<!-- FILTROS --> 
+<div class="max-w-4xl mx-auto px-4 py-4"> 
+  <div class="flex gap-2 flex-wrap mb-4"> 
+    <button onclick="filtrar('')"      id="f-todas"     class="filtro-btn active-filter px-4 py-1.5 rounded-full text-sm border">Todas</button> 
+    <button onclick="filtrar('aberta')"  id="f-aberta"  class="filtro-btn px-4 py-1.5 rounded-full text-sm border border-gray-200 text-gray-600">Abertas</button> 
+    <button onclick="filtrar('aceita')"  id="f-aceita"  class="filtro-btn px-4 py-1.5 rounded-full text-sm border border-gray-200 text-gray-600">Aceitas</button> 
+    <button onclick="filtrar('concluida')" id="f-concluida" class="filtro-btn px-4 py-1.5 rounded-full text-sm border border-gray-200 text-gray-600">Concluídas</button> 
+    <button onclick="filtrar('cancelada')" id="f-cancelada" class="filtro-btn px-4 py-1.5 rounded-full text-sm border border-gray-200 text-gray-600">Canceladas</button> 
+    <button onclick="filtrar('agendada')" id="f-agendada" class="filtro-btn px-4 py-1.5 rounded-full text-sm border border-gray-200 text-gray-600">Agendadas</button> 
+  </div> 
+ 
+  <div id="lista-corridas" class="space-y-3"></div> 
+</div> 
+ 
+<!-- MODAL --> 
+<div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-50"> 
+  <div class="bg-white rounded-2xl max-w-md w-full p-6 max-h-screen overflow-y-auto"> 
+    <div class="flex justify-between items-center mb-4"> 
+      <h2 class="font-semibold text-lg">Detalhes da corrida</h2> 
+      <button onclick="fecharModal()" class="text-gray-400 hover:text-gray-600 text-xl">✕</button> 
+    </div> 
+    <div id="modal-conteudo"></div> 
+  </div> 
+</div> 
+ 
+<style> 
+.active-filter { background:#16a34a; color:white; border-color:#16a34a; } 
+.status-aberta { background:#dbeafe; color:#1d40ae; } 
+.status-aceita { background:#fef9c3; color:#854d0e; } 
+.status-concluida { background:#dcfce7; color:#166534; } 
+.status-cancelada { background:#fee2e2; color:#991b1b; } 
+.status-agendada { background:#e0f2fe; color:#0369a1; } 
+</style> 
+ 
+<script> 
+const BASE_URL = window.location.origin 
+const token = () => localStorage.getItem('mobihub_token') 
+const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` }) 
+ 
+if (!token()) location.href = '/admin/login' 
+ 
+let filtroAtual = '' 
+ 
+async function carregar() { 
+  const url = filtroAtual ? `/api/rides?status=${filtroAtual}` : '/api/rides' 
+  const r = await fetch(url, { headers: headers() }) 
+  if (r.status === 401) { location.href = '/admin/login'; return } 
+  const corridas = await r.json() 
+  renderizar(corridas) 
+} 
+ 
+function renderizar(corridas) { 
+  const lista = document.getElementById('lista-corridas') 
+  if (!corridas.length) { 
+    lista.innerHTML = '<p class="text-center text-gray-400 py-8">Nenhuma corrida encontrada.</p>' 
+    return 
+  } 
+  lista.innerHTML = corridas.map(c => ` 
+    <div class="bg-white rounded-xl border border-gray-200 p-4 cursor-pointer hover:border-green-300 transition-colors" 
+      onclick="abrirModal(${c.id})"> 
+      <div class="flex items-start justify-between"> 
+        <div class="flex-1 min-w-0"> 
+          <p class="text-sm font-medium text-gray-900 truncate">${c.origem} → ${c.destino}</p> 
+          <p class="text-xs text-gray-500 mt-0.5">${new Date(c.created_at).toLocaleString('pt-BR')}</p> 
+        </div> 
+        <div class="flex items-center gap-2 ml-3"> 
+          <span class="text-sm font-semibold text-green-700">R$ ${Number(c.valor).toFixed(2)}</span> 
+          <span class="px-2 py-0.5 rounded-full text-xs font-medium status-${c.status}">${c.status}</span> 
+        </div> 
+      </div> 
+      ${c.agendada_para ? ` 
+        <p class="text-xs text-blue-600 mt-1 font-medium"> 
+          🗓️ Agendada para: ${new Date(c.agendada_para).toLocaleString('pt-BR')} 
+        </p>` : ''} 
+      ${c.driver_nome ? `<p class="text-xs text-gray-500 mt-2">Motorista: ${c.driver_nome} — ${c.placa}</p>` : ''} 
+    </div> 
+  `).join('') 
+} 
+ 
+let corridaAtual = null 
+ 
+async function abrirModal(id) { 
+  const r = await fetch(`/api/rides?status=`, { headers: headers() }) 
+  const todas = await r.json() 
+  const c = todas.find(x => x.id === id) 
+  if (!c) return 
+  corridaAtual = c 
+ 
+  const msgCliente = c.driver_nome ? `✅ Seu motorista está a caminho!\n\n👤 ${c.driver_nome}\n🚗 ${c.modelo_carro} ${c.cor_carro} ${c.ano_carro} — ${c.placa}\n📱 ${c.driver_telefone || '—'}\n⭐ ${Number(c.driver_media||0).toFixed(1)} • ${c.driver_viagens||0} viagens\n\n🗺️ Acompanhe sua corrida:\n${BASE_URL}/r/${c.token}` : '' 
+ 
+  document.getElementById('modal-conteudo').innerHTML = ` 
+    <div class="space-y-3 text-sm"> 
+      <div class="flex justify-between"><span class="text-gray-500">Status</span><span class="px-2 py-0.5 rounded-full text-xs font-medium status-${c.status}">${c.status}</span></div> 
+      <div class="flex justify-between"><span class="text-gray-500">Origem</span><span class="text-right font-medium max-w-[60%]">${c.origem}</span></div> 
+      <div class="flex justify-between"><span class="text-gray-500">Destino</span><span class="text-right font-medium max-w-[60%]">${c.destino}</span></div> 
+      <div class="flex justify-between"><span class="text-gray-500">Valor</span><span class="font-semibold text-green-700">R$ ${Number(c.valor).toFixed(2)}</span></div> 
+      ${c.valor_motorista ? ` 
+      <div class="flex justify-between"><span class="text-gray-500">Motorista (70%)</span> 
+        <span class="font-medium text-green-700">R$ ${Number(c.valor_motorista).toFixed(2)}</span></div> 
+      <div class="flex justify-between"><span class="text-gray-500">MobiHub (30%)</span> 
+        <span class="font-medium text-blue-700">R$ ${Number(c.valor_mobihub).toFixed(2)}</span></div> 
+      ` : ''} 
+      <div class="flex justify-between"><span class="text-gray-500">Cliente</span><span>${c.client_telefone || '—'}</span></div> 
+      ${c.driver_nome ? ` 
+      <hr class="border-gray-100"/> 
+      <p class="font-medium text-gray-700">Motorista</p> 
+      <div class="flex justify-between"><span class="text-gray-500">Nome</span><span>${c.driver_nome}</span></div> 
+      <div class="flex justify-between"><span class="text-gray-500">Carro</span><span>${c.modelo_carro} ${c.cor_carro} ${c.ano_carro}</span></div> 
+      <div class="flex justify-between"><span class="text-gray-500">Placa</span><span class="font-mono">${c.placa}</span></div> 
+      <div class="flex justify-between"><span class="text-gray-500">Telefone</span><span>${c.driver_telefone || '—'}</span></div> 
+      ` : ''} 
+      <hr class="border-gray-100"/> 
+      <p class="font-medium text-gray-700">Link da corrida</p> 
+      <div class="bg-gray-50 rounded-lg px-3 py-2 font-mono text-xs break-all">${BASE_URL}/r/${c.token}</div> 
+      <div class="flex gap-2 flex-wrap"> 
+        ${c.status === 'aceita' ? `<button onclick="atualizarStatus('concluida')" class="flex-1 bg-green-600 text-white rounded-lg py-2 text-sm font-medium">✅ Concluir</button>` : ''} 
+        ${['aberta','aceita'].includes(c.status) ? `<button onclick="atualizarStatus('cancelada')" class="flex-1 bg-red-50 text-red-600 border border-red-200 rounded-lg py-2 text-sm font-medium">✕ Cancelar</button>` : ''} 
+        ${msgCliente ? `<button onclick="copiarMensagem()" class="w-full bg-green-50 text-green-700 border border-green-200 rounded-lg py-2 text-sm font-medium">📋 Copiar mensagem para cliente</button>` : ''} 
+      </div> 
+    </div> 
+  ` 
+  document.getElementById('modal').classList.remove('hidden') 
+  window._msgCliente = msgCliente 
+} 
+ 
+async function atualizarStatus(status) { 
+  if (!corridaAtual) return 
+  await fetch(`/api/rides/${corridaAtual.id}/status`, { 
+    method: 'PUT', 
+    headers: headers(), 
+    body: JSON.stringify({ status }) 
+  }) 
+  fecharModal() 
+  carregar() 
+} 
+ 
+function copiarMensagem() { 
+  navigator.clipboard.writeText(window._msgCliente || '') 
+  alert('Mensagem copiada! Cole no WhatsApp do cliente.') 
+} 
+ 
+function fecharModal() { 
+  document.getElementById('modal').classList.add('hidden') 
+  corridaAtual = null 
+} 
+ 
+function filtrar(status) { 
+  filtroAtual = status 
+  document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('active-filter')) 
+  const id = status ? `f-${status}` : 'f-todas' 
+  document.getElementById(id)?.classList.add('active-filter') 
+  carregar() 
+} 
+ 
+function sair() { 
+  localStorage.removeItem('mobihub_token') 
+  location.href = '/admin/login' 
+} 
+ 
+carregar() 
+setInterval(carregar, 30000) 
+</script> 
+</body> 
+</html>

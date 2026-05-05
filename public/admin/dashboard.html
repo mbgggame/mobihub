@@ -1,0 +1,400 @@
+<!DOCTYPE html> 
+<html lang="pt-BR"> 
+<head> 
+  <meta charset="UTF-8"/> 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
+  <title>MobiHub — Dashboard</title> 
+  <script src="https://cdn.tailwindcss.com"></script> 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
+</head> 
+<body class="bg-gray-50 min-h-screen"> 
+ 
+<div class="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10"> 
+  <div class="flex items-center gap-3"> 
+    <span class="font-bold text-green-700 text-lg">MobiHub</span> 
+    <span class="text-gray-400">|</span> 
+    <span class="text-sm text-gray-600">Dashboard</span> 
+  </div> 
+  <div class="flex gap-2"> 
+    <a href="/admin" class="text-sm text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50">Corridas</a> 
+    <a href="/admin/motoristas" class="text-sm text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50">Motoristas</a> 
+    <a href="/admin/nova-corrida" class="bg-green-600 text-white text-sm px-3 py-1.5 rounded-lg font-medium">+ Nova corrida</a> 
+    <button onclick="sair()" class="text-sm text-gray-500 border border-gray-200 px-3 py-1.5 rounded-lg">Sair</button> 
+  </div> 
+</div> 
+ 
+<div class="max-w-6xl mx-auto px-4 py-6 space-y-8"> 
+ 
+  <!-- CARDS RESUMO --> 
+  <div> 
+    <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">Resumo de hoje</h2> 
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-3"> 
+      <div class="bg-white border border-gray-200 rounded-xl p-4"> 
+        <p class="text-xs text-gray-500">Total corridas</p> 
+        <p id="card-total" class="text-2xl font-semibold text-gray-900 mt-1">—</p> 
+      </div> 
+      <div class="bg-white border border-gray-200 rounded-xl p-4"> 
+        <p class="text-xs text-gray-500">Receita hoje</p> 
+        <p id="card-receita" class="text-2xl font-semibold text-green-700 mt-1">—</p> 
+      </div> 
+      <div class="bg-white border border-gray-200 rounded-xl p-4"> 
+        <p class="text-xs text-gray-500">Abertas agora</p> 
+        <p id="card-abertas" class="text-2xl font-semibold text-blue-600 mt-1">—</p> 
+      </div> 
+      <div class="bg-white border border-gray-200 rounded-xl p-4"> 
+        <p class="text-xs text-gray-500">Agendadas</p> 
+        <p id="card-agendadas" class="text-2xl font-semibold text-purple-600 mt-1">—</p> 
+      </div> 
+      <div class="bg-white border border-gray-200 rounded-xl p-4"> 
+        <p class="text-xs text-gray-500">Motoristas ativos</p> 
+        <p id="card-motoristas" class="text-2xl font-semibold text-gray-900 mt-1">—</p> 
+      </div> 
+    </div> 
+  </div> 
+ 
+  <!-- CORRIDAS ATIVAS --> 
+  <div> 
+    <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">Corridas ativas agora</h2> 
+    <div id="corridas-ativas" class="space-y-2"></div> 
+  </div> 
+ 
+  <!-- GRÁFICOS --> 
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6"> 
+    <div class="bg-white border border-gray-200 rounded-xl p-4"> 
+      <h3 class="text-sm font-medium text-gray-700 mb-4">Corridas — últimos 15 dias</h3> 
+      <canvas id="grafico-corridas" height="200"></canvas> 
+    </div> 
+    <div class="bg-white border border-gray-200 rounded-xl p-4"> 
+      <h3 class="text-sm font-medium text-gray-700 mb-4">Receita — últimos 15 dias</h3> 
+      <canvas id="grafico-receita" height="200"></canvas> 
+    </div> 
+  </div> 
+ 
+  <!-- MÉTRICAS --> 
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4"> 
+    <div class="bg-white border border-gray-200 rounded-xl p-4"> 
+      <h3 class="text-sm font-medium text-gray-700 mb-3">Top motoristas</h3> 
+      <div id="top-motoristas" class="space-y-2"></div> 
+    </div> 
+    <div class="bg-white border border-gray-200 rounded-xl p-4"> 
+      <h3 class="text-sm font-medium text-gray-700 mb-3">Avaliações médias</h3> 
+      <div id="avaliacoes" class="space-y-3"></div> 
+    </div> 
+    <div class="bg-white border border-gray-200 rounded-xl p-4"> 
+      <h3 class="text-sm font-medium text-gray-700 mb-3">Tempo médio de aceite</h3> 
+      <p id="tempo-aceite" class="text-3xl font-semibold text-green-700 mt-2">—</p> 
+      <p class="text-xs text-gray-400 mt-1">minutos (últimos 15 dias)</p> 
+    </div> 
+  </div> 
+ 
+  <!-- CONFIGURAÇÕES AGENDAMENTO --> 
+  <div class="bg-white border border-gray-200 rounded-xl p-6"> 
+    <h2 class="text-sm font-medium text-gray-700 uppercase tracking-wide mb-4">Configurações de agendamento</h2> 
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6"> 
+      <div class="space-y-4"> 
+        <div class="flex items-center justify-between"> 
+          <div> 
+            <p class="text-sm font-medium text-gray-700">Disparo imediato</p> 
+            <p class="text-xs text-gray-400">Envia para o Telegram na hora que o admin criar</p> 
+          </div> 
+          <label class="relative inline-flex items-center cursor-pointer"> 
+            <input type="checkbox" id="cfg-disparo-imediato" class="sr-only peer"> 
+            <div class="w-11 h-6 bg-gray-200 peer-checked:bg-green-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div> 
+          </label> 
+        </div> 
+        <div> 
+          <label class="text-sm font-medium text-gray-700">Minutos antes do disparo</label> 
+          <p class="text-xs text-gray-400 mb-1">Usado quando disparo imediato está desativado</p> 
+          <input type="number" id="cfg-minutos-antes" min="5" max="1440" step="5" 
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+        </div> 
+      </div> 
+      <div class="space-y-4"> 
+        <div class="flex items-center justify-between"> 
+          <div> 
+            <p class="text-sm font-medium text-gray-700">Bloqueio do motorista</p> 
+            <p class="text-xs text-gray-400">Impede aceite de novas corridas antes do agendamento</p> 
+          </div> 
+          <label class="relative inline-flex items-center cursor-pointer"> 
+            <input type="checkbox" id="cfg-bloqueio-ativo" class="sr-only peer"> 
+            <div class="w-11 h-6 bg-gray-200 peer-checked:bg-green-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div> 
+          </label> 
+        </div> 
+        <div> 
+          <label class="text-sm font-medium text-gray-700">Minutos de bloqueio antes do horário</label> 
+          <p class="text-xs text-gray-400 mb-1">Quanto antes do agendamento o motorista fica bloqueado</p> 
+          <input type="number" id="cfg-minutos-bloqueio" min="15" max="480" step="15" 
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+        </div> 
+      </div> 
+    </div> 
+    <button onclick="salvarConfigs()" 
+      class="mt-6 bg-green-600 text-white rounded-lg px-6 py-2.5 text-sm font-medium hover:bg-green-700"> 
+      Salvar configurações de agendamento 
+    </button> 
+  </div> 
+ 
+  <!-- CONFIGURAÇÕES DE PREÇO --> 
+  <div class="bg-white border border-gray-200 rounded-xl p-6"> 
+    <h2 class="text-sm font-medium text-gray-700 uppercase tracking-wide mb-4">Configurações de preço — corrida normal</h2> 
+    <div class="grid grid-cols-3 gap-4"> 
+      <div> 
+        <label class="text-sm font-medium text-gray-700">Valor mínimo (R$)</label> 
+        <input type="number" step="0.50" id="cfg-valor-minimo" 
+          class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+      </div> 
+      <div> 
+        <label class="text-sm font-medium text-gray-700">Km do valor mínimo</label> 
+        <input type="number" step="0.5" id="cfg-km-minimo" 
+          class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+      </div> 
+      <div> 
+        <label class="text-sm font-medium text-gray-700">R$ por km excedente</label> 
+        <input type="number" step="0.10" id="cfg-valor-km" 
+          class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+      </div> 
+    </div> 
+    <button onclick="salvarPrecos()" 
+      class="mt-4 bg-green-600 text-white rounded-lg px-6 py-2.5 text-sm font-medium hover:bg-green-700"> 
+      Salvar preços 
+    </button> 
+  </div> 
+ 
+  <!-- TARIFAS AGENDAMENTO --> 
+  <div class="bg-white border border-gray-200 rounded-xl p-6"> 
+    <h2 class="text-sm font-medium text-gray-700 uppercase tracking-wide mb-4">Tarifas de agendamento</h2> 
+    <p class="text-xs text-gray-400 mb-4">O sistema aplica a tarifa de maior valor quando dois períodos se sobrepõem.</p> 
+    <div id="lista-tarifas" class="space-y-3"></div> 
+  </div> 
+ 
+</div> 
+<script> 
+ const token = () => localStorage.getItem('mobihub_token') 
+ const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` }) 
+ if (!token()) location.href = '/admin/login' 
+ 
+ const DIAS_NOMES = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'] 
+ const STATUS_CLS = { 
+   aberta: 'bg-blue-100 text-blue-700', 
+   aceita: 'bg-yellow-100 text-yellow-700', 
+   agendada: 'bg-purple-100 text-purple-700', 
+   concluida: 'bg-green-100 text-green-700', 
+   cancelada: 'bg-red-100 text-red-700' 
+ } 
+ 
+ let graficoCorridas, graficoReceita 
+ 
+ async function carregar() { 
+   const [metricas, configs, tarifas] = await Promise.all([ 
+     fetch('/api/metricas', { headers: headers() }).then(r => r.json()), 
+     fetch('/api/configuracoes', { headers: headers() }).then(r => r.json()), 
+     fetch('/api/tarifas', { headers: headers() }).then(r => r.json()) 
+   ]) 
+   renderCards(metricas.resumoDia) 
+   renderCorridasAtivas(metricas.corridasAtivas) 
+   renderGraficos(metricas.ultimos15dias) 
+   renderTopMotoristas(metricas.topMotoristas) 
+   renderAvaliacoes(metricas.avaliacaoMedia) 
+   renderConfigs(configs) 
+   renderTarifas(tarifas) 
+   document.getElementById('tempo-aceite').textContent = 
+     metricas.tempoMedioAceite ? `${metricas.tempoMedioAceite} min` : '—' 
+ } 
+ 
+ function renderCards(r) { 
+   document.getElementById('card-total').textContent = r.total_hoje || 0 
+   document.getElementById('card-receita').textContent = `R$ ${(r.receita_hoje || 0).toFixed(2)}` 
+   document.getElementById('card-abertas').textContent = r.abertas || 0 
+   document.getElementById('card-agendadas').textContent = r.agendadas || 0 
+   document.getElementById('card-motoristas').textContent = r.motoristas_ativos || 0 
+ } 
+ 
+ function renderCorridasAtivas(corridas) { 
+   const div = document.getElementById('corridas-ativas') 
+   if (!corridas.length) { 
+     div.innerHTML = '<p class="text-sm text-gray-400">Nenhuma corrida ativa no momento.</p>' 
+     return 
+   } 
+   div.innerHTML = corridas.map(c => ` 
+     <div class="bg-white border border-gray-200 rounded-xl px-4 py-3 flex items-center justify-between"> 
+       <div> 
+         <div class="flex items-center gap-2 mb-1"> 
+           <span class="px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_CLS[c.status]}">${c.status}</span> 
+           ${c.tipo === 'agendada' ? `<span class="text-xs text-purple-600">🗓️ ${new Date(c.agendada_para).toLocaleString('pt-BR')}</span>` : ''} 
+         </div> 
+         <p class="text-sm text-gray-800">${c.origem} → ${c.destino}</p> 
+         <p class="text-xs text-gray-500 mt-0.5">${c.driver_nome ? `Motorista: ${c.driver_nome} • ${c.placa}` : 'Aguardando motorista'}</p> 
+       </div> 
+       <div class="text-right ml-4"> 
+         <p class="text-sm font-semibold text-green-700">R$ ${Number(c.valor).toFixed(2)}</p> 
+         <div class="flex gap-1 mt-2"> 
+           ${c.status === 'aceita' ? `<button onclick="atualizarStatus(${c.id},'concluida')" class="text-xs bg-green-600 text-white px-2 py-1 rounded">✓ Concluir</button>` : ''} 
+           ${['aberta','aceita','agendada'].includes(c.status) ? `<button onclick="atualizarStatus(${c.id},'cancelada')" class="text-xs bg-red-50 text-red-600 border border-red-200 px-2 py-1 rounded">✕</button>` : ''} 
+         </div> 
+       </div> 
+     </div> 
+   `).join('') 
+ } 
+ 
+ function renderGraficos(dados) { 
+   const labels = dados.map(d => new Date(d.dia + 'T12:00:00').toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' })) 
+   if (graficoCorridas) graficoCorridas.destroy() 
+   if (graficoReceita) graficoReceita.destroy() 
+   graficoCorridas = new Chart(document.getElementById('grafico-corridas'), { 
+     type: 'bar', 
+     data: { labels, datasets: [{ label: 'Corridas', data: dados.map(d => d.corridas), backgroundColor: '#16a34a', borderRadius: 6 }] }, 
+     options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } } 
+   }) 
+   graficoReceita = new Chart(document.getElementById('grafico-receita'), { 
+     type: 'line', 
+     data: { labels, datasets: [{ label: 'Receita (R$)', data: dados.map(d => d.receita), borderColor: '#16a34a', backgroundColor: 'rgba(22,163,74,0.1)', tension: 0.4, fill: true }] }, 
+     options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } } 
+   }) 
+ } 
+ 
+ function renderTopMotoristas(motoristas) { 
+   const div = document.getElementById('top-motoristas') 
+   if (!motoristas.length) { div.innerHTML = '<p class="text-xs text-gray-400">Sem dados ainda</p>'; return } 
+   div.innerHTML = motoristas.map((m, i) => ` 
+     <div class="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-0"> 
+       <div class="flex items-center gap-2"> 
+         <span class="text-xs text-gray-400 w-4">${i+1}</span> 
+         <div> 
+           <p class="text-sm font-medium text-gray-800">${m.nome}</p> 
+           <p class="text-xs text-gray-400">${m.total_viagens} viagens • ⭐ ${m.nota || '—'}</p> 
+         </div> 
+       </div> 
+       <span class="text-sm font-semibold text-green-700">R$ ${Number(m.receita).toFixed(2)}</span> 
+     </div> 
+   `).join('') 
+ } 
+ 
+ function renderAvaliacoes(av) { 
+   document.getElementById('avaliacoes').innerHTML = ` 
+     <div class="space-y-3"> 
+       <div class="bg-gray-50 rounded-lg p-3"> 
+         <p class="text-xs text-gray-500">Motoristas</p> 
+         <p class="text-2xl font-semibold text-yellow-500 mt-1">${'★'.repeat(Math.round(av?.motoristas||0))}${'☆'.repeat(5-Math.round(av?.motoristas||0))}</p> 
+         <p class="text-sm font-medium text-gray-700">${av?.motoristas||'—'} / 5.0</p> 
+       </div> 
+       <div class="bg-gray-50 rounded-lg p-3"> 
+         <p class="text-xs text-gray-500">Passageiros</p> 
+         <p class="text-2xl font-semibold text-yellow-500 mt-1">${'★'.repeat(Math.round(av?.clientes||0))}${'☆'.repeat(5-Math.round(av?.clientes||0))}</p> 
+         <p class="text-sm font-medium text-gray-700">${av?.clientes||'—'} / 5.0</p> 
+       </div> 
+     </div>` 
+ } 
+ 
+ function renderConfigs(c) { 
+   document.getElementById('cfg-disparo-imediato').checked = c.agendamento_disparo_imediato === 'true' 
+   document.getElementById('cfg-minutos-antes').value = c.agendamento_minutos_antes || 30 
+   document.getElementById('cfg-bloqueio-ativo').checked = c.agendamento_bloqueio_ativo === 'true' 
+   document.getElementById('cfg-minutos-bloqueio').value = c.agendamento_minutos_bloqueio || 60 
+   document.getElementById('cfg-valor-minimo').value = c.corrida_valor_minimo || 15 
+   document.getElementById('cfg-km-minimo').value = c.corrida_km_minimo || 7.5 
+   document.getElementById('cfg-valor-km').value = c.corrida_valor_km || 2 
+ } 
+ 
+ function renderTarifas(tarifas) { 
+   const div = document.getElementById('lista-tarifas') 
+   div.innerHTML = tarifas.map(t => { 
+     const diasAtivos = t.dias.split(',').map(Number) 
+     const diasHtml = DIAS_NOMES.map((d, i) => ` 
+       <label class="flex items-center gap-1 text-xs cursor-pointer select-none"> 
+         <input type="checkbox" data-tarifa="${t.id}" data-dia="${i}" 
+           ${diasAtivos.includes(i) ? 'checked' : ''} class="dia-check rounded"/> ${d} 
+       </label>`).join('') 
+     return ` 
+     <div class="border border-gray-200 rounded-xl p-4"> 
+       <div class="flex items-center justify-between mb-3"> 
+         <input type="text" id="t-nome-${t.id}" value="${t.nome}" 
+           class="font-semibold text-gray-900 border-b border-transparent hover:border-gray-300 focus:border-green-500 focus:outline-none bg-transparent text-sm"/> 
+         <span class="text-xs px-2 py-0.5 rounded-full ${t.ativo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}">${t.ativo ? 'Ativa' : 'Inativa'}</span> 
+       </div> 
+       <div class="flex gap-3 flex-wrap mb-3">${diasHtml}</div> 
+       <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3"> 
+         <div> 
+           <label class="text-xs text-gray-500">Hora início</label> 
+           <input type="time" id="t-hi-${t.id}" value="${t.hora_inicio}" 
+             class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+         </div> 
+         <div> 
+           <label class="text-xs text-gray-500">Hora fim</label> 
+           <input type="time" id="t-hf-${t.id}" value="${t.hora_fim}" 
+             class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+         </div> 
+         <div> 
+           <label class="text-xs text-gray-500">Valor mínimo (R$)</label> 
+           <input type="number" step="0.50" id="t-vm-${t.id}" value="${t.valor_minimo}" 
+             class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+         </div> 
+         <div> 
+           <label class="text-xs text-gray-500">R$/km excedente</label> 
+           <input type="number" step="0.10" id="t-vk-${t.id}" value="${t.valor_km}" 
+             class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+         </div> 
+       </div> 
+       <button onclick="salvarTarifa(${t.id})" 
+         class="w-full bg-green-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-green-700"> 
+         Salvar tarifa 
+       </button> 
+     </div>` 
+   }).join('') 
+ } 
+ 
+ async function salvarConfigs() { 
+   const body = { 
+     agendamento_disparo_imediato: document.getElementById('cfg-disparo-imediato').checked ? 'true' : 'false', 
+     agendamento_minutos_antes: document.getElementById('cfg-minutos-antes').value, 
+     agendamento_bloqueio_ativo: document.getElementById('cfg-bloqueio-ativo').checked ? 'true' : 'false', 
+     agendamento_minutos_bloqueio: document.getElementById('cfg-minutos-bloqueio').value 
+   } 
+   const r = await fetch('/api/configuracoes', { method: 'PUT', headers: headers(), body: JSON.stringify(body) }) 
+   if (r.ok) alert('Configurações salvas!') 
+   else alert('Erro ao salvar') 
+ } 
+ 
+ async function salvarPrecos() { 
+   const body = { 
+     corrida_valor_minimo: document.getElementById('cfg-valor-minimo').value, 
+     corrida_km_minimo: document.getElementById('cfg-km-minimo').value, 
+     corrida_valor_km: document.getElementById('cfg-valor-km').value 
+   } 
+   const r = await fetch('/api/configuracoes', { method: 'PUT', headers: headers(), body: JSON.stringify(body) }) 
+   if (r.ok) alert('Preços salvos!') 
+   else alert('Erro ao salvar') 
+ } 
+ 
+ async function salvarTarifa(id) { 
+   const diasChecked = [...document.querySelectorAll(`input[data-tarifa="${id}"].dia-check`)] 
+     .filter(c => c.checked).map(c => c.dataset.dia).join(',') 
+   const body = { 
+     nome: document.getElementById(`t-nome-${id}`).value, 
+     dias: diasChecked, 
+     hora_inicio: document.getElementById(`t-hi-${id}`).value, 
+     hora_fim: document.getElementById(`t-hf-${id}`).value, 
+     valor_minimo: parseFloat(document.getElementById(`t-vm-${id}`).value), 
+     valor_km: parseFloat(document.getElementById(`t-vk-${id}`).value) 
+   } 
+   const r = await fetch(`/api/tarifas/${id}`, { method: 'PUT', headers: headers(), body: JSON.stringify(body) }) 
+   if (r.ok) alert('Tarifa salva!') 
+   else alert('Erro ao salvar tarifa') 
+ } 
+ 
+ async function atualizarStatus(id, status) { 
+   await fetch(`/api/rides/${id}/status`, { 
+     method: 'PUT', headers: headers(), body: JSON.stringify({ status }) 
+   }) 
+   carregar() 
+ } 
+ 
+ function sair() { 
+   localStorage.removeItem('mobihub_token') 
+   location.href = '/admin/login' 
+ } 
+ 
+ carregar() 
+ setInterval(carregar, 30000) 
+ </script> 
+</body> 
+</html> 
