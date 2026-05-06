@@ -514,12 +514,14 @@
  
  let pollingAtivo = true 
  let pollingErros = 0 
+ let pollingTentativas = 0 
  
  async function iniciarPolling() { 
    await carregar() 
  
    async function tick() { 
      if (!pollingAtivo) return 
+     pollingTentativas++ 
      try { 
        await carregar() 
        pollingErros = 0 
@@ -527,11 +529,14 @@
        pollingErros++ 
        console.error('[POLLING] Erro:', e.message) 
      } 
-     const intervalo = pollingErros > 3 ? 30000 : 10000 
+ 
+     // Primeiros 5 minutos: atualiza a cada 5 segundos 
+     // Depois: a cada 15 segundos 
+     const intervalo = pollingTentativas < 60 ? 5000 : 15000 
      setTimeout(tick, intervalo) 
    } 
  
-   setTimeout(tick, 10000) 
+   setTimeout(tick, 5000) 
  } 
  
  // Para polling quando corrida concluída ou cancelada 
