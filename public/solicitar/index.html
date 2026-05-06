@@ -89,6 +89,7 @@
     <div class="rounded-xl overflow-hidden border border-gray-200"> 
       <div id="map"></div> 
     </div> 
+    <p id="txt-motoristas-online" class="text-xs text-center text-gray-400 py-1">Carregando motoristas...</p> 
     <p class="text-xs text-center text-gray-400">Ou toque no mapa para marcar os pontos</p> 
  
     <div id="ponto-origem" class="hidden bg-green-50 border border-green-200 rounded-xl px-4 py-3"> 
@@ -279,6 +280,75 @@
    }) 
    setupAutocomplete('busca-orig', 'origem') 
    setupAutocomplete('busca-dest', 'destino') 
+ 
+   carregarMotoristasOnline() 
+   setInterval(carregarMotoristasOnline, 30000) 
+ } 
+ 
+ let marcadoresMotoristas = [] 
+ 
+ async function carregarMotoristasOnline() { 
+   try { 
+     const r = await fetch('/api/motoristas-online') 
+     if (!r.ok) return 
+     const motoristas = await r.json() 
+ 
+     // Remove pins anteriores 
+     marcadoresMotoristas.forEach(m => m.setMap(null)) 
+     marcadoresMotoristas = [] 
+ 
+     if (!motoristas.length) { 
+       document.getElementById('txt-motoristas-online').textContent = '😔 Nenhum motorista disponível agora' 
+       document.getElementById('txt-motoristas-online').className = 'text-xs text-center text-red-400 py-1' 
+       return 
+     } 
+ 
+     const comLocalizacao = motoristas.filter(m => m.lat && m.lng) 
+ 
+     // Adiciona pins dos motoristas com localização 
+     comLocalizacao.forEach(m => { 
+       const marker = new google.maps.Marker({ 
+         position: { lat: parseFloat(m.lat), lng: parseFloat(m.lng) }, 
+         map, 
+         icon: { 
+           url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(` 
+             <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"> 
+               <circle cx="20" cy="20" r="18" fill="#2563eb" stroke="white" stroke-width="2"/> 
+               <text x="20" y="26" text-anchor="middle" font-size="20" fill="white">🚗</text> 
+             </svg> 
+           `), 
+           scaledSize: new google.maps.Size(40, 40), 
+           anchor: new google.maps.Point(20, 20) 
+         }, 
+         title: `${m.nome} — ${m.carro}` 
+       }) 
+ 
+       const infoWindow = new google.maps.InfoWindow({ 
+         content: ` 
+           <div style="font-size:13px;padding:4px"> 
+             <p style="font-weight:bold;margin:0">${m.nome}</p> 
+             <p style="color:#666;margin:2px 0">${m.carro}</p> 
+             <p style="color:#f59e0b;margin:0">${'★'.repeat(Math.round(m.media || 0))} ${Number(m.media || 0).toFixed(1)}</p> 
+             <p style="color:#16a34a;font-size:11px;margin:2px 0">${m.viagens} viagens</p> 
+           </div> 
+         ` 
+       }) 
+ 
+       marker.addListener('click', () => { 
+         infoWindow.open(map, marker) 
+       }) 
+ 
+       marcadoresMotoristas.push(marker) 
+     }) 
+ 
+     const total = motoristas.length 
+     const txt = document.getElementById('txt-motoristas-online') 
+     txt.textContent = `🟢 ${total} motorista${total > 1 ? 's' : ''} disponível${total > 1 ? 'is' : ''} agora` 
+     txt.className = 'text-xs text-center text-green-600 py-1 font-medium' 
+ 
+   } catch(e) { 
+     console.error('[MOTORISTAS ONLINE]', e) 
+   } 
  } 
  
  function setupAutocomplete(inputId, tipo) { 

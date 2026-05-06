@@ -160,33 +160,44 @@ export function initBot() {
         // Link da corrida e rota 
         const link = `${process.env.BASE_URL}/r/${ride.token}` 
  
-        const mapsLink = (ride.origem_lat && ride.destino_lat) 
+        let clienteNome = 'Passageiro' 
+        if (ride.client_id) { 
+          const clientResult = await dbQuery('SELECT nome FROM clients WHERE id = $1', [ride.client_id]) 
+          const client = clientResult.rows[0] 
+          if (client?.nome) clienteNome = client.nome 
+        } 
+ 
+        const linkNavegar = (ride.origem_lat && ride.origem_lng) 
+          ? `https://www.google.com/maps/dir/?api=1&destination=${ride.origem_lat},${ride.origem_lng}&travelmode=driving` 
+          : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(ride.origem)}&travelmode=driving` 
+ 
+        const linkRota = (ride.origem_lat && ride.destino_lat) 
           ? `https://www.google.com/maps/dir/?api=1&origin=${ride.origem_lat},${ride.origem_lng}&destination=${ride.destino_lat},${ride.destino_lng}&travelmode=driving` 
           : `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(ride.origem)}&destination=${encodeURIComponent(ride.destino)}&travelmode=driving` 
  
         const msgMotorista = ` 
  🚗 *Corrida aceita! Bom trabalho!* 
  
+ 👤 Passageiro: *${clienteNome}* 
  📍 Origem: ${ride.origem} 
  🏁 Destino: ${ride.destino} 
  💰 Valor total: R$ ${Number(ride.valor).toFixed(2)} 
  👨‍✈️ Seu recebimento: R$ ${Number(ride.valor_motorista || ride.valor * 0.70).toFixed(2)} 
  
- ⚠️ *IMPORTANTE: Compartilhe sua localização ao vivo aqui no bot para o passageiro acompanhar você em tempo real.* 
- 
- Como compartilhar: 
- 1️⃣ Clique no 📎 (clipe) 
- 2️⃣ Toque em Localização 
- 3️⃣ Selecione "Compartilhar localização ao vivo" 
- 4️⃣ Escolha 1 hora e confirme 
+ ⚠️ Compartilhe sua localização ao vivo aqui no bot para o passageiro acompanhar você em tempo real. 
          `.trim() 
  
         bot.sendMessage(from.id, msgMotorista, { 
           parse_mode: 'Markdown', 
           reply_markup: { 
-            inline_keyboard: [[ 
-              { text: '🗺️ Abrir rota no Google Maps', url: mapsLink } 
-            ]] 
+            inline_keyboard: [ 
+              [ 
+                { text: '🧭 Navegar até o passageiro', url: linkNavegar } 
+              ], 
+              [ 
+                { text: '🗺️ Ver rota completa (origem → destino)', url: linkRota } 
+              ] 
+            ] 
           } 
         }).catch(() => { 
           console.warn(`[BOT] Motorista ${from.id} não iniciou o bot privado.`) 

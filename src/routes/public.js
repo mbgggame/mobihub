@@ -421,6 +421,36 @@ export default async function publicRoutes(fastify) {
     return { mensagem: 'Foto atualizada com sucesso!' } 
   }) 
  
+  // Motoristas online com localização 
+  fastify.get('/api/motoristas-online', async (request, reply) => { 
+    const motoristas = (await query(` 
+      SELECT 
+        d.id, d.nome, d.modelo_carro, d.cor_carro, d.ano_carro, 
+        d.media_avaliacao, d.total_viagens, 
+        dl.lat, dl.lng, dl.updated_at as location_updated 
+      FROM drivers d 
+      LEFT JOIN driver_locations dl ON dl.id = ( 
+        SELECT id FROM driver_locations 
+        WHERE driver_id = d.id 
+        ORDER BY updated_at DESC LIMIT 1 
+      ) 
+      WHERE d.ativo = 1 
+      AND d.online = 1 
+      AND d.status_cadastro = 'aprovado' 
+    `)).rows 
+ 
+    return motoristas.map(m => ({ 
+      id: m.id, 
+      nome: m.nome.split(' ')[0], // Só o primeiro nome 
+      carro: `${m.modelo_carro} ${m.cor_carro}`, 
+      media: m.media_avaliacao, 
+      viagens: m.total_viagens, 
+      lat: m.lat || null, 
+      lng: m.lng || null, 
+      tem_localizacao: !!(m.lat && m.lng) 
+    })) 
+  }) 
+ 
   // Verificar validade do convite 
   fastify.get('/api/convite/:token', async (request, reply) => { 
     const result = await query( 
