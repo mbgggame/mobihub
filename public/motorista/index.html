@@ -1,661 +1,342 @@
 <!DOCTYPE html> 
- <html lang="pt-BR"> 
- <head> 
-   <meta charset="UTF-8"/> 
-   <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
-   <title>MobiHub — Meu Painel</title> 
-   <script src="https://cdn.tailwindcss.com"></script> 
-   <style> 
-     #video-camera { width:100%; max-height:220px; object-fit:cover; background:#000; border-radius:12px; } 
-     #canvas-hidden { display:none; } 
-   </style> 
- </head> 
- <body class="bg-gray-50 min-h-screen pb-10"> 
- 
- <div class="bg-green-600 text-white px-4 py-3 flex items-center justify-between shadow"> 
-   <div class="flex items-center gap-2"> 
-     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"> 
-       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/> 
-     </svg> 
-     <span class="font-bold text-lg">MobiHub</span> 
-   </div> 
-   <span class="text-green-200 text-sm">Painel do Motorista</span> 
- </div> 
- 
- <div class="max-w-lg mx-auto px-4 py-4 space-y-4"> 
- 
-   <!-- PERFIL --> 
-   <div class="bg-white border border-gray-200 rounded-xl p-5"> 
-     <div class="flex flex-col items-center mb-4"> 
-       <div class="relative mb-3"> 
-         <div id="avatar-placeholder" 
-           class="w-24 h-24 rounded-full bg-green-100 border-4 border-green-500 flex items-center justify-center text-green-700 font-bold text-3xl"> 
-         </div> 
-         <img id="foto-atual" src="" alt="Foto" 
-           class="hidden w-24 h-24 rounded-full object-cover border-4 border-green-500"/> 
-         <button onclick="toggleFotoOpcoes()" 
-           class="absolute bottom-0 right-0 w-8 h-8 bg-green-600 rounded-full flex items-center justify-center shadow-lg hover:bg-green-700"> 
-           <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"> 
-             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/> 
-             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/> 
-           </svg> 
-         </button> 
-       </div> 
-       <h1 id="nome-motorista" class="text-xl font-bold text-gray-900"></h1> 
-       <p id="carro-motorista" class="text-sm text-gray-500 mt-0.5"></p> 
-       <p id="placa-motorista" class="text-xs text-gray-400 font-mono mt-0.5"></p> 
-       <div class="flex items-center gap-2 mt-2"> 
-         <span id="stars-motorista" class="text-yellow-400 text-xl"></span> 
-         <span id="media-motorista" class="text-sm text-gray-600 font-medium"></span> 
-       </div> 
-     </div> 
- 
-     <!-- Opções foto --> 
-     <div id="opcoes-foto" class="hidden mb-4"> 
-       <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-2"> 
-         <p class="text-xs font-medium text-gray-600 mb-2">Atualizar foto de perfil</p> 
-         <button onclick="abrirCamera()" 
-           class="w-full flex items-center gap-3 bg-white border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:border-green-300"> 
-           📷 Tirar foto agora 
-         </button> 
-         <button onclick="document.getElementById('input-foto').click()" 
-           class="w-full flex items-center gap-3 bg-white border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:border-green-300"> 
-           🖼️ Escolher da galeria 
-         </button> 
-         <button onclick="toggleFotoOpcoes()" 
-           class="w-full text-center text-xs text-gray-400 py-1 hover:text-gray-600"> 
-           Cancelar 
-         </button> 
-       </div> 
-     </div> 
- 
-     <input id="input-foto" type="file" accept="image/*" class="hidden" onchange="processarArquivo(event)"/> 
-     <canvas id="canvas-hidden"></canvas> 
- 
-     <!-- Câmera --> 
-     <div id="area-camera" class="hidden mb-4"> 
-       <video id="video-camera" autoplay playsinline></video> 
-       <div class="flex gap-2 mt-2"> 
-         <button onclick="capturarFoto()" 
-           class="flex-1 bg-green-600 text-white rounded-xl py-2.5 font-semibold text-sm"> 
-           📸 Capturar 
-         </button> 
-         <button onclick="fecharCamera()" 
-           class="flex-1 bg-white border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm"> 
-           Cancelar 
-         </button> 
-       </div> 
-     </div> 
- 
-     <!-- Preview nova foto --> 
-     <div id="area-preview" class="hidden mb-4"> 
-       <p class="text-sm font-medium text-gray-700 mb-2 text-center">Preview</p> 
-       <div class="flex justify-center mb-3"> 
-         <img id="preview-nova" src="" class="w-28 h-28 rounded-full object-cover border-4 border-green-400"/> 
-       </div> 
-       <div class="flex gap-2"> 
-         <button onclick="salvarFoto()" 
-           class="flex-1 bg-green-600 text-white rounded-xl py-2.5 font-semibold text-sm"> 
-           ✅ Salvar foto 
-         </button> 
-         <button onclick="descartarFoto()" 
-           class="flex-1 bg-white border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm"> 
-           Descartar 
-         </button> 
-       </div> 
-     </div> 
-   </div> 
- 
-   <!-- STATUS ONLINE/OFFLINE --> 
-   <div class="bg-white border border-gray-200 rounded-xl p-4"> 
-     <div class="flex items-center justify-between"> 
-       <div> 
-         <p class="text-sm font-semibold text-gray-800" id="txt-status-online">Carregando...</p> 
-         <p class="text-xs text-gray-400 mt-0.5" id="txt-status-desc"></p> 
-       </div> 
-       <button id="btn-toggle-online" onclick="toggleOnline()" 
-         class="px-4 py-2 rounded-xl text-sm font-semibold transition-all"> 
-       </button> 
-     </div> 
-   </div> 
- 
-   <!-- ESTATÍSTICAS --> 
-   <div class="grid grid-cols-2 gap-3"> 
-     <div class="bg-white border border-gray-200 rounded-xl p-4 text-center"> 
-       <p id="stat-viagens" class="text-2xl font-bold text-green-700">—</p> 
-       <p class="text-xs text-gray-500 mt-0.5">Viagens concluídas</p> 
-     </div> 
-     <div class="bg-white border border-gray-200 rounded-xl p-4 text-center"> 
-       <p id="stat-aval" class="text-2xl font-bold text-yellow-500">—</p> 
-       <p class="text-xs text-gray-500 mt-0.5">Avaliações recebidas</p> 
-     </div> 
-   </div> 
- 
-   <!-- VEÍCULOS --> 
-   <div class="bg-white border border-gray-200 rounded-xl p-4"> 
-     <div class="flex items-center justify-between mb-3"> 
-       <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Meus veículos</p> 
-       <button onclick="toggleFormVeiculo()" 
-         class="text-xs text-green-600 border border-green-300 rounded-lg px-3 py-1.5 hover:bg-green-50"> 
-         + Adicionar 
-       </button> 
-     </div> 
- 
-     <!-- Formulário novo veículo --> 
-     <div id="form-veiculo" class="hidden bg-gray-50 border border-gray-200 rounded-xl p-3 mb-3 space-y-2"> 
-       <p class="text-xs font-medium text-gray-600">Novo veículo</p> 
-       <div class="grid grid-cols-2 gap-2"> 
-         <div> 
-           <label class="text-xs text-gray-400">Modelo</label> 
-           <input id="v-modelo" type="text" placeholder="Ex: BYD King GS" 
-             class="mt-0.5 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-         </div> 
-         <div> 
-           <label class="text-xs text-gray-400">Ano</label> 
-           <input id="v-ano" type="text" placeholder="Ex: 2024" 
-             class="mt-0.5 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-         </div> 
-         <div> 
-           <label class="text-xs text-gray-400">Cor</label> 
-           <input id="v-cor" type="text" placeholder="Ex: Prata" 
-             class="mt-0.5 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-         </div> 
-         <div> 
-           <label class="text-xs text-gray-400">Placa</label> 
-           <input id="v-placa" type="text" placeholder="Ex: SGZ2D22" 
-             class="mt-0.5 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-         </div> 
-       </div> 
-       <div id="erro-veiculo" class="hidden text-xs text-red-600 bg-red-50 rounded px-2 py-1"></div> 
-       <div class="flex gap-2"> 
-         <button onclick="adicionarVeiculo()" 
-           class="flex-1 bg-green-600 text-white rounded-lg py-2 text-sm font-medium"> 
-           Salvar veículo 
-         </button> 
-         <button onclick="toggleFormVeiculo()" 
-           class="flex-1 bg-white border border-gray-200 text-gray-600 rounded-lg py-2 text-sm"> 
-           Cancelar 
-         </button> 
-       </div> 
-     </div> 
- 
-     <!-- Lista de veículos --> 
-     <div id="lista-veiculos" class="space-y-2"></div> 
-   </div> 
- 
-   <!-- GANHOS --> 
-   <div class="bg-white border border-gray-200 rounded-xl p-4"> 
-     <p class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-3">Seus ganhos</p> 
-     <div class="grid grid-cols-3 gap-3"> 
-       <div class="bg-green-50 rounded-lg p-3 text-center"> 
-         <p id="ganhos-hoje" class="text-lg font-bold text-green-700">—</p> 
-         <p class="text-xs text-green-600 mt-0.5">Hoje</p> 
-       </div> 
-       <div class="bg-blue-50 rounded-lg p-3 text-center"> 
-         <p id="ganhos-semana" class="text-lg font-bold text-blue-700">—</p> 
-         <p class="text-xs text-blue-600 mt-0.5">Semana</p> 
-       </div> 
-       <div class="bg-purple-50 rounded-lg p-3 text-center"> 
-         <p id="ganhos-mes" class="text-lg font-bold text-purple-700">—</p> 
-         <p class="text-xs text-purple-600 mt-0.5">Mês</p> 
-       </div> 
-     </div> 
-     <div class="mt-3 pt-3 border-t border-gray-100 text-center"> 
-       <p class="text-xs text-gray-400">Total acumulado</p> 
-       <p id="ganhos-total" class="text-xl font-bold text-gray-800 mt-0.5">—</p> 
-     </div> 
-   </div> 
- 
-   <!-- HISTÓRICO DE CORRIDAS --> 
-   <div class="bg-white border border-gray-200 rounded-xl p-4"> 
-     <p class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-3">Histórico de corridas</p> 
-     <div id="lista-corridas" class="space-y-2"></div> 
-   </div> 
- 
-   <!-- AVALIAÇÕES RECEBIDAS --> 
-   <div class="bg-white border border-gray-200 rounded-xl p-4"> 
-     <p class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-3">Avaliações recebidas</p> 
-     <p class="text-xs text-gray-400 mb-3">As avaliações são anônimas</p> 
-     <div id="lista-avaliacoes" class="space-y-3"></div> 
-   </div> 
- 
- </div> 
- 
-<script> 
- const tokenMotorista = location.pathname.split('/motorista/')[1] 
- let novaFotoBase64 = null 
- let streamCamera = null 
- 
- function estrelas(media) { 
-   if (!media) return '☆☆☆☆☆' 
-   const cheias = Math.round(media) 
-   return '★'.repeat(cheias) + '☆'.repeat(5 - cheias) 
- } 
- 
- function moeda(val) { 
-   return `R$ ${Number(val || 0).toFixed(2)}` 
- } 
- 
- async function carregar() { 
-   try { 
-     const r = await fetch(`/api/motorista/${tokenMotorista}`) 
-     if (!r.ok) { 
-       document.body.innerHTML = ` 
-         <div class="flex items-center justify-center min-h-screen px-4"> 
-           <div class="text-center"> 
-             <p class="text-4xl mb-4">🚗</p> 
-             <p class="text-gray-600 font-medium">Perfil não encontrado</p> 
-             <p class="text-gray-400 text-sm mt-1">Verifique o link enviado pelo bot</p> 
-           </div> 
-         </div>` 
-       return 
-     } 
-     const { driver, corridas, comentarios, financeiro } = await r.json() 
-     renderizarPerfil(driver) 
-     renderizarFinanceiro(financeiro) 
-     renderizarCorridas(corridas) 
-     renderizarAvaliacoes(comentarios) 
-     carregarVeiculos() 
-   } catch(e) { 
-     console.error(e) 
-   } 
- } 
- 
- function renderizarPerfil(driver) { 
-   const placeholder = document.getElementById('avatar-placeholder') 
-   const fotoAtual = document.getElementById('foto-atual') 
- 
-   if (driver.foto_base64) { 
-     placeholder.classList.add('hidden') 
-     fotoAtual.src = driver.foto_base64 
-     fotoAtual.classList.remove('hidden') 
-   } else { 
-     placeholder.textContent = driver.nome.charAt(0).toUpperCase() 
-     placeholder.classList.remove('hidden') 
-     fotoAtual.classList.add('hidden') 
-   } 
- 
-   document.getElementById('nome-motorista').textContent = driver.nome 
-   document.getElementById('carro-motorista').textContent = 
-     `${driver.modelo_carro} ${driver.cor_carro} ${driver.ano_carro}` 
-   document.getElementById('placa-motorista').textContent = `Placa: ${driver.placa}` 
-   document.getElementById('stars-motorista').textContent = estrelas(driver.media_avaliacao) 
-   document.getElementById('media-motorista').textContent = driver.total_avaliacoes 
-     ? `${Number(driver.media_avaliacao).toFixed(1)} / 5.0 (${driver.total_avaliacoes} aval.)` 
-     : 'Sem avaliações ainda' 
-   document.getElementById('stat-viagens').textContent = driver.total_viagens || 0 
-   document.getElementById('stat-aval').textContent = driver.total_avaliacoes || 0 
- 
-   renderizarStatusOnline(driver) 
- } 
- 
- let motoristOnline = false 
- 
- function renderizarStatusOnline(driver) { 
-   motoristOnline = driver.online === 1 
-   const txt = document.getElementById('txt-status-online') 
-   const desc = document.getElementById('txt-status-desc') 
-   const btn = document.getElementById('btn-toggle-online') 
- 
-   if (motoristOnline) { 
-     txt.textContent = '🟢 Você está ONLINE' 
-     desc.textContent = 'Recebendo ofertas de corrida' 
-     btn.textContent = 'Ficar offline' 
-     btn.className = 'px-4 py-2 rounded-xl text-sm font-semibold bg-red-50 text-red-600 border border-red-200 hover:bg-red-100' 
-   } else { 
-     txt.textContent = '🔴 Você está OFFLINE' 
-     desc.textContent = 'Não está recebendo corridas' 
-     btn.textContent = 'Ficar online' 
-     btn.className = 'px-4 py-2 rounded-xl text-sm font-semibold bg-green-600 text-white hover:bg-green-700' 
-   } 
- } 
- 
- async function toggleOnline() { 
-   const novoStatus = !motoristOnline 
-   const btn = document.getElementById('btn-toggle-online') 
-   btn.textContent = 'Aguarde...' 
-   btn.disabled = true 
- 
-   try { 
-     const r = await fetch(`/api/motorista/${tokenMotorista}/online`, { 
-       method: 'PUT', 
-       headers: { 'Content-Type': 'application/json' }, 
-       body: JSON.stringify({ online: novoStatus ? 1 : 0 }) 
-     }) 
- 
-     if (r.ok) { 
-       motoristOnline = novoStatus 
-       renderizarStatusOnline({ online: novoStatus ? 1 : 0 }) 
-     } 
-   } catch(e) { 
-     alert('Erro de conexão') 
-   } 
-   btn.disabled = false 
- } 
- 
- function renderizarFinanceiro(f) { 
-   document.getElementById('ganhos-hoje').textContent = moeda(f?.ganhos_hoje) 
-   document.getElementById('ganhos-semana').textContent = moeda(f?.ganhos_semana) 
-   document.getElementById('ganhos-mes').textContent = moeda(f?.ganhos_mes) 
-   document.getElementById('ganhos-total').textContent = moeda(f?.ganhos_total) 
- } 
- 
- function renderizarCorridas(corridas) { 
-   const div = document.getElementById('lista-corridas') 
-   if (!corridas.length) { 
-     div.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">Nenhuma corrida ainda</p>' 
-     return 
-   } 
- 
-   const statusCls = { 
-     aberta:    'bg-blue-100 text-blue-700', 
-     aceita:    'bg-yellow-100 text-yellow-700', 
-     concluida: 'bg-green-100 text-green-700', 
-     cancelada: 'bg-red-100 text-red-700', 
-     agendada:  'bg-purple-100 text-purple-700' 
-   } 
- 
-   div.innerHTML = corridas.map(c => ` 
-     <div class="border border-gray-100 rounded-xl px-3 py-2.5"> 
-       <div class="flex items-start justify-between mb-1"> 
-         <div class="flex-1 min-w-0 mr-2"> 
-           <p class="text-sm text-gray-800 font-medium truncate"> 
-             ${c.origem.split(',')[0]} → ${c.destino.split(',')[0]} 
-           </p> 
-           <p class="text-xs text-gray-400 mt-0.5"> 
-             ${new Date(c.created_at).toLocaleDateString('pt-BR')} 
-             ${c.tipo === 'agendada' ? '• 🗓️ Agendada' : ''} 
-           </p> 
-         </div> 
-         <div class="text-right flex-shrink-0"> 
-           <span class="text-xs px-2 py-0.5 rounded-full font-medium ${statusCls[c.status] || 'bg-gray-100 text-gray-600'}"> 
-             ${c.status} 
-           </span> 
-           ${c.status === 'concluida' ? ` 
-             <p class="text-sm font-bold text-green-700 mt-1"> 
-               ${moeda(c.valor_motorista || c.valor * 0.70)} 
-             </p> 
-           ` : ''} 
-         </div> 
-       </div> 
-     </div> 
-   `).join('') 
- } 
- 
- function renderizarAvaliacoes(comentarios) { 
-   const div = document.getElementById('lista-avaliacoes') 
-   if (!comentarios.length) { 
-     div.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">Nenhuma avaliação ainda</p>' 
-     return 
-   } 
- 
-   div.innerHTML = comentarios.map(a => ` 
-     <div class="bg-gray-50 border border-gray-100 rounded-xl p-3"> 
-       <div class="flex items-center justify-between mb-1"> 
-         <span class="text-yellow-400 text-lg">${estrelas(a.stars_motorista)}</span> 
-         <span class="text-xs text-gray-400"> 
-           ${a.avaliado_em_cliente 
-             ? new Date(a.avaliado_em_cliente).toLocaleDateString('pt-BR') 
-             : ''} 
-         </span> 
-       </div> 
-       ${a.comentario_cliente ? ` 
-         <p class="text-sm text-gray-600 italic">"${a.comentario_cliente}"</p> 
-       ` : '<p class="text-xs text-gray-400">Sem comentário</p>'} 
-     </div> 
-   `).join('') 
- } 
- 
- // ── FOTO ────────────────────────────────── 
- function toggleFotoOpcoes() { 
-   const div = document.getElementById('opcoes-foto') 
-   div.classList.toggle('hidden') 
- } 
- 
- async function abrirCamera() { 
-   document.getElementById('opcoes-foto').classList.add('hidden') 
-   try { 
-     streamCamera = await navigator.mediaDevices.getUserMedia({ 
-       video: { facingMode: 'user', width: 400, height: 400 }, audio: false 
-     }) 
-     document.getElementById('video-camera').srcObject = streamCamera 
-     document.getElementById('area-camera').classList.remove('hidden') 
-   } catch(e) { 
-     alert('Não foi possível acessar a câmera. Verifique as permissões do navegador.') 
-   } 
- } 
- 
- function fecharCamera() { 
-   if (streamCamera) { streamCamera.getTracks().forEach(t => t.stop()); streamCamera = null } 
-   document.getElementById('area-camera').classList.add('hidden') 
-   document.getElementById('video-camera').srcObject = null 
- } 
- 
- function capturarFoto() { 
-   const video = document.getElementById('video-camera') 
-   const canvas = document.getElementById('canvas-hidden') 
-   const size = 400 
-   canvas.width = size; canvas.height = size 
-   const ctx = canvas.getContext('2d') 
-   const vw = video.videoWidth, vh = video.videoHeight 
-   const lado = Math.min(vw, vh) 
-   ctx.drawImage(video, (vw-lado)/2, (vh-lado)/2, lado, lado, 0, 0, size, size) 
-   novaFotoBase64 = canvas.toDataURL('image/jpeg', 0.85) 
-   document.getElementById('preview-nova').src = novaFotoBase64 
-   document.getElementById('area-preview').classList.remove('hidden') 
-   fecharCamera() 
- } 
- 
- function processarArquivo(event) { 
-   const file = event.target.files[0] 
-   if (!file) return 
-   document.getElementById('opcoes-foto').classList.add('hidden') 
-   const reader = new FileReader() 
-   reader.onload = e => { 
-     const img = new Image() 
-     img.onload = () => { 
-       const canvas = document.getElementById('canvas-hidden') 
-       const size = 400 
-       canvas.width = size; canvas.height = size 
-       const ctx = canvas.getContext('2d') 
-       const lado = Math.min(img.width, img.height) 
-       ctx.drawImage(img, (img.width-lado)/2, (img.height-lado)/2, lado, lado, 0, 0, size, size) 
-       novaFotoBase64 = canvas.toDataURL('image/jpeg', 0.85) 
-       document.getElementById('preview-nova').src = novaFotoBase64 
-       document.getElementById('area-preview').classList.remove('hidden') 
-     } 
-     img.src = e.target.result 
-   } 
-   reader.readAsDataURL(file) 
-   event.target.value = '' 
- } 
- 
- function descartarFoto() { 
-   novaFotoBase64 = null 
-   document.getElementById('area-preview').classList.add('hidden') 
-   document.getElementById('preview-nova').src = '' 
- } 
- 
- async function salvarFoto() { 
-   if (!novaFotoBase64) return 
-   const btn = document.querySelector('#area-preview button') 
-   btn.textContent = 'Salvando...' 
-   btn.disabled = true 
- 
-   try { 
-     const r = await fetch(`/api/motorista/${tokenMotorista}/foto`, { 
-       method: 'PUT', 
-       headers: { 'Content-Type': 'application/json' }, 
-       body: JSON.stringify({ foto_base64: novaFotoBase64 }) 
-     }) 
- 
-     if (!r.ok) { 
-       alert('Erro ao salvar foto.') 
-       btn.textContent = '✅ Salvar foto' 
-       btn.disabled = false 
-       return 
-     } 
- 
-     // Atualiza foto na tela 
-     const placeholder = document.getElementById('avatar-placeholder') 
-     const fotoAtual = document.getElementById('foto-atual') 
-     placeholder.classList.add('hidden') 
-     fotoAtual.src = novaFotoBase64 
-     fotoAtual.classList.remove('hidden') 
- 
-     descartarFoto() 
-     alert('✅ Foto atualizada!') 
-   } catch(e) { 
-     alert('Erro de conexão.') 
-     btn.textContent = '✅ Salvar foto' 
-     btn.disabled = false 
-   } 
- } 
- 
- async function carregarVeiculos() { 
-   try { 
-     const r = await fetch(`/api/motorista/${tokenMotorista}/veiculos`) 
-     if (!r.ok) return 
-     const veiculos = await r.json() 
-     renderizarVeiculos(veiculos) 
-   } catch(e) { 
-     console.error('[VEICULOS]', e) 
-   } 
- } 
- 
- function renderizarVeiculos(veiculos) { 
-   const div = document.getElementById('lista-veiculos') 
-   if (!veiculos.length) { 
-     div.innerHTML = '<p class="text-xs text-gray-400 text-center py-2">Nenhum veículo cadastrado</p>' 
-     return 
-   } 
- 
-   div.innerHTML = veiculos.map(v => ` 
-     <div class="border ${v.ativo ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-white'} rounded-xl px-3 py-2.5"> 
-       <div class="flex items-center justify-between"> 
-         <div class="flex-1 min-w-0"> 
-           <div class="flex items-center gap-2"> 
-             <span class="text-sm">🚗</span> 
-             <p class="text-sm font-semibold text-gray-900 truncate"> 
-               ${v.modelo} ${v.cor} ${v.ano} 
-             </p> 
-             ${v.ativo ? '<span class="text-xs px-2 py-0.5 bg-green-600 text-white rounded-full">ATIVO</span>' : ''} 
-           </div> 
-           <p class="text-xs text-gray-500 font-mono mt-0.5 ml-6">${v.placa}</p> 
-         </div> 
-         <div class="flex gap-1 ml-2"> 
-           ${!v.ativo ? ` 
-             <button onclick="ativarVeiculo(${v.id})" 
-               class="text-xs text-green-600 border border-green-300 rounded-lg px-2 py-1 hover:bg-green-50 whitespace-nowrap"> 
-               Usar este 
-             </button> 
-           ` : ''} 
-           ${!v.ativo ? ` 
-             <button onclick="removerVeiculo(${v.id}, '${v.modelo} ${v.placa}')" 
-               class="text-xs text-red-400 border border-red-200 rounded-lg px-2 py-1 hover:bg-red-50"> 
-               🗑️ 
-             </button> 
-           ` : ''} 
-         </div> 
-       </div> 
-     </div> 
-   `).join('') 
- } 
- 
- function toggleFormVeiculo() { 
-   const form = document.getElementById('form-veiculo') 
-   form.classList.toggle('hidden') 
-   if (!form.classList.contains('hidden')) { 
-     document.getElementById('v-modelo').focus() 
-   } 
- } 
- 
- async function adicionarVeiculo() { 
-   const modelo = document.getElementById('v-modelo').value.trim() 
-   const ano = document.getElementById('v-ano').value.trim() 
-   const cor = document.getElementById('v-cor').value.trim() 
-   const placa = document.getElementById('v-placa').value.trim() 
-   const erro = document.getElementById('erro-veiculo') 
- 
-   if (!modelo || !ano || !cor || !placa) { 
-     erro.textContent = 'Preencha todos os campos' 
-     erro.classList.remove('hidden') 
-     return 
-   } 
-   erro.classList.add('hidden') 
- 
-   try { 
-     const r = await fetch(`/api/motorista/${tokenMotorista}/veiculos`, { 
-       method: 'POST', 
-       headers: { 'Content-Type': 'application/json' }, 
-       body: JSON.stringify({ modelo, ano, cor, placa }) 
-     }) 
-     const d = await r.json() 
- 
-     if (!r.ok) { 
-       erro.textContent = d.error || 'Erro ao cadastrar' 
-       erro.classList.remove('hidden') 
-       return 
-     } 
- 
-     // Limpa o formulário 
-     document.getElementById('v-modelo').value = '' 
-     document.getElementById('v-ano').value = '' 
-     document.getElementById('v-cor').value = '' 
-     document.getElementById('v-placa').value = '' 
-     document.getElementById('form-veiculo').classList.add('hidden') 
- 
-     alert('✅ Veículo cadastrado!') 
-     carregarVeiculos() 
-   } catch(e) { 
-     erro.textContent = 'Erro de conexão' 
-     erro.classList.remove('hidden') 
-   } 
- } 
- 
- async function ativarVeiculo(vehicleId) { 
-   try { 
-     const r = await fetch(`/api/motorista/${tokenMotorista}/veiculos/${vehicleId}/ativar`, { 
-       method: 'PUT', 
-       headers: { 'Authorization': `Bearer ${tokenMotorista}` } 
-     }) 
-     const d = await r.json() 
- 
-     if (!r.ok) { 
-       alert('Erro: ' + d.error) 
-       return 
-     } 
- 
-     alert('✅ ' + d.mensagem) 
-     carregarVeiculos() 
-     carregar() // Atualiza o perfil 
-   } catch(e) { 
-     alert('Erro de conexão') 
-   } 
- } 
- 
- async function removerVeiculo(vehicleId, nome) { 
-   if (!confirm(`Remover "${nome}"?`)) return 
- 
-   try { 
-     const r = await fetch(`/api/motorista/${tokenMotorista}/veiculos/${vehicleId}`, { 
-       method: 'DELETE' 
-     }) 
-     const d = await r.json() 
- 
-     if (!r.ok) { 
-       alert('Erro: ' + d.error) 
-       return 
-     } 
- 
-     alert('Veículo removido!') 
-     carregarVeiculos() 
-   } catch(e) { 
-     alert('Erro de conexão') 
-   } 
- } 
- 
- carregar() 
- </script> 
- </body> 
- </html> 
+<html lang="pt-BR"> 
+<head> 
+  <meta charset="UTF-8"/> 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
+  <title>MobiHub — Motorista</title> 
+  <script src="https://cdn.tailwindcss.com"></script> 
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/> 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script> 
+  <style> 
+    #video-camera { width:100%; max-height:220px; object-fit:cover; background:#000; border-radius:12px; } 
+    #canvas-hidden { display:none; } 
+    #map-corrida { height: 250px; } 
+    .aba-btn { transition: all 0.2s; } 
+    .aba-ativa { border-bottom: 3px solid #16a34a; color: #16a34a; font-weight: 600; } 
+    .pulse-ring { 
+      animation: pulseRing 1.5s infinite; 
+    } 
+    @keyframes pulseRing { 
+      0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.4); } 
+      70% { box-shadow: 0 0 0 15px rgba(22, 163, 74, 0); } 
+      100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); } 
+    } 
+  </style> 
+</head> 
+<body class="bg-gray-50 min-h-screen pb-20"> 
+
+<!-- HEADER --> 
+<div class="bg-green-600 text-white px-4 py-3 flex items-center justify-between shadow sticky top-0 z-20"> 
+  <div class="flex items-center gap-2"> 
+    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"> 
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/> 
+    </svg> 
+    <span class="font-bold text-lg">MobiHub</span> 
+  </div> 
+  <div class="flex items-center gap-2"> 
+    <span id="badge-online" class="hidden text-xs px-2 py-0.5 rounded-full bg-green-500 text-white border border-green-300">● Online</span> 
+    <span id="badge-offline" class="text-xs px-2 py-0.5 rounded-full bg-red-500 text-white">○ Offline</span> 
+  </div> 
+</div> 
+
+<!-- ABAS --> 
+<div class="bg-white border-b border-gray-200 sticky top-12 z-10"> 
+  <div class="flex"> 
+    <button onclick="mudarAba('painel')" id="aba-painel" 
+      class="aba-btn aba-ativa flex-1 py-3 text-sm text-center text-gray-600"> 
+      👤 Painel 
+    </button> 
+    <button onclick="mudarAba('corridas')" id="aba-corridas" 
+      class="aba-btn flex-1 py-3 text-sm text-center text-gray-600 relative"> 
+      🚗 Corridas 
+      <span id="badge-nova-corrida" class="hidden absolute top-1 right-4 w-2 h-2 bg-red-500 rounded-full"></span> 
+    </button> 
+    <button onclick="mudarAba('historico')" id="aba-historico" 
+      class="aba-btn flex-1 py-3 text-sm text-center text-gray-600"> 
+      📊 Histórico 
+    </button> 
+  </div> 
+</div> 
+
+<!-- ═══════════════ ABA PAINEL ═══════════════ --> 
+<div id="tab-painel" class="max-w-lg mx-auto px-4 py-4 space-y-4"> 
+
+  <!-- PERFIL --> 
+  <div class="bg-white border border-gray-200 rounded-xl p-5"> 
+    <div class="flex flex-col items-center mb-4"> 
+      <div class="relative mb-3"> 
+        <div id="avatar-placeholder" 
+          class="w-24 h-24 rounded-full bg-green-100 border-4 border-green-500 flex items-center justify-center text-green-700 font-bold text-3xl"> 
+        </div> 
+        <img id="foto-atual" src="" alt="Foto" 
+          class="hidden w-24 h-24 rounded-full object-cover border-4 border-green-500"/> 
+        <button onclick="toggleFotoOpcoes()" 
+          class="absolute bottom-0 right-0 w-8 h-8 bg-green-600 rounded-full flex items-center justify-center shadow-lg"> 
+          <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"> 
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/> 
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/> 
+          </svg> 
+        </button> 
+      </div> 
+      <h1 id="nome-motorista" class="text-xl font-bold text-gray-900"></h1> 
+      <div class="flex items-center gap-2 mt-1"> 
+        <span id="stars-motorista" class="text-yellow-400 text-lg"></span> 
+        <span id="media-motorista" class="text-sm text-gray-500"></span> 
+      </div> 
+    </div> 
+
+    <!-- Opções foto --> 
+    <div id="opcoes-foto" class="hidden mb-4"> 
+      <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-2"> 
+        <button onclick="abrirCamera()" 
+          class="w-full flex items-center gap-3 bg-white border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50"> 
+          📷 Tirar foto agora 
+        </button> 
+        <button onclick="document.getElementById('input-foto').click()" 
+          class="w-full flex items-center gap-3 bg-white border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50"> 
+          🖼️ Escolher da galeria 
+        </button> 
+        <button onclick="toggleFotoOpcoes()" 
+          class="w-full text-center text-xs text-gray-400 py-1">Cancelar</button> 
+      </div> 
+    </div> 
+
+    <input id="input-foto" type="file" accept="image/*" class="hidden" onchange="processarArquivo(event)"/> 
+    <canvas id="canvas-hidden"></canvas> 
+
+    <div id="area-camera" class="hidden mb-4"> 
+      <video id="video-camera" autoplay playsinline></video> 
+      <div class="flex gap-2 mt-2"> 
+        <button onclick="capturarFoto()" class="flex-1 bg-green-600 text-white rounded-xl py-2.5 font-semibold text-sm">📸 Capturar</button> 
+        <button onclick="fecharCamera()" class="flex-1 bg-white border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm">Cancelar</button> 
+      </div> 
+    </div> 
+
+    <div id="area-preview" class="hidden mb-4"> 
+      <div class="flex justify-center mb-3"> 
+        <img id="preview-nova" src="" class="w-28 h-28 rounded-full object-cover border-4 border-green-400"/> 
+      </div> 
+      <div class="flex gap-2"> 
+        <button onclick="salvarFoto()" class="flex-1 bg-green-600 text-white rounded-xl py-2.5 font-semibold text-sm">✅ Salvar</button> 
+        <button onclick="descartarFoto()" class="flex-1 bg-white border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm">Descartar</button> 
+      </div> 
+    </div> 
+  </div> 
+
+  <!-- STATUS ONLINE/OFFLINE --> 
+  <div class="bg-white border border-gray-200 rounded-xl p-4"> 
+    <div class="flex items-center justify-between"> 
+      <div> 
+        <p class="text-sm font-semibold text-gray-800" id="txt-status-online">Carregando...</p> 
+        <p class="text-xs text-gray-400 mt-0.5" id="txt-status-desc"></p> 
+      </div> 
+      <button id="btn-toggle-online" onclick="toggleOnline()" 
+        class="px-4 py-2 rounded-xl text-sm font-semibold transition-all"> 
+      </button> 
+    </div> 
+  </div> 
+
+  <!-- GANHOS --> 
+  <div class="bg-white border border-gray-200 rounded-xl p-4"> 
+    <p class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-3">Seus ganhos</p> 
+    <div class="grid grid-cols-3 gap-3"> 
+      <div class="bg-green-50 rounded-lg p-3 text-center"> 
+        <p id="ganhos-hoje" class="text-lg font-bold text-green-700">—</p> 
+        <p class="text-xs text-green-600 mt-0.5">Hoje</p> 
+      </div> 
+      <div class="bg-blue-50 rounded-lg p-3 text-center"> 
+        <p id="ganhos-semana" class="text-lg font-bold text-blue-700">—</p> 
+        <p class="text-xs text-blue-600 mt-0.5">Semana</p> 
+      </div> 
+      <div class="bg-purple-50 rounded-lg p-3 text-center"> 
+        <p id="ganhos-mes" class="text-lg font-bold text-purple-700">—</p> 
+        <p class="text-xs text-purple-600 mt-0.5">Mês</p> 
+      </div> 
+    </div> 
+    <div class="mt-3 pt-3 border-t border-gray-100 text-center"> 
+      <p class="text-xs text-gray-400">Total acumulado</p> 
+      <p id="ganhos-total" class="text-xl font-bold text-gray-800 mt-0.5">—</p> 
+    </div> 
+  </div> 
+
+  <!-- VEÍCULOS --> 
+  <div class="bg-white border border-gray-200 rounded-xl p-4"> 
+    <div class="flex items-center justify-between mb-3"> 
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Meus veículos</p> 
+      <button onclick="toggleFormVeiculo()" 
+        class="text-xs text-green-600 border border-green-300 rounded-lg px-3 py-1.5 hover:bg-green-50"> 
+        + Adicionar 
+      </button> 
+    </div> 
+
+    <div id="form-veiculo" class="hidden bg-gray-50 border border-gray-200 rounded-xl p-3 mb-3 space-y-2"> 
+      <p class="text-xs font-medium text-gray-600">Novo veículo</p> 
+      <div class="grid grid-cols-2 gap-2"> 
+        <div> 
+          <label class="text-xs text-gray-400">Modelo</label> 
+          <input id="v-modelo" type="text" placeholder="Ex: BYD King GS" 
+            class="mt-0.5 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+        </div> 
+        <div> 
+          <label class="text-xs text-gray-400">Ano</label> 
+          <input id="v-ano" type="text" placeholder="Ex: 2024" 
+            class="mt-0.5 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+        </div> 
+        <div> 
+          <label class="text-xs text-gray-400">Cor</label> 
+          <input id="v-cor" type="text" placeholder="Ex: Prata" 
+            class="mt-0.5 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+        </div> 
+        <div> 
+          <label class="text-xs text-gray-400">Placa</label> 
+          <input id="v-placa" type="text" placeholder="Ex: SGZ2D22" 
+            class="mt-0.5 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+        </div> 
+      </div> 
+      <div id="erro-veiculo" class="hidden text-xs text-red-600 bg-red-50 rounded px-2 py-1"></div> 
+      <div class="flex gap-2"> 
+        <button onclick="adicionarVeiculo()" class="flex-1 bg-green-600 text-white rounded-lg py-2 text-sm font-medium">Salvar</button> 
+        <button onclick="toggleFormVeiculo()" class="flex-1 bg-white border border-gray-200 text-gray-600 rounded-lg py-2 text-sm">Cancelar</button> 
+      </div> 
+    </div> 
+
+    <div id="lista-veiculos" class="space-y-2"></div> 
+  </div> 
+
+</div> 
+
+<!-- ═══════════════ ABA CORRIDAS ═══════════════ --> 
+<div id="tab-corridas" class="hidden max-w-lg mx-auto px-4 py-4 space-y-4"> 
+
+  <!-- NOVA CORRIDA DISPONÍVEL --> 
+  <div id="card-nova-corrida" class="hidden"> 
+    <div class="bg-white border-2 border-green-400 rounded-xl p-4 pulse-ring"> 
+      <div class="flex items-center justify-between mb-3"> 
+        <p class="text-sm font-bold text-green-700">🚗 Nova corrida disponível!</p> 
+        <span id="timer-corrida" class="text-xs text-gray-400 font-mono"></span> 
+      </div> 
+      <div class="space-y-1.5 mb-4"> 
+        <p class="text-sm text-gray-700"><span class="font-medium">📍 De:</span> <span id="corrida-origem"></span></p> 
+        <p class="text-sm text-gray-700"><span class="font-medium">🏁 Para:</span> <span id="corrida-destino"></span></p> 
+        <p class="text-sm text-gray-700"><span class="font-medium">👤 Passageiro:</span> <span id="corrida-passageiro"></span></p> 
+        <p class="text-sm text-gray-700"><span class="font-medium">💰 Valor:</span> <span id="corrida-valor" class="font-bold text-green-700"></span></p> 
+        <p class="text-sm text-gray-700"><span class="font-medium">👨‍✈️ Seu ganho:</span> <span id="corrida-ganho" class="font-bold text-blue-700"></span></p> 
+      </div> 
+      <div class="flex gap-2"> 
+        <button onclick="aceitarCorrida()" 
+          class="flex-1 bg-green-600 text-white rounded-xl py-3 font-bold text-sm hover:bg-green-700"> 
+          ✅ Aceitar 
+        </button> 
+        <button onclick="recusarCorrida()" 
+          class="flex-1 bg-red-50 text-red-600 border border-red-200 rounded-xl py-3 font-semibold text-sm hover:bg-red-100"> 
+          ❌ Recusar 
+        </button> 
+        <button onclick="ignorarCorrida()" 
+          class="bg-gray-100 text-gray-500 border border-gray-200 rounded-xl py-3 px-3 text-sm hover:bg-gray-200"> 
+          🔕 
+        </button> 
+      </div> 
+    </div> 
+  </div> 
+
+  <!-- CORRIDA EM ANDAMENTO --> 
+  <div id="card-corrida-ativa" class="hidden space-y-3"> 
+    <div class="bg-white border border-gray-200 rounded-xl p-4"> 
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-3">Corrida em andamento</p> 
+      <div class="space-y-1.5 mb-4"> 
+        <p class="text-sm text-gray-700"><span class="font-medium">📍 De:</span> <span id="ativa-origem"></span></p> 
+        <p class="text-sm text-gray-700"><span class="font-medium">🏁 Para:</span> <span id="ativa-destino"></span></p> 
+        <p class="text-sm font-bold text-green-700" id="ativa-valor"></p> 
+      </div> 
+
+      <!-- Status detalhado --> 
+      <div id="status-detalhe-motorista" class="bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 mb-3 hidden"> 
+        <p class="text-xs text-yellow-700 font-medium" id="txt-status-detalhe"></p> 
+        <p class="text-lg font-mono font-bold text-yellow-800 mt-0.5" id="txt-timer-motorista"></p> 
+      </div> 
+
+      <!-- Botões de controle --> 
+      <div class="grid grid-cols-2 gap-2"> 
+        <button onclick="acaoCorridaAtiva('chegou')" id="btn-chegou" 
+          class="bg-blue-50 text-blue-700 border border-blue-200 rounded-lg py-2.5 text-sm font-medium hover:bg-blue-100"> 
+          📍 Cheguei 
+        </button> 
+        <button onclick="acaoCorridaAtiva('embarcou')" id="btn-embarcou" 
+          class="bg-green-50 text-green-700 border border-green-200 rounded-lg py-2.5 text-sm font-medium hover:bg-green-100"> 
+          🚶 Embarcou 
+        </button> 
+        <button onclick="acaoCorrivaAtiva('parada')" id="btn-parada" 
+          class="bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-lg py-2.5 text-sm font-medium hover:bg-yellow-100"> 
+          ⏸️ Parar 
+        </button> 
+        <button onclick="acaoCorridaAtiva('finalizar')" 
+          class="bg-green-600 text-white rounded-lg py-2.5 text-sm font-bold hover:bg-green-700"> 
+          ✅ Finalizar 
+        </button> 
+      </div> 
+    </div> 
+
+    <!-- Mapa da corrida ativa --> 
+    <div class="bg-white border border-gray-200 rounded-xl overflow-hidden"> 
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wide px-4 pt-3 pb-2">Rota</p> 
+      <div id="map-corrida"></div> 
+      <div class="px-4 py-2 flex gap-2"> 
+        <a id="link-navegar" href="#" target="_blank" 
+          class="flex-1 text-center text-sm text-blue-600 border border-blue-200 rounded-lg py-2 hover:bg-blue-50"> 
+          🧭 Navegar até passageiro 
+        </a> 
+        <a id="link-rota-completa" href="#" target="_blank" 
+          class="flex-1 text-center text-sm text-green-600 border border-green-200 rounded-lg py-2 hover:bg-green-50"> 
+          🗺️ Rota completa 
+        </a> 
+      </div> 
+    </div> 
+  </div> 
+
+  <!-- SEM CORRIDA --> 
+  <div id="card-sem-corrida" class="bg-white border border-gray-200 rounded-xl p-8 text-center"> 
+    <p class="text-4xl mb-3">🚗</p> 
+    <p class="font-semibold text-gray-700" id="txt-aguardando">Aguardando corridas...</p> 
+    <p class="text-sm text-gray-400 mt-1" id="txt-aguardando-sub">Fique online para receber corridas</p> 
+  </div> 
+
+  <!-- AUDIO --> 
+  <audio id="audio-corrida" loop></audio> 
+
+</div> 
+
+<!-- ═══════════════ ABA HISTÓRICO ═══════════════ --> 
+<div id="tab-historico" class="hidden max-w-lg mx-auto px-4 py-4 space-y-4"> 
+
+  <!-- MÉDIA DA PLATAFORMA --> 
+  <div class="bg-white border border-gray-200 rounded-xl p-4 text-center"> 
+    <p class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-2">Sua avaliação na plataforma</p> 
+    <p id="hist-stars" class="text-3xl text-yellow-400">☆☆☆☆☆</p> 
+    <p id="hist-media" class="text-2xl font-bold text-gray-800 mt-1">—</p> 
+    <p id="hist-total-aval" class="text-xs text-gray-400 mt-0.5"></p> 
+    <p class="text-xs text-gray-300 mt-2">Avaliações fornecidas pelos passageiros via plataforma</p> 
+  </div> 
+
+  <!-- ESTATÍSTICAS --> 
+  <div class="grid grid-cols-2 gap-3"> 
+    <div class="bg-white border border-gray-200 rounded-xl p-4 text-center"> 
+      <p id="hist-viagens" class="text-2xl font-bold text-green-700">—</p> 
+      <p class="text-xs text-gray-500 mt-0.5">Viagens concluídas</p> 
+    </div> 
+    <div class="bg-white border border-gray-200 rounded-xl p-4 text-center"> 
+      <p id="hist-ganhos-total" class="text-2xl font-bold text-blue-700">—</p> 
+      <p class="text-xs text-gray-500 mt-0.5">Total ganho</p> 
+    </div> 
+  </div> 
+
+  <!-- HISTÓRICO DE CORRIDAS --> 
+  <div class="bg-white border border-gray-200 rounded-xl p-4"> 
+    <p class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-3">Corridas realizadas</p> 
+    <div id="hist-lista-corridas" class="space-y-2"></div> 
+  </div> 
+
+</div> 
+
+<!-- SCRIPT SERÁ ADICIONADO NO BLOCO 4 --> 
+</body> 
+</html>
