@@ -106,6 +106,19 @@
      </div> 
    </div> 
  
+   <!-- STATUS ONLINE/OFFLINE --> 
+   <div class="bg-white border border-gray-200 rounded-xl p-4"> 
+     <div class="flex items-center justify-between"> 
+       <div> 
+         <p class="text-sm font-semibold text-gray-800" id="txt-status-online">Carregando...</p> 
+         <p class="text-xs text-gray-400 mt-0.5" id="txt-status-desc"></p> 
+       </div> 
+       <button id="btn-toggle-online" onclick="toggleOnline()" 
+         class="px-4 py-2 rounded-xl text-sm font-semibold transition-all"> 
+       </button> 
+     </div> 
+   </div> 
+ 
    <!-- ESTATÍSTICAS --> 
    <div class="grid grid-cols-2 gap-3"> 
      <div class="bg-white border border-gray-200 rounded-xl p-4 text-center"> 
@@ -219,6 +232,52 @@
      : 'Sem avaliações ainda' 
    document.getElementById('stat-viagens').textContent = driver.total_viagens || 0 
    document.getElementById('stat-aval').textContent = driver.total_avaliacoes || 0 
+ 
+   renderizarStatusOnline(driver) 
+ } 
+ 
+ let motoristOnline = false 
+ 
+ function renderizarStatusOnline(driver) { 
+   motoristOnline = driver.online === 1 
+   const txt = document.getElementById('txt-status-online') 
+   const desc = document.getElementById('txt-status-desc') 
+   const btn = document.getElementById('btn-toggle-online') 
+ 
+   if (motoristOnline) { 
+     txt.textContent = '🟢 Você está ONLINE' 
+     desc.textContent = 'Recebendo ofertas de corrida' 
+     btn.textContent = 'Ficar offline' 
+     btn.className = 'px-4 py-2 rounded-xl text-sm font-semibold bg-red-50 text-red-600 border border-red-200 hover:bg-red-100' 
+   } else { 
+     txt.textContent = '🔴 Você está OFFLINE' 
+     desc.textContent = 'Não está recebendo corridas' 
+     btn.textContent = 'Ficar online' 
+     btn.className = 'px-4 py-2 rounded-xl text-sm font-semibold bg-green-600 text-white hover:bg-green-700' 
+   } 
+ } 
+ 
+ async function toggleOnline() { 
+   const novoStatus = !motoristOnline 
+   const btn = document.getElementById('btn-toggle-online') 
+   btn.textContent = 'Aguarde...' 
+   btn.disabled = true 
+ 
+   try { 
+     const r = await fetch(`/api/motorista/${tokenMotorista}/online`, { 
+       method: 'PUT', 
+       headers: { 'Content-Type': 'application/json' }, 
+       body: JSON.stringify({ online: novoStatus ? 1 : 0 }) 
+     }) 
+ 
+     if (r.ok) { 
+       motoristOnline = novoStatus 
+       renderizarStatusOnline({ online: novoStatus ? 1 : 0 }) 
+     } 
+   } catch(e) { 
+     alert('Erro de conexão') 
+   } 
+   btn.disabled = false 
  } 
  
  function renderizarFinanceiro(f) { 

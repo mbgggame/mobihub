@@ -343,7 +343,9 @@ export default async function publicRoutes(fastify) {
       try { 
         const { sendRideToGroup } = await import('../telegram.js') 
         const messageId = await sendRideToGroup(ride) 
-        await query('UPDATE rides SET telegram_message_id = $1 WHERE id = $2', [messageId, ride.id]) 
+        if (messageId) { 
+          await query('UPDATE rides SET telegram_message_id = $1 WHERE id = $2', [messageId, ride.id]) 
+        } 
       } catch(err) { 
         console.error('[SOLICITAR] Erro ao enviar para Telegram:', err.message) 
       } 
@@ -417,5 +419,73 @@ export default async function publicRoutes(fastify) {
     await query('UPDATE drivers SET foto_base64 = $1 WHERE id = $2', [foto_base64, driver.id]) 
  
     return { mensagem: 'Foto atualizada com sucesso!' } 
+  }) 
+ 
+  // Verificar validade do convite 
+  fastify.get('/api/convite/:token', async (request, reply) => { 
+    const result = await query( 
+      'SELECT * FROM convites WHERE token = $1 AND usado = false AND expira_em > NOW()', 
+      [request.params.token] 
+    ) 
+    if (!result.rows.length) { 
+      return reply.code(404).send({ error: 'Convite inválido ou expirado' }) 
+    } 
+    return { valido: true } 
+  }) 
+ 
+  // Cadastro público do motorista via convite 
+  fastify.post('/api/cadastro-motorista/:token', async (request, reply) => { 
+    const { token } = request.params 
+    const { nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, foto_base64 } = request.body 
+ 
+    // Verifica convite 
+    const convite = (await query( 
+      'SELECT * FROM convites WHERE token = $1 AND usado = false AND expira_em > NOW()', 
+      [token] 
+    )).rows[0] 
+ 
+    if (!convite) return reply.code(400).send({ error: 'Convite inválido ou expirado' }) 
+ 
+    // Verifica se Telegram ID já existe 
+    const existing = (await query( 
+      'SELECT id FROM drivers WHERE telegram_id = $1', 
+      [telegram_id] 
+    )).rows[0] 
+ 
+    if (existing) return reply.code(409).send({ error: 'Este Telegram ID já está cadastrado' }) 
+ 
+    // Gera token de perfil 
+    const { v4: uuidv4 } = await import('uuid') 
+    const tokenPerfil = uuidv4() 
+ 
+    // Cadastra motorista como pendente 
+    const result = await query(` 
+      INSERT INTO drivers 
+        (nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, 
+         foto_base64, token_perfil, status_cadastro, ativo) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pendente', 0) 
+      RETURNING id 
+    `, [nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, foto_base64 || null, tokenPerfil]) 
+ 
+    const driverId = result.rows[0].id 
+ 
+    // Marca convite como usado 
+    await query( 
+      'UPDATE convites SET usado = true, usado_em = NOW(), driver_id = $1 WHERE token = $2', 
+      [driverId, token] 
+    ) 
+ 
+    // Notifica admin no Telegram 
+    try { 
+      const { getBot } = await import('../telegram.js') 
+      const bot = getBot() 
+      const linkAdmin = `${process.env.BASE_URL}/admin/motoristas` 
+      bot?.sendMessage(process.env.TELEGRAM_GROUP_ID, 
+        `🆕 *Novo motorista aguardando aprovação!*\n\n👤 ${nome}\n🚗 ${modelo_carro} ${cor_carro} ${ano_carro}\n📋 Placa: ${placa}\n📱 Tel: ${telefone}\n\n✅ Acesse o painel para aprovar:\n${linkAdmin}`, 
+        { parse_mode: 'Markdown' } 
+      ).catch(() => {}) 
+    } catch(e) {} 
+ 
+    return { mensagem: 'Cadastro enviado com sucesso! Aguarde aprovação.' } 
   }) 
 } 

@@ -263,6 +263,19 @@ export function initBot() {
 } 
  
 export async function sendRideToGroup(ride) { 
+  // Verifica se há motoristas online 
+  const motoristasOnline = (await dbQuery( 
+    "SELECT COUNT(*) as total FROM drivers WHERE ativo = 1 AND online = 1 AND status_cadastro = 'aprovado'", 
+    [] 
+  )).rows[0] 
+ 
+  const qtdOnline = parseInt(motoristasOnline?.total || 0) 
+ 
+  if (qtdOnline === 0) { 
+    console.log('[BOT] Nenhum motorista online — corrida criada mas não disparada') 
+    return null 
+  } 
+ 
   const isAgendada = ride.tipo === 'agendada' 
   const valorMotorista = ride.valor_motorista 
     ? `R$ ${Number(ride.valor_motorista).toFixed(2)}` 

@@ -1,0 +1,313 @@
+<!DOCTYPE html> 
+<html lang="pt-BR"> 
+<head> 
+  <meta charset="UTF-8"/> 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
+  <title>MobiHub — Cadastro de Motorista</title> 
+  <script src="https://cdn.tailwindcss.com"></script> 
+  <style> 
+    #video-camera { width:100%; max-height:220px; object-fit:cover; background:#000; border-radius:12px; } 
+    #canvas-hidden { display:none; } 
+  </style> 
+</head> 
+<body class="bg-gray-50 min-h-screen pb-10"> 
+ 
+<div class="bg-green-600 text-white px-4 py-3 flex items-center gap-2 shadow"> 
+  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"> 
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/> 
+  </svg> 
+  <span class="font-bold text-lg">MobiHub</span> 
+  <span class="text-green-200 text-sm">— Cadastro de Motorista</span> 
+</div> 
+ 
+<div class="max-w-lg mx-auto px-4 py-6 space-y-4"> 
+ 
+  <!-- TELA: LINK INVÁLIDO --> 
+  <div id="tela-invalido" class="hidden"> 
+    <div class="bg-white border border-red-200 rounded-xl p-6 text-center"> 
+      <p class="text-4xl mb-3">❌</p> 
+      <h2 class="text-lg font-bold text-red-700 mb-2">Link inválido ou expirado</h2> 
+      <p class="text-sm text-gray-500">Este link de cadastro não é mais válido. Solicite um novo link ao administrador.</p> 
+    </div> 
+  </div> 
+ 
+  <!-- TELA: FORMULÁRIO --> 
+  <div id="tela-formulario" class="hidden space-y-4"> 
+ 
+    <div class="bg-green-50 border border-green-200 rounded-xl p-4"> 
+      <p class="text-sm font-medium text-green-800">✅ Link válido! Preencha seus dados para se cadastrar como motorista.</p> 
+      <p class="text-xs text-green-600 mt-1">Seu cadastro será analisado e aprovado pela equipe MobiHub.</p> 
+    </div> 
+ 
+    <div class="bg-white border border-gray-200 rounded-xl p-5 space-y-4"> 
+ 
+      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Dados pessoais</h2> 
+ 
+      <div> 
+        <label class="text-xs text-gray-500 font-medium">Nome completo *</label> 
+        <input id="f-nome" type="text" placeholder="Seu nome completo" 
+          class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+      </div> 
+ 
+      <div class="grid grid-cols-2 gap-3"> 
+        <div> 
+          <label class="text-xs text-gray-500 font-medium">Telefone *</label> 
+          <input id="f-telefone" type="tel" placeholder="(27) 99999-9999" 
+            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+        </div> 
+        <div> 
+          <label class="text-xs text-gray-500 font-medium">Telegram ID *</label> 
+          <input id="f-telegram" type="text" placeholder="Ex: 1479908250" 
+            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+          <p class="text-xs text-gray-400 mt-0.5">Fale com @userinfobot no Telegram</p> 
+        </div> 
+      </div> 
+ 
+      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide pt-2">Dados do veículo</h2> 
+ 
+      <div class="grid grid-cols-2 gap-3"> 
+        <div> 
+          <label class="text-xs text-gray-500 font-medium">Modelo do carro *</label> 
+          <input id="f-modelo" type="text" placeholder="Ex: BYD King GS" 
+            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+        </div> 
+        <div> 
+          <label class="text-xs text-gray-500 font-medium">Ano *</label> 
+          <input id="f-ano" type="text" placeholder="Ex: 2024" 
+            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+        </div> 
+      </div> 
+ 
+      <div class="grid grid-cols-2 gap-3"> 
+        <div> 
+          <label class="text-xs text-gray-500 font-medium">Cor *</label> 
+          <input id="f-cor" type="text" placeholder="Ex: Prata" 
+            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+        </div> 
+        <div> 
+          <label class="text-xs text-gray-500 font-medium">Placa *</label> 
+          <input id="f-placa" type="text" placeholder="Ex: SGZ2D22" 
+            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+        </div> 
+      </div> 
+ 
+      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide pt-2">Foto de perfil</h2> 
+ 
+      <div> 
+        <div class="flex gap-2 mb-2"> 
+          <button type="button" onclick="abrirCamera()" 
+            class="flex-1 flex items-center justify-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:border-green-300"> 
+            📷 Tirar foto 
+          </button> 
+          <button type="button" onclick="document.getElementById('input-foto').click()" 
+            class="flex-1 flex items-center justify-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:border-green-300"> 
+            🖼️ Galeria 
+          </button> 
+        </div> 
+        <input id="input-foto" type="file" accept="image/*" class="hidden" onchange="processarFoto(event)"/> 
+        <canvas id="canvas-hidden"></canvas> 
+ 
+        <div id="area-camera" class="hidden mb-3"> 
+          <video id="video-camera" autoplay playsinline></video> 
+          <div class="flex gap-2 mt-2"> 
+            <button type="button" onclick="capturarFoto()" 
+              class="flex-1 bg-green-600 text-white rounded-lg py-2 text-sm font-medium"> 
+              📸 Capturar 
+            </button> 
+            <button type="button" onclick="fecharCamera()" 
+              class="flex-1 bg-white border border-gray-200 text-gray-600 rounded-lg py-2 text-sm"> 
+              Cancelar 
+            </button> 
+          </div> 
+        </div> 
+ 
+        <div id="preview-foto" class="hidden flex justify-center mb-2"> 
+          <div class="relative"> 
+            <img id="img-preview" src="" class="w-24 h-24 rounded-full object-cover border-4 border-green-400"/> 
+            <button onclick="removerFoto()" 
+              class="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center">✕</button> 
+          </div> 
+        </div> 
+      </div> 
+ 
+      <div id="erro-form" class="hidden text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2"></div> 
+ 
+      <button id="btn-cadastrar" onclick="cadastrar()" 
+        class="w-full bg-green-600 text-white rounded-xl py-3.5 font-bold text-base hover:bg-green-700"> 
+        Enviar cadastro para aprovação 
+      </button> 
+ 
+    </div> 
+  </div> 
+ 
+  <!-- TELA: SUCESSO --> 
+  <div id="tela-sucesso" class="hidden"> 
+    <div class="bg-white border border-gray-200 rounded-xl p-6 text-center"> 
+      <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"> 
+        <svg class="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"> 
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/> 
+        </svg> 
+      </div> 
+      <h2 class="text-xl font-bold text-gray-900 mb-2">Cadastro enviado!</h2> 
+      <p class="text-sm text-gray-500 mb-4">Seus dados foram recebidos e estão sendo analisados pela equipe MobiHub.</p> 
+      <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-left"> 
+        <p class="text-xs text-yellow-800 font-medium">⏳ Próximos passos:</p> 
+        <ul class="text-xs text-yellow-700 mt-1 space-y-1"> 
+          <li>• Nossa equipe vai analisar seu cadastro</li> 
+          <li>• Você receberá uma mensagem no Telegram quando aprovado</li> 
+          <li>• Após aprovação você já pode receber corridas</li> 
+        </ul> 
+      </div> 
+    </div> 
+  </div> 
+ 
+</div> 
+ 
+<script> 
+ const tokenConvite = location.pathname.split('/cadastro-motorista/')[1] 
+ let fotoBase64 = null 
+ let streamCamera = null 
+ 
+ async function verificarConvite() { 
+   if (!tokenConvite) { 
+     mostrarInvalido() 
+     return 
+   } 
+   try { 
+     const r = await fetch(`/api/convite/${tokenConvite}`) 
+     if (!r.ok) { 
+       mostrarInvalido() 
+       return 
+     } 
+     document.getElementById('tela-formulario').classList.remove('hidden') 
+   } catch(e) { 
+     mostrarInvalido() 
+   } 
+ } 
+ 
+ function mostrarInvalido() { 
+   document.getElementById('tela-invalido').classList.remove('hidden') 
+ } 
+ 
+ // ── CÂMERA ────────────────────────────── 
+ async function abrirCamera() { 
+   try { 
+     streamCamera = await navigator.mediaDevices.getUserMedia({ 
+       video: { facingMode: 'user', width: 400, height: 400 }, audio: false 
+     }) 
+     document.getElementById('video-camera').srcObject = streamCamera 
+     document.getElementById('area-camera').classList.remove('hidden') 
+   } catch(e) { 
+     alert('Não foi possível acessar a câmera.') 
+   } 
+ } 
+ 
+ function fecharCamera() { 
+   if (streamCamera) { streamCamera.getTracks().forEach(t => t.stop()); streamCamera = null } 
+   document.getElementById('area-camera').classList.add('hidden') 
+   document.getElementById('video-camera').srcObject = null 
+ } 
+ 
+ function capturarFoto() { 
+   const video = document.getElementById('video-camera') 
+   const canvas = document.getElementById('canvas-hidden') 
+   const size = 400 
+   canvas.width = size; canvas.height = size 
+   const ctx = canvas.getContext('2d') 
+   const vw = video.videoWidth, vh = video.videoHeight 
+   const lado = Math.min(vw, vh) 
+   ctx.drawImage(video, (vw-lado)/2, (vh-lado)/2, lado, lado, 0, 0, size, size) 
+   aplicarFoto(canvas.toDataURL('image/jpeg', 0.85)) 
+   fecharCamera() 
+ } 
+ 
+ function processarFoto(event) { 
+   const file = event.target.files[0] 
+   if (!file) return 
+   const reader = new FileReader() 
+   reader.onload = e => { 
+     const img = new Image() 
+     img.onload = () => { 
+       const canvas = document.getElementById('canvas-hidden') 
+       const size = 400 
+       canvas.width = size; canvas.height = size 
+       const ctx = canvas.getContext('2d') 
+       const lado = Math.min(img.width, img.height) 
+       ctx.drawImage(img, (img.width-lado)/2, (img.height-lado)/2, lado, lado, 0, 0, size, size) 
+       aplicarFoto(canvas.toDataURL('image/jpeg', 0.85)) 
+     } 
+     img.src = e.target.result 
+   } 
+   reader.readAsDataURL(file) 
+   event.target.value = '' 
+ } 
+ 
+ function aplicarFoto(base64) { 
+   fotoBase64 = base64 
+   document.getElementById('img-preview').src = base64 
+   document.getElementById('preview-foto').classList.remove('hidden') 
+ } 
+ 
+ function removerFoto() { 
+   fotoBase64 = null 
+   document.getElementById('preview-foto').classList.add('hidden') 
+   document.getElementById('img-preview').src = '' 
+ } 
+ 
+ // ── CADASTRO ──────────────────────────── 
+ async function cadastrar() { 
+   const nome = document.getElementById('f-nome').value.trim() 
+   const telefone = document.getElementById('f-telefone').value.trim() 
+   const telegram_id = document.getElementById('f-telegram').value.trim() 
+   const modelo_carro = document.getElementById('f-modelo').value.trim() 
+   const ano_carro = document.getElementById('f-ano').value.trim() 
+   const cor_carro = document.getElementById('f-cor').value.trim() 
+   const placa = document.getElementById('f-placa').value.trim() 
+   const erro = document.getElementById('erro-form') 
+ 
+   if (!nome || !telefone || !telegram_id || !modelo_carro || !ano_carro || !cor_carro || !placa) { 
+     erro.textContent = 'Preencha todos os campos obrigatórios' 
+     erro.classList.remove('hidden') 
+     return 
+   } 
+ 
+   erro.classList.add('hidden') 
+   const btn = document.getElementById('btn-cadastrar') 
+   btn.textContent = 'Enviando...' 
+   btn.disabled = true 
+ 
+   try { 
+     const r = await fetch(`/api/cadastro-motorista/${tokenConvite}`, { 
+       method: 'POST', 
+       headers: { 'Content-Type': 'application/json' }, 
+       body: JSON.stringify({ 
+         nome, telefone, telegram_id, 
+         modelo_carro, ano_carro, cor_carro, placa, 
+         foto_base64: fotoBase64 || null 
+       }) 
+     }) 
+ 
+     const d = await r.json() 
+ 
+     if (!r.ok) { 
+       erro.textContent = d.error || 'Erro ao cadastrar' 
+       erro.classList.remove('hidden') 
+       btn.textContent = 'Enviar cadastro para aprovação' 
+       btn.disabled = false 
+       return 
+     } 
+ 
+     document.getElementById('tela-formulario').classList.add('hidden') 
+     document.getElementById('tela-sucesso').classList.remove('hidden') 
+   } catch(e) { 
+     erro.textContent = 'Erro de conexão. Tente novamente.' 
+     erro.classList.remove('hidden') 
+     btn.textContent = 'Enviar cadastro para aprovação' 
+     btn.disabled = false 
+   } 
+ } 
+ 
+ verificarConvite() 
+ </script> 
+</body> 
+</html>

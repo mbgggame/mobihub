@@ -131,7 +131,9 @@ export default async function ridesRoutes(fastify) {
     if (!tipo || tipo === 'normal') { 
       try { 
         const messageId = await sendRideToGroup(ride) 
-        await dbQuery('UPDATE rides SET telegram_message_id = $1 WHERE id = $2', [messageId, ride.id]) 
+        if (messageId) { 
+          await query('UPDATE rides SET telegram_message_id = $1 WHERE id = $2', [messageId, ride.id]) 
+        } 
       } catch (err) { 
         console.error('[RIDES] Erro ao enviar para Telegram:', err.message) 
       } 
