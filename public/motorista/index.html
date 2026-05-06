@@ -337,6 +337,255 @@
 
 </div> 
 
-<!-- SCRIPT SERÁ ADICIONADO NO BLOCO 4 --> 
+<script> 
+ const tokenMotorista = location.pathname.split('/motorista/')[1] 
+ let novaFotoBase64 = null 
+ let streamCamera = null 
+ let motoristOnline = false 
+ let corridaAtualId = null 
+ let corridaAtualToken = null 
+ let corridasIgnoradas = [] 
+ let audioAtivo = false 
+ let mapCorrida = null 
+ let timerInterval = null 
+ let pollingAtivo = true 
+ 
+ function estrelas(media) { 
+   if (!media) return '☆☆☆☆☆' 
+   const cheias = Math.round(media) 
+   return '★'.repeat(cheias) + '☆'.repeat(5 - cheias) 
+ } 
+ function moeda(val) { return `R$ ${Number(val || 0).toFixed(2)}` } 
+ 
+ function mudarAba(aba) { 
+   ['painel','corridas','historico'].forEach(a => { 
+     document.getElementById(`tab-${a}`).classList.add('hidden') 
+     document.getElementById(`aba-${a}`).classList.remove('aba-ativa') 
+   }) 
+   document.getElementById(`tab-${aba}`).classList.remove('hidden') 
+   document.getElementById(`aba-${aba}`).classList.add('aba-ativa') 
+   if (aba === 'corridas') { 
+     document.getElementById('badge-nova-corrida').classList.add('hidden') 
+     if (!mapCorrida && corridaAtualId) iniciarMapaCorrida() 
+   } 
+   if (aba === 'historico') carregarHistorico() 
+ } 
+ 
+ async function carregar() { 
+   try { 
+     const r = await fetch(`/api/motorista/${tokenMotorista}`) 
+     if (!r.ok) { 
+       document.body.innerHTML = `<div class="flex items-center justify-center min-h-screen px-4 text-center"><div><p class="text-4xl mb-4">🚗</p><p class="text-gray-600 font-medium">Perfil não encontrado</p></div></div>` 
+       return 
+     } 
+     const { driver, financeiro } = await r.json() 
+     renderizarPerfil(driver) 
+     renderizarFinanceiro(financeiro) 
+     renderizarStatusOnline(driver) 
+     carregarVeiculos() 
+   } catch(e) { console.error(e) } 
+ } 
+ 
+ function renderizarPerfil(driver) { 
+   const placeholder = document.getElementById('avatar-placeholder') 
+   const fotoAtual = document.getElementById('foto-atual') 
+   if (driver.foto_base64) { 
+     placeholder.classList.add('hidden') 
+     fotoAtual.src = driver.foto_base64 
+     fotoAtual.classList.remove('hidden') 
+   } else { 
+     placeholder.textContent = driver.nome.charAt(0).toUpperCase() 
+   } 
+   document.getElementById('nome-motorista').textContent = driver.nome 
+   document.getElementById('stars-motorista').textContent = estrelas(driver.media_avaliacao) 
+   document.getElementById('media-motorista').textContent = driver.total_avaliacoes 
+     ? `${Number(driver.media_avaliacao || 0).toFixed(1)} / 5.0 • ${driver.total_avaliacoes} aval.` 
+     : 'Sem avaliações ainda' 
+ } 
+ 
+ function renderizarFinanceiro(f) { 
+   document.getElementById('ganhos-hoje').textContent = moeda(f?.ganhos_hoje) 
+   document.getElementById('ganhos-semana').textContent = moeda(f?.ganhos_semana) 
+   document.getElementById('ganhos-mes').textContent = moeda(f?.ganhos_mes) 
+   document.getElementById('ganhos-total').textContent = moeda(f?.ganhos_total) 
+ } 
+ 
+ function renderizarStatusOnline(driver) { 
+   motoristOnline = driver.online === 1 
+   const txt = document.getElementById('txt-status-online') 
+   const desc = document.getElementById('txt-status-desc') 
+   const btn = document.getElementById('btn-toggle-online') 
+   const badgeOn = document.getElementById('badge-online') 
+   const badgeOff = document.getElementById('badge-offline') 
+   if (motoristOnline) { 
+     txt.textContent = '🟢 Você está ONLINE' 
+     desc.textContent = 'Recebendo ofertas de corrida' 
+     btn.textContent = 'Ficar offline' 
+     btn.className = 'px-4 py-2 rounded-xl text-sm font-semibold bg-red-50 text-red-600 border border-red-200' 
+     badgeOn.classList.remove('hidden') 
+     badgeOff.classList.add('hidden') 
+   } else { 
+     txt.textContent = '🔴 Você está OFFLINE' 
+     desc.textContent = 'Não está recebendo corridas' 
+     btn.textContent = 'Ficar online' 
+     btn.className = 'px-4 py-2 rounded-xl text-sm font-semibold bg-green-600 text-white' 
+     badgeOn.classList.add('hidden') 
+     badgeOff.classList.remove('hidden') 
+   } 
+ } 
+ 
+ async function toggleOnline() { 
+   const novoStatus = !motoristOnline 
+   const btn = document.getElementById('btn-toggle-online') 
+   btn.textContent = 'Aguarde...' 
+   btn.disabled = true 
+   try { 
+     const r = await fetch(`/api/motorista/${tokenMotorista}/online`, { 
+       method: 'PUT', 
+       headers: { 'Content-Type': 'application/json' }, 
+       body: JSON.stringify({ online: novoStatus ? 1 : 0 }) 
+     }) 
+     if (r.ok) { motoristOnline = novoStatus; renderizarStatusOnline({ online: novoStatus ? 1 : 0 }) } 
+   } catch(e) { alert('Erro de conexão') } 
+   btn.disabled = false 
+ } 
+ 
+ async function carregarVeiculos() { 
+   try { 
+     const r = await fetch(`/api/motorista/${tokenMotorista}/veiculos`) 
+     if (!r.ok) return 
+     const veiculos = await r.json() 
+     const div = document.getElementById('lista-veiculos') 
+     if (!veiculos.length) { div.innerHTML = '<p class="text-xs text-gray-400 text-center py-2">Nenhum veículo cadastrado</p>'; return } 
+     div.innerHTML = veiculos.map(v => ` 
+       <div class="border ${v.ativo ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-white'} rounded-xl px-3 py-2.5"> 
+         <div class="flex items-center justify-between"> 
+           <div class="flex-1 min-w-0"> 
+             <div class="flex items-center gap-2"> 
+               <p class="text-sm font-semibold text-gray-900 truncate">🚗 ${v.modelo} ${v.cor} ${v.ano}</p> 
+               ${v.ativo ? '<span class="text-xs px-2 py-0.5 bg-green-600 text-white rounded-full flex-shrink-0">ATIVO</span>' : ''} 
+             </div> 
+             <p class="text-xs text-gray-500 font-mono mt-0.5">${v.placa}</p> 
+           </div> 
+           <div class="flex gap-1 ml-2"> 
+             ${!v.ativo ? `<button onclick="ativarVeiculo(${v.id})" class="text-xs text-green-600 border border-green-300 rounded-lg px-2 py-1">Usar</button>` : ''} 
+             ${!v.ativo ? `<button onclick="removerVeiculo(${v.id})" class="text-xs text-red-400 border border-red-200 rounded-lg px-2 py-1">🗑️</button>` : ''} 
+           </div> 
+         </div> 
+       </div> 
+     `).join('') 
+   } catch(e) {} 
+ } 
+ 
+ function toggleFormVeiculo() { document.getElementById('form-veiculo').classList.toggle('hidden') } 
+ 
+ async function adicionarVeiculo() { 
+   const modelo = document.getElementById('v-modelo').value.trim() 
+   const ano = document.getElementById('v-ano').value.trim() 
+   const cor = document.getElementById('v-cor').value.trim() 
+   const placa = document.getElementById('v-placa').value.trim() 
+   const erro = document.getElementById('erro-veiculo') 
+   if (!modelo || !ano || !cor || !placa) { erro.textContent = 'Preencha todos os campos'; erro.classList.remove('hidden'); return } 
+   erro.classList.add('hidden') 
+   try { 
+     const r = await fetch(`/api/motorista/${tokenMotorista}/veiculos`, { 
+       method: 'POST', headers: { 'Content-Type': 'application/json' }, 
+       body: JSON.stringify({ modelo, ano, cor, placa }) 
+     }) 
+     const d = await r.json() 
+     if (!r.ok) { erro.textContent = d.error; erro.classList.remove('hidden'); return } 
+     document.getElementById('v-modelo').value = '' 
+     document.getElementById('v-ano').value = '' 
+     document.getElementById('v-cor').value = '' 
+     document.getElementById('v-placa').value = '' 
+     document.getElementById('form-veiculo').classList.add('hidden') 
+     carregarVeiculos() 
+   } catch(e) { erro.textContent = 'Erro de conexão'; erro.classList.remove('hidden') } 
+ } 
+ 
+ async function ativarVeiculo(vehicleId) { 
+   const r = await fetch(`/api/motorista/${tokenMotorista}/veiculos/${vehicleId}/ativar`, { method: 'PUT' }) 
+   const d = await r.json() 
+   if (r.ok) carregarVeiculos(); else alert('Erro: ' + d.error) 
+ } 
+ 
+ async function removerVeiculo(vehicleId) { 
+   if (!confirm('Remover este veículo?')) return 
+   const r = await fetch(`/api/motorista/${tokenMotorista}/veiculos/${vehicleId}`, { method: 'DELETE' }) 
+   const d = await r.json() 
+   if (r.ok) carregarVeiculos(); else alert('Erro: ' + d.error) 
+ } 
+ 
+ function toggleFotoOpcoes() { document.getElementById('opcoes-foto').classList.toggle('hidden') } 
+ 
+ async function abrirCamera() { 
+   document.getElementById('opcoes-foto').classList.add('hidden') 
+   try { 
+     streamCamera = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false }) 
+     document.getElementById('video-camera').srcObject = streamCamera 
+     document.getElementById('area-camera').classList.remove('hidden') 
+   } catch(e) { alert('Não foi possível acessar a câmera.') } 
+ } 
+ 
+ function fecharCamera() { 
+   if (streamCamera) { streamCamera.getTracks().forEach(t => t.stop()); streamCamera = null } 
+   document.getElementById('area-camera').classList.add('hidden') 
+ } 
+ 
+ function capturarFoto() { 
+   const video = document.getElementById('video-camera') 
+   const canvas = document.getElementById('canvas-hidden') 
+   const size = 400; canvas.width = size; canvas.height = size 
+   const ctx = canvas.getContext('2d') 
+   const vw = video.videoWidth, vh = video.videoHeight 
+   const lado = Math.min(vw, vh) 
+   ctx.drawImage(video, (vw-lado)/2, (vh-lado)/2, lado, lado, 0, 0, size, size) 
+   novaFotoBase64 = canvas.toDataURL('image/jpeg', 0.85) 
+   document.getElementById('preview-nova').src = novaFotoBase64 
+   document.getElementById('area-preview').classList.remove('hidden') 
+   fecharCamera() 
+ } 
+ 
+ function processarArquivo(event) { 
+   const file = event.target.files[0]; if (!file) return 
+   document.getElementById('opcoes-foto').classList.add('hidden') 
+   const reader = new FileReader() 
+   reader.onload = e => { 
+     const img = new Image() 
+     img.onload = () => { 
+       const canvas = document.getElementById('canvas-hidden') 
+       const size = 400; canvas.width = size; canvas.height = size 
+       const ctx = canvas.getContext('2d') 
+       const lado = Math.min(img.width, img.height) 
+       ctx.drawImage(img, (img.width-lado)/2, (img.height-lado)/2, lado, lado, 0, 0, size, size) 
+       novaFotoBase64 = canvas.toDataURL('image/jpeg', 0.85) 
+       document.getElementById('preview-nova').src = novaFotoBase64 
+       document.getElementById('area-preview').classList.remove('hidden') 
+     } 
+     img.src = e.target.result 
+   } 
+   reader.readAsDataURL(file); event.target.value = '' 
+ } 
+ 
+ function descartarFoto() { novaFotoBase64 = null; document.getElementById('area-preview').classList.add('hidden') } 
+ 
+ async function salvarFoto() { 
+   if (!novaFotoBase64) return 
+   try { 
+     const r = await fetch(`/api/motorista/${tokenMotorista}/foto`, { 
+       method: 'PUT', headers: { 'Content-Type': 'application/json' }, 
+       body: JSON.stringify({ foto_base64: novaFotoBase64 }) 
+     }) 
+     if (r.ok) { 
+       document.getElementById('avatar-placeholder').classList.add('hidden') 
+       document.getElementById('foto-atual').src = novaFotoBase64 
+       document.getElementById('foto-atual').classList.remove('hidden') 
+       descartarFoto(); alert('✅ Foto atualizada!') 
+     } 
+   } catch(e) { alert('Erro de conexão') } 
+ } 
+ 
+ // AGUARDE PARTE B 
+ </script> 
 </body> 
 </html>
