@@ -17,6 +17,7 @@
     "dotenv": "^16.4.0",
     "fastify": "^4.26.0",
     "node-telegram-bot-api": "^0.67.0",
+    "pg": "^8.20.0",
     "uuid": "^9.0.0"
   }
 }

@@ -1,184 +1,287 @@
-import Database from 'better-sqlite3' 
-import { join, dirname } from 'path' 
-import { fileURLToPath } from 'url' 
-import bcrypt from 'bcrypt' 
-import { v4 as uuidv4 } from 'uuid' 
+import pg from 'pg' 
+ import bcrypt from 'bcrypt' 
  
-const __dirname = dirname(fileURLToPath(import.meta.url)) 
-const DB_PATH = join(__dirname, '..', 'mobihub.db') 
+ const { Pool } = pg 
  
-export const db = new Database(DB_PATH) 
+ export const pool = new Pool({ 
+   connectionString: process.env.DATABASE_URL, 
+   ssl: process.env.DATABASE_URL?.includes('render.com') 
+     ? { rejectUnauthorized: false } 
+     : false 
+ }) 
  
-db.pragma('journal_mode = WAL') 
-db.pragma('foreign_keys = ON') 
+ // Compatibilidade com código existente que usa db.prepare() 
+ export const db = { 
+   prepare: (sql) => ({ 
+     run: (...params) => { 
+       const query = convertSQL(sql) 
+       return runSync(query, params) 
+     }, 
+     get: (...params) => { 
+       const query = convertSQL(sql) 
+       return getSync(query, params) 
+     }, 
+     all: (...params) => { 
+       const query = convertSQL(sql) 
+       return allSync(query, params) 
+     } 
+   }), 
+   exec: (sql) => { 
+     const statements = sql.split(';').map(s => s.trim()).filter(s => s.length > 0) 
+     for (const stmt of statements) { 
+       runSync(stmt, []) 
+     } 
+   }, 
+   pragma: () => {}, 
+   transaction: (fn) => (...args) => fn(...args) 
+ } 
  
-export function initDB() { 
-  db.exec(` 
+ // Converte SQL do SQLite para PostgreSQL 
+ function convertSQL(sql) { 
+   return sql 
+     .replace(/INTEGER PRIMARY KEY AUTOINCREMENT/gi, 'SERIAL PRIMARY KEY') 
+     .replace(/DATETIME DEFAULT CURRENT_TIMESTAMP/gi, 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP') 
+     .replace(/DATETIME/gi, 'TIMESTAMP') 
+     .replace(/TEXT/gi, 'TEXT') 
+     .replace(/REAL/gi, 'DOUBLE PRECISION') 
+     .replace(/\?/g, () => `$${++convertSQL._counter}`) 
+ } 
+ convertSQL._counter = 0 
  
-    CREATE TABLE IF NOT EXISTS admins ( 
-      id INTEGER PRIMARY KEY AUTOINCREMENT, 
-      email TEXT UNIQUE NOT NULL, 
-      senha_hash TEXT NOT NULL, 
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP 
-    ); 
+ function resetCounter(sql) { 
+   convertSQL._counter = 0 
+   return sql 
+ } 
  
-    CREATE TABLE IF NOT EXISTS drivers ( 
-      id INTEGER PRIMARY KEY AUTOINCREMENT, 
-      nome TEXT NOT NULL, 
-      telefone TEXT, 
-      telegram_id TEXT UNIQUE NOT NULL, 
-      modelo_carro TEXT NOT NULL, 
-      ano_carro TEXT NOT NULL, 
-      cor_carro TEXT NOT NULL, 
-      placa TEXT NOT NULL, 
-      total_viagens INTEGER DEFAULT 0, 
-      media_avaliacao REAL DEFAULT 0, 
-      total_avaliacoes INTEGER DEFAULT 0, 
-      ativo INTEGER DEFAULT 1, 
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP 
-    ); 
+ function convertSQLWithCounter(sql) { 
+   convertSQL._counter = 0 
+   return convertSQL(sql) 
+ } 
  
-    CREATE TABLE IF NOT EXISTS clients ( 
-      id INTEGER PRIMARY KEY AUTOINCREMENT, 
-      telefone TEXT UNIQUE NOT NULL, 
-      nome TEXT, 
-      total_corridas INTEGER DEFAULT 0, 
-      media_avaliacao REAL DEFAULT 0, 
-      total_avaliacoes INTEGER DEFAULT 0, 
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP 
-    ); 
+ // Executa query síncrona usando Atomics 
+ function runSync(sql, params) { 
+   const converted = convertSQLWithCounter(sql) 
+   const result = runAsync(converted, params) 
+   return { lastInsertRowid: result?.id, changes: result?.rowCount } 
+ } 
  
-    CREATE TABLE IF NOT EXISTS rides ( 
-      id INTEGER PRIMARY KEY AUTOINCREMENT, 
-      token TEXT UNIQUE NOT NULL, 
-      client_id INTEGER REFERENCES clients(id), 
-      driver_id INTEGER REFERENCES drivers(id), 
-      origem TEXT NOT NULL, 
-      origem_lat REAL, 
-      origem_lng REAL, 
-      destino TEXT NOT NULL, 
-      destino_lat REAL, 
-      destino_lng REAL, 
-      valor REAL NOT NULL, 
-      status TEXT DEFAULT 'aberta', 
-      maps_link TEXT, 
-      telegram_message_id INTEGER, 
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP, 
-      aceita_at DATETIME, 
-      concluida_at DATETIME, 
-      cancelada_at DATETIME 
-    ); 
+ function getSync(sql, params) { 
+   const converted = convertSQLWithCounter(sql) 
+   return getAsync(converted, params) 
+ } 
  
-    CREATE TABLE IF NOT EXISTS ratings ( 
-      id INTEGER PRIMARY KEY AUTOINCREMENT, 
-      ride_id INTEGER UNIQUE REFERENCES rides(id), 
-      estrelas_motorista INTEGER CHECK(estrelas_motorista BETWEEN 1 AND 5), 
-      comentario_cliente TEXT, 
-      avaliado_em_cliente DATETIME, 
-      estrelas_cliente INTEGER CHECK(estrelas_cliente BETWEEN 1 AND 5), 
-      comentario_motorista TEXT, 
-      avaliado_em_motorista DATETIME, 
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP 
-    ); 
+ function allSync(sql, params) { 
+   const converted = convertSQLWithCounter(sql) 
+   return allAsync(converted, params) 
+ } 
  
-  `) 
+ // Armazena resultados pendentes 
+ const pending = new Map() 
+ let reqId = 0 
  
-  seedAdmin() 
+ function runAsync(sql, params) { 
+   const id = ++reqId 
+   pool.query(sql, params) 
+     .then(r => pending.set(id, { done: true, result: r.rows[0] })) 
+     .catch(e => { console.error('[DB ERROR]', e.message, sql); pending.set(id, { done: true, result: null }) }) 
  
-  try { 
-    db.prepare("ALTER TABLE drivers ADD COLUMN foto_base64 TEXT").run() 
-  } catch(e) {} 
+   const start = Date.now() 
+   while (!pending.has(id) || !pending.get(id).done) { 
+     if (Date.now() - start > 5000) break 
+     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10) 
+   } 
+   const r = pending.get(id) 
+   pending.delete(id) 
+   return r?.result 
+ } 
  
-  try { db.prepare("ALTER TABLE drivers ADD COLUMN token_perfil TEXT").run() } catch(e) {} 
+ function getAsync(sql, params) { 
+   const id = ++reqId 
+   pool.query(sql, params) 
+     .then(r => pending.set(id, { done: true, result: r.rows[0] || null })) 
+     .catch(e => { console.error('[DB ERROR]', e.message, sql); pending.set(id, { done: true, result: null }) }) 
  
-  const semToken = db.prepare('SELECT id FROM drivers WHERE token_perfil IS NULL').all() 
-  for (const d of semToken) { 
-    db.prepare('UPDATE drivers SET token_perfil = ? WHERE id = ?').run(uuidv4(), d.id) 
-  } 
+   const start = Date.now() 
+   while (!pending.has(id) || !pending.get(id).done) { 
+     if (Date.now() - start > 5000) break 
+     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10) 
+   } 
+   const r = pending.get(id) 
+   pending.delete(id) 
+   return r?.result 
+ } 
  
-  try { db.prepare("ALTER TABLE rides ADD COLUMN valor_motorista REAL").run() } catch(e) {} 
-  try { db.prepare("ALTER TABLE rides ADD COLUMN valor_mobihub REAL").run() } catch(e) {} 
+ function allAsync(sql, params) { 
+   const id = ++reqId 
+   pool.query(sql, params) 
+     .then(r => pending.set(id, { done: true, result: r.rows || [] })) 
+     .catch(e => { console.error('[DB ERROR]', e.message, sql); pending.set(id, { done: true, result: [] }) }) 
  
-  try { db.prepare("ALTER TABLE rides ADD COLUMN tipo TEXT DEFAULT 'normal'").run() } catch(e) {} 
-  try { db.prepare("ALTER TABLE rides ADD COLUMN agendada_para DATETIME").run() } catch(e) {} 
-  try { db.prepare("ALTER TABLE rides ADD COLUMN disparada_at DATETIME").run() } catch(e) {} 
+   const start = Date.now() 
+   while (!pending.has(id) || !pending.get(id).done) { 
+     if (Date.now() - start > 5000) break 
+     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10) 
+   } 
+   const r = pending.get(id) 
+   pending.delete(id) 
+   return r?.result 
+ } 
  
-  try { db.prepare("ALTER TABLE clients ADD COLUMN email TEXT").run() } catch(e) {} 
+ export async function initDB() { 
+   await pool.query(` 
+     CREATE TABLE IF NOT EXISTS admins ( 
+       id SERIAL PRIMARY KEY, 
+       email TEXT UNIQUE NOT NULL, 
+       senha_hash TEXT NOT NULL, 
+       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
+     ); 
  
-  db.exec(` 
-    CREATE TABLE IF NOT EXISTS driver_locations ( 
-      id INTEGER PRIMARY KEY AUTOINCREMENT, 
-      driver_id INTEGER REFERENCES drivers(id), 
-      ride_id INTEGER REFERENCES rides(id), 
-      lat REAL NOT NULL, 
-      lng REAL NOT NULL, 
-      velocidade REAL, 
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP 
-    ); 
+     CREATE TABLE IF NOT EXISTS drivers ( 
+       id SERIAL PRIMARY KEY, 
+       nome TEXT NOT NULL, 
+       telefone TEXT, 
+       telegram_id TEXT UNIQUE NOT NULL, 
+       modelo_carro TEXT NOT NULL, 
+       ano_carro TEXT NOT NULL, 
+       cor_carro TEXT NOT NULL, 
+       placa TEXT NOT NULL, 
+       total_viagens INTEGER DEFAULT 0, 
+       media_avaliacao DOUBLE PRECISION DEFAULT 0, 
+       total_avaliacoes INTEGER DEFAULT 0, 
+       ativo INTEGER DEFAULT 1, 
+       foto_base64 TEXT, 
+       token_perfil TEXT, 
+       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
+     ); 
  
-    CREATE TABLE IF NOT EXISTS tarifas ( 
-      id INTEGER PRIMARY KEY AUTOINCREMENT, 
-      nome TEXT NOT NULL, 
-      dias TEXT NOT NULL, 
-      hora_inicio TEXT NOT NULL, 
-      hora_fim TEXT NOT NULL, 
-      valor_minimo REAL NOT NULL, 
-      valor_km REAL DEFAULT 2.00, 
-      km_minimo REAL DEFAULT 7.5, 
-      ativo INTEGER DEFAULT 1 
-    ); 
+     CREATE TABLE IF NOT EXISTS clients ( 
+       id SERIAL PRIMARY KEY, 
+       telefone TEXT UNIQUE NOT NULL, 
+       nome TEXT, 
+       email TEXT, 
+       total_corridas INTEGER DEFAULT 0, 
+       media_avaliacao DOUBLE PRECISION DEFAULT 0, 
+       total_avaliacoes INTEGER DEFAULT 0, 
+       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
+     ); 
  
-    CREATE TABLE IF NOT EXISTS configuracoes ( 
-      chave TEXT PRIMARY KEY, 
-      valor TEXT NOT NULL 
-    ); 
-  `) 
+     CREATE TABLE IF NOT EXISTS rides ( 
+       id SERIAL PRIMARY KEY, 
+       token TEXT UNIQUE NOT NULL, 
+       client_id INTEGER REFERENCES clients(id), 
+       driver_id INTEGER REFERENCES drivers(id), 
+       origem TEXT NOT NULL, 
+       origem_lat DOUBLE PRECISION, 
+       origem_lng DOUBLE PRECISION, 
+       destino TEXT NOT NULL, 
+       destino_lat DOUBLE PRECISION, 
+       destino_lng DOUBLE PRECISION, 
+       valor DOUBLE PRECISION NOT NULL, 
+       valor_motorista DOUBLE PRECISION, 
+       valor_mobihub DOUBLE PRECISION, 
+       status TEXT DEFAULT 'aberta', 
+       tipo TEXT DEFAULT 'normal', 
+       maps_link TEXT, 
+       telegram_message_id INTEGER, 
+       agendada_para TIMESTAMP, 
+       disparada_at TIMESTAMP, 
+       concluida_auto INTEGER DEFAULT 0, 
+       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+       aceita_at TIMESTAMP, 
+       concluida_at TIMESTAMP, 
+       cancelada_at TIMESTAMP 
+     ); 
  
-  const configsIniciais = { 
-    'agendamento_disparo_imediato': 'true', 
-    'agendamento_minutos_antes': '30', 
-    'agendamento_bloqueio_ativo': 'true', 
-    'agendamento_minutos_bloqueio': '60', 
-    'corrida_valor_minimo': '15', 
-    'corrida_km_minimo': '7.5', 
-    'corrida_valor_km': '2' 
-  } 
+     CREATE TABLE IF NOT EXISTS ratings ( 
+       id SERIAL PRIMARY KEY, 
+       ride_id INTEGER UNIQUE REFERENCES rides(id), 
+       estrelas_motorista INTEGER CHECK(estrelas_motorista BETWEEN 1 AND 5), 
+       comentario_cliente TEXT, 
+       avaliado_em_cliente TIMESTAMP, 
+       estrelas_cliente INTEGER CHECK(estrelas_cliente BETWEEN 1 AND 5), 
+       comentario_motorista TEXT, 
+       avaliado_em_motorista TIMESTAMP, 
+       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
+     ); 
  
-  const insertConfig = db.prepare(` 
-    INSERT OR IGNORE INTO configuracoes (chave, valor) VALUES (?, ?) 
-  `) 
-  for (const [chave, valor] of Object.entries(configsIniciais)) { 
-    insertConfig.run(chave, valor) 
-  } 
+     CREATE TABLE IF NOT EXISTS driver_locations ( 
+       id SERIAL PRIMARY KEY, 
+       driver_id INTEGER REFERENCES drivers(id), 
+       ride_id INTEGER REFERENCES rides(id), 
+       lat DOUBLE PRECISION NOT NULL, 
+       lng DOUBLE PRECISION NOT NULL, 
+       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
+     ); 
  
-  try { db.prepare("ALTER TABLE rides ADD COLUMN concluida_auto INTEGER DEFAULT 0").run() } catch(e) {} 
-  try { db.prepare("ALTER TABLE ratings ADD COLUMN comentario_passageiro_sobre_motorista TEXT").run() } catch(e) {} 
+     CREATE TABLE IF NOT EXISTS configuracoes ( 
+       chave TEXT PRIMARY KEY, 
+       valor TEXT NOT NULL 
+     ); 
  
-  // Configuração do raio de chegada 
-  insertConfig.run('chegada_raio_metros', '150') 
-  insertConfig.run('chegada_auto_ativo', 'true') 
+     CREATE TABLE IF NOT EXISTS tarifas ( 
+       id SERIAL PRIMARY KEY, 
+       nome TEXT NOT NULL, 
+       dias TEXT NOT NULL, 
+       hora_inicio TEXT NOT NULL, 
+       hora_fim TEXT NOT NULL, 
+       valor_minimo DOUBLE PRECISION NOT NULL, 
+       valor_km DOUBLE PRECISION DEFAULT 2.00, 
+       km_minimo DOUBLE PRECISION DEFAULT 7.5, 
+       ativo INTEGER DEFAULT 1 
+     ); 
+   `) 
  
-  const tarifasExistentes = db.prepare('SELECT COUNT(*) as total FROM tarifas').get() 
-  if (tarifasExistentes.total === 0) { 
-    const insert = db.prepare(` 
-      INSERT INTO tarifas (nome, dias, hora_inicio, hora_fim, valor_minimo, valor_km, km_minimo) 
-      VALUES (?, ?, ?, ?, ?, ?, ?) 
-    `) 
-    insert.run('Padrão', '1,2,3,4,5', '09:00', '17:00', 15.00, 2.00, 7.5) 
-    insert.run('Pico manhã', '1,2,3,4,5', '06:00', '09:00', 20.00, 2.00, 7.5) 
-    insert.run('Pico tarde', '1,2,3,4,5', '17:00', '20:00', 20.00, 2.00, 7.5) 
-    insert.run('Noturno', '0,1,2,3,4,5,6', '20:00', '06:00', 22.00, 2.00, 7.5) 
-    insert.run('Fim de semana', '0,6', '06:00', '20:00', 22.00, 2.00, 7.5) 
-    insert.run('Fim de semana noturno', '0,6', '20:00', '06:00', 25.00, 2.00, 7.5) 
-  } 
-} 
+   await seedAdmin() 
+   await seedConfigs() 
+   await seedTarifas() 
+   console.log('[DB] PostgreSQL inicializado') 
+ } 
  
-function seedAdmin() { 
-  const existing = db.prepare('SELECT id FROM admins LIMIT 1').get() 
-  if (existing) return 
-  const email = process.env.ADMIN_EMAIL || 'admin@mobihub.com' 
-  const senha = process.env.ADMIN_SENHA || 'mobihub123' 
-  const hash = bcrypt.hashSync(senha, 10) 
-  db.prepare('INSERT INTO admins (email, senha_hash) VALUES (?, ?)').run(email, hash) 
-  console.log(`[DB] Admin criado: ${email}`) 
-}
+ async function seedAdmin() { 
+   const existing = await pool.query('SELECT id FROM admins LIMIT 1') 
+   if (existing.rows.length > 0) return 
+   const email = process.env.ADMIN_EMAIL || 'admin@mobihub.com' 
+   const senha = process.env.ADMIN_SENHA || 'mobihub123' 
+   const hash = await bcrypt.hash(senha, 10) 
+   await pool.query('INSERT INTO admins (email, senha_hash) VALUES ($1, $2)', [email, hash]) 
+   console.log(`[DB] Admin criado: ${email}`) 
+ } 
+ 
+ async function seedConfigs() { 
+   const configs = { 
+     'agendamento_disparo_imediato': 'true', 
+     'agendamento_minutos_antes': '30', 
+     'agendamento_bloqueio_ativo': 'true', 
+     'agendamento_minutos_bloqueio': '60', 
+     'corrida_valor_minimo': '15', 
+     'corrida_km_minimo': '7.5', 
+     'corrida_valor_km': '2', 
+     'chegada_raio_metros': '150', 
+     'chegada_auto_ativo': 'true' 
+   } 
+   for (const [chave, valor] of Object.entries(configs)) { 
+     await pool.query( 
+       'INSERT INTO configuracoes (chave, valor) VALUES ($1, $2) ON CONFLICT (chave) DO NOTHING', 
+       [chave, valor] 
+     ) 
+   } 
+ } 
+ 
+ async function seedTarifas() { 
+   const existing = await pool.query('SELECT COUNT(*) as total FROM tarifas') 
+   if (parseInt(existing.rows[0].total) > 0) return 
+   const tarifas = [ 
+     ['Padrão', '1,2,3,4,5', '09:00', '17:00', 15.00], 
+     ['Pico manhã', '1,2,3,4,5', '06:00', '09:00', 20.00], 
+     ['Pico tarde', '1,2,3,4,5', '17:00', '20:00', 20.00], 
+     ['Noturno', '0,1,2,3,4,5,6', '20:00', '06:00', 22.00], 
+     ['Fim de semana', '0,6', '06:00', '20:00', 22.00], 
+     ['Fim de semana noturno', '0,6', '20:00', '06:00', 25.00] 
+   ] 
+   for (const t of tarifas) { 
+     await pool.query( 
+       'INSERT INTO tarifas (nome, dias, hora_inicio, hora_fim, valor_minimo) VALUES ($1, $2, $3, $4, $5)', 
+       t 
+     ) 
+   } 
+ } 

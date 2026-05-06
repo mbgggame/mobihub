@@ -48,7 +48,7 @@ await fastify.register(ridesRoutes)
 await fastify.register(publicRoutes) 
  
 // Inicializa 
-initDB() 
+await initDB() 
 initBot() 
 initScheduler() 
  
