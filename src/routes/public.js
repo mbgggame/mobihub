@@ -24,11 +24,21 @@ export default async function publicRoutes(fastify) {
     const ratingResult = await query('SELECT estrelas_motorista, comentario_cliente, avaliado_em_cliente FROM ratings WHERE ride_id = $1', [ride.id]) 
     const rating = ratingResult.rows[0] 
  
+    const paradasResult = await query( 
+      'SELECT duracao_min, custo, iniciada_at, finalizada_at FROM ride_stops WHERE ride_id = $1 ORDER BY iniciada_at', 
+      [ride.id] 
+    ) 
+    const paradas = paradasResult.rows 
+ 
+    const configsResult = await query('SELECT chave, valor FROM configuracoes') 
+    const config = {} 
+    configsResult.rows.forEach(c => config[c.chave] = c.valor) 
+ 
     // Remove dados sensíveis antes de retornar 
     delete ride.client_id 
     delete ride.driver_id 
  
-    return { ride, rating } 
+    return { ride, rating, paradas, config } 
   }) 
  
   fastify.get('/api/ride/:token/motorista-location', async (request, reply) => { 
