@@ -20,6 +20,11 @@
    <span class="font-semibold">MobiHub</span> 
  </div> 
  
+ <div id="indicador-polling" class="bg-green-50 border-b border-green-100 px-4 py-1.5 flex items-center justify-between"> 
+   <p class="text-xs text-green-600">🔄 Atualizando automaticamente a cada 10 segundos</p> 
+   <span id="ultimo-update" class="text-xs text-green-400"></span> 
+ </div> 
+ 
  <div class="max-w-lg mx-auto px-4 py-4 space-y-4"> 
  
    <!-- STATUS --> 
@@ -218,18 +223,25 @@
      const r = await fetch(`/api/ride/${token}`) 
      if (!r.ok) { 
        document.body.innerHTML = '<p class="text-center mt-20 text-gray-500">Corrida não encontrada.</p>' 
+       pollingAtivo = false 
        return 
      } 
      const { ride, rating, paradas, config } = await r.json() 
      dadosAtuais = { ride, rating, paradas, config } 
      renderizar(ride, rating, paradas, config) 
+     
+     verificarParaPolling(ride.status) 
+ 
+     const agora = new Date().toLocaleTimeString('pt-BR') 
+     const el = document.getElementById('ultimo-update') 
+     if (el) el.textContent = `Última atualização: ${agora}` 
  
      // Se corrida aceita, busca localização do motorista 
      if (ride.status === 'aceita') { 
        atualizarLocalizacaoMotorista(ride) 
      } 
    } catch (e) { 
-     console.error(e) 
+     console.error('[CARREGAR]', e) 
    } 
  } 
  
@@ -500,12 +512,34 @@
    } 
  } 
  
- // Polling — atualiza a cada 10 segundos 
+ let pollingAtivo = true 
+ let pollingErros = 0 
+ 
  async function iniciarPolling() { 
    await carregar() 
-   setInterval(async () => { 
-     await carregar() 
-   }, 10000) 
+ 
+   async function tick() { 
+     if (!pollingAtivo) return 
+     try { 
+       await carregar() 
+       pollingErros = 0 
+     } catch(e) { 
+       pollingErros++ 
+       console.error('[POLLING] Erro:', e.message) 
+     } 
+     const intervalo = pollingErros > 3 ? 30000 : 10000 
+     setTimeout(tick, intervalo) 
+   } 
+ 
+   setTimeout(tick, 10000) 
+ } 
+ 
+ // Para polling quando corrida concluída ou cancelada 
+ function verificarParaPolling(status) { 
+   if (status === 'concluida' || status === 'cancelada') { 
+     pollingAtivo = false 
+     console.log('[POLLING] Parado — corrida finalizada') 
+   } 
  } 
  
  iniciarPolling() 
