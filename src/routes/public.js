@@ -19,6 +19,8 @@ export default async function publicRoutes(fastify) {
     `, [request.params.token]) 
     const ride = result.rows[0] 
  
+    console.log('[DEBUG] Ride status:', ride?.status, 'token:', request.params.token) 
+ 
     if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
  
     const ratingResult = await query('SELECT estrelas_motorista, comentario_cliente, avaliado_em_cliente FROM ratings WHERE ride_id = $1', [ride.id]) 
