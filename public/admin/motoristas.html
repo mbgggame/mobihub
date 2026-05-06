@@ -1,374 +1,442 @@
 <!DOCTYPE html> 
-<html lang="pt-BR"> 
-<head> 
-  <meta charset="UTF-8"/> 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
-  <title>MobiHub — Gestão de Motoristas</title> 
-  <script src="https://cdn.tailwindcss.com"></script> 
-</head> 
-<body class="bg-gray-50 min-h-screen"> 
+ <html lang="pt-BR"> 
+ <head> 
+   <meta charset="UTF-8"/> 
+   <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
+   <title>MobiHub — Motoristas</title> 
+   <script src="https://cdn.tailwindcss.com"></script> 
+ </head> 
+ <body class="bg-gray-50 min-h-screen pb-10"> 
  
-<!-- HEADER --> 
-<div class="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between"> 
-  <div class="flex items-center gap-3"> 
-    <a href="/admin" class="text-gray-500 hover:text-gray-700">← Voltar</a> 
-    <span class="font-bold text-green-700 text-lg">MobiHub</span> 
-  </div> 
-  <div class="flex gap-2"> 
-    <a href="/admin/dashboard" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors">📊 Dashboard</a> 
-    <button onclick="sair()" class="bg-red-50 text-red-600 hover:bg-red-100 px-4 py-2 rounded-xl text-sm font-semibold transition-colors">Sair</button> 
-  </div> 
-</div> 
+ <div class="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10"> 
+   <div class="flex items-center gap-3"> 
+     <a href="/admin/dashboard" class="text-gray-500 hover:text-gray-700 text-sm">← Dashboard</a> 
+     <span class="text-gray-300">|</span> 
+     <span class="font-semibold text-gray-900">Motoristas</span> 
+   </div> 
+   <button onclick="sair()" class="text-sm text-gray-500 border border-gray-200 px-3 py-1.5 rounded-lg">Sair</button> 
+ </div> 
  
-<div class="max-w-4xl mx-auto px-4 py-6 space-y-8"> 
-   
-  <!-- FORMULÁRIO DE CADASTRO --> 
-  <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6"> 
-    <h2 class="text-lg font-semibold text-gray-900 mb-4">Cadastrar Novo Motorista</h2> 
-    <div id="erro" class="hidden bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2.5 mb-4"></div> 
-    <div id="sucesso" class="hidden bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-4 py-2.5 mb-4">Motorista cadastrado com sucesso!</div> 
-     
-    <form id="form-motorista" class="grid grid-cols-1 md:grid-cols-2 gap-4"> 
-      <div> 
-        <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Nome Completo</label> 
-        <input name="nome" type="text" required placeholder="Ex: João Silva" 
-          class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-      </div> 
-      <div> 
-        <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Telefone</label> 
-        <input name="telefone" type="tel" placeholder="Ex: 5527999999999" 
-          class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-      </div> 
-      <div> 
-        <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Telegram ID</label> 
-        <input name="telegram_id" type="number" required placeholder="Ex: 8566665692" 
-          class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-        <p class="text-xs text-yellow-600 mt-1"> 
-          ⚠️ O Telegram ID deve ser exatamente o número do usuário. 
-          Para descobrir o ID de um motorista, peça para ele enviar /start para @mvpmobi_bot 
-          e você verá o ID nos logs do servidor. 
-        </p> 
-      </div> 
-      <div> 
-        <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Modelo do Carro</label> 
-        <input name="modelo_carro" type="text" required placeholder="Ex: Toyota Corolla" 
-          class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-      </div> 
-      <div> 
-        <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Ano do Carro</label> 
-        <input name="ano_carro" type="text" required placeholder="Ex: 2022" 
-          class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-      </div> 
-      <div> 
-        <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Cor do Carro</label> 
-        <input name="cor_carro" type="text" required placeholder="Ex: Prata" 
-          class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-      </div> 
-      <div class="md:col-span-2"> 
-        <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Placa</label> 
-        <input name="placa" type="text" required placeholder="Ex: ABC1D23" 
-          class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-      </div> 
-      <div class="md:col-span-2"> 
-        <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Foto do motorista (opcional)</label> 
-        <input id="input-foto" type="file" accept="image/*" 
-          class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"/> 
-        <input type="hidden" name="foto_base64" id="foto_base64"> 
-      </div> 
-      <div class="md:col-span-2"> 
-        <button type="submit" 
-          class="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl py-3.5 font-semibold text-base transition-colors"> 
-          Cadastrar motorista 
-        </button> 
-      </div> 
-    </form> 
-  </div> 
+ <div class="max-w-2xl mx-auto px-4 py-6 space-y-6"> 
  
-  <!-- MODAL DE EDIÇÃO --> 
-  <div id="modal-edicao" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-50"> 
-    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 max-h-screen overflow-y-auto"> 
-      <div class="flex justify-between items-center mb-4"> 
-        <h2 class="font-semibold text-lg">Editar Motorista</h2> 
-        <button onclick="fecharModal()" class="text-gray-400 hover:text-gray-600 text-xl">✕</button> 
-      </div> 
-      <div id="form-editar" class="grid grid-cols-1 md:grid-cols-2 gap-4"> 
-        <input type="hidden" id="edit-id"> 
-        <div> 
-          <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Nome Completo</label> 
-          <input id="edit-nome" type="text" required class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-        </div> 
-        <div> 
-          <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Telefone</label> 
-          <input id="edit-telefone" type="tel" class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-        </div> 
-        <div> 
-          <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Telegram ID</label> 
-          <input id="edit-telegram" type="number" required class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-        </div> 
-        <div> 
-          <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Modelo do Carro</label> 
-          <input id="edit-modelo" type="text" required class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-        </div> 
-        <div> 
-          <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Ano do Carro</label> 
-          <input id="edit-ano" type="text" required class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-        </div> 
-        <div> 
-          <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Cor do Carro</label> 
-          <input id="edit-cor" type="text" required class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-        </div> 
-        <div class="md:col-span-2"> 
-          <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Placa</label> 
-          <input id="edit-placa" type="text" required class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-        </div> 
-        <div class="md:col-span-2"> 
-          <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">Foto do motorista (opcional)</label> 
-          <input id="input-foto-edit" type="file" accept="image/*" 
-            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"/> 
-          <input type="hidden" id="foto_base64_edit"> 
-        </div> 
-        <div class="md:col-span-2"> 
-          <button id="btn-salvar-edicao" onclick="salvarEdicao()" 
-            class="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl py-3.5 font-semibold text-base transition-colors"> 
-            Salvar Alterações 
-          </button> 
-        </div> 
-      </div> 
-    </div> 
-  </div> 
+   <!-- FORMULÁRIO --> 
+   <div class="bg-white border border-gray-200 rounded-xl p-5"> 
+     <h2 id="form-titulo" class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">Cadastrar motorista</h2> 
+     <input type="hidden" id="edit-id"/> 
+     <div class="grid grid-cols-1 gap-3"> 
+       <div> 
+         <label class="text-xs text-gray-500 font-medium">Nome completo</label> 
+         <input id="f-nome" type="text" placeholder="Nome completo" 
+           class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+       </div> 
+       <div class="grid grid-cols-2 gap-3"> 
+         <div> 
+           <label class="text-xs text-gray-500 font-medium">Telefone</label> 
+           <input id="f-telefone" type="tel" placeholder="(27) 99999-9999" 
+             class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+         </div> 
+         <div> 
+           <label class="text-xs text-gray-500 font-medium">Telegram ID</label> 
+           <input id="f-telegram" type="text" placeholder="Ex: 1479908250" 
+             class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+         </div> 
+       </div> 
+       <div class="grid grid-cols-2 gap-3"> 
+         <div> 
+           <label class="text-xs text-gray-500 font-medium">Modelo do carro</label> 
+           <input id="f-modelo" type="text" placeholder="Ex: BYD King GS" 
+             class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+         </div> 
+         <div> 
+           <label class="text-xs text-gray-500 font-medium">Ano</label> 
+           <input id="f-ano" type="text" placeholder="Ex: 2024" 
+             class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+         </div> 
+       </div> 
+       <div class="grid grid-cols-2 gap-3"> 
+         <div> 
+           <label class="text-xs text-gray-500 font-medium">Cor do carro</label> 
+           <input id="f-cor" type="text" placeholder="Ex: Prata" 
+             class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+         </div> 
+         <div> 
+           <label class="text-xs text-gray-500 font-medium">Placa</label> 
+           <input id="f-placa" type="text" placeholder="Ex: SGZ2D22" 
+             class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+         </div> 
+       </div> 
  
-  <!-- LISTAGEM DE MOTORISTAS --> 
-  <div class="space-y-4"> 
-    <h2 class="text-lg font-semibold text-gray-900">Motoristas Cadastrados</h2> 
-    <div id="lista-motoristas" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div> 
-  </div> 
-</div> 
+       <!-- FOTO --> 
+       <div> 
+         <label class="text-xs text-gray-500 font-medium">Foto do motorista</label> 
+         <div class="mt-2 flex gap-2"> 
+           <button type="button" onclick="abrirCamera()" 
+             class="flex-1 flex items-center justify-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:border-green-300"> 
+             📷 Tirar foto 
+           </button> 
+           <button type="button" onclick="document.getElementById('input-foto').click()" 
+             class="flex-1 flex items-center justify-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:border-green-300"> 
+             🖼️ Galeria 
+           </button> 
+         </div> 
+         <input id="input-foto" type="file" accept="image/*" class="hidden" onchange="processarFoto(event)"/> 
+         <canvas id="canvas-foto" class="hidden"></canvas> 
+ 
+         <div id="area-camera" class="hidden mt-2"> 
+           <video id="video-camera" autoplay playsinline 
+             class="w-full rounded-lg" style="max-height:220px;object-fit:cover;background:#000"></video> 
+           <div class="flex gap-2 mt-2"> 
+             <button type="button" onclick="capturarFoto()" 
+               class="flex-1 bg-green-600 text-white rounded-lg py-2 text-sm font-medium"> 
+               📸 Capturar 
+             </button> 
+             <button type="button" onclick="fecharCamera()" 
+               class="flex-1 bg-white border border-gray-200 text-gray-600 rounded-lg py-2 text-sm"> 
+               Cancelar 
+             </button> 
+           </div> 
+         </div> 
+ 
+         <div id="preview-foto" class="hidden mt-3 flex justify-center"> 
+           <div class="relative"> 
+             <img id="img-preview" src="" alt="Preview" 
+               class="w-24 h-24 rounded-full object-cover border-4 border-green-400"/> 
+             <button onclick="removerFoto()" 
+               class="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center">✕</button> 
+           </div> 
+         </div> 
+       </div> 
+ 
+       <div id="erro-form" class="hidden text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2"></div> 
+ 
+       <div class="flex gap-2"> 
+         <button id="btn-salvar" onclick="salvar()" 
+           class="flex-1 bg-green-600 text-white rounded-xl py-3 font-semibold text-sm hover:bg-green-700"> 
+           Cadastrar motorista 
+         </button> 
+         <button id="btn-cancelar" onclick="cancelarEdicao()" 
+           class="hidden border border-gray-200 text-gray-600 rounded-xl py-3 px-4 text-sm hover:bg-gray-50"> 
+           Cancelar 
+         </button> 
+       </div> 
+     </div> 
+   </div> 
+ 
+   <!-- LISTA --> 
+   <div> 
+     <div class="flex items-center justify-between mb-3"> 
+       <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Motoristas cadastrados</h2> 
+       <button onclick="carregarMotoristas()" class="text-xs text-green-600 hover:text-green-800">↻ Atualizar</button> 
+     </div> 
+     <div id="lista-motoristas" class="space-y-3"></div> 
+   </div> 
+ 
+ </div> 
+ 
+ <!-- MODAL TOKEN --> 
+ <div id="modal-token" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-50"> 
+   <div class="bg-white rounded-2xl max-w-sm w-full p-6"> 
+     <h3 class="font-semibold text-gray-900 mb-2">Link do perfil</h3> 
+     <p class="text-xs text-gray-500 mb-3">Envie este link para o motorista ver seu perfil e avaliações</p> 
+     <div class="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 mb-4"> 
+       <p id="txt-link-perfil" class="text-xs text-green-700 font-mono break-all"></p> 
+     </div> 
+     <div class="flex gap-2"> 
+       <button onclick="copiarLinkPerfil()" 
+         class="flex-1 bg-green-600 text-white rounded-lg py-2.5 text-sm font-medium"> 
+         📋 Copiar link 
+       </button> 
+       <button onclick="fecharModalToken()" 
+         class="flex-1 border border-gray-200 text-gray-600 rounded-lg py-2.5 text-sm"> 
+         Fechar 
+       </button> 
+     </div> 
+   </div> 
+ </div> 
  
 <script> 
-const token = () => localStorage.getItem('mobihub_token') 
-const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` }) 
+ const token = () => localStorage.getItem('mobihub_token') 
+ const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` }) 
+ if (!token()) location.href = '/admin/login' 
  
-if (!token()) location.href = '/admin/login' 
+ let fotoBase64 = null 
+ let streamCamera = null 
+ let linkPerfilAtual = '' 
  
-async function carregarMotoristas() { 
-  const r = await fetch('/api/drivers', { headers: headers() }) 
-  if (r.status === 401) { location.href = '/admin/login'; return } 
-  const motoristas = await r.json() 
-  renderizar(motoristas) 
-} 
+ function sair() { localStorage.removeItem('mobihub_token'); location.href = '/admin/login' } 
  
-function renderizar(motoristas) { 
-  const lista = document.getElementById('lista-motoristas') 
-  if (!motoristas.length) { 
-    lista.innerHTML = '<p class="col-span-full text-center text-gray-400 py-8">Nenhum motorista cadastrado.</p>' 
-    return 
-  } 
-  lista.innerHTML = motoristas.map(m => {
-    const iniciais = m.nome.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
-    return ` 
-    <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-sm"> 
-      <div class="flex justify-between items-start mb-3"> 
-        <div class="flex items-center gap-3">
-          ${m.foto_base64  
-            ? `<img src="${m.foto_base64}" class="w-12 h-12 rounded-full object-cover border border-gray-100">` 
-            : `<div class="w-12 h-12 rounded-full bg-green-600 flex items-center justify-center text-white font-bold text-sm">${iniciais}</div>`
-          }
-          <div> 
-            <h3 class="font-semibold text-gray-900">${m.nome}</h3> 
-            <p class="text-xs text-gray-500">${m.telefone || 'Sem telefone'}</p> 
-          </div> 
-        </div>
-        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${m.ativo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}"> 
-          ${m.ativo ? 'Ativo' : 'Inativo'} 
-        </span> 
-      </div> 
-      <div class="space-y-1 text-sm text-gray-600 mb-4"> 
-        <p><span class="font-medium">Carro:</span> ${m.modelo_carro} ${m.cor_carro} (${m.ano_carro})</p> 
-        <p><span class="font-medium">Placa:</span> <span class="font-mono">${m.placa}</span></p> 
-        <div class="flex gap-4 pt-1"> 
-          <p><span class="font-medium">Viagens:</span> ${m.total_viagens}</p> 
-          <p><span class="font-medium">Nota:</span> ⭐ ${Number(m.media_avaliacao || 0).toFixed(1)}</p> 
-        </div> 
-      </div> 
-      <div class="pt-3 border-t border-gray-50 flex gap-2"> 
-        <button onclick="abrirModalEdicao(${JSON.stringify(m).replace(/"/g, '&quot;')})" class="flex-1 text-xs text-green-600 font-medium hover:bg-green-50 py-1.5 rounded transition-colors border border-green-100">Editar</button>
-        ${m.ativo  
-          ? `<button onclick="alterarStatus(${m.id}, 0)" class="flex-1 text-xs text-red-600 font-medium hover:bg-red-50 py-1.5 rounded transition-colors border border-red-100">Desativar</button>` 
-          : `<button onclick="alterarStatus(${m.id}, 1)" class="flex-1 text-xs text-green-600 font-medium hover:bg-green-50 py-1.5 rounded transition-colors border border-green-100">Reativar</button>` 
-        } 
-      </div> 
-    </div> 
-  `}).join('') 
-} 
+ // ── CÂMERA ────────────────────────────── 
+ async function abrirCamera() { 
+   try { 
+     streamCamera = await navigator.mediaDevices.getUserMedia({ 
+       video: { facingMode: 'user', width: 400, height: 400 }, audio: false 
+     }) 
+     document.getElementById('video-camera').srcObject = streamCamera 
+     document.getElementById('area-camera').classList.remove('hidden') 
+   } catch(e) { 
+     alert('Não foi possível acessar a câmera. Verifique as permissões.') 
+   } 
+ } 
  
-async function alterarStatus(id, ativo) { 
-  if (ativo === 0 && !confirm('Deseja realmente desativar este motorista?')) return 
-   
-  const r = await fetch(`/api/drivers/${id}`, { 
-    method: ativo === 0 ? 'DELETE' : 'PUT', 
-    headers: headers(), 
-    body: ativo === 1 ? JSON.stringify({ ativo: 1 }) : null 
+ function fecharCamera() { 
+   if (streamCamera) { streamCamera.getTracks().forEach(t => t.stop()); streamCamera = null } 
+   document.getElementById('area-camera').classList.add('hidden') 
+   document.getElementById('video-camera').srcObject = null 
+ } 
+ 
+ function capturarFoto() { 
+   const video = document.getElementById('video-camera') 
+   const canvas = document.getElementById('canvas-foto') 
+   const size = 400 
+   canvas.width = size; canvas.height = size 
+   const ctx = canvas.getContext('2d') 
+   const vw = video.videoWidth, vh = video.videoHeight 
+   const lado = Math.min(vw, vh) 
+   ctx.drawImage(video, (vw-lado)/2, (vh-lado)/2, lado, lado, 0, 0, size, size) 
+   aplicarFoto(canvas.toDataURL('image/jpeg', 0.85)) 
+   fecharCamera() 
+ } 
+ 
+ function processarFoto(event) { 
+   const file = event.target.files[0] 
+   if (!file) return 
+   const reader = new FileReader() 
+   reader.onload = e => { 
+     const img = new Image() 
+     img.onload = () => { 
+       const canvas = document.getElementById('canvas-foto') 
+       const size = 400 
+       canvas.width = size; canvas.height = size 
+       const ctx = canvas.getContext('2d') 
+       const lado = Math.min(img.width, img.height) 
+       ctx.drawImage(img, (img.width-lado)/2, (img.height-lado)/2, lado, lado, 0, 0, size, size) 
+       aplicarFoto(canvas.toDataURL('image/jpeg', 0.85)) 
+     } 
+     img.src = e.target.result 
+   } 
+   reader.readAsDataURL(file) 
+   event.target.value = '' 
+ } 
+ 
+ function aplicarFoto(base64) { 
+   fotoBase64 = base64 
+   document.getElementById('img-preview').src = base64 
+   document.getElementById('preview-foto').classList.remove('hidden') 
+ } 
+ 
+ function removerFoto() { 
+   fotoBase64 = null 
+   document.getElementById('preview-foto').classList.add('hidden') 
+   document.getElementById('img-preview').src = '' 
+ } 
+ 
+ // ── FORMULÁRIO ────────────────────────── 
+ function limparForm() { 
+   ['f-nome','f-telefone','f-telegram','f-modelo','f-ano','f-cor','f-placa'].forEach(id => { 
+     document.getElementById(id).value = '' 
+   }) 
+   document.getElementById('edit-id').value = '' 
+   removerFoto() 
+   document.getElementById('erro-form').classList.add('hidden') 
+   document.getElementById('btn-salvar').textContent = 'Cadastrar motorista' 
+   document.getElementById('btn-cancelar').classList.add('hidden') 
+   document.getElementById('form-titulo').textContent = 'Cadastrar motorista' 
+ } 
+ 
+ function cancelarEdicao() { limparForm() } 
+ 
+ function editarMotorista(d) { 
+   document.getElementById('form-titulo').textContent = 'Editar motorista' 
+   document.getElementById('edit-id').value = d.id 
+   document.getElementById('f-nome').value = d.nome || '' 
+   document.getElementById('f-telefone').value = d.telefone || '' 
+   document.getElementById('f-telegram').value = d.telegram_id || '' 
+   document.getElementById('f-modelo').value = d.modelo_carro || '' 
+   document.getElementById('f-ano').value = d.ano_carro || '' 
+   document.getElementById('f-cor').value = d.cor_carro || '' 
+   document.getElementById('f-placa').value = d.placa || '' 
+   document.getElementById('btn-salvar').textContent = 'Salvar alterações' 
+   document.getElementById('btn-cancelar').classList.remove('hidden') 
+   if (d.foto_base64) { 
+     fotoBase64 = d.foto_base64 
+     document.getElementById('img-preview').src = d.foto_base64 
+     document.getElementById('preview-foto').classList.remove('hidden') 
+   } else { 
+     removerFoto() 
+   } 
+   window.scrollTo({ top: 0, behavior: 'smooth' }) 
+ } 
+ 
+ async function salvar() { 
+   const id = document.getElementById('edit-id').value 
+   const body = { 
+     nome: document.getElementById('f-nome').value.trim(), 
+     telefone: document.getElementById('f-telefone').value.trim(), 
+     telegram_id: document.getElementById('f-telegram').value.trim(), 
+     modelo_carro: document.getElementById('f-modelo').value.trim(), 
+     ano_carro: document.getElementById('f-ano').value.trim(), 
+     cor_carro: document.getElementById('f-cor').value.trim(), 
+     placa: document.getElementById('f-placa').value.trim(), 
+     foto_base64: fotoBase64 || null 
+   } 
+ 
+   const erro = document.getElementById('erro-form') 
+   if (!body.nome || !body.telegram_id || !body.modelo_carro || !body.placa) { 
+     erro.textContent = 'Preencha todos os campos obrigatórios' 
+     erro.classList.remove('hidden') 
+     return 
+   } 
+   erro.classList.add('hidden') 
+ 
+   const btn = document.getElementById('btn-salvar') 
+   btn.textContent = 'Salvando...' 
+   btn.disabled = true 
+ 
+   try { 
+     const url = id ? `/api/drivers/${id}` : '/api/drivers' 
+     const method = id ? 'PUT' : 'POST' 
+     const r = await fetch(url, { method, headers: headers(), body: JSON.stringify(body) }) 
+     const d = await r.json() 
+ 
+     if (!r.ok) { 
+       erro.textContent = d.error || 'Erro ao salvar' 
+       erro.classList.remove('hidden') 
+       btn.textContent = id ? 'Salvar alterações' : 'Cadastrar motorista' 
+       btn.disabled = false 
+       return 
+     } 
+ 
+     limparForm() 
+     btn.disabled = false 
+     carregarMotoristas() 
+   } catch(e) { 
+     erro.textContent = 'Erro de conexão' 
+     erro.classList.remove('hidden') 
+     btn.textContent = id ? 'Salvar alterações' : 'Cadastrar motorista' 
+     btn.disabled = false 
+   } 
+ } 
+ 
+ // ── LISTA ──────────────────────────────── 
+ async function carregarMotoristas() { 
+   const r = await fetch('/api/drivers', { headers: headers() }) 
+   if (r.status === 401) { location.href = '/admin/login'; return } 
+   const lista = await r.json() 
+   renderizarMotoristas(lista) 
+ } 
+ 
+ function renderizarMotoristas(lista) { 
+   const div = document.getElementById('lista-motoristas') 
+   if (!lista.length) { 
+     div.innerHTML = '<p class="text-sm text-gray-400 text-center py-8">Nenhum motorista cadastrado ainda.</p>' 
+     return 
+   } 
+   div.innerHTML = lista.map(d => ` 
+     <div class="bg-white border border-gray-200 rounded-xl p-4"> 
+       <div class="flex items-center gap-3 mb-3"> 
+         <div class="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 border-2 border-gray-200 ${d.foto_base64 ? '' : 'bg-green-100 flex items-center justify-center'}"> 
+           ${d.foto_base64 
+             ? `<img src="${d.foto_base64}" class="w-full h-full object-cover"/>` 
+             : `<span class="text-green-700 font-bold text-xl">${d.nome.charAt(0).toUpperCase()}</span>` 
+           } 
+         </div> 
+         <div class="flex-1 min-w-0"> 
+           <div class="flex items-center gap-2 flex-wrap"> 
+             <p class="font-semibold text-gray-900">${d.nome}</p> 
+             <span class="px-2 py-0.5 rounded-full text-xs font-medium ${d.ativo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}"> 
+               ${d.ativo ? 'Ativo' : 'Inativo'} 
+             </span> 
+           </div> 
+           <p class="text-xs text-gray-500 mt-0.5">${d.telefone || '—'}</p> 
+           <p class="text-xs text-gray-400">⭐ ${Number(d.media_avaliacao || 0).toFixed(1)} • ${d.total_viagens || 0} viagens</p> 
+         </div> 
+       </div> 
+ 
+       <div class="bg-gray-50 rounded-lg px-3 py-2 mb-3 text-xs text-gray-600 space-y-0.5"> 
+         <p><span class="font-medium">Carro:</span> ${d.modelo_carro} ${d.cor_carro} ${d.ano_carro}</p> 
+         <p><span class="font-medium">Placa:</span> <span class="font-mono">${d.placa}</span></p> 
+         <p><span class="font-medium">Telegram ID:</span> ${d.telegram_id}</p> 
+       </div> 
+ 
+       <div class="grid grid-cols-2 gap-2"> 
+         <button onclick='editarMotorista(${JSON.stringify(d).replace(/'/g, "\\'")})' 
+           class="text-sm text-green-600 border border-green-200 rounded-lg py-2 hover:bg-green-50"> 
+           ✏️ Editar 
+         </button> 
+         <button onclick="${d.ativo ? `desativar(${d.id})` : `reativar(${d.id})`}" 
+           class="text-sm ${d.ativo 
+             ? 'text-orange-600 border border-orange-200 hover:bg-orange-50' 
+             : 'text-blue-600 border border-blue-200 hover:bg-blue-50'} rounded-lg py-2"> 
+           ${d.ativo ? '⏸️ Desativar' : '▶️ Reativar'} 
+         </button> 
+         <button onclick="gerarToken(${d.id}, '${d.nome.replace(/'/g, "\\'")}')" 
+           class="text-sm text-purple-600 border border-purple-200 rounded-lg py-2 hover:bg-purple-50"> 
+           🔗 ${d.token_perfil ? 'Atualizar link' : 'Gerar link perfil'} 
+         </button> 
+         <button onclick="excluir(${d.id}, '${d.nome.replace(/'/g, "\\'")}')" 
+           class="text-sm text-red-500 border border-red-200 rounded-lg py-2 hover:bg-red-50"> 
+           🗑️ Excluir 
+         </button> 
+         ${d.token_perfil ? ` 
+         <a href="/motorista/${d.token_perfil}" target="_blank" 
+           class="col-span-2 text-center text-sm text-blue-600 border border-blue-200 rounded-lg py-2 hover:bg-blue-50"> 
+           👤 Ver perfil do motorista 
+         </a>` : ''} 
+       </div> 
+     </div> 
+   `).join('') 
+ } 
+ 
+ // ── AÇÕES ──────────────────────────────── 
+ async function desativar(id) { 
+   await fetch(`/api/drivers/${id}`, { method: 'DELETE', headers: headers() }) 
+   carregarMotoristas() 
+ } 
+ 
+ async function reativar(id) { 
+   await fetch(`/api/drivers/${id}`, { 
+     method: 'PUT', headers: headers(), body: JSON.stringify({ ativo: 1 }) 
+   }) 
+   carregarMotoristas() 
+ } 
+ 
+ async function excluir(id, nome) { 
+   if (!confirm(`⚠️ Excluir "${nome}" permanentemente?\n\nEsta ação não pode ser desfeita.`)) return 
+   if (!confirm(`Confirmar exclusão de "${nome}"?`)) return 
+   const r = await fetch(`/api/drivers/${id}/excluir`, { method: 'DELETE', headers: headers() }) 
+   const d = await r.json() 
+   if (r.ok) { alert('Motorista excluído!'); carregarMotoristas() } 
+   else alert('Erro: ' + d.error) 
+ } 
+ 
+ async function gerarToken(id, nome) { 
+  const r = await fetch(`/api/drivers/${id}/gerar-token`, { 
+    method: 'POST', 
+    headers: { 
+      'Authorization': `Bearer ${token()}` 
+    } 
   }) 
-   
-  if (r.ok) carregarMotoristas() 
-} 
- 
-document.getElementById('form-motorista').addEventListener('submit', async (e) => { 
-  e.preventDefault() 
-  const formData = new FormData(e.target) 
-  const data = Object.fromEntries(formData.entries()) 
-  const erro = document.getElementById('erro') 
-  const sucesso = document.getElementById('sucesso') 
-   
-  erro.classList.add('hidden') 
-  sucesso.classList.add('hidden') 
-   
-  try { 
-    const r = await fetch('/api/drivers', { 
-      method: 'POST', 
-      headers: headers(), 
-      body: JSON.stringify(data) 
-    }) 
-    const d = await r.json() 
-    if (!r.ok) { 
-      erro.textContent = d.error 
-      erro.classList.remove('hidden') 
-      return 
-    } 
-    sucesso.classList.remove('hidden') 
-    e.target.reset() 
+  const d = await r.json() 
+  if (r.ok) { 
+    linkPerfilAtual = `${window.location.origin}/motorista/${d.token_perfil}` 
+    document.getElementById('txt-link-perfil').textContent = linkPerfilAtual 
+    document.getElementById('modal-token').classList.remove('hidden') 
     carregarMotoristas() 
-    setTimeout(() => sucesso.classList.add('hidden'), 3000) 
-  } catch { 
-    erro.textContent = 'Erro de conexão.' 
-    erro.classList.remove('hidden') 
-  } 
-}) 
- 
-function sair() { 
-  localStorage.removeItem('mobihub_token') 
-  location.href = '/admin/login' 
-} 
- 
-// Auxiliares para Foto
-async function processarFoto(file) {
-  return new Promise((resolve) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const img = new Image()
-      reader.onload = (e) => {
-        img.src = e.target.result
-        img.onload = () => {
-          const canvas = document.createElement('canvas')
-          let width = img.width
-          let height = img.height
-          const max = 800
-          if (width > max || height > max) {
-            if (width > height) {
-              height *= max / width
-              width = max
-            } else {
-              width *= max / height
-              height = max
-            }
-          }
-          canvas.width = width
-          canvas.height = height
-          const ctx = canvas.getContext('2d')
-          ctx.drawImage(img, 0, 0, width, height)
-          resolve(canvas.toDataURL('image/jpeg', 0.8))
-        }
-      }
-      img.src = e.target.result
-    }
-    reader.readAsDataURL(file)
-  })
-}
-
-document.getElementById('input-foto').onchange = async (e) => {
-  if (e.target.files[0]) {
-    document.getElementById('foto_base64').value = await processarFoto(e.target.files[0])
-  }
-}
-
-document.getElementById('input-foto-edit').onchange = async (e) => {
-  if (e.target.files[0]) {
-    document.getElementById('foto_base64_edit').value = await processarFoto(e.target.files[0])
-  }
-}
-
-// Edição
-let motoristaSendoEditado = null 
- 
-function abrirModalEdicao(motorista) { 
-  motoristaSendoEditado = motorista 
-  document.getElementById('edit-id').value = motorista.id 
-  document.getElementById('edit-nome').value = motorista.nome || '' 
-  document.getElementById('edit-telefone').value = motorista.telefone || '' 
-  document.getElementById('edit-telegram').value = motorista.telegram_id || '' 
-  document.getElementById('edit-modelo').value = motorista.modelo_carro || '' 
-  document.getElementById('edit-ano').value = motorista.ano_carro || '' 
-  document.getElementById('edit-cor').value = motorista.cor_carro || '' 
-  document.getElementById('edit-placa').value = motorista.placa || '' 
-  document.getElementById('foto_base64_edit').value = motorista.foto_base64 || ''
-  document.getElementById('modal-edicao').classList.remove('hidden') 
-} 
- 
-async function salvarEdicao() { 
-  const id = motoristaSendoEditado?.id 
-  if (!id) { alert('Erro: motorista não identificado'); return } 
- 
-  const body = { 
-    nome: document.getElementById('edit-nome').value, 
-    telefone: document.getElementById('edit-telefone').value, 
-    telegram_id: document.getElementById('edit-telegram').value, 
-    modelo_carro: document.getElementById('edit-modelo').value, 
-    ano_carro: document.getElementById('edit-ano').value, 
-    cor_carro: document.getElementById('edit-cor').value, 
-    placa: document.getElementById('edit-placa').value,
-    foto_base64: document.getElementById('foto_base64_edit').value
-  } 
- 
-  const btn = document.getElementById('btn-salvar-edicao') 
-  btn.textContent = 'Salvando...' 
-  btn.disabled = true 
- 
-  try { 
-    const r = await fetch(`/api/drivers/${id}`, { 
-      method: 'PUT', 
-      headers: { 
-        'Content-Type': 'application/json', 
-        'Authorization': `Bearer ${localStorage.getItem('mobihub_token')}` 
-      }, 
-      body: JSON.stringify(body) 
-    }) 
- 
-    const d = await r.json() 
- 
-    if (!r.ok) { 
-      alert('Erro ao salvar: ' + d.error) 
-      btn.textContent = 'Salvar Alterações' 
-      btn.disabled = false 
-      return 
-    } 
- 
-    document.getElementById('modal-edicao').classList.add('hidden') 
-    motoristaSendoEditado = null 
-    await carregarMotoristas() 
-    alert('Motorista atualizado com sucesso!') 
-  } catch (e) { 
-    alert('Erro de conexão: ' + e.message) 
-    btn.textContent = 'Salvar Alterações' 
-    btn.disabled = false 
+  } else { 
+    alert('Erro ao gerar token: ' + (d.error || JSON.stringify(d))) 
   } 
 } 
-
-function fecharModal() {
-  document.getElementById('modal-edicao').classList.add('hidden')
-  motoristaSendoEditado = null
-}
-
-carregarMotoristas() 
-</script> 
-</body> 
-</html>
+ 
+ function copiarLinkPerfil() { 
+   navigator.clipboard.writeText(linkPerfilAtual) 
+   alert('Link copiado!') 
+ } 
+ 
+ function fecharModalToken() { 
+   document.getElementById('modal-token').classList.add('hidden') 
+ } 
+ 
+ carregarMotoristas() 
+ </script> 
+ </body> 
+ </html> 

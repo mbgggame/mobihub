@@ -6,403 +6,555 @@
   <title>MobiHub — Solicitar corrida</title> 
   <script src="https://cdn.tailwindcss.com"></script> 
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBz0TOxlMbWgEQuDoMSqneGN0UFywnX-7s&libraries=places&language=pt-BR"></script> 
-  <style> 
-    #map { height: 320px; } 
-    .star-btn { cursor:pointer; font-size:1.5rem; color:#d1d5db; } 
-    .star-btn.active { color:#f59e0b; } 
-  </style> 
+  <style>#map { height: 280px; } .pac-container { z-index: 9999 !important; }</style> 
 </head> 
-<body class="bg-gray-50 min-h-screen"> 
+<body class="bg-gray-50 min-h-screen pb-10"> 
  
-  <!-- HEADER --> 
-  <div class="bg-green-600 text-white px-4 py-3 flex items-center gap-2 shadow"> 
-    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg> 
-    <span class="font-semibold text-lg">MobiHub</span> 
-    <span class="text-green-200 text-sm ml-1">— Solicitar corrida</span> 
+<div class="bg-green-600 text-white px-4 py-3 flex items-center gap-2 shadow"> 
+  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg> 
+  <span class="font-bold text-lg">MobiHub</span> 
+</div> 
+ 
+<div class="max-w-lg mx-auto px-4 py-4 space-y-4"> 
+ 
+  <!-- TELA 1: CADASTRO --> 
+  <div id="tela-cadastro"> 
+    <div class="bg-white border border-gray-200 rounded-xl p-5"> 
+      <h2 class="font-semibold text-gray-900 mb-1">Bem-vindo ao MobiHub!</h2> 
+      <p class="text-sm text-gray-500 mb-4">Preencha seus dados uma única vez para continuar.</p> 
+      <div class="space-y-3"> 
+        <div> 
+          <label class="text-xs text-gray-500 font-medium">Nome completo</label> 
+          <input id="cad-nome" type="text" placeholder="Seu nome" 
+            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+        </div> 
+        <div> 
+          <label class="text-xs text-gray-500 font-medium">Celular (WhatsApp)</label> 
+          <input id="cad-celular" type="tel" placeholder="(27) 99999-9999" 
+            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+        </div> 
+        <div> 
+          <label class="text-xs text-gray-500 font-medium">E-mail</label> 
+          <input id="cad-email" type="email" placeholder="seu@email.com" 
+            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+        </div> 
+        <div id="erro-cadastro" class="hidden text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2"></div> 
+        <button onclick="salvarCadastro()" 
+          class="w-full bg-green-600 text-white rounded-xl py-3 font-semibold text-sm hover:bg-green-700"> 
+          Continuar → 
+        </button> 
+      </div> 
+    </div> 
   </div> 
  
-  <div class="max-w-lg mx-auto px-4 pt-4"> 
+  <!-- TELA 2: SOLICITAR --> 
+  <div id="tela-solicitar" class="hidden space-y-4"> 
+ 
+    <div class="flex items-center justify-between"> 
+      <p class="text-sm text-gray-600">Olá, <span id="txt-nome-cliente" class="font-semibold text-green-700"></span>!</p> 
+      <button onclick="trocarCadastro()" class="text-xs text-gray-400 hover:text-gray-600 underline">Trocar dados</button> 
+    </div> 
+ 
     <div class="flex gap-2"> 
       <button id="btn-agora" onclick="setTipo('normal')" 
         class="flex-1 bg-green-600 text-white rounded-xl py-3 font-semibold text-sm"> 
-        Corrida agora 
+        🚗 Corrida agora 
       </button> 
       <button id="btn-agendar" onclick="setTipo('agendada')" 
         class="flex-1 bg-white border border-green-600 text-green-600 rounded-xl py-3 font-semibold text-sm"> 
-        Agendar corrida 
+        🗓️ Agendar 
       </button> 
     </div> 
-  </div> 
- 
-  <div class="max-w-lg mx-auto px-4 py-4 space-y-4"> 
  
     <div id="campo-agendamento" class="hidden bg-white border border-gray-200 rounded-xl p-4"> 
-      <p class="text-sm font-medium text-gray-700 mb-3">Data e hora da corrida</p> 
+      <label class="text-sm font-medium text-gray-700">Data e hora da corrida</label> 
       <input id="data-agendamento" type="datetime-local" 
-        class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-      <p id="aviso-agendamento" class="text-xs text-gray-400 mt-2"></p> 
+        class="mt-2 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+      <p class="text-xs text-gray-400 mt-1">Mínimo 2 horas de antecedência • Máximo 10 dias</p> 
     </div> 
  
-    <!-- ATALHOS RÁPIDOS --> 
-    <div id="atalhos" class="hidden"> 
-      <p class="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Atalhos rápidos</p> 
-      <div class="flex gap-2 flex-wrap" id="atalhos-lista"></div> 
-    </div> 
- 
-    <!-- HISTÓRICO --> 
-    <div id="historico-section" class="hidden"> 
-      <p class="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Corridas recentes</p> 
-      <div id="historico-lista" class="space-y-2"></div> 
-    </div> 
- 
-    <!-- BUSCA DE ENDEREÇO --> 
-    <div class="space-y-2"> 
-      <div class="relative"> 
-        <label class="text-xs text-gray-500 font-medium">Origem</label> 
-        <input id="busca-orig" type="text" 
-          placeholder="Ex: Aeroporto, Shopping, Rua X número Y..." 
-          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 mt-1"/> 
+    <div class="bg-white border border-gray-200 rounded-xl p-4 space-y-3"> 
+      <div> 
+        <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">📍 Origem</label> 
+        <input id="busca-orig" type="text" placeholder="Ex: Aeroporto, Shopping, Rua X 123..." 
+          class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
       </div> 
-      <div class="relative"> 
-        <label class="text-xs text-gray-500 font-medium">Destino</label> 
-        <input id="busca-dest" type="text" 
-          placeholder="Ex: Aeroporto, Shopping, Rua X número Y..." 
-          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 mt-1"/> 
+      <div> 
+        <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">🏁 Destino</label> 
+        <input id="busca-dest" type="text" placeholder="Ex: Aeroporto, Shopping, Rua X 123..." 
+          class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
       </div> 
     </div> 
  
-    <!-- MAPA --> 
-    <div class="rounded-xl overflow-hidden border border-gray-200 shadow-sm"> 
-      <div id="map" style="height: 320px; width: 100%; border-radius: 12px;"></div> 
+    <div class="rounded-xl overflow-hidden border border-gray-200"> 
+      <div id="map"></div> 
     </div> 
-    <p id="txt-distancia" class="text-xs text-center text-gray-400 mt-2"></p> 
-    <p class="text-xs text-center text-gray-400">Ou toque no mapa para marcar o ponto</p> 
+    <p class="text-xs text-center text-gray-400">Ou toque no mapa para marcar os pontos</p> 
  
-    <!-- PONTOS SELECIONADOS --> 
-    <div id="ponto-origem" class="hidden bg-green-50 border border-green-200 rounded-lg px-4 py-3"> 
+    <div id="ponto-origem" class="hidden bg-green-50 border border-green-200 rounded-xl px-4 py-3"> 
       <div class="flex items-start justify-between"> 
         <div> 
           <p class="text-xs text-green-600 font-medium">Origem</p> 
           <p id="txt-origem" class="text-sm text-green-900 font-semibold mt-0.5"></p> 
         </div> 
-        <div class="flex gap-2 mt-1"> 
-          <button onclick="salvarFavorito('casa')" class="text-xs text-green-600 border border-green-300 rounded px-2 py-0.5 hover:bg-green-100">+ Casa</button> 
-          <button onclick="salvarFavorito('trabalho')" class="text-xs text-green-600 border border-green-300 rounded px-2 py-0.5 hover:bg-green-100">+ Trabalho</button> 
+        <div class="flex gap-1 mt-1"> 
+          <button onclick="salvarFavorito('casa')" title="Salvar como Casa" 
+            class="text-xs text-green-600 border border-green-300 rounded px-2 py-0.5 hover:bg-green-100">🏠</button> 
+          <button onclick="salvarFavorito('trabalho')" title="Salvar como Trabalho" 
+            class="text-xs text-green-600 border border-green-300 rounded px-2 py-0.5 hover:bg-green-100">💼</button> 
         </div> 
       </div> 
     </div> 
  
-    <div id="ponto-destino" class="hidden bg-red-50 border border-red-200 rounded-lg px-4 py-3"> 
+    <div id="ponto-destino" class="hidden bg-red-50 border border-red-200 rounded-xl px-4 py-3"> 
       <div class="flex items-start justify-between"> 
         <div> 
           <p class="text-xs text-red-600 font-medium">Destino</p> 
           <p id="txt-destino" class="text-sm text-red-900 font-semibold mt-0.5"></p> 
         </div> 
-        <button onclick="limparPontos()" class="text-xs text-red-400 hover:text-red-600">Limpar</button> 
+        <button onclick="limparPontos()" class="text-xs text-red-400 hover:text-red-600 mt-1">Limpar</button> 
       </div> 
     </div> 
  
-    <!-- BOTÃO SOLICITAR --> 
+    <div id="card-valor" class="hidden bg-green-50 border border-green-200 rounded-xl px-4 py-4"> 
+      <div class="flex items-center justify-between"> 
+        <div> 
+          <p class="text-xs text-green-600 font-medium">Valor estimado</p> 
+          <p id="txt-valor" class="text-3xl font-bold text-green-800 mt-0.5"></p> 
+        </div> 
+        <div class="text-right"> 
+          <p id="txt-distancia" class="text-sm text-green-600 font-medium"></p> 
+          <p id="txt-duracao" class="text-xs text-green-500 mt-0.5"></p> 
+          <p id="txt-tarifa-nome" class="text-xs text-green-400 mt-0.5"></p> 
+        </div> 
+      </div> 
+    </div> 
+ 
+    <div id="erro-solicitar" class="hidden bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3"></div> 
+ 
     <button id="btn-solicitar" onclick="solicitar()" disabled 
-      class="w-full bg-green-600 text-white rounded-xl py-3.5 font-semibold text-base flex items-center justify-center gap-2 opacity-40 cursor-not-allowed transition-all"> 
-      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg> 
-      Solicitar via WhatsApp 
+      class="w-full bg-green-600 text-white rounded-xl py-4 font-bold text-base opacity-40 cursor-not-allowed transition-all"> 
+      Solicitar corrida 
     </button> 
+ 
+    <div id="atalhos" class="hidden"> 
+      <p class="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">Atalhos rápidos</p> 
+      <div id="atalhos-lista" class="flex gap-2 flex-wrap"></div> 
+    </div> 
+ 
+    <div id="historico-section" class="hidden"> 
+      <p class="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">Corridas recentes</p> 
+      <div id="historico-lista" class="space-y-2"></div> 
+    </div> 
  
   </div> 
  
-<script> 
-const ADMIN_WHATSAPP = '5527999999999' // TROCAR pelo número real do admin 
-const STORAGE_FAV = 'mobihub_favoritos' 
-const STORAGE_HIST = 'mobihub_historico' 
- 
-let map, geocoder 
-let marcadores = { origem: null, destino: null } 
-let pontos = { origem: null, destino: null } 
-let proximoPonto = 'origem' 
-let tipoCorrida = 'normal' 
- 
-function setTipo(tipo) { 
-  tipoCorrida = tipo 
-  const campoAg = document.getElementById('campo-agendamento') 
-  const btnAgora = document.getElementById('btn-agora') 
-  const btnAgendar = document.getElementById('btn-agendar') 
- 
-  if (tipo === 'agendada') { 
-    campoAg.classList.remove('hidden') 
-    btnAgora.className = 'flex-1 bg-white border border-green-600 text-green-600 rounded-xl py-3 font-semibold text-sm' 
-    btnAgendar.className = 'flex-1 bg-green-600 text-white rounded-xl py-3 font-semibold text-sm' 
- 
-    const agora = new Date() 
-    const min = new Date(agora.getTime() + 2 * 60 * 60 * 1000) 
-    const max = new Date(agora.getTime() + 10 * 24 * 60 * 60 * 1000) 
- 
-    const input = document.getElementById('data-agendamento') 
-    input.min = min.toISOString().slice(0, 16) 
-    input.max = max.toISOString().slice(0, 16) 
-    input.value = min.toISOString().slice(0, 16) 
- 
-    input.addEventListener('change', calcularValorAgendado) 
-    calcularValorAgendado() 
-  } else { 
-    campoAg.classList.add('hidden') 
-    btnAgora.className = 'flex-1 bg-green-600 text-white rounded-xl py-3 font-semibold text-sm' 
-    btnAgendar.className = 'flex-1 bg-white border border-green-600 text-green-600 rounded-xl py-3 font-semibold text-sm' 
-  } 
-} 
- 
-async function calcularValorAgendado() { 
-  if (!pontos.origem || !pontos.destino) return 
-  const dataHora = document.getElementById('data-agendamento').value 
-  if (!dataHora) return 
- 
-  const distanciaKm = calcularDistanciaHaversine( 
-    pontos.origem.lat, pontos.origem.lng, pontos.destino.lat, pontos.destino.lng 
-  ) 
- 
-  try { 
-    const r = await fetch( 
-      `/api/tarifas/calcular?data_hora=${encodeURIComponent(dataHora)}&distancia_km=${distanciaKm.toFixed(2)}` 
-    ) 
-    const d = await r.json() 
-    document.getElementById('aviso-agendamento').textContent = 
-      `Tarifa: ${d.tarifa} • Valor estimado: R$ ${d.valor.toFixed(2)}` 
-    window._valorAgendado = d 
-  } catch(e) {} 
-} 
- 
-function calcularDistanciaHaversine(lat1, lng1, lat2, lng2) { 
-  const R = 6371 
-  const dLat = (lat2 - lat1) * Math.PI / 180 
-  const dLng = (lng2 - lng1) * Math.PI / 180 
-  const a = Math.sin(dLat/2) * Math.sin(dLat/2) + 
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-    Math.sin(dLng/2) * Math.sin(dLng/2) 
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) 
-} 
- 
-function initMap() { 
-  map = new google.maps.Map(document.getElementById('map'), { 
-    center: { lat: -20.3222, lng: -40.3381 }, 
-    zoom: 13, 
-    mapTypeControl: false, 
-    streetViewControl: false, 
-    fullscreenControl: false 
-  }) 
-  geocoder = new google.maps.Geocoder() 
- 
-  map.addListener('click', (e) => { 
-    const lat = e.latLng.lat() 
-    const lng = e.latLng.lng() 
-    const tipo = pontos.origem ? 'destino' : 'origem' 
-    geocoder.geocode({ location: { lat, lng } }, (results, status) => { 
-      if (status === 'OK' && results[0]) { 
-        marcarPonto(lat, lng, results[0].formatted_address, tipo) 
-      } 
-    }) 
-  }) 
-} 
- 
-function setupAutocomplete(inputId, tipo) { 
-  const input = document.getElementById(inputId) 
-  const autocomplete = new google.maps.places.Autocomplete(input, { 
-    componentRestrictions: { country: 'br' }, 
-    fields: ['geometry', 'formatted_address', 'name'], 
-    bounds: new google.maps.LatLngBounds( 
-      new google.maps.LatLng(-21.5, -41.5), 
-      new google.maps.LatLng(-19.5, -39.5) 
-    ), 
-    strictBounds: false 
-  }) 
- 
-  autocomplete.addListener('place_changed', () => { 
-    const place = autocomplete.getPlace() 
-    if (!place.geometry) return 
-    const lat = place.geometry.location.lat() 
-    const lng = place.geometry.location.lng() 
-    const endereco = place.formatted_address || place.name 
-    marcarPonto(lat, lng, endereco, tipo) 
-    map.setCenter({ lat, lng }) 
-    map.setZoom(15) 
-  }) 
-} 
- 
-function marcarPonto(lat, lng, endereco, tipo) { 
-  if (marcadores[tipo]) marcadores[tipo].setMap(null) 
- 
-  marcadores[tipo] = new google.maps.Marker({ 
-    position: { lat, lng }, 
-    map, 
-    label: tipo === 'origem' ? 'A' : 'B', 
-    title: tipo === 'origem' ? 'Origem' : 'Destino' 
-  }) 
- 
-  pontos[tipo] = { lat, lng, endereco } 
-  origem = pontos.origem 
-  destino = pontos.destino 
- 
-  if (tipo === 'origem') { 
-    document.getElementById('txt-origem').textContent = endereco 
-    document.getElementById('ponto-origem').classList.remove('hidden') 
-    document.getElementById('busca-orig').value = endereco 
-  } else { 
-    document.getElementById('txt-destino').textContent = endereco 
-    document.getElementById('ponto-destino').classList.remove('hidden') 
-    document.getElementById('busca-dest').value = endereco 
-  } 
- 
-  if (pontos.origem && pontos.destino) { 
-    const bounds = new google.maps.LatLngBounds() 
-    bounds.extend(new google.maps.LatLng(pontos.origem.lat, pontos.origem.lng)) 
-    bounds.extend(new google.maps.LatLng(pontos.destino.lat, pontos.destino.lng)) 
-    map.fitBounds(bounds, { padding: 60 }) 
-    calcularDistancia() 
-    if (tipoCorrida === 'agendada') calcularValorAgendado() 
-  } 
- 
-  atualizarBotao() 
-} 
- 
-function calcularDistancia() { 
-  if (!pontos.origem || !pontos.destino) return 
-  const service = new google.maps.DistanceMatrixService() 
-  service.getDistanceMatrix({ 
-    origins: [new google.maps.LatLng(pontos.origem.lat, pontos.origem.lng)], 
-    destinations: [new google.maps.LatLng(pontos.destino.lat, pontos.destino.lng)], 
-    travelMode: google.maps.TravelMode.DRIVING, 
-    unitSystem: google.maps.UnitSystem.METRIC, 
-    region: 'br' 
-  }, (response, status) => { 
-    if (status === 'OK') { 
-      const element = response.rows[0].elements[0] 
-      if (element.status === 'OK') { 
-        const distanciaKm = element.distance.value / 1000 
-        const duracaoMin = Math.round(element.duration.value / 60) 
-        document.getElementById('txt-distancia').textContent = 
-          `Distância: ${distanciaKm.toFixed(1)} km • Tempo estimado: ${duracaoMin} min` 
-      } 
-    } 
-  }) 
-} 
- 
-function atualizarBotao() { 
-  const btn = document.getElementById('btn-solicitar') 
-  if (pontos.origem && pontos.destino) { 
-    btn.disabled = false 
-    btn.classList.remove('opacity-40', 'cursor-not-allowed') 
-  } 
-} 
- 
-function limparPontos() { 
-  if (marcadores.origem) marcadores.origem.setMap(null) 
-  if (marcadores.destino) marcadores.destino.setMap(null) 
-  marcadores = { origem: null, destino: null } 
-  pontos = { origem: null, destino: null } 
-  origem = null 
-  destino = null 
-  proximoPonto = 'origem' 
-  document.getElementById('ponto-origem').classList.add('hidden') 
-  document.getElementById('ponto-destino').classList.add('hidden') 
-  document.getElementById('busca-orig').value = '' 
-  document.getElementById('busca-dest').value = '' 
-  const btn = document.getElementById('btn-solicitar') 
-  if (btn) { btn.disabled = true; btn.classList.add('opacity-40', 'cursor-not-allowed') } 
-  document.getElementById('txt-distancia').textContent = '' 
-} 
- 
-function solicitar() { 
-  if (!pontos.origem || !pontos.destino) return 
- 
-  let msg = `Nova solicitação de corrida! 🚗\n\n` 
- 
-  if (tipoCorrida === 'agendada') { 
-    const dataHora = document.getElementById('data-agendamento').value 
-    const dataFormatada = new Date(dataHora).toLocaleString('pt-BR') 
-    const valor = window._valorAgendado 
-    msg += `🗓️ *CORRIDA AGENDADA*\n` 
-    msg += `📅 Data e hora: ${dataFormatada}\n` 
-    msg += `📍 Origem: ${pontos.origem.endereco}\n` 
-    msg += `🏁 Destino: ${pontos.destino.endereco}\n` 
-    if (valor) { 
-      msg += `💰 Valor estimado: R$ ${valor.valor.toFixed(2)}\n` 
-      msg += `📋 Tarifa: ${valor.tarifa}\n` 
-    } 
-  } else { 
-    msg += `📍 Origem: ${pontos.origem.endereco}\n` 
-    msg += `🏁 Destino: ${pontos.destino.endereco}\n` 
-  } 
- 
-  msg += `\n🗺️ Ver no mapa: https://maps.google.com/?saddr=${pontos.origem.lat},${pontos.origem.lng}&daddr=${pontos.destino.lat},${pontos.destino.lng}` 
-  msg += `\n\nAguardo confirmação!` 
- 
-  salvarHistorico() 
-  window.open(`https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(msg)}`, '_blank') 
-} 
- 
-function salvarFavorito(tipo) { 
-  if (!pontos.origem) return 
-  const favs = JSON.parse(localStorage.getItem(STORAGE_FAV) || '{}') 
-  favs[tipo] = { label: tipo === 'casa' ? 'Casa' : 'Trabalho', ...pontos.origem } 
-  localStorage.setItem(STORAGE_FAV, JSON.stringify(favs)) 
-  renderizarAtalhos() 
-  alert(`Salvo como ${tipo === 'casa' ? 'Casa' : 'Trabalho'}!`) 
-} 
- 
-function salvarHistorico() { 
-  const hist = JSON.parse(localStorage.getItem(STORAGE_HIST) || '[]') 
-  hist.unshift({ origem: pontos.origem, destino: pontos.destino, data: new Date().toLocaleDateString('pt-BR') }) 
-  localStorage.setItem(STORAGE_HIST, JSON.stringify(hist.slice(0, 5))) 
-} 
- 
-function renderizarAtalhos() { 
-  const favs = JSON.parse(localStorage.getItem(STORAGE_FAV) || '{}') 
-  const lista = document.getElementById('atalhos-lista') 
-  const section = document.getElementById('atalhos') 
-  lista.innerHTML = '' 
-  const items = Object.values(favs) 
-  if (!items.length) { section.classList.add('hidden'); return } 
-  section.classList.remove('hidden') 
-  items.forEach(f => { 
-    const btn = document.createElement('button') 
-    btn.className = 'flex items-center gap-1.5 bg-white border border-gray-200 rounded-full px-3 py-1.5 text-sm text-gray-700 hover:bg-green-50 hover:border-green-300' 
-    btn.innerHTML = `<span>${f.label === 'Casa' ? '🏠' : '💼'}</span> <span>${f.label}</span>` 
-    btn.onclick = () => marcarPonto(f.lat, f.lng, f.endereco, 'origem') 
-    lista.appendChild(btn) 
-  }) 
-} 
- 
-function renderizarHistorico() { 
-  const hist = JSON.parse(localStorage.getItem(STORAGE_HIST) || '[]') 
-  const lista = document.getElementById('historico-lista') 
-  const section = document.getElementById('historico-section') 
-  if (!hist.length) { section.classList.add('hidden'); return } 
-  section.classList.remove('hidden') 
-  lista.innerHTML = hist.map((h, i) => ` 
-    <div class="bg-white border border-gray-200 rounded-lg px-3 py-2.5 flex items-center justify-between"> 
-      <div class="text-sm"> 
-        <p class="text-gray-800 font-medium truncate max-w-[200px]">${h.origem.endereco.split(',')[0]} → ${h.destino.endereco.split(',')[0]}</p> 
-        <p class="text-gray-400 text-xs">${h.data}</p> 
+  <!-- TELA 3: CONFIRMAÇÃO --> 
+  <div id="tela-confirmacao" class="hidden"> 
+    <div class="bg-white border border-gray-200 rounded-xl p-6 text-center"> 
+      <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"> 
+        <svg class="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"> 
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/> 
+        </svg> 
       </div> 
-      <button onclick="repetirCorrida(${i})" class="text-xs text-green-600 border border-green-300 rounded px-2 py-1 hover:bg-green-50 whitespace-nowrap ml-2">Repetir</button> 
+      <h2 class="text-xl font-bold text-gray-900 mb-1">Corrida solicitada!</h2> 
+      <p class="text-sm text-gray-500 mb-6">Aguarde um motorista aceitar sua corrida.</p> 
+      <div class="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mb-4 text-left"> 
+        <p class="text-xs text-gray-500 mb-1">Link de acompanhamento</p> 
+        <p id="txt-link" class="text-sm text-green-700 font-mono break-all"></p> 
+      </div> 
+      <div class="flex flex-col gap-2"> 
+        <button onclick="abrirLink()" 
+          class="w-full bg-green-600 text-white rounded-xl py-3 font-semibold text-sm hover:bg-green-700"> 
+          🗺️ Acompanhar corrida 
+        </button> 
+        <button onclick="copiarLink()" 
+          class="w-full bg-white border border-gray-200 text-gray-700 rounded-xl py-3 font-semibold text-sm hover:bg-gray-50"> 
+          📋 Copiar link 
+        </button> 
+        <button onclick="compartilharLink()" 
+          class="w-full bg-green-50 border border-green-200 text-green-700 rounded-xl py-3 font-semibold text-sm hover:bg-green-100"> 
+          🔗 Compartilhar corrida 
+        </button> 
+        <button onclick="novaCorrida()" class="w-full text-gray-400 text-sm py-2 hover:text-gray-600"> 
+          Solicitar outra corrida 
+        </button> 
+      </div> 
     </div> 
-  `).join('') 
-} 
+  </div> 
  
-function repetirCorrida(i) { 
-  const hist = JSON.parse(localStorage.getItem(STORAGE_HIST) || '[]') 
-  const h = hist[i] 
-  limparPontos() 
-  marcarPonto(h.origem.lat, h.origem.lng, h.origem.endereco, 'origem') 
-  marcarPonto(h.destino.lat, h.destino.lng, h.destino.endereco, 'destino') 
-} 
+</div> 
+<script> 
+ const STORAGE_CLIENTE = 'mobihub_cliente' 
+ const STORAGE_FAV = 'mobihub_favoritos' 
+ const STORAGE_HIST = 'mobihub_historico' 
  
-window.onload = () => { 
-  initMap() 
-  setupAutocomplete('busca-orig', 'origem') 
-  setupAutocomplete('busca-dest', 'destino') 
-  renderizarAtalhos() 
-  renderizarHistorico() 
-} 
-</script> 
+ let map, geocoder 
+ let marcadores = { origem: null, destino: null } 
+ let pontos = { origem: null, destino: null } 
+ let origem = null, destino = null 
+ let tipoCorreida = 'normal' 
+ let linkGerado = '' 
+ let valorCalculado = 0 
+ 
+ function verificarCadastro() { 
+   const cliente = JSON.parse(localStorage.getItem(STORAGE_CLIENTE) || 'null') 
+   if (cliente && cliente.celular && cliente.nome) { 
+     document.getElementById('tela-cadastro').classList.add('hidden') 
+     document.getElementById('tela-solicitar').classList.remove('hidden') 
+     document.getElementById('txt-nome-cliente').textContent = cliente.nome 
+     renderizarAtalhos() 
+     renderizarHistorico() 
+   } 
+ } 
+ 
+ function salvarCadastro() { 
+   const nome = document.getElementById('cad-nome').value.trim() 
+   const celular = document.getElementById('cad-celular').value.trim() 
+   const email = document.getElementById('cad-email').value.trim() 
+   const erro = document.getElementById('erro-cadastro') 
+   if (!nome) { erro.textContent = 'Nome é obrigatório'; erro.classList.remove('hidden'); return } 
+   if (!celular) { erro.textContent = 'Celular é obrigatório'; erro.classList.remove('hidden'); return } 
+   erro.classList.add('hidden') 
+   localStorage.setItem(STORAGE_CLIENTE, JSON.stringify({ nome, celular, email })) 
+   verificarCadastro() 
+ } 
+ 
+ function trocarCadastro() { 
+   localStorage.removeItem(STORAGE_CLIENTE) 
+   document.getElementById('tela-solicitar').classList.add('hidden') 
+   document.getElementById('tela-cadastro').classList.remove('hidden') 
+ } 
+ 
+ function setTipo(tipo) { 
+   tipoCorreida = tipo 
+   const campo = document.getElementById('campo-agendamento') 
+   document.getElementById('btn-agora').className = tipo === 'normal' 
+     ? 'flex-1 bg-green-600 text-white rounded-xl py-3 font-semibold text-sm' 
+     : 'flex-1 bg-white border border-green-600 text-green-600 rounded-xl py-3 font-semibold text-sm' 
+   document.getElementById('btn-agendar').className = tipo === 'agendada' 
+     ? 'flex-1 bg-green-600 text-white rounded-xl py-3 font-semibold text-sm' 
+     : 'flex-1 bg-white border border-green-600 text-green-600 rounded-xl py-3 font-semibold text-sm' 
+   if (tipo === 'agendada') { 
+     campo.classList.remove('hidden') 
+     const agora = new Date() 
+ 
+     // Mínimo: 2 horas a partir de agora 
+     const min = new Date(agora.getTime() + 2 * 60 * 60 * 1000) 
+ 
+     // Máximo: exatamente 10 dias corridos a partir de hoje 
+     const max = new Date(agora) 
+     max.setDate(max.getDate() + 10) 
+     max.setHours(23, 59, 0, 0) 
+ 
+     const input = document.getElementById('data-agendamento') 
+     input.min = min.toISOString().slice(0, 16) 
+     input.max = max.toISOString().slice(0, 16) 
+     if (!input.value || input.value < input.min) { 
+       input.value = min.toISOString().slice(0, 16) 
+     } 
+     input.onchange = recalcularValor 
+   } else { 
+     campo.classList.add('hidden') 
+   } 
+   recalcularValor() 
+ } 
+ 
+ function initMap() { 
+   map = new google.maps.Map(document.getElementById('map'), { 
+     center: { lat: -20.3222, lng: -40.3381 }, 
+     zoom: 13, 
+     mapTypeControl: false, 
+     streetViewControl: false, 
+     fullscreenControl: false 
+   }) 
+   geocoder = new google.maps.Geocoder() 
+   map.addListener('click', (e) => { 
+     const lat = e.latLng.lat() 
+     const lng = e.latLng.lng() 
+     const tipo = !pontos.origem ? 'origem' : 'destino' 
+     geocoder.geocode({ location: { lat, lng } }, (results, status) => { 
+       if (status === 'OK' && results[0]) marcarPonto(lat, lng, results[0].formatted_address, tipo) 
+     }) 
+   }) 
+   setupAutocomplete('busca-orig', 'origem') 
+   setupAutocomplete('busca-dest', 'destino') 
+ } 
+ 
+ function setupAutocomplete(inputId, tipo) { 
+   const input = document.getElementById(inputId) 
+   const ac = new google.maps.places.Autocomplete(input, { 
+     componentRestrictions: { country: 'br' }, 
+     fields: ['geometry', 'formatted_address', 'name'], 
+     bounds: new google.maps.LatLngBounds( 
+       new google.maps.LatLng(-21.5, -41.5), 
+       new google.maps.LatLng(-19.5, -39.5) 
+     ), 
+     strictBounds: false 
+   }) 
+   ac.addListener('place_changed', () => { 
+     const place = ac.getPlace() 
+     if (!place.geometry) return 
+     const lat = place.geometry.location.lat() 
+     const lng = place.geometry.location.lng() 
+     marcarPonto(lat, lng, place.formatted_address || place.name, tipo) 
+     map.setCenter({ lat, lng }) 
+     map.setZoom(15) 
+   }) 
+ } 
+ 
+ function marcarPonto(lat, lng, endereco, tipo) { 
+   if (marcadores[tipo]) marcadores[tipo].setMap(null) 
+   marcadores[tipo] = new google.maps.Marker({ 
+     position: { lat, lng }, map, 
+     label: tipo === 'origem' ? 'A' : 'B', 
+     title: tipo === 'origem' ? 'Origem' : 'Destino' 
+   }) 
+   pontos[tipo] = { lat, lng, endereco } 
+   origem = pontos.origem 
+   destino = pontos.destino 
+   if (tipo === 'origem') { 
+     document.getElementById('txt-origem').textContent = endereco 
+     document.getElementById('ponto-origem').classList.remove('hidden') 
+   } else { 
+     document.getElementById('txt-destino').textContent = endereco 
+     document.getElementById('ponto-destino').classList.remove('hidden') 
+   } 
+   if (pontos.origem && pontos.destino) { 
+     const bounds = new google.maps.LatLngBounds() 
+     bounds.extend(new google.maps.LatLng(pontos.origem.lat, pontos.origem.lng)) 
+     bounds.extend(new google.maps.LatLng(pontos.destino.lat, pontos.destino.lng)) 
+     map.fitBounds(bounds, { padding: 60 }) 
+     calcularDistancia() 
+   } 
+ } 
+ 
+ function limparPontos() { 
+   if (marcadores.origem) marcadores.origem.setMap(null) 
+   if (marcadores.destino) marcadores.destino.setMap(null) 
+   marcadores = { origem: null, destino: null } 
+   pontos = { origem: null, destino: null } 
+   origem = null; destino = null 
+   document.getElementById('ponto-origem').classList.add('hidden') 
+   document.getElementById('ponto-destino').classList.add('hidden') 
+   document.getElementById('busca-orig').value = '' 
+   document.getElementById('busca-dest').value = '' 
+   document.getElementById('card-valor').classList.add('hidden') 
+   const btn = document.getElementById('btn-solicitar') 
+   btn.disabled = true 
+   btn.classList.add('opacity-40', 'cursor-not-allowed') 
+ } 
+ 
+ function calcularDistancia() { 
+   if (!pontos.origem || !pontos.destino) return 
+   const service = new google.maps.DistanceMatrixService() 
+   service.getDistanceMatrix({ 
+     origins: [new google.maps.LatLng(pontos.origem.lat, pontos.origem.lng)], 
+     destinations: [new google.maps.LatLng(pontos.destino.lat, pontos.destino.lng)], 
+     travelMode: google.maps.TravelMode.DRIVING, 
+     unitSystem: google.maps.UnitSystem.METRIC, 
+     region: 'br' 
+   }, (response, status) => { 
+     if (status === 'OK') { 
+       const el = response.rows[0].elements[0] 
+       if (el.status === 'OK') { 
+         const distanciaKm = el.distance.value / 1000 
+         const duracaoMin = Math.round(el.duration.value / 60) 
+         exibirValor(distanciaKm, duracaoMin) 
+       } 
+     } 
+   }) 
+ } 
+ 
+ async function exibirValor(distanciaKm, duracaoMin) { 
+   let valor = 0 
+   let tarifaNome = '' 
+   if (tipoCorreida === 'agendada') { 
+     const dataHora = document.getElementById('data-agendamento').value 
+     if (dataHora) { 
+       try { 
+         const r = await fetch(`/api/tarifas/calcular?data_hora=${encodeURIComponent(dataHora)}&distancia_km=${distanciaKm.toFixed(2)}`) 
+         const d = await r.json() 
+         valor = d.valor 
+         tarifaNome = d.tarifa 
+       } catch(e) { 
+         valor = calcularValorLocal(distanciaKm, 25, 7.5, 2) 
+       } 
+     } 
+   } else { 
+     valor = calcularValorLocal(distanciaKm, 15, 7.5, 2) 
+   } 
+   valorCalculado = valor 
+   document.getElementById('txt-valor').textContent = `R$ ${valor.toFixed(2)}` 
+   document.getElementById('txt-distancia').textContent = `${distanciaKm.toFixed(1)} km` 
+   document.getElementById('txt-duracao').textContent = `~${duracaoMin} min` 
+   if (tarifaNome) document.getElementById('txt-tarifa-nome').textContent = tarifaNome 
+   document.getElementById('card-valor').classList.remove('hidden') 
+   const btn = document.getElementById('btn-solicitar') 
+   btn.disabled = false 
+   btn.classList.remove('opacity-40', 'cursor-not-allowed') 
+ } 
+ 
+ function calcularValorLocal(distanciaKm, valorMin, kmMin, valorKm) { 
+   if (distanciaKm <= kmMin) return valorMin 
+   return valorMin + ((distanciaKm - kmMin) * valorKm) 
+ } 
+ 
+ function recalcularValor() { 
+   if (pontos.origem && pontos.destino) calcularDistancia() 
+ } 
+ 
+ async function solicitar() { 
+   const cliente = JSON.parse(localStorage.getItem(STORAGE_CLIENTE) || 'null') 
+   if (!cliente || !origem || !destino || !valorCalculado) return 
+   const btn = document.getElementById('btn-solicitar') 
+   const erro = document.getElementById('erro-solicitar') 
+   btn.textContent = 'Enviando...' 
+   btn.disabled = true 
+   erro.classList.add('hidden') 
+   try { 
+     const agendadaPara = tipoCorreida === 'agendada' 
+       ? document.getElementById('data-agendamento').value : null 
+     const r = await fetch('/api/solicitar', { 
+       method: 'POST', 
+       headers: { 'Content-Type': 'application/json' }, 
+       body: JSON.stringify({ 
+         nome: cliente.nome, 
+         celular: cliente.celular, 
+         email: cliente.email || null, 
+         origem: origem.endereco, 
+         origem_lat: origem.lat, 
+         origem_lng: origem.lng, 
+         destino: destino.endereco, 
+         destino_lat: destino.lat, 
+         destino_lng: destino.lng, 
+         valor: valorCalculado, 
+         tipo: tipoCorreida, 
+         agendada_para: agendadaPara 
+       }) 
+     }) 
+     const d = await r.json() 
+     if (!r.ok) { 
+       erro.textContent = d.error || 'Erro ao solicitar' 
+       erro.classList.remove('hidden') 
+       btn.textContent = 'Solicitar corrida' 
+       btn.disabled = false 
+       return 
+     } 
+     linkGerado = d.link 
+     salvarHistorico() 
+     document.getElementById('tela-solicitar').classList.add('hidden') 
+     document.getElementById('tela-confirmacao').classList.remove('hidden') 
+     document.getElementById('txt-link').textContent = d.link 
+   } catch(e) { 
+     erro.textContent = 'Erro de conexão. Tente novamente.' 
+     erro.classList.remove('hidden') 
+     btn.textContent = 'Solicitar corrida' 
+     btn.disabled = false 
+   } 
+ } 
+ 
+ function abrirLink() { window.open(linkGerado, '_blank') } 
+ 
+ function copiarLink() { 
+   navigator.clipboard.writeText(linkGerado) 
+   alert('Link copiado!') 
+ } 
+ 
+ function compartilharLink() { 
+   const msg = `Acompanhe minha corrida em tempo real: ${linkGerado}` 
+   if (navigator.share) { 
+     navigator.share({ title: 'MobiHub — Minha corrida', text: msg, url: linkGerado }) 
+   } else { 
+     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank') 
+   } 
+ } 
+ 
+ function novaCorrida() { 
+   linkGerado = '' 
+   valorCalculado = 0 
+   limparPontos() 
+   document.getElementById('tela-confirmacao').classList.add('hidden') 
+   document.getElementById('tela-solicitar').classList.remove('hidden') 
+   document.getElementById('btn-solicitar').textContent = 'Solicitar corrida' 
+ } 
+ 
+ function salvarFavorito(tipo) { 
+   if (!pontos.origem) return 
+   const favs = JSON.parse(localStorage.getItem(STORAGE_FAV) || '{}') 
+   favs[tipo] = { ...pontos.origem } 
+   localStorage.setItem(STORAGE_FAV, JSON.stringify(favs)) 
+   renderizarAtalhos() 
+   alert(`Salvo como ${tipo === 'casa' ? 'Casa 🏠' : 'Trabalho 💼'}!`) 
+ } 
+ 
+ function salvarHistorico() { 
+   if (!pontos.origem || !pontos.destino) return 
+   const hist = JSON.parse(localStorage.getItem(STORAGE_HIST) || '[]') 
+   const entrada = { origem: pontos.origem, destino: pontos.destino, data: new Date().toLocaleDateString('pt-BR') } 
+   const filtrado = hist.filter(h => 
+     h.origem.endereco !== entrada.origem.endereco || 
+     h.destino.endereco !== entrada.destino.endereco 
+   ) 
+   filtrado.unshift(entrada) 
+   localStorage.setItem(STORAGE_HIST, JSON.stringify(filtrado.slice(0, 5))) 
+   renderizarHistorico() 
+ } 
+ 
+ function renderizarAtalhos() { 
+   const favs = JSON.parse(localStorage.getItem(STORAGE_FAV) || '{}') 
+   const lista = document.getElementById('atalhos-lista') 
+   const section = document.getElementById('atalhos') 
+   lista.innerHTML = '' 
+   const items = Object.entries(favs) 
+   if (!items.length) { section.classList.add('hidden'); return } 
+   section.classList.remove('hidden') 
+   items.forEach(([tipo, f]) => { 
+     const btn = document.createElement('button') 
+     btn.className = 'flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm hover:bg-green-50 hover:border-green-300' 
+     btn.innerHTML = `<span>${tipo === 'casa' ? '🏠' : '💼'}</span><div class="text-left"><p class="text-xs font-medium text-green-700">${tipo === 'casa' ? 'Casa' : 'Trabalho'}</p><p class="text-xs text-gray-500 truncate max-w-[140px]">${f.endereco.split(',')[0]}</p></div>` 
+     btn.onclick = () => { 
+       marcarPonto(f.lat, f.lng, f.endereco, 'origem') 
+       map.setCenter({ lat: f.lat, lng: f.lng }) 
+       map.setZoom(15) 
+     } 
+     lista.appendChild(btn) 
+   }) 
+ } 
+ 
+ function renderizarHistorico() { 
+   const hist = JSON.parse(localStorage.getItem(STORAGE_HIST) || '[]') 
+   const lista = document.getElementById('historico-lista') 
+   const section = document.getElementById('historico-section') 
+   if (!hist.length) { section.classList.add('hidden'); return } 
+   section.classList.remove('hidden') 
+   lista.innerHTML = hist.map((h, i) => ` 
+     <div class="bg-white border border-gray-200 rounded-xl px-3 py-2.5 flex items-center justify-between"> 
+       <div class="flex-1 min-w-0 mr-3"> 
+         <p class="text-sm text-gray-800 font-medium truncate">${h.origem.endereco.split(',')[0]} → ${h.destino.endereco.split(',')[0]}</p> 
+         <p class="text-xs text-gray-400 mt-0.5">${h.data}</p> 
+       </div> 
+       <button onclick="repetirCorrida(${i})" class="text-xs text-green-600 border border-green-300 rounded-lg px-3 py-1.5 hover:bg-green-50 whitespace-nowrap">Repetir</button> 
+     </div> 
+   `).join('') 
+ } 
+ 
+ function repetirCorrida(i) { 
+   const hist = JSON.parse(localStorage.getItem(STORAGE_HIST) || '[]') 
+   const h = hist[i] 
+   if (!h) return 
+   marcarPonto(h.origem.lat, h.origem.lng, h.origem.endereco, 'origem') 
+   marcarPonto(h.destino.lat, h.destino.lng, h.destino.endereco, 'destino') 
+   const bounds = new google.maps.LatLngBounds() 
+   bounds.extend(new google.maps.LatLng(h.origem.lat, h.origem.lng)) 
+   bounds.extend(new google.maps.LatLng(h.destino.lat, h.destino.lng)) 
+   map.fitBounds(bounds, { padding: 60 }) 
+ } 
+ 
+ window.onload = () => { 
+   initMap() 
+   verificarCadastro() 
+ } 
+ </script> 
 </body> 
-</html>
+</html> 

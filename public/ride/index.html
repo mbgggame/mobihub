@@ -1,206 +1,352 @@
 <!DOCTYPE html> 
-<html lang="pt-BR"> 
-<head> 
-  <meta charset="UTF-8"/> 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
-  <title>MobiHub — Acompanhar corrida</title> 
-  <script src="https://cdn.tailwindcss.com"></script> 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/> 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script> 
-  <style>#map { height: 280px; }</style> 
-</head> 
-<body class="bg-gray-50 min-h-screen"> 
+ <html lang="pt-BR"> 
+ <head> 
+   <meta charset="UTF-8"/> 
+   <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
+   <title>MobiHub — Acompanhar corrida</title> 
+   <script src="https://cdn.tailwindcss.com"></script> 
+   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/> 
+   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script> 
+   <style> 
+     #map { height: 300px; } 
+     .pulse { animation: pulse 2s infinite; } 
+     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} } 
+   </style> 
+ </head> 
+ <body class="bg-gray-50 min-h-screen"> 
  
-  <div class="bg-green-600 text-white px-4 py-3 flex items-center gap-2"> 
-    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/></svg> 
-    <span class="font-semibold">MobiHub</span> 
-  </div> 
+ <div class="bg-green-600 text-white px-4 py-3 flex items-center gap-2"> 
+   <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/></svg> 
+   <span class="font-semibold">MobiHub</span> 
+ </div> 
  
-  <div class="max-w-lg mx-auto px-4 py-4 space-y-4"> 
+ <div class="max-w-lg mx-auto px-4 py-4 space-y-4"> 
  
-    <!-- STATUS --> 
-    <div class="bg-white rounded-xl border border-gray-200 p-4"> 
-      <div class="flex items-center justify-between"> 
-        <div> 
-          <p class="text-xs text-gray-500">Status da corrida</p> 
-          <span id="badge-status" class="inline-block mt-1 px-3 py-1 rounded-full text-sm font-semibold"></span> 
-        </div> 
-        <div id="spinner" class="hidden"> 
-          <svg class="animate-spin w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg> 
-        </div> 
-      </div> 
-      <div class="mt-3 space-y-1"> 
-        <p class="text-sm text-gray-700"><span class="font-medium">De:</span> <span id="txt-origem">—</span></p> 
-        <p class="text-sm text-gray-700"><span class="font-medium">Para:</span> <span id="txt-destino">—</span></p> 
-      </div> 
-    </div> 
+   <!-- STATUS --> 
+   <div class="bg-white rounded-xl border border-gray-200 p-4"> 
+     <div class="flex items-center justify-between"> 
+       <div> 
+         <p class="text-xs text-gray-500">Status da corrida</p> 
+         <span id="badge-status" class="inline-block mt-1 px-3 py-1 rounded-full text-sm font-semibold"></span> 
+       </div> 
+       <div id="spinner" class="hidden"> 
+         <svg class="animate-spin w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24"> 
+           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/> 
+           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/> 
+         </svg> 
+       </div> 
+     </div> 
+     <div class="mt-3 space-y-1"> 
+       <p class="text-sm text-gray-700"><span class="font-medium">De:</span> <span id="txt-origem">—</span></p> 
+       <p class="text-sm text-gray-700"><span class="font-medium">Para:</span> <span id="txt-destino">—</span></p> 
+     </div> 
+   </div> 
  
-    <!-- MOTORISTA --> 
-    <div id="card-motorista" class="hidden bg-white rounded-xl border border-gray-200 p-4"> 
-      <p class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-3">Seu motorista</p> 
-      <div class="flex items-center gap-3 mb-3"> 
-        <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold text-lg" id="avatar-motorista"></div> 
-        <div> 
-          <p id="nome-motorista" class="font-semibold text-gray-900"></p> 
-          <div class="flex items-center gap-1 mt-0.5"> 
-            <span id="stars-motorista" class="text-yellow-400 text-sm"></span> 
-            <span id="info-motorista" class="text-xs text-gray-500"></span> 
-          </div> 
-        </div> 
-      </div> 
-      <div class="bg-gray-50 rounded-lg p-3 space-y-1.5"> 
-        <p class="text-sm text-gray-700"><span class="font-medium">Carro:</span> <span id="carro-motorista"></span></p> 
-        <p class="text-sm text-gray-700"><span class="font-medium">Placa:</span> <span id="placa-motorista"></span></p> 
-        <p class="text-sm text-gray-700"><span class="font-medium">Telefone:</span> <span id="tel-motorista"></span></p> 
-      </div> 
-    </div> 
+   <!-- ETA E DISTÂNCIA DO MOTORISTA --> 
+   <div id="card-eta" class="hidden bg-green-50 border border-green-200 rounded-xl p-4"> 
+     <div class="flex items-center justify-between"> 
+       <div> 
+         <p class="text-xs text-green-600 font-medium">Motorista a caminho</p> 
+         <p id="txt-eta" class="text-2xl font-bold text-green-800 mt-0.5"></p> 
+         <p id="txt-distancia-motorista" class="text-sm text-green-600 mt-0.5"></p> 
+       </div> 
+       <div class="w-12 h-12 bg-green-200 rounded-full flex items-center justify-center pulse"> 
+         <svg class="w-6 h-6 text-green-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"> 
+           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/> 
+         </svg> 
+       </div> 
+     </div> 
+     <p id="txt-location-age" class="text-xs text-green-500 mt-2"></p> 
+   </div> 
  
-    <!-- MAPA --> 
-    <div id="mapa-section" class="hidden bg-white rounded-xl border border-gray-200 overflow-hidden"> 
-      <p class="text-xs text-gray-500 font-medium uppercase tracking-wide px-4 pt-3 pb-2">Acompanhamento</p> 
-      <div id="iframe-maps" class="hidden"> 
-        <iframe id="maps-frame" width="100%" height="280" frameborder="0" style="border:0" allowfullscreen></iframe> 
-      </div> 
-      <div id="leaflet-map" class="hidden"> 
-        <div id="map"></div> 
-        <p class="text-xs text-center text-gray-400 py-2">Aguardando localização do motorista</p> 
-      </div> 
-    </div> 
+   <!-- MOTORISTA --> 
+   <div id="card-motorista" class="hidden bg-white rounded-xl border border-gray-200 p-4"> 
+     <p class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-3">Seu motorista</p> 
+     <div class="flex items-center gap-3 mb-3"> 
+       <div id="avatar-motorista" class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold text-lg overflow-hidden"> 
+       </div> 
+       <div> 
+         <p id="nome-motorista" class="font-semibold text-gray-900"></p> 
+         <div class="flex items-center gap-1 mt-0.5"> 
+           <span id="stars-motorista" class="text-yellow-400 text-sm"></span> 
+           <span id="info-motorista" class="text-xs text-gray-500"></span> 
+         </div> 
+       </div> 
+     </div> 
+     <div class="bg-gray-50 rounded-lg p-3 space-y-1.5"> 
+       <p class="text-sm text-gray-700"><span class="font-medium">Carro:</span> <span id="carro-motorista"></span></p> 
+       <p class="text-sm text-gray-700"><span class="font-medium">Placa:</span> <span id="placa-motorista"></span></p> 
+       <p class="text-sm text-gray-700"><span class="font-medium">Telefone:</span> <span id="tel-motorista"></span></p> 
+     </div> 
+   </div> 
  
-    <!-- AVALIAÇÃO --> 
-    <div id="card-avaliacao" class="hidden bg-white rounded-xl border border-gray-200 p-4"> 
-      <p class="text-sm font-semibold text-gray-800 mb-1">Como foi sua corrida?</p> 
-      <p class="text-xs text-gray-500 mb-3">Avalie o motorista</p> 
-      <div class="flex gap-2 justify-center mb-4" id="estrelas-container"> 
-        <span class="star text-4xl cursor-pointer text-gray-300" data-v="1">★</span> 
-        <span class="star text-4xl cursor-pointer text-gray-300" data-v="2">★</span> 
-        <span class="star text-4xl cursor-pointer text-gray-300" data-v="3">★</span> 
-        <span class="star text-4xl cursor-pointer text-gray-300" data-v="4">★</span> 
-        <span class="star text-4xl cursor-pointer text-gray-300" data-v="5">★</span> 
-      </div> 
-      <textarea id="comentario" placeholder="Comentário opcional..." rows="2" 
-        class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-green-400 mb-3"></textarea> 
-      <button id="btn-avaliar" onclick="enviarAvaliacao()" 
-        class="w-full bg-green-600 text-white rounded-lg py-2.5 font-semibold text-sm"> 
-        Enviar avaliação 
-      </button> 
-    </div> 
+   <!-- MAPA --> 
+   <div id="mapa-section" class="hidden bg-white rounded-xl border border-gray-200 overflow-hidden"> 
+     <div class="flex items-center justify-between px-4 pt-3 pb-2"> 
+       <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Mapa</p> 
+       <span id="badge-rastreamento" class="hidden text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 pulse">● Ao vivo</span> 
+     </div> 
+     <div id="map"></div> 
+     <p id="txt-mapa-info" class="text-xs text-center text-gray-400 py-2"></p> 
+   </div> 
  
-    <!-- AGRADECIMENTO --> 
-    <div id="card-obrigado" class="hidden bg-green-50 border border-green-200 rounded-xl p-4 text-center"> 
-      <p class="text-2xl mb-2">⭐</p> 
-      <p class="font-semibold text-green-800">Obrigado pela avaliação!</p> 
-      <p class="text-sm text-green-600 mt-1">Sua opinião melhora o serviço para todos.</p> 
-    </div> 
+   <!-- AVALIAÇÃO --> 
+   <div id="card-avaliacao" class="hidden bg-white rounded-xl border border-gray-200 p-4"> 
+     <p class="text-sm font-semibold text-gray-800 mb-1">Como foi sua corrida?</p> 
+     <p class="text-xs text-gray-500 mb-3">Avalie o motorista</p> 
+     <div class="flex gap-2 justify-center mb-4" id="estrelas-container"> 
+       <span class="star text-4xl cursor-pointer text-gray-300" data-v="1">★</span> 
+       <span class="star text-4xl cursor-pointer text-gray-300" data-v="2">★</span> 
+       <span class="star text-4xl cursor-pointer text-gray-300" data-v="3">★</span> 
+       <span class="star text-4xl cursor-pointer text-gray-300" data-v="4">★</span> 
+       <span class="star text-4xl cursor-pointer text-gray-300" data-v="5">★</span> 
+     </div> 
+     <textarea id="comentario" placeholder="Comentário opcional..." rows="2" 
+       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-green-400 mb-3"></textarea> 
+     <button id="btn-avaliar" onclick="enviarAvaliacao()" 
+       class="w-full bg-green-600 text-white rounded-lg py-2.5 font-semibold text-sm"> 
+       Enviar avaliação 
+     </button> 
+   </div> 
  
-  </div> 
+   <!-- AGRADECIMENTO --> 
+   <div id="card-obrigado" class="hidden bg-green-50 border border-green-200 rounded-xl p-4 text-center"> 
+     <p class="text-2xl mb-2">⭐</p> 
+     <p class="font-semibold text-green-800">Obrigado pela avaliação!</p> 
+     <p class="text-sm text-green-600 mt-1">Sua opinião melhora o serviço para todos.</p> 
+   </div> 
+ 
+ </div> 
  
 <script> 
-const token = location.pathname.split('/r/')[1] 
-let estrelaSelecionada = 0 
-let map, dadosAtuais 
+ const token = location.pathname.split('/r/')[1] 
+ let estrelaSelecionada = 0 
+ let map, markerOrigem, markerDestino, markerMotorista 
+ let dadosAtuais = null 
  
-const statusConfig = { 
-  aberta:   { label: 'Aguardando motorista', cls: 'bg-blue-100 text-blue-700' }, 
-  aceita:   { label: 'Motorista a caminho',  cls: 'bg-yellow-100 text-yellow-700' }, 
-  concluida:{ label: 'Concluída',            cls: 'bg-green-100 text-green-700' }, 
-  cancelada:{ label: 'Cancelada',            cls: 'bg-red-100 text-red-700' } 
-} 
+ const statusConfig = { 
+   aberta:   { label: 'Aguardando motorista', cls: 'bg-blue-100 text-blue-700' }, 
+   aceita:   { label: 'Motorista a caminho',  cls: 'bg-yellow-100 text-yellow-700' }, 
+   agendada: { label: 'Agendada',             cls: 'bg-purple-100 text-purple-700' }, 
+   concluida:{ label: 'Concluída',            cls: 'bg-green-100 text-green-700' }, 
+   cancelada:{ label: 'Cancelada',            cls: 'bg-red-100 text-red-700' } 
+ } 
  
-async function carregar() { 
-  try { 
-    const r = await fetch(`/api/ride/${token}`) 
-    if (!r.ok) { document.body.innerHTML = '<p class="text-center mt-20 text-gray-500">Corrida não encontrada.</p>'; return } 
-    const { ride, rating } = await r.json() 
-    dadosAtuais = { ride, rating } 
-    renderizar(ride, rating) 
-  } catch (e) { console.error(e) } 
-} 
+ function initMap() { 
+   map = L.map('map', { zoomControl: true }) 
+   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+     attribution: '© OpenStreetMap' 
+   }).addTo(map) 
+   map.setView([-20.3222, -40.3381], 13) 
+ } 
  
-function renderizar(ride, rating) { 
-  // Status 
-  const cfg = statusConfig[ride.status] || statusConfig.aberta 
-  const badge = document.getElementById('badge-status') 
-  badge.textContent = cfg.label 
-  badge.className = `inline-block mt-1 px-3 py-1 rounded-full text-sm font-semibold ${cfg.cls}` 
+ const iconOrigem = L.divIcon({ 
+   html: '<div style="background:#16a34a;color:white;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">A</div>', 
+   className: '', iconSize: [32, 32], iconAnchor: [16, 16] 
+ }) 
  
-  document.getElementById('txt-origem').textContent = ride.origem 
-  document.getElementById('txt-destino').textContent = ride.destino 
+ const iconDestino = L.divIcon({ 
+   html: '<div style="background:#dc2626;color:white;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">B</div>', 
+   className: '', iconSize: [32, 32], iconAnchor: [16, 16] 
+ }) 
  
-  // Motorista 
-  if (ride.driver_nome) { 
-    document.getElementById('card-motorista').classList.remove('hidden') 
-    document.getElementById('avatar-motorista').textContent = ride.driver_nome.charAt(0).toUpperCase() 
-    document.getElementById('nome-motorista').textContent = ride.driver_nome 
-    document.getElementById('stars-motorista').textContent = '★'.repeat(Math.round(ride.driver_media || 0)) 
-    document.getElementById('info-motorista').textContent = `${(ride.driver_media || 0).toFixed(1)} • ${ride.driver_viagens || 0} viagens` 
-    document.getElementById('carro-motorista').textContent = `${ride.modelo_carro} ${ride.cor_carro} ${ride.ano_carro}` 
-    document.getElementById('placa-motorista').textContent = ride.placa 
-    document.getElementById('tel-motorista').textContent = ride.driver_telefone || '—' 
-  } 
+ const iconMotorista = L.divIcon({ 
+   html: '<div style="background:#2563eb;color:white;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:18px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4)">🚗</div>', 
+   className: '', iconSize: [36, 36], iconAnchor: [18, 18] 
+ }) 
  
-  // Mapa 
-  document.getElementById('mapa-section').classList.remove('hidden') 
-  if (ride.maps_link) { 
-    document.getElementById('iframe-maps').classList.remove('hidden') 
-    document.getElementById('maps-frame').src = ride.maps_link 
-  } else { 
-    document.getElementById('leaflet-map').classList.remove('hidden') 
-    if (!map) { 
-      map = L.map('map').setView([-20.3222, -40.3381], 12) 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map) 
-    } 
-    if (ride.origem_lat) { 
-      L.marker([ride.origem_lat, ride.origem_lng]).addTo(map).bindPopup('Origem') 
-      if (ride.destino_lat) { 
-        L.marker([ride.destino_lat, ride.destino_lng]).addTo(map).bindPopup('Destino') 
-        map.fitBounds([[ride.origem_lat, ride.origem_lng], [ride.destino_lat, ride.destino_lng]], { padding: [30, 30] }) 
-      } 
-    } 
-  } 
+ async function carregar() { 
+   try { 
+     const r = await fetch(`/api/ride/${token}`) 
+     if (!r.ok) { 
+       document.body.innerHTML = '<p class="text-center mt-20 text-gray-500">Corrida não encontrada.</p>' 
+       return 
+     } 
+     const { ride, rating } = await r.json() 
+     dadosAtuais = { ride, rating } 
+     renderizar(ride, rating) 
  
-  // Avaliação 
-  if (ride.status === 'concluida') { 
-    if (!rating?.estrelas_motorista) { 
-      document.getElementById('card-avaliacao').classList.remove('hidden') 
-    } else { 
-      document.getElementById('card-obrigado').classList.remove('hidden') 
-    } 
-  } 
-} 
+     // Se corrida aceita, busca localização do motorista 
+     if (ride.status === 'aceita') { 
+       atualizarLocalizacaoMotorista(ride) 
+     } 
+   } catch (e) { 
+     console.error(e) 
+   } 
+ } 
  
-// Estrelas 
-document.querySelectorAll('.star').forEach(s => { 
-  s.addEventListener('click', () => { 
-    estrelaSelecionada = parseInt(s.dataset.v) 
-    document.querySelectorAll('.star').forEach((st, i) => { 
-      st.style.color = i < estrelaSelecionada ? '#f59e0b' : '#d1d5db' 
-    }) 
-  }) 
-}) 
+ function renderizar(ride, rating) { 
+   // Status 
+   const cfg = statusConfig[ride.status] || statusConfig.aberta 
+   const badge = document.getElementById('badge-status') 
+   badge.textContent = cfg.label 
+   badge.className = `inline-block mt-1 px-3 py-1 rounded-full text-sm font-semibold ${cfg.cls}` 
  
-async function enviarAvaliacao() { 
-  if (!estrelaSelecionada) { alert('Selecione uma nota!'); return } 
-  const btn = document.getElementById('btn-avaliar') 
-  btn.textContent = 'Enviando...' 
-  btn.disabled = true 
-  const r = await fetch(`/api/ride/${token}/avaliar-motorista`, { 
-    method: 'POST', 
-    headers: { 'Content-Type': 'application/json' }, 
-    body: JSON.stringify({ estrelas: estrelaSelecionada, comentario: document.getElementById('comentario').value }) 
-  }) 
-  if (r.ok) { 
-    document.getElementById('card-avaliacao').classList.add('hidden') 
-    document.getElementById('card-obrigado').classList.remove('hidden') 
-  } else { 
-    btn.textContent = 'Enviar avaliação' 
-    btn.disabled = false 
-    alert('Erro ao enviar. Tente novamente.') 
-  } 
-} 
+   document.getElementById('txt-origem').textContent = ride.origem 
+   document.getElementById('txt-destino').textContent = ride.destino 
  
-carregar() 
-setInterval(carregar, 15000) 
-</script> 
-</body> 
-</html>
+   // Motorista 
+   if (ride.driver_nome) { 
+     document.getElementById('card-motorista').classList.remove('hidden') 
+     const avatar = document.getElementById('avatar-motorista') 
+     if (ride.foto_base64) { 
+       avatar.innerHTML = `<img src="${ride.foto_base64}" class="w-full h-full object-cover"/>` 
+     } else { 
+       avatar.textContent = ride.driver_nome.charAt(0).toUpperCase() 
+     } 
+     document.getElementById('nome-motorista').textContent = ride.driver_nome 
+     const media = ride.driver_media || 0 
+     document.getElementById('stars-motorista').textContent = '★'.repeat(Math.round(media)) + '☆'.repeat(5 - Math.round(media)) 
+     document.getElementById('info-motorista').textContent = `${media.toFixed(1)} • ${ride.driver_viagens || 0} viagens` 
+     document.getElementById('carro-motorista').textContent = `${ride.modelo_carro} ${ride.cor_carro} ${ride.ano_carro}` 
+     document.getElementById('placa-motorista').textContent = ride.placa 
+     document.getElementById('tel-motorista').textContent = ride.driver_telefone || '—' 
+   } 
+ 
+   // Mapa 
+   document.getElementById('mapa-section').classList.remove('hidden') 
+ 
+   if (!map) initMap() 
+ 
+   const bounds = [] 
+ 
+   if (ride.origem_lat) { 
+     if (markerOrigem) markerOrigem.remove() 
+     markerOrigem = L.marker([ride.origem_lat, ride.origem_lng], { icon: iconOrigem }) 
+       .addTo(map).bindPopup('📍 Origem: ' + ride.origem) 
+     bounds.push([ride.origem_lat, ride.origem_lng]) 
+   } 
+ 
+   if (ride.destino_lat) { 
+     if (markerDestino) markerDestino.remove() 
+     markerDestino = L.marker([ride.destino_lat, ride.destino_lng], { icon: iconDestino }) 
+       .addTo(map).bindPopup('🏁 Destino: ' + ride.destino) 
+     bounds.push([ride.destino_lat, ride.destino_lng]) 
+   } 
+ 
+   if (bounds.length > 1) { 
+     map.fitBounds(bounds, { padding: [40, 40] }) 
+   } else if (bounds.length === 1) { 
+     map.setView(bounds[0], 15) 
+   } 
+ 
+   document.getElementById('txt-mapa-info').textContent = 
+     ride.status === 'aceita' ? 'Atualizando localização do motorista...' : 
+     ride.status === 'concluida' ? 'Corrida concluída' : 'Aguardando motorista' 
+ 
+   // Avaliação 
+   if (ride.status === 'concluida') { 
+     if (!rating?.estrelas_motorista) { 
+       document.getElementById('card-avaliacao').classList.remove('hidden') 
+     } else { 
+       document.getElementById('card-obrigado').classList.remove('hidden') 
+     } 
+   } 
+ } 
+ 
+ async function atualizarLocalizacaoMotorista(ride) { 
+   try { 
+     const r = await fetch(`/api/ride/${token}/motorista-location`) 
+     if (!r.ok) return 
+     const { location } = await r.json() 
+ 
+     if (!location || !location.ativo) { 
+       document.getElementById('txt-mapa-info').textContent = 
+         'Aguardando localização ao vivo do motorista...' 
+       return 
+     } 
+ 
+     // Atualiza pin do motorista no mapa 
+     if (markerMotorista) { 
+       markerMotorista.setLatLng([location.lat, location.lng]) 
+     } else { 
+       markerMotorista = L.marker([location.lat, location.lng], { icon: iconMotorista }) 
+         .addTo(map).bindPopup('🚗 Motorista') 
+       document.getElementById('badge-rastreamento').classList.remove('hidden') 
+     } 
+ 
+     // Ajusta mapa para mostrar motorista e origem 
+     if (ride.origem_lat) { 
+       map.fitBounds([ 
+         [location.lat, location.lng], 
+         [ride.origem_lat, ride.origem_lng] 
+       ], { padding: [40, 40] }) 
+     } 
+ 
+     // Calcula distância e ETA via Haversine (aproximado) 
+     const distKm = calcularDistanciaHaversine( 
+       location.lat, location.lng, 
+       ride.origem_lat, ride.origem_lng 
+     ) 
+ 
+     const etaMin = Math.round(distKm / 0.5) // ~30 km/h em área urbana 
+ 
+     document.getElementById('card-eta').classList.remove('hidden') 
+     document.getElementById('txt-eta').textContent = `${etaMin} min` 
+     document.getElementById('txt-distancia-motorista').textContent = 
+       `Motorista a ${distKm.toFixed(1)} km de você` 
+ 
+     const segundosAtras = location.segundos_atras 
+     document.getElementById('txt-location-age').textContent = 
+       segundosAtras < 10 ? '● Localização ao vivo' 
+       : segundosAtras < 60 ? `● Atualizado há ${segundosAtras}s` 
+       : '○ Localização desatualizada' 
+ 
+     document.getElementById('txt-mapa-info').textContent = '● Rastreamento ao vivo ativo' 
+ 
+   } catch(e) { 
+     console.error('[LOCATION]', e) 
+   } 
+ } 
+ 
+ function calcularDistanciaHaversine(lat1, lng1, lat2, lng2) { 
+   const R = 6371 
+   const dLat = (lat2 - lat1) * Math.PI / 180 
+   const dLng = (lng2 - lng1) * Math.PI / 180 
+   const a = Math.sin(dLat/2) * Math.sin(dLat/2) + 
+     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+     Math.sin(dLng/2) * Math.sin(dLng/2) 
+   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) 
+ } 
+ 
+ // Estrelas avaliação 
+ document.querySelectorAll('.star').forEach(s => { 
+   s.addEventListener('click', () => { 
+     estrelaSelecionada = parseInt(s.dataset.v) 
+     document.querySelectorAll('.star').forEach((st, i) => { 
+       st.style.color = i < estrelaSelecionada ? '#f59e0b' : '#d1d5db' 
+     }) 
+   }) 
+ }) 
+ 
+ async function enviarAvaliacao() { 
+   if (!estrelaSelecionada) { alert('Selecione uma nota!'); return } 
+   const btn = document.getElementById('btn-avaliar') 
+   btn.textContent = 'Enviando...' 
+   btn.disabled = true 
+   const r = await fetch(`/api/ride/${token}/avaliar-motorista`, { 
+     method: 'POST', 
+     headers: { 'Content-Type': 'application/json' }, 
+     body: JSON.stringify({ 
+       estrelas: estrelaSelecionada, 
+       comentario: document.getElementById('comentario').value 
+     }) 
+   }) 
+   if (r.ok) { 
+     document.getElementById('card-avaliacao').classList.add('hidden') 
+     document.getElementById('card-obrigado').classList.remove('hidden') 
+   } else { 
+     btn.textContent = 'Enviar avaliação' 
+     btn.disabled = false 
+     alert('Erro ao enviar. Tente novamente.') 
+   } 
+ } 
+ 
+ // Polling — atualiza a cada 15 segundos 
+ carregar() 
+ setInterval(() => { 
+   carregar() 
+ }, 15000) 
+ </script> 
+ </body> 
+ </html> 

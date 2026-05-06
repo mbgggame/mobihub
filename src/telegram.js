@@ -4,9 +4,38 @@ import { db } from './db.js'
 let bot 
  
 export function initBot() { 
-  bot = new TelegramBot(process.env.TELEGRAM_TOKEN, { 
-    polling: true, 
-    baseApiUrl: 'https://api.telegram.org' 
+  bot = new TelegramBot(process.env.TELEGRAM_TOKEN, { polling: true }) 
+ 
+  // Recebe localização ao vivo do motorista 
+  bot.on('location', (msg) => { 
+    const { lat, lng } = { lat: msg.location.latitude, lng: msg.location.longitude } 
+    const telegramId = String(msg.from.id) 
+ 
+    const driver = db.prepare('SELECT * FROM drivers WHERE telegram_id = ? AND ativo = 1').get(telegramId) 
+    if (!driver) return 
+ 
+    // Busca corrida ativa do motorista 
+    const ride = db.prepare(` 
+      SELECT * FROM rides 
+      WHERE driver_id = ? AND status = 'aceita' 
+      ORDER BY aceita_at DESC LIMIT 1 
+    `).get(driver.id) 
+ 
+    if (!ride) return 
+ 
+    // Salva ou atualiza localização 
+    const existing = db.prepare('SELECT id FROM driver_locations WHERE ride_id = ?').get(ride.id) 
+    if (existing) { 
+      db.prepare(` 
+        UPDATE driver_locations SET lat = ?, lng = ?, updated_at = CURRENT_TIMESTAMP 
+        WHERE ride_id = ? 
+      `).run(lat, lng, ride.id) 
+    } else { 
+      db.prepare(` 
+        INSERT INTO driver_locations (driver_id, ride_id, lat, lng) 
+        VALUES (?, ?, ?, ?) 
+      `).run(driver.id, ride.id, lat, lng) 
+    } 
   }) 
  
   bot.on('callback_query', async (query) => { 
@@ -22,9 +51,6 @@ export function initBot() {
         ).get(rideId) 
         if (!ride) return null 
  
-        console.log('[DEBUG] from.id:', from.id) 
-        console.log('[DEBUG] String(from.id):', String(from.id)) 
- 
         let driver = db.prepare( 
           'SELECT * FROM drivers WHERE telegram_id = ? AND ativo = 1' 
         ).get(String(from.id)) 
@@ -35,15 +61,9 @@ export function initBot() {
           ).get(String(from.id)) 
         } 
  
-        console.log('[DEBUG] driver encontrado:', driver) 
+        if (!driver) return null 
  
-        if (!driver) { 
-          const todos = db.prepare('SELECT id, nome, telegram_id FROM drivers WHERE ativo = 1').all() 
-          console.log('[DEBUG] Motoristas ativos no banco:', todos) 
-          return null 
-        } 
- 
-        // --- VERIFICAÇÃO DE BLOQUEIO POR AGENDAMENTO --- 
+        // Verifica bloqueio por agendamento 
         const bloqueioAtivo = db.prepare( 
           "SELECT valor FROM configuracoes WHERE chave = 'agendamento_bloqueio_ativo'" 
         ).get()?.valor === 'true' 
@@ -54,7 +74,7 @@ export function initBot() {
           ).get()?.valor || '60') 
  
           const agora = new Date() 
-          const limiteBloquio = new Date(agora.getTime() + minBloqueio * 60 * 1000) 
+          const limiteBloqueio = new Date(agora.getTime() + minBloqueio * 60 * 1000) 
  
           const corridaAgendada = db.prepare(` 
             SELECT * FROM rides 
@@ -63,15 +83,10 @@ export function initBot() {
             AND status IN ('aberta', 'aceita') 
             AND agendada_para <= ? 
             AND agendada_para >= ? 
-          `).get(driver.id, limiteBloquio.toISOString(), agora.toISOString()) 
+          `).get(driver.id, limiteBloqueio.toISOString(), agora.toISOString()) 
  
           if (corridaAgendada) { 
-            const horario = new Date(corridaAgendada.agendada_para).toLocaleString('pt-BR') 
-            bot.answerCallbackQuery(query.id, { 
-              text: `Você tem uma corrida agendada para ${horario}. Disponível após concluí-la.`, 
-              show_alert: true 
-            }) 
-            return { blocked: true } 
+            return { bloqueado: true, horario: corridaAgendada.agendada_para } 
           } 
         } 
  
@@ -96,21 +111,28 @@ export function initBot() {
         return 
       } 
  
-      if (result.blocked) return 
+      if (result.bloqueado) { 
+        const horario = new Date(result.horario).toLocaleString('pt-BR') 
+        bot.answerCallbackQuery(query.id, { 
+          text: `Você tem um agendamento para ${horario}. Disponível após concluí-lo.`, 
+          show_alert: true 
+        }) 
+        return 
+      } 
  
       const { ride, driver } = result 
+      bot.answerCallbackQuery(query.id, { text: '✅ Corrida aceita! Bom trabalho.' }) 
  
-      bot.answerCallbackQuery(query.id, { text: 'Corrida aceita! Bom trabalho.' }) 
- 
+      // Atualiza mensagem no grupo 
       const textoGrupo = ` 
-✅ *Corrida aceita!* 
+ ✅ *Corrida aceita!* 
  
-📍 Origem: ${ride.origem} 
-🏁 Destino: ${ride.destino} 
-💰 Valor: R$ ${ride.valor.toFixed(2)} 
+ 📍 Origem: ${ride.origem} 
+ 🏁 Destino: ${ride.destino} 
+ 💰 Valor: R$ ${Number(ride.valor).toFixed(2)} 
  
-🧑‍✈️ Motorista: *${driver.nome}* 
-🚗 ${driver.modelo_carro} ${driver.cor_carro} ${driver.ano_carro} — ${driver.placa} 
+ 🧑‍✈️ Motorista: *${driver.nome}* 
+ 🚗 ${driver.modelo_carro} ${driver.cor_carro} ${driver.ano_carro} — ${driver.placa} 
       `.trim() 
  
       bot.editMessageText(textoGrupo, { 
@@ -119,13 +141,59 @@ export function initBot() {
         parse_mode: 'Markdown' 
       }).catch(() => {}) 
  
+      // Link da corrida e rota 
       const link = `${process.env.BASE_URL}/r/${ride.token}` 
-      bot.sendMessage(from.id, 
-        `🚗 Você aceitou a corrida!\n\n📍 ${ride.origem}\n🏁 ${ride.destino}\n\nAbra o Google Maps, compartilhe sua localização ao vivo e envie o link aqui.\n\n🔗 Link da corrida para o cliente:\n${link}`, 
-        { parse_mode: 'Markdown' } 
-      ).catch(() => { 
+ 
+      const mapsLink = (ride.origem_lat && ride.destino_lat) 
+        ? `https://www.google.com/maps/dir/?api=1&origin=${ride.origem_lat},${ride.origem_lng}&destination=${ride.destino_lat},${ride.destino_lng}&travelmode=driving` 
+        : `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(ride.origem)}&destination=${encodeURIComponent(ride.destino)}&travelmode=driving` 
+ 
+      const msgMotorista = ` 
+ 🚗 *Corrida aceita! Bom trabalho!* 
+ 
+ 📍 Origem: ${ride.origem} 
+ 🏁 Destino: ${ride.destino} 
+ 💰 Valor total: R$ ${Number(ride.valor).toFixed(2)} 
+ 👨‍✈️ Seu recebimento: R$ ${Number(ride.valor_motorista || ride.valor * 0.70).toFixed(2)} 
+ 
+ ⚠️ *IMPORTANTE: Compartilhe sua localização ao vivo aqui no bot para o passageiro acompanhar você em tempo real.* 
+ 
+ Como compartilhar: 
+ 1️⃣ Clique no 📎 (clipe) 
+ 2️⃣ Toque em Localização 
+ 3️⃣ Selecione "Compartilhar localização ao vivo" 
+ 4️⃣ Escolha 1 hora e confirme 
+       `.trim() 
+ 
+      bot.sendMessage(from.id, msgMotorista, { 
+        parse_mode: 'Markdown', 
+        reply_markup: { 
+          inline_keyboard: [[ 
+            { text: '🗺️ Abrir rota no Google Maps', url: mapsLink } 
+          ]] 
+        } 
+      }).catch(() => { 
         console.warn(`[BOT] Motorista ${from.id} não iniciou o bot privado.`) 
       }) 
+ 
+      // Manda link da corrida separado para ficar destacado 
+      bot.sendMessage(from.id, 
+        `📱 Link da corrida para o passageiro acompanhar:\n${link}`, 
+        { parse_mode: 'Markdown' } 
+      ).catch(() => {}) 
+ 
+      // Busca token do perfil do motorista 
+      const driverComToken = db.prepare('SELECT token_perfil FROM drivers WHERE id = ?').get(driver.id) 
+      const linkPerfil = driverComToken?.token_perfil 
+        ? `${process.env.BASE_URL}/motorista/${driverComToken.token_perfil}` 
+        : null 
+ 
+      if (linkPerfil) { 
+        bot.sendMessage(from.id, 
+          `👤 Seu perfil e avaliações:\n${linkPerfil}`, 
+          { parse_mode: 'Markdown' } 
+        ).catch(() => {}) 
+      } 
  
       return 
     } 
@@ -168,31 +236,67 @@ export function initBot() {
 } 
  
 export async function sendRideToGroup(ride) { 
+  const isAgendada = ride.tipo === 'agendada' 
   const valorMotorista = ride.valor_motorista 
     ? `R$ ${Number(ride.valor_motorista).toFixed(2)}` 
     : `R$ ${(ride.valor * 0.70).toFixed(2)}` 
-  
-  const valorTotal = `R$ ${Number(ride.valor).toFixed(2)}` 
-
+ 
+  const titulo = isAgendada 
+    ? `🗓️ *Novo agendamento disponível!*` 
+    : `🚗 *Nova corrida disponível!*` 
+ 
+  const dataAgendada = isAgendada && ride.agendada_para 
+    ? `\n📅 Data: ${new Date(ride.agendada_para).toLocaleString('pt-BR')}` 
+    : '' 
+ 
+  // Busca dados do passageiro 
+  let infoPassageiro = '' 
+  if (ride.client_id) { 
+    const client = db.prepare('SELECT nome, media_avaliacao, total_avaliacoes FROM clients WHERE id = ?').get(ride.client_id) 
+    if (client) { 
+      const nome = client.nome || 'Passageiro' 
+      const media = client.media_avaliacao 
+        ? `⭐ ${Number(client.media_avaliacao).toFixed(1)}` 
+        : '⭐ Novo' 
+      infoPassageiro = `\n👤 Passageiro: *${nome}* ${media}` 
+    } 
+  } 
+ 
+  const linkPassageiro = (ride.origem_lat && ride.origem_lng) 
+    ? `https://www.google.com/maps?q=${ride.origem_lat},${ride.origem_lng}` 
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ride.origem)}` 
+ 
+  const linkNavegar = (ride.origem_lat && ride.origem_lng) 
+    ? `https://www.google.com/maps/dir/?api=1&destination=${ride.origem_lat},${ride.origem_lng}&travelmode=driving` 
+    : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(ride.origem)}&travelmode=driving` 
+ 
   const texto = ` 
-🚗 *Nova corrida disponível!* 
-
+${titulo} 
+ 
 📍 Origem: ${ride.origem} 
-🏁 Destino: ${ride.destino} 
-
-💰 Valor total: ${valorTotal} 
+🏁 Destino: ${ride.destino}${dataAgendada}${infoPassageiro} 
+💰 Valor total: R$ ${Number(ride.valor).toFixed(2)} 
 👨‍✈️ Seu recebimento (70%): *${valorMotorista}* 
+ 
+📌 Toque para ver onde o passageiro está: 
   `.trim() 
-
+ 
   const msg = await bot.sendMessage(process.env.TELEGRAM_GROUP_ID, texto, { 
     parse_mode: 'Markdown', 
     reply_markup: { 
-      inline_keyboard: [[ 
-        { text: '✅ Aceitar corrida', callback_data: `accept:${ride.id}` } 
-      ]] 
+      inline_keyboard: [ 
+        [ 
+          { text: '📌 Ver passageiro no mapa', url: linkPassageiro }, 
+          { text: '🧭 Como chegar', url: linkNavegar } 
+        ], 
+        [ 
+          { text: isAgendada ? '📅 Aceitar agendamento' : '✅ Aceitar corrida', 
+            callback_data: `accept:${ride.id}` } 
+        ] 
+      ] 
     } 
   }) 
-
+ 
   return msg.message_id 
 } 
  
@@ -226,4 +330,4 @@ export async function editGroupMessage(messageId, texto) {
  
 export function getBot() { 
   return bot 
-}
+} 

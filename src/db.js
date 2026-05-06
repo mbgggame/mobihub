@@ -2,6 +2,7 @@ import Database from 'better-sqlite3'
 import { join, dirname } from 'path' 
 import { fileURLToPath } from 'url' 
 import bcrypt from 'bcrypt' 
+import { v4 as uuidv4 } from 'uuid' 
  
 const __dirname = dirname(fileURLToPath(import.meta.url)) 
 const DB_PATH = join(__dirname, '..', 'mobihub.db') 
@@ -88,6 +89,13 @@ export function initDB() {
     db.prepare("ALTER TABLE drivers ADD COLUMN foto_base64 TEXT").run() 
   } catch(e) {} 
  
+  try { db.prepare("ALTER TABLE drivers ADD COLUMN token_perfil TEXT").run() } catch(e) {} 
+ 
+  const semToken = db.prepare('SELECT id FROM drivers WHERE token_perfil IS NULL').all() 
+  for (const d of semToken) { 
+    db.prepare('UPDATE drivers SET token_perfil = ? WHERE id = ?').run(uuidv4(), d.id) 
+  } 
+ 
   try { db.prepare("ALTER TABLE rides ADD COLUMN valor_motorista REAL").run() } catch(e) {} 
   try { db.prepare("ALTER TABLE rides ADD COLUMN valor_mobihub REAL").run() } catch(e) {} 
  
@@ -95,7 +103,19 @@ export function initDB() {
   try { db.prepare("ALTER TABLE rides ADD COLUMN agendada_para DATETIME").run() } catch(e) {} 
   try { db.prepare("ALTER TABLE rides ADD COLUMN disparada_at DATETIME").run() } catch(e) {} 
  
+  try { db.prepare("ALTER TABLE clients ADD COLUMN email TEXT").run() } catch(e) {} 
+ 
   db.exec(` 
+    CREATE TABLE IF NOT EXISTS driver_locations ( 
+      id INTEGER PRIMARY KEY AUTOINCREMENT, 
+      driver_id INTEGER REFERENCES drivers(id), 
+      ride_id INTEGER REFERENCES rides(id), 
+      lat REAL NOT NULL, 
+      lng REAL NOT NULL, 
+      velocidade REAL, 
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP 
+    ); 
+ 
     CREATE TABLE IF NOT EXISTS tarifas ( 
       id INTEGER PRIMARY KEY AUTOINCREMENT, 
       nome TEXT NOT NULL, 
@@ -130,6 +150,13 @@ export function initDB() {
   for (const [chave, valor] of Object.entries(configsIniciais)) { 
     insertConfig.run(chave, valor) 
   } 
+ 
+  try { db.prepare("ALTER TABLE rides ADD COLUMN concluida_auto INTEGER DEFAULT 0").run() } catch(e) {} 
+  try { db.prepare("ALTER TABLE ratings ADD COLUMN comentario_passageiro_sobre_motorista TEXT").run() } catch(e) {} 
+ 
+  // Configuração do raio de chegada 
+  insertConfig.run('chegada_raio_metros', '150') 
+  insertConfig.run('chegada_auto_ativo', 'true') 
  
   const tarifasExistentes = db.prepare('SELECT COUNT(*) as total FROM tarifas').get() 
   if (tarifasExistentes.total === 0) { 

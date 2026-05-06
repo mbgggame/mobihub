@@ -120,7 +120,7 @@ export default async function ridesRoutes(fastify) {
  
     const ride = db.prepare('SELECT * FROM rides WHERE id = ?').get(result.lastInsertRowid) 
  
-    // Só dispara imediatamente se for corrida normal 
+    // Só dispara imediatamente se for corrida NORMAL 
     if (!tipo || tipo === 'normal') { 
       try { 
         const messageId = await sendRideToGroup(ride) 
@@ -165,25 +165,26 @@ export default async function ridesRoutes(fastify) {
     db.prepare(updateQuery).run(...params) 
  
     if (status === 'concluida') { 
-      // Notifica motorista para avaliar cliente 
       if (ride.driver_id) { 
         const driver = db.prepare('SELECT * FROM drivers WHERE id = ?').get(ride.driver_id) 
         if (driver) { 
-          await notifyDriverRateClient(driver, ride) 
+          console.log('[DEBUG] Enviando avaliação para motorista:', driver.telegram_id) 
+          try { 
+            await notifyDriverRateClient(driver, ride) 
+            console.log('[DEBUG] Avaliação enviada com sucesso') 
+          } catch(err) { 
+            console.error('[DEBUG] Erro ao enviar avaliação:', err.message) 
+          } 
           db.prepare('UPDATE drivers SET total_viagens = total_viagens + 1 WHERE id = ?').run(driver.id) 
         } 
       } 
- 
-      // Incrementa corridas do cliente 
       if (ride.client_id) { 
         db.prepare('UPDATE clients SET total_corridas = total_corridas + 1 WHERE id = ?').run(ride.client_id) 
       } 
- 
-      // Edita mensagem no grupo 
       if (ride.telegram_message_id) { 
         await editGroupMessage( 
           ride.telegram_message_id, 
-          `✅ *Corrida concluída!*\n\n📍 ${ride.origem}\n🏁 ${ride.destino}\n💰 R$ ${ride.valor.toFixed(2)}` 
+          `✅ *Corrida concluída!*\n\n📍 ${ride.origem}\n🏁 ${ride.destino}\n💰 R$ ${Number(ride.valor).toFixed(2)}` 
         ) 
       } 
     } 
@@ -242,7 +243,7 @@ export default async function ridesRoutes(fastify) {
  
   // Métricas para o Dashboard 
   fastify.get('/api/metricas', { preHandler: requireAuth }, async () => { 
-    const hoje = new Date().toISOString().split('T')[0] 
+    const hoje = new Date().toLocaleDateString('pt-BR').split('/').reverse().join('-') 
  
     const resumoDia = db.prepare(` 
       SELECT 
@@ -251,8 +252,9 @@ export default async function ridesRoutes(fastify) {
         SUM(CASE WHEN status = 'aberta' THEN 1 ELSE 0 END) as abertas, 
         SUM(CASE WHEN status = 'agendada' THEN 1 ELSE 0 END) as agendadas, 
         SUM(CASE WHEN status = 'concluida' THEN 1 ELSE 0 END) as concluidas 
-      FROM rides WHERE DATE(created_at) = ? 
-    `).get(hoje) 
+      FROM rides 
+      WHERE DATE(created_at, 'localtime') = DATE('now', 'localtime') 
+    `).get() 
  
     const motoristasAtivos = db.prepare( 
       'SELECT COUNT(*) as total FROM drivers WHERE ativo = 1' 
@@ -327,5 +329,12 @@ export default async function ridesRoutes(fastify) {
     }) 
     transaction(configs) 
     return { mensagem: 'Configurações salvas' } 
+  }) 
+ 
+  fastify.get('/api/clients', { preHandler: requireAuth }, async () => { 
+    return db.prepare(` 
+      SELECT id, nome, telefone, total_corridas, media_avaliacao, total_avaliacoes 
+      FROM clients ORDER BY nome 
+    `).all() 
   }) 
 }

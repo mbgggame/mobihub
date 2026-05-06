@@ -1,0 +1,389 @@
+<!DOCTYPE html> 
+ <html lang="pt-BR"> 
+ <head> 
+   <meta charset="UTF-8"/> 
+   <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
+   <title>MobiHub — Reputação</title> 
+   <script src="https://cdn.tailwindcss.com"></script> 
+ </head> 
+ <body class="bg-gray-50 min-h-screen"> 
+ 
+ <div class="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10"> 
+   <div class="flex items-center gap-3"> 
+     <a href="/admin/dashboard" class="text-gray-500 hover:text-gray-700 text-sm">← Dashboard</a> 
+     <span class="text-gray-300">|</span> 
+     <span class="font-semibold text-gray-900">Reputação</span> 
+   </div> 
+   <button onclick="sair()" class="text-sm text-gray-500 border border-gray-200 px-3 py-1.5 rounded-lg">Sair</button> 
+ </div> 
+ 
+ <div class="max-w-4xl mx-auto px-4 py-6 space-y-6"> 
+ 
+   <!-- MÉDIAS GERAIS --> 
+   <div> 
+     <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">Médias gerais do sistema</h2> 
+     <div class="grid grid-cols-2 gap-4"> 
+       <div class="bg-white border border-gray-200 rounded-xl p-4 text-center"> 
+         <p class="text-xs text-gray-500 mb-1">Avaliação dos motoristas</p> 
+         <p id="media-motoristas" class="text-3xl font-bold text-yellow-500">—</p> 
+         <p id="total-aval-motoristas" class="text-xs text-gray-400 mt-1"></p> 
+       </div> 
+       <div class="bg-white border border-gray-200 rounded-xl p-4 text-center"> 
+         <p class="text-xs text-gray-500 mb-1">Avaliação dos passageiros</p> 
+         <p id="media-clientes" class="text-3xl font-bold text-blue-500">—</p> 
+         <p id="total-aval-clientes" class="text-xs text-gray-400 mt-1"></p> 
+       </div> 
+     </div> 
+   </div> 
+ 
+   <!-- PESQUISA --> 
+   <div class="bg-white border border-gray-200 rounded-xl p-5"> 
+     <h2 class="text-sm font-medium text-gray-700 uppercase tracking-wide mb-4">Pesquisar reputação</h2> 
+     <div class="flex gap-2 mb-4"> 
+       <button onclick="setTipoPesquisa('corrida')" id="tab-corrida" 
+         class="flex-1 bg-green-600 text-white rounded-lg py-2 text-sm font-medium"> 
+         Por corrida 
+       </button> 
+       <button onclick="setTipoPesquisa('motorista')" id="tab-motorista" 
+         class="flex-1 bg-white border border-gray-200 text-gray-600 rounded-lg py-2 text-sm font-medium"> 
+         Por motorista 
+       </button> 
+       <button onclick="setTipoPesquisa('cliente')" id="tab-cliente" 
+         class="flex-1 bg-white border border-gray-200 text-gray-600 rounded-lg py-2 text-sm font-medium"> 
+         Por passageiro 
+       </button> 
+     </div> 
+ 
+     <!-- Pesquisa por corrida --> 
+     <div id="busca-corrida"> 
+       <div class="flex gap-2"> 
+         <input id="input-corrida-id" type="number" placeholder="ID da corrida (ex: 123)" 
+           class="flex-1 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+         <button onclick="pesquisarCorrida()" 
+           class="bg-green-600 text-white rounded-lg px-4 py-2.5 text-sm font-medium"> 
+           Buscar 
+         </button> 
+       </div> 
+     </div> 
+ 
+     <!-- Pesquisa por motorista --> 
+     <div id="busca-motorista" class="hidden"> 
+       <div class="flex gap-2"> 
+         <select id="select-motorista" 
+           class="flex-1 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"> 
+           <option value="">Selecione um motorista...</option> 
+         </select> 
+         <button onclick="pesquisarMotorista()" 
+           class="bg-green-600 text-white rounded-lg px-4 py-2.5 text-sm font-medium"> 
+           Buscar 
+         </button> 
+       </div> 
+     </div> 
+ 
+     <!-- Pesquisa por cliente --> 
+     <div id="busca-cliente" class="hidden"> 
+       <div class="flex gap-2"> 
+         <select id="select-cliente" 
+           class="flex-1 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"> 
+           <option value="">Selecione um passageiro...</option> 
+         </select> 
+         <button onclick="pesquisarCliente()" 
+           class="bg-green-600 text-white rounded-lg px-4 py-2.5 text-sm font-medium"> 
+           Buscar 
+         </button> 
+       </div> 
+     </div> 
+ 
+     <!-- Resultado da pesquisa --> 
+     <div id="resultado-pesquisa" class="mt-4"></div> 
+   </div> 
+ 
+   <!-- TOP MOTORISTAS --> 
+   <div class="bg-white border border-gray-200 rounded-xl p-5"> 
+     <h2 class="text-sm font-medium text-gray-700 uppercase tracking-wide mb-4">🏆 Top motoristas</h2> 
+     <div id="top-motoristas" class="space-y-2"></div> 
+   </div> 
+ 
+   <!-- CLIENTES PROBLEMÁTICOS --> 
+   <div class="bg-white border border-gray-200 rounded-xl p-5"> 
+     <h2 class="text-sm font-medium text-gray-700 uppercase tracking-wide mb-4">⚠️ Passageiros com baixa avaliação</h2> 
+     <p class="text-xs text-gray-400 mb-3">Passageiros com média abaixo de 3 estrelas e pelo menos 2 avaliações</p> 
+     <div id="clientes-problematicos" class="space-y-2"></div> 
+   </div> 
+ 
+ </div> 
+ 
+<script> 
+ const token = () => localStorage.getItem('mobihub_token') 
+ const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` }) 
+ if (!token()) location.href = '/admin/login' 
+ 
+ let tipoPesquisa = 'corrida' 
+ 
+ function sair() { 
+   localStorage.removeItem('mobihub_token') 
+   location.href = '/admin/login' 
+ } 
+ 
+ function estrelas(media) { 
+   if (!media) return '☆☆☆☆☆' 
+   const cheias = Math.round(media) 
+   return '★'.repeat(cheias) + '☆'.repeat(5 - cheias) 
+ } 
+ 
+ function setTipoPesquisa(tipo) { 
+   tipoPesquisa = tipo 
+   document.getElementById('busca-corrida').classList.add('hidden') 
+   document.getElementById('busca-motorista').classList.add('hidden') 
+   document.getElementById('busca-cliente').classList.add('hidden') 
+   document.getElementById(`busca-${tipo}`).classList.remove('hidden') 
+   document.getElementById('resultado-pesquisa').innerHTML = '' 
+ 
+   const tabs = ['corrida', 'motorista', 'cliente'] 
+   tabs.forEach(t => { 
+     const btn = document.getElementById(`tab-${t}`) 
+     btn.className = t === tipo 
+       ? 'flex-1 bg-green-600 text-white rounded-lg py-2 text-sm font-medium' 
+       : 'flex-1 bg-white border border-gray-200 text-gray-600 rounded-lg py-2 text-sm font-medium' 
+   }) 
+ } 
+ 
+ async function pesquisarCorrida() { 
+   const id = document.getElementById('input-corrida-id').value 
+   if (!id) { alert('Digite o ID da corrida'); return } 
+ 
+   const r = await fetch(`/api/reputacao/corrida/${id}`, { headers: headers() }) 
+   if (!r.ok) { document.getElementById('resultado-pesquisa').innerHTML = '<p class="text-sm text-red-500">Corrida não encontrada</p>'; return } 
+ 
+   const { ride, rating } = await r.json() 
+   const div = document.getElementById('resultado-pesquisa') 
+ 
+   div.innerHTML = ` 
+     <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3"> 
+       <div class="flex items-center justify-between"> 
+         <p class="font-semibold text-gray-900">Corrida #${ride.id}</p> 
+         <span class="text-xs px-2 py-0.5 rounded-full ${ride.status === 'concluida' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}">${ride.status}</span> 
+       </div> 
+       <div class="text-sm text-gray-600 space-y-1"> 
+         <p><span class="font-medium">De:</span> ${ride.origem}</p> 
+         <p><span class="font-medium">Para:</span> ${ride.destino}</p> 
+         <p><span class="font-medium">Valor:</span> R$ ${Number(ride.valor).toFixed(2)}</p> 
+         <p><span class="font-medium">Data:</span> ${new Date(ride.created_at).toLocaleString('pt-BR')}</p> 
+       </div> 
+       <hr class="border-gray-200"/> 
+       <div class="grid grid-cols-2 gap-4"> 
+         <div class="bg-white border border-gray-200 rounded-lg p-3"> 
+           <p class="text-xs text-gray-500 font-medium mb-1">Passageiro avaliou motorista</p> 
+           ${rating?.estrelas_motorista ? ` 
+             <p class="text-yellow-500 text-lg">${estrelas(rating.estrelas_motorista)}</p> 
+             <p class="text-sm font-semibold text-gray-800">${rating.estrelas_motorista}/5</p> 
+             ${rating.comentario_cliente ? `<p class="text-xs text-gray-500 mt-1 italic">"${rating.comentario_cliente}"</p>` : ''} 
+             <p class="text-xs text-gray-400 mt-1">${rating.avaliado_em_cliente ? new Date(rating.avaliado_em_cliente).toLocaleString('pt-BR') : ''}</p> 
+           ` : '<p class="text-xs text-gray-400">Não avaliado ainda</p>'} 
+         </div> 
+         <div class="bg-white border border-gray-200 rounded-lg p-3"> 
+           <p class="text-xs text-gray-500 font-medium mb-1">Motorista avaliou passageiro</p> 
+           ${rating?.estrelas_cliente ? ` 
+             <p class="text-blue-500 text-lg">${estrelas(rating.estrelas_cliente)}</p> 
+             <p class="text-sm font-semibold text-gray-800">${rating.estrelas_cliente}/5</p> 
+             ${rating.comentario_motorista ? `<p class="text-xs text-gray-500 mt-1 italic">"${rating.comentario_motorista}"</p>` : ''} 
+             <p class="text-xs text-gray-400 mt-1">${rating.avaliado_em_motorista ? new Date(rating.avaliado_em_motorista).toLocaleString('pt-BR') : ''}</p> 
+           ` : '<p class="text-xs text-gray-400">Não avaliado ainda</p>'} 
+         </div> 
+       </div> 
+       ${ride.driver_nome ? ` 
+       <hr class="border-gray-200"/> 
+       <div class="flex items-center justify-between"> 
+         <div> 
+           <p class="text-xs text-gray-500">Motorista</p> 
+           <p class="text-sm font-semibold text-gray-800">${ride.driver_nome}</p> 
+           <p class="text-xs text-gray-500">Média geral: <span class="text-yellow-500">${estrelas(ride.driver_media)}</span> ${Number(ride.driver_media || 0).toFixed(1)} (${ride.driver_total || 0} avaliações)</p> 
+         </div> 
+         <button onclick="setTipoPesquisa('motorista'); document.getElementById('select-motorista').value='${ride.driver_id}'; pesquisarMotorista()" 
+           class="text-xs text-green-600 border border-green-300 rounded-lg px-3 py-1.5 hover:bg-green-50"> 
+           Ver histórico 
+         </button> 
+       </div>` : ''} 
+     </div> 
+   ` 
+ } 
+ 
+ async function pesquisarMotorista() { 
+   const id = document.getElementById('select-motorista').value 
+   if (!id) { alert('Selecione um motorista'); return } 
+ 
+   const r = await fetch(`/api/reputacao/motorista/${id}`, { headers: headers() }) 
+   if (!r.ok) { document.getElementById('resultado-pesquisa').innerHTML = '<p class="text-sm text-red-500">Motorista não encontrado</p>'; return } 
+ 
+   const { driver, avaliacoes } = await r.json() 
+   const div = document.getElementById('resultado-pesquisa') 
+ 
+   div.innerHTML = ` 
+     <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-4"> 
+       <div class="flex items-center gap-3"> 
+         <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold text-lg"> 
+           ${driver.nome.charAt(0).toUpperCase()} 
+         </div> 
+         <div> 
+           <p class="font-semibold text-gray-900">${driver.nome}</p> 
+           <p class="text-yellow-500 text-sm">${estrelas(driver.media_avaliacao)} <span class="text-gray-600">${Number(driver.media_avaliacao || 0).toFixed(1)}/5</span></p> 
+           <p class="text-xs text-gray-500">${driver.total_avaliacoes || 0} avaliações • ${driver.total_viagens || 0} viagens</p> 
+         </div> 
+       </div> 
+       <hr class="border-gray-200"/> 
+       <div class="space-y-3"> 
+         <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Histórico de avaliações</p> 
+         ${avaliacoes.length === 0 ? '<p class="text-sm text-gray-400">Nenhuma avaliação ainda</p>' : 
+           avaliacoes.map(a => ` 
+             <div class="bg-white border border-gray-200 rounded-lg p-3"> 
+               <div class="flex items-center justify-between mb-1"> 
+                 <p class="text-xs text-gray-500">${new Date(a.corrida_data).toLocaleDateString('pt-BR')} • ${a.client_nome || 'Cliente'}</p> 
+                 <p class="text-yellow-500">${estrelas(a.estrelas_motorista)} <span class="text-gray-700 text-xs">${a.estrelas_motorista}/5</span></p> 
+               </div> 
+               <p class="text-xs text-gray-600">${a.origem?.split(',')[0]} → ${a.destino?.split(',')[0]}</p> 
+               ${a.comentario_cliente ? `<p class="text-xs text-gray-500 italic mt-1">"${a.comentario_cliente}"</p>` : ''} 
+             </div> 
+           `).join('') 
+         } 
+       </div> 
+     </div> 
+   ` 
+ } 
+ 
+ async function pesquisarCliente() { 
+   const id = document.getElementById('select-cliente').value 
+   if (!id) { alert('Selecione um passageiro'); return } 
+ 
+   const r = await fetch(`/api/reputacao/cliente/${id}`, { headers: headers() }) 
+   if (!r.ok) { document.getElementById('resultado-pesquisa').innerHTML = '<p class="text-sm text-red-500">Cliente não encontrado</p>'; return } 
+ 
+   const { client, avaliacoes } = await r.json() 
+   const div = document.getElementById('resultado-pesquisa') 
+ 
+   div.innerHTML = ` 
+     <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-4"> 
+       <div class="flex items-center gap-3"> 
+         <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-lg"> 
+           ${(client.nome || client.telefone).charAt(0).toUpperCase()} 
+         </div> 
+         <div> 
+           <p class="font-semibold text-gray-900">${client.nome || 'Cliente'}</p> 
+           <p class="text-sm text-gray-500">${client.telefone}</p> 
+           <p class="text-blue-500 text-sm">${estrelas(client.media_avaliacao)} <span class="text-gray-600">${Number(client.media_avaliacao || 0).toFixed(1)}/5</span></p> 
+           <p class="text-xs text-gray-500">${client.total_avaliacoes || 0} avaliações • ${client.total_corridas || 0} corridas</p> 
+         </div> 
+       </div> 
+       <hr class="border-gray-200"/> 
+       <div class="space-y-3"> 
+         <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Avaliações recebidas dos motoristas</p> 
+         ${avaliacoes.length === 0 ? '<p class="text-sm text-gray-400">Nenhuma avaliação ainda</p>' : 
+           avaliacoes.map(a => ` 
+             <div class="bg-white border border-gray-200 rounded-lg p-3"> 
+               <div class="flex items-center justify-between mb-1"> 
+                 <p class="text-xs text-gray-500">${new Date(a.corrida_data).toLocaleDateString('pt-BR')} • ${a.driver_nome || 'Motorista'}</p> 
+                 <p class="text-blue-500">${estrelas(a.estrelas_cliente)} <span class="text-gray-700 text-xs">${a.estrelas_cliente}/5</span></p> 
+               </div> 
+               <p class="text-xs text-gray-600">${a.origem?.split(',')[0]} → ${a.destino?.split(',')[0]}</p> 
+               ${a.comentario_motorista ? `<p class="text-xs text-gray-500 italic mt-1">"${a.comentario_motorista}"</p>` : ''} 
+             </div> 
+           `).join('') 
+         } 
+       </div> 
+     </div> 
+   ` 
+ } 
+ 
+ async function carregarGeral() { 
+   const r = await fetch('/api/reputacao/geral', { headers: headers() }) 
+   if (!r.ok) return 
+   const { mediaMotoristas, mediaClientes, topMotoristas, clientesProblematicos } = await r.json() 
+ 
+   // Médias gerais 
+   document.getElementById('media-motoristas').textContent = 
+     mediaMotoristas?.media ? `${estrelas(mediaMotoristas.media)} ${Number(mediaMotoristas.media).toFixed(1)}` : '—' 
+   document.getElementById('total-aval-motoristas').textContent = 
+     `${mediaMotoristas?.total || 0} avaliações` 
+ 
+   document.getElementById('media-clientes').textContent = 
+     mediaClientes?.media ? `${estrelas(mediaClientes.media)} ${Number(mediaClientes.media).toFixed(1)}` : '—' 
+   document.getElementById('total-aval-clientes').textContent = 
+     `${mediaClientes?.total || 0} avaliações` 
+ 
+   // Top motoristas 
+   const topDiv = document.getElementById('top-motoristas') 
+   if (!topMotoristas?.length) { 
+     topDiv.innerHTML = '<p class="text-sm text-gray-400">Sem dados ainda</p>' 
+   } else { 
+     topDiv.innerHTML = topMotoristas.map((d, i) => ` 
+       <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0"> 
+         <div class="flex items-center gap-3"> 
+           <span class="text-sm font-bold text-gray-400 w-6">${i + 1}</span> 
+           <div> 
+             <p class="text-sm font-semibold text-gray-800">${d.nome}</p> 
+             <p class="text-xs text-gray-400">${d.total_viagens} viagens</p> 
+           </div> 
+         </div> 
+         <div class="text-right"> 
+           <p class="text-yellow-500">${estrelas(d.media_avaliacao)}</p> 
+           <p class="text-xs text-gray-600">${Number(d.media_avaliacao || 0).toFixed(1)} (${d.total_avaliacoes} aval.)</p> 
+         </div> 
+       </div> 
+     `).join('') 
+   } 
+ 
+   // Clientes problemáticos 
+   const probDiv = document.getElementById('clientes-problematicos') 
+   if (!clientesProblematicos?.length) { 
+     probDiv.innerHTML = '<p class="text-sm text-gray-400">Nenhum passageiro com baixa avaliação</p>' 
+   } else { 
+     probDiv.innerHTML = clientesProblematicos.map(c => ` 
+       <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0"> 
+         <div> 
+           <p class="text-sm font-semibold text-gray-800">${c.nome || 'Cliente'}</p> 
+           <p class="text-xs text-gray-500">${c.telefone} • ${c.total_corridas} corridas</p> 
+         </div> 
+         <div class="text-right"> 
+           <p class="text-red-400">${estrelas(c.media_avaliacao)}</p> 
+           <p class="text-xs text-gray-600">${Number(c.media_avaliacao || 0).toFixed(1)} (${c.total_avaliacoes} aval.)</p> 
+         </div> 
+       </div> 
+     `).join('') 
+   } 
+ 
+   // Carrega selects de motoristas e clientes 
+   await carregarSelects() 
+ } 
+ 
+ async function carregarSelects() { 
+   const [motRes, cliRes] = await Promise.all([ 
+     fetch('/api/drivers', { headers: headers() }), 
+     fetch('/api/clients', { headers: headers() }).catch(() => null) 
+   ]) 
+ 
+   if (motRes.ok) { 
+     const motoristas = await motRes.json() 
+     const sel = document.getElementById('select-motorista') 
+     motoristas.forEach(m => { 
+       const opt = document.createElement('option') 
+       opt.value = m.id 
+       opt.textContent = `${m.nome} — ⭐ ${Number(m.media_avaliacao || 0).toFixed(1)} (${m.total_avaliacoes || 0} aval.)` 
+       sel.appendChild(opt) 
+     }) 
+   } 
+ 
+   if (cliRes && cliRes.ok) { 
+     const clientes = await cliRes.json() 
+     const sel = document.getElementById('select-cliente') 
+     clientes.forEach(c => { 
+       const opt = document.createElement('option') 
+       opt.value = c.id 
+       opt.textContent = `${c.nome || c.telefone} — ⭐ ${Number(c.media_avaliacao || 0).toFixed(1)} (${c.total_avaliacoes || 0} aval.)` 
+       sel.appendChild(opt) 
+     }) 
+   } 
+ } 
+ 
+ carregarGeral() 
+ </script> 
+ </body> 
+ </html> 

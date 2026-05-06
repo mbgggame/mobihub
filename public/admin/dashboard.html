@@ -16,9 +16,9 @@
     <span class="text-sm text-gray-600">Dashboard</span> 
   </div> 
   <div class="flex gap-2"> 
-    <a href="/admin" class="text-sm text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50">Corridas</a> 
-    <a href="/admin/motoristas" class="text-sm text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50">Motoristas</a> 
-    <a href="/admin/nova-corrida" class="bg-green-600 text-white text-sm px-3 py-1.5 rounded-lg font-medium">+ Nova corrida</a> 
+    <a href="/admin" class="text-sm text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg">Corridas</a> 
+    <a href="/admin/motoristas" class="text-sm text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg">Motoristas</a> 
+    <a href="/admin/reputacao" class="text-sm text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50">Reputação</a> 
     <button onclick="sair()" class="text-sm text-gray-500 border border-gray-200 px-3 py-1.5 rounded-lg">Sair</button> 
   </div> 
 </div> 
@@ -132,6 +132,33 @@
       class="mt-6 bg-green-600 text-white rounded-lg px-6 py-2.5 text-sm font-medium hover:bg-green-700"> 
       Salvar configurações de agendamento 
     </button> 
+ 
+    <!-- CONFIGURAÇÕES DE CHEGADA AUTOMÁTICA --> 
+    <div class="bg-white border border-gray-200 rounded-xl p-6 mt-4"> 
+      <h2 class="text-sm font-medium text-gray-700 uppercase tracking-wide mb-4">Finalização automática</h2> 
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6"> 
+        <div class="flex items-center justify-between"> 
+          <div> 
+            <p class="text-sm font-medium text-gray-700">Finalização automática</p> 
+            <p class="text-xs text-gray-400">Conclui a corrida quando motorista chegar ao destino</p> 
+          </div> 
+          <label class="relative inline-flex items-center cursor-pointer"> 
+            <input type="checkbox" id="cfg-chegada-auto" class="sr-only peer"> 
+            <div class="w-11 h-6 bg-gray-200 peer-checked:bg-green-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div> 
+          </label> 
+        </div> 
+        <div> 
+          <label class="text-sm font-medium text-gray-700">Raio de chegada (metros)</label> 
+          <p class="text-xs text-gray-400 mb-1">Distância para considerar que chegou ao destino</p> 
+          <input type="number" id="cfg-raio-metros" min="50" max="500" step="50" 
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+        </div> 
+      </div> 
+      <button onclick="salvarChegada()" 
+        class="mt-4 bg-green-600 text-white rounded-lg px-6 py-2.5 text-sm font-medium hover:bg-green-700"> 
+        Salvar configurações de chegada 
+      </button> 
+    </div> 
   </div> 
  
   <!-- CONFIGURAÇÕES DE PREÇO --> 
@@ -170,8 +197,14 @@
 </div> 
 <script> 
  const token = () => localStorage.getItem('mobihub_token') 
- const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` }) 
- if (!token()) location.href = '/admin/login' 
+ const headers = () => ({ 
+   'Content-Type': 'application/json', 
+   'Authorization': `Bearer ${localStorage.getItem('mobihub_token')}` 
+ }) 
+ 
+ if (!localStorage.getItem('mobihub_token')) { 
+   location.href = '/admin/login' 
+ } 
  
  const DIAS_NOMES = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'] 
  const STATUS_CLS = { 
@@ -185,20 +218,46 @@
  let graficoCorridas, graficoReceita 
  
  async function carregar() { 
-   const [metricas, configs, tarifas] = await Promise.all([ 
-     fetch('/api/metricas', { headers: headers() }).then(r => r.json()), 
-     fetch('/api/configuracoes', { headers: headers() }).then(r => r.json()), 
-     fetch('/api/tarifas', { headers: headers() }).then(r => r.json()) 
-   ]) 
-   renderCards(metricas.resumoDia) 
-   renderCorridasAtivas(metricas.corridasAtivas) 
-   renderGraficos(metricas.ultimos15dias) 
-   renderTopMotoristas(metricas.topMotoristas) 
-   renderAvaliacoes(metricas.avaliacaoMedia) 
-   renderConfigs(configs) 
-   renderTarifas(tarifas) 
-   document.getElementById('tempo-aceite').textContent = 
-     metricas.tempoMedioAceite ? `${metricas.tempoMedioAceite} min` : '—' 
+   const tk = token() 
+   if (!tk) { location.href = '/admin/login'; return } 
+ 
+   try { 
+     const [metricasRes, configsRes, tarifasRes] = await Promise.all([ 
+       fetch('/api/metricas', { headers: headers() }), 
+       fetch('/api/configuracoes', { headers: headers() }), 
+       fetch('/api/tarifas', { headers: headers() }) 
+     ]) 
+ 
+     // Se qualquer rota retornar 401, redireciona para login 
+     if (metricasRes.status === 401 || configsRes.status === 401 || tarifasRes.status === 401) { 
+       localStorage.removeItem('mobihub_token') 
+       location.href = '/admin/login' 
+       return 
+     } 
+ 
+     const metricas = await metricasRes.json() 
+     const configs = await configsRes.json() 
+     const tarifas = await tarifasRes.json() 
+ 
+     if (!metricas || !metricas.resumoDia) { 
+       console.error('[DASHBOARD] Dados de métricas inválidos:', metricas) 
+       return 
+     } 
+ 
+     renderCards(metricas.resumoDia) 
+     renderCorridasAtivas(metricas.corridasAtivas || []) 
+     renderGraficos(metricas.ultimos15dias || []) 
+     renderTopMotoristas(metricas.topMotoristas || []) 
+     renderAvaliacoes(metricas.avaliacaoMedia || {}) 
+     renderConfigs(configs || {}) 
+     renderTarifas(tarifas || []) 
+ 
+     document.getElementById('tempo-aceite').textContent = 
+       metricas.tempoMedioAceite ? `${metricas.tempoMedioAceite} min` : '—' 
+ 
+   } catch(err) { 
+     console.error('[DASHBOARD] Erro ao carregar:', err.message) 
+   } 
  } 
  
  function renderCards(r) { 
@@ -293,6 +352,11 @@
    document.getElementById('cfg-valor-minimo').value = c.corrida_valor_minimo || 15 
    document.getElementById('cfg-km-minimo').value = c.corrida_km_minimo || 7.5 
    document.getElementById('cfg-valor-km').value = c.corrida_valor_km || 2 
+ 
+   if (document.getElementById('cfg-chegada-auto')) { 
+     document.getElementById('cfg-chegada-auto').checked = c.chegada_auto_ativo === 'true' 
+     document.getElementById('cfg-raio-metros').value = c.chegada_raio_metros || 150 
+   } 
  } 
  
  function renderTarifas(tarifas) { 
@@ -362,6 +426,16 @@
    } 
    const r = await fetch('/api/configuracoes', { method: 'PUT', headers: headers(), body: JSON.stringify(body) }) 
    if (r.ok) alert('Preços salvos!') 
+   else alert('Erro ao salvar') 
+ } 
+ 
+ async function salvarChegada() { 
+   const body = { 
+     chegada_auto_ativo: document.getElementById('cfg-chegada-auto').checked ? 'true' : 'false', 
+     chegada_raio_metros: document.getElementById('cfg-raio-metros').value 
+   } 
+   const r = await fetch('/api/configuracoes', { method: 'PUT', headers: headers(), body: JSON.stringify(body) }) 
+   if (r.ok) alert('Configurações de chegada salvas!') 
    else alert('Erro ao salvar') 
  } 
  

@@ -35,8 +35,11 @@ fastify.get('/admin/login', (req, reply) => reply.sendFile('admin/login.html'))
 fastify.get('/admin/nova-corrida', (req, reply) => reply.sendFile('admin/nova-corrida.html')) 
 fastify.get('/admin/motoristas', (req, reply) => reply.sendFile('admin/motoristas.html')) 
 fastify.get('/admin/tarifas', (req, reply) => reply.sendFile('admin/tarifas.html')) 
+fastify.get('/admin/reputacao', (req, reply) => reply.sendFile('admin/reputacao.html')) 
 fastify.get('/solicitar', (req, reply) => reply.sendFile('solicitar/index.html')) 
 fastify.get('/r/:token', (req, reply) => reply.sendFile('ride/index.html')) 
+fastify.get('/motorista/:token', (req, reply) => reply.sendFile('motorista/index.html')) 
+fastify.get('/favicon.ico', (req, reply) => reply.code(204).send()) 
  
 // Rotas API 
 await fastify.register(authRoutes) 
