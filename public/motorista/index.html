@@ -208,6 +208,18 @@
 <!-- ═══════════════ ABA CORRIDAS ═══════════════ --> 
 <div id="tab-corridas" class="hidden max-w-lg mx-auto px-4 py-4 space-y-4"> 
 
+  <!-- DESBLOQUEIO DE ÁUDIO --> 
+  <div id="card-audio-bloqueado" class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex items-center justify-between"> 
+    <div> 
+      <p class="text-sm font-semibold text-yellow-800">🔔 Ativar alertas sonoros</p> 
+      <p class="text-xs text-yellow-600 mt-0.5">Toque para receber som quando chegar corrida</p> 
+    </div> 
+    <button onclick="desbloquearAudio()" 
+      class="bg-yellow-500 text-white rounded-lg px-4 py-2 text-sm font-semibold hover:bg-yellow-600"> 
+      Ativar 
+    </button> 
+  </div> 
+ 
   <!-- NOVA CORRIDA DISPONÍVEL --> 
   <div id="card-nova-corrida" class="hidden"> 
     <div class="bg-white border-2 border-green-400 rounded-xl p-4 pulse-ring"> 
@@ -760,11 +772,45 @@
    } catch(e) { alert('Erro de conexão') } 
  } 
  
+ async function desbloquearAudio() { 
+   const audio = document.getElementById('audio-corrida') 
+   try { 
+     audio.volume = 0 
+     await audio.play() 
+     audio.pause() 
+     audio.currentTime = 0 
+     audio.volume = 1 
+     document.getElementById('card-audio-bloqueado').innerHTML = ` 
+       <div class="flex items-center gap-2"> 
+         <span class="text-green-600 text-lg">🔔</span> 
+         <p class="text-sm font-semibold text-green-700">Alertas sonoros ativados!</p> 
+       </div> 
+     ` 
+     document.getElementById('card-audio-bloqueado').className = 'bg-green-50 border border-green-200 rounded-xl p-3' 
+     setTimeout(() => { 
+       document.getElementById('card-audio-bloqueado').classList.add('hidden') 
+     }, 2000) 
+     console.log('[AUDIO] Desbloqueado com sucesso') 
+   } catch(e) { 
+     console.error('[AUDIO] Erro ao desbloquear:', e) 
+     alert('Não foi possível ativar o áudio. Verifique se o celular não está no modo silencioso.') 
+   } 
+ } 
+ 
  function tocarSom() { 
    const audio = document.getElementById('audio-corrida') 
-   if (audio.src && audio.src !== window.location.href) { 
-     audio.play().catch(() => {}) 
-     audioAtivo = true 
+   if (!audio.src || audio.src === window.location.href) return 
+   audio.volume = 1 
+   audio.loop = true 
+   const promise = audio.play() 
+   if (promise) { 
+     promise.then(() => { 
+       audioAtivo = true 
+       console.log('[AUDIO] Tocando') 
+     }).catch(e => { 
+       console.warn('[AUDIO] Bloqueado pelo navegador:', e.message) 
+       document.getElementById('card-audio-bloqueado')?.classList.remove('hidden') 
+     }) 
    } 
  } 
  
