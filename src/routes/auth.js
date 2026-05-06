@@ -1,4 +1,5 @@
 import bcrypt from 'bcrypt' 
+import { query, pool } from '../db.js' 
 import { db } from '../db.js' 
  
 export default async function authRoutes(fastify) { 

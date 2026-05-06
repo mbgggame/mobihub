@@ -270,6 +270,7 @@ import pg from 'pg'
  async function seedTarifas() { 
    const existing = await pool.query('SELECT COUNT(*) as total FROM tarifas') 
    if (parseInt(existing.rows[0].total) > 0) return 
+   
    const tarifas = [ 
      ['Padrão', '1,2,3,4,5', '09:00', '17:00', 15.00], 
      ['Pico manhã', '1,2,3,4,5', '06:00', '09:00', 20.00], 
@@ -278,10 +279,11 @@ import pg from 'pg'
      ['Fim de semana', '0,6', '06:00', '20:00', 22.00], 
      ['Fim de semana noturno', '0,6', '20:00', '06:00', 25.00] 
    ] 
+   
    for (const t of tarifas) { 
      await pool.query( 
        'INSERT INTO tarifas (nome, dias, hora_inicio, hora_fim, valor_minimo) VALUES ($1, $2, $3, $4, $5)', 
-       t 
+       [t[0], t[1], t[2], t[3], t[4]] 
      ) 
    } 
  } 

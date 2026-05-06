@@ -1,4 +1,5 @@
 import TelegramBot from 'node-telegram-bot-api' 
+import { query, pool } from './db.js' 
 import { db } from './db.js' 
  
 let bot 

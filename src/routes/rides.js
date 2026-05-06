@@ -1,3 +1,4 @@
+import { query as dbQuery, pool } from '../db.js' 
 import { db } from '../db.js' 
 import { requireAuth } from '../middleware/auth.js' 
 import { sendRideToGroup, notifyDriverRateClient, editGroupMessage } from '../telegram.js' 

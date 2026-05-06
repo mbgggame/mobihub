@@ -1,3 +1,4 @@
+import { query, pool } from './db.js' 
 import { db } from './db.js' 
  
 function getConfig(chave) { 

@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid' 
+import { query, pool } from '../db.js' 
 import { db } from '../db.js' 
 import { requireAuth } from '../middleware/auth.js' 
  
