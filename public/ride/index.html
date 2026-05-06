@@ -183,6 +183,7 @@
  
 <script> 
  const token = location.pathname.split('/r/')[1] 
+ console.log('[RIDE] Token:', token) 
  let estrelaSelecionada = 0 
  let map, markerOrigem, markerDestino, markerMotorista 
  let dadosAtuais = null 
@@ -227,28 +228,27 @@
        return 
      } 
      const { ride, rating, paradas, config } = await r.json() 
+     console.log('[POLLING] Status atual:', ride.status, '| Motorista:', ride.driver_nome) 
      dadosAtuais = { ride, rating, paradas, config } 
      renderizar(ride, rating, paradas, config) 
-     
      verificarParaPolling(ride.status) 
- 
-     const agora = new Date().toLocaleTimeString('pt-BR') 
-     const el = document.getElementById('ultimo-update') 
-     if (el) el.textContent = `Última atualização: ${agora}` 
- 
-     // Se corrida aceita, busca localização do motorista 
-     if (ride.status === 'aceita') { 
-       atualizarLocalizacaoMotorista(ride) 
-     } 
-   } catch (e) { 
+     if (ride.status === 'aceita') atualizarLocalizacaoMotorista(ride) 
+   } catch(e) { 
      console.error('[CARREGAR]', e) 
    } 
  } 
  
  function renderizar(ride, rating, paradas, config) { 
+   console.log('[RENDER] Renderizando status:', ride.status) 
+   const badge = document.getElementById('badge-status') 
+   console.log('[RENDER] Badge element:', badge) 
+   if (!badge) { 
+     console.error('[RENDER] Elemento badge-status não encontrado!') 
+     return 
+   } 
+ 
    // Status 
    const cfg = statusConfig[ride.status] || statusConfig.aberta 
-   const badge = document.getElementById('badge-status') 
    badge.textContent = cfg.label 
    badge.className = `inline-block mt-1 px-3 py-1 rounded-full text-sm font-semibold ${cfg.cls}` 
  
@@ -370,6 +370,9 @@
        </a> 
      ` 
    } 
+ 
+   // Força atualização visual 
+   document.title = `MobiHub — ${statusConfig[ride.status]?.label || ride.status}` 
  } 
  
  let timerInterval = null 
