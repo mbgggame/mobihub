@@ -115,6 +115,38 @@ async function abrirModal(id) {
       <div class="flex justify-between"><span class="text-gray-500">Origem</span><span class="text-right font-medium max-w-[60%]">${c.origem}</span></div> 
       <div class="flex justify-between"><span class="text-gray-500">Destino</span><span class="text-right font-medium max-w-[60%]">${c.destino}</span></div> 
       <div class="flex justify-between"><span class="text-gray-500">Valor</span><span class="font-semibold text-green-700">R$ ${Number(c.valor).toFixed(2)}</span></div> 
+      
+      // Resumo financeiro detalhado 
+      ${c.custo_espera_inicial > 0 || c.custo_paradas > 0 ? ` 
+      <hr class="border-gray-100"/> 
+      <p class="font-medium text-gray-700 text-sm">Detalhamento do valor</p> 
+      <div class="flex justify-between text-sm"> 
+        <span class="text-gray-500">Valor base</span> 
+        <span>R$ ${Number(c.valor || 0).toFixed(2)}</span> 
+      </div> 
+      ${c.custo_espera_inicial > 0 ? ` 
+      <div class="flex justify-between text-sm"> 
+        <span class="text-gray-500">Espera (${Number(c.tempo_espera_inicial_min || 0).toFixed(1)} min)</span> 
+        <span class="text-orange-600">+ R$ ${Number(c.custo_espera_inicial).toFixed(2)}</span> 
+      </div>` : ''} 
+      ${c.custo_paradas > 0 ? ` 
+      <div class="flex justify-between text-sm"> 
+        <span class="text-gray-500">Paradas (${c.num_paradas || 0}x — ${Number(c.tempo_paradas_total_min || 0).toFixed(1)} min)</span> 
+        <span class="text-orange-600">+ R$ ${Number(c.custo_paradas).toFixed(2)}</span> 
+      </div>` : ''} 
+      <div class="flex justify-between font-semibold border-t border-gray-100 pt-1"> 
+        <span>Total final</span> 
+        <span class="text-green-700">R$ ${Number(c.valor_final || c.valor || 0).toFixed(2)}</span> 
+      </div> 
+      ` : ''} 
+      
+      ${c.cancelado_por_espera ? ` 
+      <div class="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm"> 
+        <p class="text-red-700 font-medium">⏱️ Cancelado por excesso de espera</p> 
+        <p class="text-red-600">Taxa cobrada: R$ ${Number(c.taxa_cancelamento || 0).toFixed(2)}</p> 
+      </div> 
+      ` : ''} 
+ 
       ${c.valor_motorista ? ` 
       <div class="flex justify-between"><span class="text-gray-500">Motorista (70%)</span> 
         <span class="font-medium text-green-700">R$ ${Number(c.valor_motorista).toFixed(2)}</span></div> 
@@ -134,7 +166,29 @@ async function abrirModal(id) {
       <p class="font-medium text-gray-700">Link da corrida</p> 
       <div class="bg-gray-50 rounded-lg px-3 py-2 font-mono text-xs break-all">${BASE_URL}/r/${c.token}</div> 
       <div class="flex gap-2 flex-wrap"> 
-        ${c.status === 'aceita' ? `<button onclick="atualizarStatus('concluida')" class="flex-1 bg-green-600 text-white rounded-lg py-2 text-sm font-medium">✅ Concluir</button>` : ''} 
+        ${c.status === 'aceita' ? ` 
+        <button onclick="atualizarStatus('concluida')" class="flex-1 bg-green-600 text-white rounded-lg py-2 text-sm font-medium">✅ Concluir</button> 
+        <hr class="w-full border-gray-100"/> 
+        <p class="w-full font-medium text-gray-700 text-xs uppercase tracking-wide">Controle da corrida</p> 
+        <div class="grid grid-cols-2 gap-2 w-full"> 
+          <button onclick="controlarCorrida(${c.id}, 'motorista-chegou')" 
+            class="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-lg py-2 hover:bg-blue-100"> 
+            📍 Motorista chegou 
+          </button> 
+          <button onclick="controlarCorrida(${c.id}, 'passageiro-embarcou')" 
+            class="text-xs bg-green-50 text-green-700 border border-green-200 rounded-lg py-2 hover:bg-green-100"> 
+            🚶 Embarcou 
+          </button> 
+          <button onclick="controlarCorrida(${c.id}, 'parada/iniciar', 'POST')" 
+            class="text-xs bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-lg py-2 hover:bg-yellow-100"> 
+            ⏸️ Iniciar parada 
+          </button> 
+          <button onclick="verResumoFinanceiro(${c.id})" 
+            class="text-xs bg-purple-50 text-purple-700 border border-purple-200 rounded-lg py-2 hover:bg-purple-100"> 
+            💰 Resumo financeiro 
+          </button> 
+        </div> 
+        ` : ''} 
         ${['aberta','aceita'].includes(c.status) ? `<button onclick="atualizarStatus('cancelada')" class="flex-1 bg-red-50 text-red-600 border border-red-200 rounded-lg py-2 text-sm font-medium">✕ Cancelar</button>` : ''} 
         ${msgCliente ? `<button onclick="copiarMensagem()" class="w-full bg-green-50 text-green-700 border border-green-200 rounded-lg py-2 text-sm font-medium">📋 Copiar mensagem para cliente</button>` : ''} 
       </div> 
@@ -146,13 +200,50 @@ async function abrirModal(id) {
  
 async function atualizarStatus(status) { 
   if (!corridaAtual) return 
-  await fetch(`/api/rides/${corridaAtual.id}/status`, { 
+  const r = await fetch(`/api/rides/${corridaAtual.id}/status`, { 
     method: 'PUT', 
     headers: headers(), 
     body: JSON.stringify({ status }) 
   }) 
-  fecharModal() 
-  carregar() 
+  if (r.ok) { 
+    fecharModal() 
+    carregar() 
+  } else { 
+    alert('Erro ao atualizar status') 
+  } 
+} 
+ 
+async function controlarCorrida(id, acao, method = 'PUT') { 
+  const r = await fetch(`/api/rides/${id}/${acao}`, { 
+    method, 
+    headers: headers() 
+  }) 
+  const d = await r.json() 
+  if (r.ok) { 
+    alert(d.mensagem || 'Ação executada!') 
+    fecharModal() 
+    carregar() 
+  } else { 
+    alert('Erro: ' + (d.error || 'Tente novamente')) 
+  } 
+} 
+ 
+async function verResumoFinanceiro(id) { 
+  const r = await fetch(`/api/rides/${id}/resumo-financeiro`, { headers: headers() }) 
+  const d = await r.json() 
+  if (!r.ok) { alert('Erro ao carregar resumo'); return } 
+ 
+  alert(` 
+ 💰 RESUMO FINANCEIRO — Corrida #${id} 
+ 
+ Valor base: R$ ${d.valor_base.toFixed(2)} 
+ Espera inicial: R$ ${d.custo_espera_inicial.toFixed(2)} (${d.tempo_espera_min.toFixed(1)} min) 
+ Paradas (${d.num_paradas}x): R$ ${d.custo_paradas.toFixed(2)} (${d.tempo_paradas_min.toFixed(1)} min) 
+ ━━━━━━━━━━━━━━━━━━━ 
+ Total: R$ ${d.valor_final.toFixed(2)} 
+ Motorista (70%): R$ ${d.valor_motorista.toFixed(2)} 
+ MobiHub (30%): R$ ${d.valor_mobihub.toFixed(2)} 
+   `.trim()) 
 } 
  
 function copiarMensagem() { 

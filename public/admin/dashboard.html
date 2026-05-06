@@ -199,6 +199,53 @@
     </button> 
   </div> 
  
+  <!-- CONFIGURAÇÕES DE COBRANÇA DINÂMICA --> 
+  <div class="bg-white border border-gray-200 rounded-xl p-6"> 
+    <h2 class="text-sm font-medium text-gray-700 uppercase tracking-wide mb-4">Cobrança dinâmica — espera e paradas</h2> 
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-4"> 
+      <div> 
+        <label class="text-sm font-medium text-gray-700">Espera grátis (min)</label> 
+        <p class="text-xs text-gray-400 mb-1">Minutos grátis ao chegar</p> 
+        <input type="number" step="1" id="cfg-espera-gratis" 
+          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+      </div> 
+      <div> 
+        <label class="text-sm font-medium text-gray-700">R$/min espera</label> 
+        <p class="text-xs text-gray-400 mb-1">Valor por minuto após grátis</p> 
+        <input type="number" step="0.10" id="cfg-espera-valor" 
+          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+      </div> 
+      <div> 
+        <label class="text-sm font-medium text-gray-700">Máx. espera (min)</label> 
+        <p class="text-xs text-gray-400 mb-1">Limite para cancelamento</p> 
+        <input type="number" step="1" id="cfg-espera-max" 
+          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+      </div> 
+      <div> 
+        <label class="text-sm font-medium text-gray-700">Taxa cancelamento (R$)</label> 
+        <p class="text-xs text-gray-400 mb-1">Cobrado do passageiro</p> 
+        <input type="number" step="0.50" id="cfg-espera-taxa" 
+          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+      </div> 
+      <div> 
+        <label class="text-sm font-medium text-gray-700">Parada grátis (min)</label> 
+        <p class="text-xs text-gray-400 mb-1">Minutos grátis por parada</p> 
+        <input type="number" step="1" id="cfg-parada-gratis" 
+          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+      </div> 
+      <div> 
+        <label class="text-sm font-medium text-gray-700">R$/min parada</label> 
+        <p class="text-xs text-gray-400 mb-1">Valor por minuto de parada</p> 
+        <input type="number" step="0.10" id="cfg-parada-valor" 
+          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+      </div> 
+    </div> 
+    <button onclick="salvarCobranca()" 
+      class="mt-4 bg-green-600 text-white rounded-lg px-6 py-2.5 text-sm font-medium hover:bg-green-700"> 
+      Salvar configurações de cobrança 
+    </button> 
+  </div> 
+ 
   <!-- TARIFAS AGENDAMENTO --> 
   <div class="bg-white border border-gray-200 rounded-xl p-6"> 
     <h2 class="text-sm font-medium text-gray-700 uppercase tracking-wide mb-4">Tarifas de agendamento</h2> 
@@ -371,6 +418,32 @@
      document.getElementById('cfg-chegada-auto').checked = c.chegada_auto_ativo === 'true' 
      document.getElementById('cfg-raio-metros').value = c.chegada_raio_metros || 150 
    } 
+ 
+   // Cobrança dinâmica 
+   if (document.getElementById('cfg-espera-gratis')) { 
+     document.getElementById('cfg-espera-gratis').value = c.espera_minutos_gratis || 5 
+     document.getElementById('cfg-espera-valor').value = c.espera_valor_minuto || 0.60 
+     document.getElementById('cfg-espera-max').value = c.espera_max_cancelamento || 10 
+     document.getElementById('cfg-espera-taxa').value = c.espera_taxa_cancelamento || 7.00 
+     document.getElementById('cfg-parada-gratis').value = c.parada_minutos_gratis || 2 
+     document.getElementById('cfg-parada-valor').value = c.parada_valor_minuto || 0.60 
+   } 
+ } 
+ 
+ async function salvarCobranca() { 
+   const body = { 
+     espera_minutos_gratis: document.getElementById('cfg-espera-gratis').value, 
+     espera_valor_minuto: document.getElementById('cfg-espera-valor').value, 
+     espera_max_cancelamento: document.getElementById('cfg-espera-max').value, 
+     espera_taxa_cancelamento: document.getElementById('cfg-espera-taxa').value, 
+     parada_minutos_gratis: document.getElementById('cfg-parada-gratis').value, 
+     parada_valor_minuto: document.getElementById('cfg-parada-valor').value 
+   } 
+   const r = await fetch('/api/configuracoes', { 
+     method: 'PUT', headers: headers(), body: JSON.stringify(body) 
+   }) 
+   if (r.ok) alert('✅ Configurações de cobrança salvas!') 
+   else alert('Erro ao salvar') 
  } 
  
  function renderTarifas(tarifas) { 
