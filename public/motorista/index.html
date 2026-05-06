@@ -131,6 +131,58 @@
      </div> 
    </div> 
  
+   <!-- VEÍCULOS --> 
+   <div class="bg-white border border-gray-200 rounded-xl p-4"> 
+     <div class="flex items-center justify-between mb-3"> 
+       <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Meus veículos</p> 
+       <button onclick="toggleFormVeiculo()" 
+         class="text-xs text-green-600 border border-green-300 rounded-lg px-3 py-1.5 hover:bg-green-50"> 
+         + Adicionar 
+       </button> 
+     </div> 
+ 
+     <!-- Formulário novo veículo --> 
+     <div id="form-veiculo" class="hidden bg-gray-50 border border-gray-200 rounded-xl p-3 mb-3 space-y-2"> 
+       <p class="text-xs font-medium text-gray-600">Novo veículo</p> 
+       <div class="grid grid-cols-2 gap-2"> 
+         <div> 
+           <label class="text-xs text-gray-400">Modelo</label> 
+           <input id="v-modelo" type="text" placeholder="Ex: BYD King GS" 
+             class="mt-0.5 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+         </div> 
+         <div> 
+           <label class="text-xs text-gray-400">Ano</label> 
+           <input id="v-ano" type="text" placeholder="Ex: 2024" 
+             class="mt-0.5 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+         </div> 
+         <div> 
+           <label class="text-xs text-gray-400">Cor</label> 
+           <input id="v-cor" type="text" placeholder="Ex: Prata" 
+             class="mt-0.5 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+         </div> 
+         <div> 
+           <label class="text-xs text-gray-400">Placa</label> 
+           <input id="v-placa" type="text" placeholder="Ex: SGZ2D22" 
+             class="mt-0.5 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+         </div> 
+       </div> 
+       <div id="erro-veiculo" class="hidden text-xs text-red-600 bg-red-50 rounded px-2 py-1"></div> 
+       <div class="flex gap-2"> 
+         <button onclick="adicionarVeiculo()" 
+           class="flex-1 bg-green-600 text-white rounded-lg py-2 text-sm font-medium"> 
+           Salvar veículo 
+         </button> 
+         <button onclick="toggleFormVeiculo()" 
+           class="flex-1 bg-white border border-gray-200 text-gray-600 rounded-lg py-2 text-sm"> 
+           Cancelar 
+         </button> 
+       </div> 
+     </div> 
+ 
+     <!-- Lista de veículos --> 
+     <div id="lista-veiculos" class="space-y-2"></div> 
+   </div> 
+ 
    <!-- GANHOS --> 
    <div class="bg-white border border-gray-200 rounded-xl p-4"> 
      <p class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-3">Seus ganhos</p> 
@@ -203,6 +255,7 @@
      renderizarFinanceiro(financeiro) 
      renderizarCorridas(corridas) 
      renderizarAvaliacoes(comentarios) 
+     carregarVeiculos() 
    } catch(e) { 
      console.error(e) 
    } 
@@ -456,6 +509,149 @@
      alert('Erro de conexão.') 
      btn.textContent = '✅ Salvar foto' 
      btn.disabled = false 
+   } 
+ } 
+ 
+ async function carregarVeiculos() { 
+   try { 
+     const r = await fetch(`/api/motorista/${tokenMotorista}/veiculos`) 
+     if (!r.ok) return 
+     const veiculos = await r.json() 
+     renderizarVeiculos(veiculos) 
+   } catch(e) { 
+     console.error('[VEICULOS]', e) 
+   } 
+ } 
+ 
+ function renderizarVeiculos(veiculos) { 
+   const div = document.getElementById('lista-veiculos') 
+   if (!veiculos.length) { 
+     div.innerHTML = '<p class="text-xs text-gray-400 text-center py-2">Nenhum veículo cadastrado</p>' 
+     return 
+   } 
+ 
+   div.innerHTML = veiculos.map(v => ` 
+     <div class="border ${v.ativo ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-white'} rounded-xl px-3 py-2.5"> 
+       <div class="flex items-center justify-between"> 
+         <div class="flex-1 min-w-0"> 
+           <div class="flex items-center gap-2"> 
+             <span class="text-sm">🚗</span> 
+             <p class="text-sm font-semibold text-gray-900 truncate"> 
+               ${v.modelo} ${v.cor} ${v.ano} 
+             </p> 
+             ${v.ativo ? '<span class="text-xs px-2 py-0.5 bg-green-600 text-white rounded-full">ATIVO</span>' : ''} 
+           </div> 
+           <p class="text-xs text-gray-500 font-mono mt-0.5 ml-6">${v.placa}</p> 
+         </div> 
+         <div class="flex gap-1 ml-2"> 
+           ${!v.ativo ? ` 
+             <button onclick="ativarVeiculo(${v.id})" 
+               class="text-xs text-green-600 border border-green-300 rounded-lg px-2 py-1 hover:bg-green-50 whitespace-nowrap"> 
+               Usar este 
+             </button> 
+           ` : ''} 
+           ${!v.ativo ? ` 
+             <button onclick="removerVeiculo(${v.id}, '${v.modelo} ${v.placa}')" 
+               class="text-xs text-red-400 border border-red-200 rounded-lg px-2 py-1 hover:bg-red-50"> 
+               🗑️ 
+             </button> 
+           ` : ''} 
+         </div> 
+       </div> 
+     </div> 
+   `).join('') 
+ } 
+ 
+ function toggleFormVeiculo() { 
+   const form = document.getElementById('form-veiculo') 
+   form.classList.toggle('hidden') 
+   if (!form.classList.contains('hidden')) { 
+     document.getElementById('v-modelo').focus() 
+   } 
+ } 
+ 
+ async function adicionarVeiculo() { 
+   const modelo = document.getElementById('v-modelo').value.trim() 
+   const ano = document.getElementById('v-ano').value.trim() 
+   const cor = document.getElementById('v-cor').value.trim() 
+   const placa = document.getElementById('v-placa').value.trim() 
+   const erro = document.getElementById('erro-veiculo') 
+ 
+   if (!modelo || !ano || !cor || !placa) { 
+     erro.textContent = 'Preencha todos os campos' 
+     erro.classList.remove('hidden') 
+     return 
+   } 
+   erro.classList.add('hidden') 
+ 
+   try { 
+     const r = await fetch(`/api/motorista/${tokenMotorista}/veiculos`, { 
+       method: 'POST', 
+       headers: { 'Content-Type': 'application/json' }, 
+       body: JSON.stringify({ modelo, ano, cor, placa }) 
+     }) 
+     const d = await r.json() 
+ 
+     if (!r.ok) { 
+       erro.textContent = d.error || 'Erro ao cadastrar' 
+       erro.classList.remove('hidden') 
+       return 
+     } 
+ 
+     // Limpa o formulário 
+     document.getElementById('v-modelo').value = '' 
+     document.getElementById('v-ano').value = '' 
+     document.getElementById('v-cor').value = '' 
+     document.getElementById('v-placa').value = '' 
+     document.getElementById('form-veiculo').classList.add('hidden') 
+ 
+     alert('✅ Veículo cadastrado!') 
+     carregarVeiculos() 
+   } catch(e) { 
+     erro.textContent = 'Erro de conexão' 
+     erro.classList.remove('hidden') 
+   } 
+ } 
+ 
+ async function ativarVeiculo(vehicleId) { 
+   try { 
+     const r = await fetch(`/api/motorista/${tokenMotorista}/veiculos/${vehicleId}/ativar`, { 
+       method: 'PUT', 
+       headers: { 'Authorization': `Bearer ${tokenMotorista}` } 
+     }) 
+     const d = await r.json() 
+ 
+     if (!r.ok) { 
+       alert('Erro: ' + d.error) 
+       return 
+     } 
+ 
+     alert('✅ ' + d.mensagem) 
+     carregarVeiculos() 
+     carregar() // Atualiza o perfil 
+   } catch(e) { 
+     alert('Erro de conexão') 
+   } 
+ } 
+ 
+ async function removerVeiculo(vehicleId, nome) { 
+   if (!confirm(`Remover "${nome}"?`)) return 
+ 
+   try { 
+     const r = await fetch(`/api/motorista/${tokenMotorista}/veiculos/${vehicleId}`, { 
+       method: 'DELETE' 
+     }) 
+     const d = await r.json() 
+ 
+     if (!r.ok) { 
+       alert('Erro: ' + d.error) 
+       return 
+     } 
+ 
+     alert('Veículo removido!') 
+     carregarVeiculos() 
+   } catch(e) { 
+     alert('Erro de conexão') 
    } 
  } 
  
