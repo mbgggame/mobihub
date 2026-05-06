@@ -1,7 +1,15 @@
-import { query as dbQuery, pool } from '../db.js' 
+import { query as dbQuery, pool, query } from '../db.js' 
 import { requireAuth } from '../middleware/auth.js' 
 import { sendRideToGroup, notifyDriverRateClient, editGroupMessage } from '../telegram.js' 
 import { v4 as uuidv4 } from 'uuid' 
+import { calculateInitialWaitCost, calculateStopCost, calculateTotalRideCost, calcularTempoMinutos, podeMotoristaCancel } from '../billing.js' 
+ 
+async function getConfig() { 
+  const configs = (await query('SELECT chave, valor FROM configuracoes')).rows 
+  const obj = {} 
+  configs.forEach(c => obj[c.chave] = c.valor) 
+  return obj 
+} 
  
 async function calcularTarifa(dataHoraStr, distanciaKm) { 
   const data = new Date(dataHoraStr) 
@@ -345,7 +353,205 @@ export default async function ridesRoutes(fastify) {
       `, [chave, String(valor)]) 
     } 
     
-    return { mensagem: 'Configurações salvas' } 
+    return { mensagem: 'Configurações salvas' }return result.rows
+  }) 
+ 
+  // Motorista chegou ao ponto de embarque 
+  fastify.put('/api/rides/:id/motorista-chegou', { preHandler: requireAuth }, async (request, reply) => { 
+    const { id } = request.params 
+    const ride = (await query('SELECT * FROM rides WHERE id = $1', [id])).rows[0] 
+    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
+    if (ride.status !== 'aceita') return reply.code(400).send({ error: 'Corrida não está aceita' }) 
+ 
+    await query(` 
+      UPDATE rides SET 
+        status_detalhe = 'aguardando_passageiro', 
+        motorista_chegou_at = CURRENT_TIMESTAMP 
+      WHERE id = $1 
+    `, [id]) 
+ 
+    const config = await getConfig() 
+ 
+    return { 
+      mensagem: 'Chegada registrada. Timer de espera iniciado.', 
+      minutos_gratis: config.espera_minutos_gratis, 
+      valor_por_minuto: config.espera_valor_minuto, 
+      max_espera: config.espera_max_cancelamento, 
+      taxa_cancelamento: config.espera_taxa_cancelamento 
+    } 
+  }) 
+ 
+  // Passageiro embarcou 
+  fastify.put('/api/rides/:id/passageiro-embarcou', { preHandler: requireAuth }, async (request, reply) => { 
+    const { id } = request.params 
+    const ride = (await query('SELECT * FROM rides WHERE id = $1', [id])).rows[0] 
+    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
+    if (!ride.motorista_chegou_at) return reply.code(400).send({ error: 'Motorista ainda não chegou' }) 
+ 
+    const config = await getConfig() 
+    const tempoEspera = calcularTempoMinutos(ride.motorista_chegou_at) 
+    const custoEspera = calculateInitialWaitCost(tempoEspera, config) 
+ 
+    await query(` 
+      UPDATE rides SET 
+        status_detalhe = 'em_andamento', 
+        passageiro_embarcou_at = CURRENT_TIMESTAMP, 
+        tempo_espera_inicial_min = $1, 
+        custo_espera_inicial = $2 
+      WHERE id = $3 
+    `, [tempoEspera, custoEspera, id]) 
+ 
+    return { 
+      mensagem: 'Passageiro embarcou. Corrida iniciada!', 
+      tempo_espera_min: tempoEspera.toFixed(1), 
+      custo_espera: custoEspera 
+    } 
+  }) 
+ 
+  // Iniciar parada 
+  fastify.post('/api/rides/:id/parada/iniciar', { preHandler: requireAuth }, async (request, reply) => { 
+    const { id } = request.params 
+    const ride = (await query('SELECT * FROM rides WHERE id = $1', [id])).rows[0] 
+    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
+ 
+    // Verifica se já tem parada aberta 
+    const paradaAberta = (await query( 
+      'SELECT id FROM ride_stops WHERE ride_id = $1 AND finalizada_at IS NULL', 
+      [id] 
+    )).rows[0] 
+    if (paradaAberta) return reply.code(400).send({ error: 'Já existe uma parada em andamento' }) 
+ 
+    const result = await query( 
+      'INSERT INTO ride_stops (ride_id) VALUES ($1) RETURNING id', 
+      [id] 
+    ) 
+ 
+    await query(` 
+      UPDATE rides SET 
+        status_detalhe = 'em_parada', 
+        num_paradas = num_paradas + 1 
+      WHERE id = $1 
+    `, [id]) 
+ 
+    const config = await getConfig() 
+ 
+    return { 
+      mensagem: 'Parada iniciada', 
+      stop_id: result.rows[0].id, 
+      minutos_gratis: config.parada_minutos_gratis, 
+      valor_por_minuto: config.parada_valor_minuto 
+    } 
+  }) 
+ 
+  // Finalizar parada 
+  fastify.put('/api/rides/:id/parada/:stopId/finalizar', { preHandler: requireAuth }, async (request, reply) => { 
+    const { id, stopId } = request.params 
+ 
+    const stop = (await query( 
+      'SELECT * FROM ride_stops WHERE id = $1 AND ride_id = $2 AND finalizada_at IS NULL', 
+      [stopId, id] 
+    )).rows[0] 
+    if (!stop) return reply.code(404).send({ error: 'Parada não encontrada' }) 
+ 
+    const config = await getConfig() 
+    const duracaoMin = calcularTempoMinutos(stop.iniciada_at) 
+    const custo = calculateStopCost(duracaoMin, config) 
+ 
+    await query(` 
+      UPDATE ride_stops SET 
+        finalizada_at = CURRENT_TIMESTAMP, 
+        duracao_min = $1, 
+        custo = $2 
+      WHERE id = $3 
+    `, [duracaoMin, custo, stopId]) 
+ 
+    // Soma custo das paradas na corrida 
+    const totalParadas = (await query( 
+      'SELECT COALESCE(SUM(custo), 0) as total, COALESCE(SUM(duracao_min), 0) as tempo FROM ride_stops WHERE ride_id = $1', 
+      [id] 
+    )).rows[0] 
+ 
+    await query(` 
+      UPDATE rides SET 
+        status_detalhe = 'em_andamento', 
+        custo_paradas = $1, 
+        tempo_paradas_total_min = $2 
+      WHERE id = $3 
+    `, [totalParadas.total, totalParadas.tempo, id]) 
+ 
+    return { 
+      mensagem: 'Parada finalizada', 
+      duracao_min: duracaoMin.toFixed(1), 
+      custo_parada: custo, 
+      total_paradas: parseFloat(totalParadas.total) 
+    } 
+  }) 
+ 
+  // Cancelar por espera 
+  fastify.put('/api/rides/:id/cancelar-espera', { preHandler: requireAuth }, async (request, reply) => { 
+    const { id } = request.params 
+    const ride = (await query('SELECT * FROM rides WHERE id = $1', [id])).rows[0] 
+    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
+    if (!ride.motorista_chegou_at) return reply.code(400).send({ error: 'Timer não iniciado' }) 
+ 
+    const config = await getConfig() 
+ 
+    if (!podeMotoristaCancel(ride.motorista_chegou_at, config)) { 
+      const tempoEspera = calcularTempoMinutos(ride.motorista_chegou_at) 
+      return reply.code(400).send({ 
+        error: `Aguarde ${config.espera_max_cancelamento} minutos para cancelar. Tempo atual: ${tempoEspera.toFixed(1)} min` 
+      }) 
+    } 
+ 
+    const taxaCancelamento = parseFloat(config.espera_taxa_cancelamento || 7) 
+    const tempoEspera = calcularTempoMinutos(ride.motorista_chegou_at) 
+ 
+    await query(` 
+      UPDATE rides SET 
+        status = 'cancelada', 
+        cancelada_at = CURRENT_TIMESTAMP, 
+        cancelado_por_espera = 1, 
+        taxa_cancelamento = $1, 
+        tempo_espera_inicial_min = $2, 
+        valor_final = $3 
+      WHERE id = $4 
+    `, [taxaCancelamento, tempoEspera, taxaCancelamento, id]) 
+ 
+    return { 
+      mensagem: 'Corrida cancelada por tempo de espera excedido', 
+      taxa_cancelamento: taxaCancelamento, 
+      tempo_espera_min: tempoEspera.toFixed(1) 
+    } 
+  }) 
+ 
+  // Obter resumo financeiro da corrida 
+  fastify.get('/api/rides/:id/resumo-financeiro', { preHandler: requireAuth }, async (request, reply) => { 
+    const { id } = request.params 
+    const ride = (await query('SELECT * FROM rides WHERE id = $1', [id])).rows[0] 
+    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
+ 
+    const config = await getConfig() 
+    const paradas = (await query('SELECT * FROM ride_stops WHERE ride_id = $1 ORDER BY iniciada_at', [id])).rows 
+ 
+    const valorBase = ride.valor || 0 
+    const custoEspera = ride.custo_espera_inicial || 0 
+    const custoParadas = ride.custo_paradas || 0 
+    const valorFinal = calculateTotalRideCost(valorBase, custoEspera, custoParadas, config) 
+ 
+    return { 
+      valor_base: valorBase, 
+      custo_espera_inicial: custoEspera, 
+      tempo_espera_min: ride.tempo_espera_inicial_min || 0, 
+      custo_paradas: custoParadas, 
+      tempo_paradas_min: ride.tempo_paradas_total_min || 0, 
+      num_paradas: ride.num_paradas || 0, 
+      valor_final: valorFinal, 
+      valor_motorista: parseFloat((valorFinal * 0.70).toFixed(2)), 
+      valor_mobihub: parseFloat((valorFinal * 0.30).toFixed(2)), 
+      paradas_detalhe: paradas, 
+      cancelado_por_espera: ride.cancelado_por_espera === 1, 
+      taxa_cancelamento: ride.taxa_cancelamento || 0 
+    } 
   }) 
  
   fastify.get('/api/clients', { preHandler: requireAuth }, async () => { 

@@ -137,6 +137,44 @@ export async function initDB() {
     ) 
   `) 
  
+  await query(` 
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS status_detalhe TEXT DEFAULT 'normal'; 
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS motorista_chegou_at TIMESTAMP; 
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS passageiro_embarcou_at TIMESTAMP; 
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS tempo_espera_inicial_min DOUBLE PRECISION DEFAULT 0; 
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS custo_espera_inicial DOUBLE PRECISION DEFAULT 0; 
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS tempo_paradas_total_min DOUBLE PRECISION DEFAULT 0; 
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS custo_paradas DOUBLE PRECISION DEFAULT 0; 
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS num_paradas INTEGER DEFAULT 0; 
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS valor_final DOUBLE PRECISION; 
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS cancelado_por_espera INTEGER DEFAULT 0; 
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS taxa_cancelamento DOUBLE PRECISION DEFAULT 0; 
+  `) 
+ 
+  await query(` 
+    CREATE TABLE IF NOT EXISTS ride_stops ( 
+      id SERIAL PRIMARY KEY, 
+      ride_id INTEGER REFERENCES rides(id), 
+      iniciada_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+      finalizada_at TIMESTAMP, 
+      duracao_min DOUBLE PRECISION, 
+      custo DOUBLE PRECISION DEFAULT 0, 
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
+    ) 
+  `) 
+ 
+  await query(` 
+    INSERT INTO configuracoes (chave, valor) VALUES 
+      ('espera_minutos_gratis', '5'), 
+      ('espera_valor_minuto', '0.60'), 
+      ('espera_max_cancelamento', '10'), 
+      ('espera_taxa_cancelamento', '7.00'), 
+      ('parada_minutos_gratis', '2'), 
+      ('parada_valor_minuto', '0.60'), 
+      ('valor_minimo_corrida', '7.00') 
+    ON CONFLICT (chave) DO NOTHING 
+  `) 
+ 
   await seedAdmin() 
   await seedConfigs() 
   await seedTarifas() 
