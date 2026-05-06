@@ -41,6 +41,26 @@ fastify.get('/motorista/:token', (req, reply) => reply.sendFile('motorista/index
 fastify.get('/cadastro-motorista/:token', (req, reply) => reply.sendFile('cadastro-motorista/index.html')) 
 fastify.get('/favicon.ico', (req, reply) => reply.code(204).send()) 
  
+// Webhook do Telegram 
+fastify.post('/webhook/telegram', async (request, reply) => { 
+  const { getBot } = await import('./telegram.js') 
+  const bot = getBot() 
+  if (bot) bot.processUpdate(request.body) 
+  return { ok: true } 
+}) 
+ 
+// Configura webhook após iniciar 
+fastify.addHook('onReady', async () => { 
+  const isProduction = process.env.BASE_URL && !process.env.BASE_URL.includes('localhost') 
+  if (isProduction) { 
+    const { getBot } = await import('./telegram.js') 
+    const bot = getBot() 
+    const webhookUrl = `${process.env.BASE_URL}/webhook/telegram` 
+    await bot.setWebHook(webhookUrl) 
+    console.log('[BOT] Webhook configurado:', webhookUrl) 
+  } 
+}) 
+ 
 // Rotas API 
 await fastify.register(authRoutes) 
 await fastify.register(driversRoutes) 

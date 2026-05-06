@@ -353,7 +353,7 @@ export default async function ridesRoutes(fastify) {
       `, [chave, String(valor)]) 
     } 
     
-    return { mensagem: 'Configurações salvas' }return result.rows
+    return { mensagem: 'Configurações salvas' } 
   }) 
  
   // Motorista chegou ao ponto de embarque 

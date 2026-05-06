@@ -4,7 +4,20 @@ import { query as dbQuery, pool } from './db.js'
 let bot 
  
 export function initBot() { 
-  bot = new TelegramBot(process.env.TELEGRAM_TOKEN, { polling: true }) 
+  const token = process.env.TELEGRAM_TOKEN 
+  if (!token) { console.warn('[BOT] Token não configurado'); return } 
+ 
+  bot = new TelegramBot(token, { polling: false }) 
+ 
+  // Usa webhook no Render, polling local 
+  const isProduction = process.env.BASE_URL && !process.env.BASE_URL.includes('localhost') 
+ 
+  if (isProduction) { 
+    console.log('[BOT] Modo webhook (produção)') 
+  } else { 
+    bot = new TelegramBot(token, { polling: true }) 
+    console.log('[BOT] Modo polling (local)') 
+  } 
  
   // Recebe localização ao vivo do motorista 
   bot.on('location', async (msg) => { 
@@ -478,7 +491,9 @@ export function initBot() {
     } 
   }) 
  
-  console.log('[BOT] Telegram bot iniciado com polling') 
+  bot.on('polling_error', (err) => { 
+    console.error('erro: [polling_error]', JSON.stringify({ code: err.code, message: err.message })) 
+  }) 
 } 
  
 export async function sendRideToGroup(ride) { 
@@ -508,13 +523,6 @@ export async function sendRideToGroup(ride) {
     ? `\n📅 Data: ${new Date(ride.agendada_para).toLocaleString('pt-BR')}` 
     : '' 
  
-  // Busca motoristas online 
-  const motoristasOnline = (await dbQuery( 
-    'SELECT COUNT(*) as total FROM drivers WHERE ativo = 1 AND online = 1 AND status_cadastro = $1', 
-    ['aprovado'] 
-  )).rows[0] 
- 
-  const qtdOnline = parseInt(motoristasOnline?.total || 0) 
   const infoOnline = qtdOnline > 0 
     ? `\n👥 ${qtdOnline} motorista${qtdOnline > 1 ? 's' : ''} online` 
     : '\n⚠️ Nenhum motorista online' 
