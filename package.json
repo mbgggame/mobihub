@@ -1,23 +1,21 @@
-{
-  "name": "mobihub",
-  "version": "1.0.0",
-  "type": "module",
-  "main": "src/server.js",
-  "scripts": {
-    "start": "node src/server.js",
-    "dev": "node --watch src/server.js"
-  },
-  "dependencies": {
-    "@fastify/cors": "^9.0.0",
-    "@fastify/formbody": "^7.4.0",
-    "@fastify/jwt": "^8.0.0",
-    "@fastify/static": "^7.0.0",
-    "bcrypt": "^5.1.1",
-    "better-sqlite3": "^9.4.0",
-    "dotenv": "^16.4.0",
-    "fastify": "^4.26.0",
-    "node-telegram-bot-api": "^0.67.0",
-    "pg": "^8.20.0",
-    "uuid": "^9.0.0"
-  }
-}
+{ 
+   "name": "mobihub", 
+   "version": "1.0.0", 
+   "type": "module", 
+   "main": "src/server.js", 
+   "scripts": { 
+     "start": "node src/server.js", 
+     "dev": "node --watch src/server.js" 
+   }, 
+   "dependencies": { 
+     "fastify": "^4.26.0", 
+     "@fastify/static": "^7.0.0", 
+     "@fastify/jwt": "^8.0.0", 
+     "@fastify/cors": "^9.0.0", 
+     "pg": "^8.11.0", 
+     "node-telegram-bot-api": "^0.66.0", 
+     "uuid": "^9.0.0", 
+     "bcrypt": "^5.1.1", 
+     "dotenv": "^16.4.0" 
+   } 
+ } 
