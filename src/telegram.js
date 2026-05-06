@@ -223,6 +223,20 @@ export function initBot() {
           ).catch(() => {}) 
         } 
  
+        // Envia painel de controle da corrida ao motorista 
+        bot.sendMessage(from.id, `🎛️ *Painel de controle da corrida #${ride.id}*\n\nUse os botões abaixo para gerenciar a corrida:`, { 
+          parse_mode: 'Markdown', 
+          reply_markup: { 
+            inline_keyboard: [ 
+              [{ text: '📍 Cheguei ao passageiro', callback_data: `chegou:${ride.id}` }], 
+              [{ text: '🚶 Passageiro embarcou', callback_data: `embarcou:${ride.id}` }], 
+              [{ text: '⏸️ Iniciar parada', callback_data: `parada_ini:${ride.id}` }], 
+              [{ text: '▶️ Retomar corrida', callback_data: `parada_fim:${ride.id}` }], 
+              [{ text: '✅ Finalizar corrida', callback_data: `finalizar:${ride.id}` }] 
+            ] 
+          } 
+        }).catch(() => {}) 
+ 
       } catch (err) { 
         await client.query('ROLLBACK') 
         console.error('[BOT] Erro ao aceitar corrida:', err) 
@@ -266,6 +280,200 @@ export function initBot() {
         { chat_id: from.id, message_id: message.message_id } 
       ).catch(() => {}) 
  
+      return 
+    } 
+ 
+    // CHEGOU AO PASSAGEIRO 
+    if (data.startsWith('chegou:')) { 
+      const rideId = parseInt(data.split(':')[1]) 
+      const ride = (await dbQuery('SELECT * FROM rides WHERE id = $1', [rideId])).rows[0] 
+      if (!ride) { bot.answerCallbackQuery(callbackQuery.id, { text: 'Corrida não encontrada', show_alert: true }); return } 
+ 
+      await dbQuery(` 
+        UPDATE rides SET 
+          status_detalhe = 'aguardando_passageiro', 
+          motorista_chegou_at = CURRENT_TIMESTAMP 
+        WHERE id = $1 AND motorista_chegou_at IS NULL 
+      `, [rideId]) 
+ 
+      bot.answerCallbackQuery(callbackQuery.id, { text: '📍 Chegada registrada! Timer iniciado.', show_alert: true }) 
+ 
+      bot.sendMessage(from.id, 
+        `📍 *Chegada registrada!*\n\n⏱️ Você tem 5 minutos grátis de espera.\nApós isso: R$ 0,60/min\n\nSe o passageiro não aparecer em 10 minutos, você pode cancelar.`, 
+        { parse_mode: 'Markdown' } 
+      ).catch(() => {}) 
+      return 
+    } 
+ 
+    // PASSAGEIRO EMBARCOU 
+    if (data.startsWith('embarcou:')) { 
+      const rideId = parseInt(data.split(':')[1]) 
+      const ride = (await dbQuery('SELECT * FROM rides WHERE id = $1', [rideId])).rows[0] 
+      if (!ride) { bot.answerCallbackQuery(callbackQuery.id, { text: 'Corrida não encontrada', show_alert: true }); return } 
+      if (!ride.motorista_chegou_at) { bot.answerCallbackQuery(callbackQuery.id, { text: 'Registre chegada primeiro!', show_alert: true }); return } 
+ 
+      const { calcularTempoMinutos, calculateInitialWaitCost } = await import('./billing.js') 
+      const configs = (await dbQuery('SELECT chave, valor FROM configuracoes')).rows 
+      const config = {} 
+      configs.forEach(c => config[c.chave] = c.valor) 
+ 
+      const tempoEspera = calcularTempoMinutos(ride.motorista_chegou_at) 
+      const custoEspera = calculateInitialWaitCost(tempoEspera, config) 
+ 
+      await dbQuery(` 
+        UPDATE rides SET 
+          status_detalhe = 'em_andamento', 
+          passageiro_embarcou_at = CURRENT_TIMESTAMP, 
+          tempo_espera_inicial_min = $1, 
+          custo_espera_inicial = $2 
+        WHERE id = $3 
+      `, [tempoEspera, custoEspera, rideId]) 
+ 
+      const msg = custoEspera > 0 
+        ? `🚶 *Passageiro embarcou!*\n\n⏱️ Espera: ${tempoEspera.toFixed(1)} min\n💰 Custo espera: R$ ${custoEspera.toFixed(2)}\n\nCorrida iniciada! Bom trajeto!` 
+        : `🚶 *Passageiro embarcou!*\n\n⏱️ Espera: ${tempoEspera.toFixed(1)} min (dentro do grátis)\n\nCorrida iniciada! Bom trajeto!` 
+ 
+      bot.answerCallbackQuery(callbackQuery.id, { text: 'Corrida iniciada!' }) 
+      bot.sendMessage(from.id, msg, { parse_mode: 'Markdown' }).catch(() => {}) 
+      return 
+    } 
+ 
+    // INICIAR PARADA 
+    if (data.startsWith('parada_ini:')) { 
+      const rideId = parseInt(data.split(':')[1]) 
+ 
+      const paradaAberta = (await dbQuery( 
+        'SELECT id FROM ride_stops WHERE ride_id = $1 AND finalizada_at IS NULL', [rideId] 
+      )).rows[0] 
+ 
+      if (paradaAberta) { 
+        bot.answerCallbackQuery(callbackQuery.id, { text: 'Já existe uma parada em andamento!', show_alert: true }) 
+        return 
+      } 
+ 
+      const result = await dbQuery('INSERT INTO ride_stops (ride_id) VALUES ($1) RETURNING id', [rideId]) 
+      await dbQuery(`UPDATE rides SET status_detalhe = 'em_parada', num_paradas = num_paradas + 1 WHERE id = $1`, [rideId]) 
+ 
+      bot.answerCallbackQuery(callbackQuery.id, { text: '⏸️ Parada iniciada! 2 min grátis.', show_alert: true }) 
+      bot.sendMessage(from.id, 
+        `⏸️ *Parada iniciada*\n\n⏱️ 2 minutos grátis\nApós isso: R$ 0,60/min\n\nClique em "▶️ Retomar corrida" quando continuar.`, 
+        { 
+          parse_mode: 'Markdown', 
+          reply_markup: { 
+            inline_keyboard: [[ 
+              { text: '▶️ Retomar corrida', callback_data: `parada_fim:${rideId}:${result.rows[0].id}` } 
+            ]] 
+          } 
+        } 
+      ).catch(() => {}) 
+      return 
+    } 
+ 
+    // FINALIZAR PARADA 
+    if (data.startsWith('parada_fim:')) { 
+      const parts = data.split(':') 
+      const rideId = parseInt(parts[1]) 
+      const stopId = parts[2] ? parseInt(parts[2]) : null 
+ 
+      const stop = (await dbQuery( 
+        'SELECT * FROM ride_stops WHERE ride_id = $1 AND finalizada_at IS NULL ORDER BY iniciada_at DESC LIMIT 1', 
+        [rideId] 
+      )).rows[0] 
+ 
+      if (!stop) { 
+        bot.answerCallbackQuery(callbackQuery.id, { text: 'Nenhuma parada em andamento', show_alert: true }) 
+        return 
+      } 
+ 
+      const { calcularTempoMinutos, calculateStopCost } = await import('./billing.js') 
+      const configs = (await dbQuery('SELECT chave, valor FROM configuracoes')).rows 
+      const config = {} 
+      configs.forEach(c => config[c.chave] = c.valor) 
+ 
+      const duracao = calcularTempoMinutos(stop.iniciada_at) 
+      const custo = calculateStopCost(duracao, config) 
+ 
+      await dbQuery(` 
+        UPDATE ride_stops SET finalizada_at = CURRENT_TIMESTAMP, duracao_min = $1, custo = $2 WHERE id = $3 
+      `, [duracao, custo, stop.id]) 
+ 
+      const totalParadas = (await dbQuery( 
+        'SELECT COALESCE(SUM(custo), 0) as total, COALESCE(SUM(duracao_min), 0) as tempo FROM ride_stops WHERE ride_id = $1', 
+        [rideId] 
+      )).rows[0] 
+ 
+      await dbQuery(` 
+        UPDATE rides SET status_detalhe = 'em_andamento', custo_paradas = $1, tempo_paradas_total_min = $2 WHERE id = $3 
+      `, [totalParadas.total, totalParadas.tempo, rideId]) 
+ 
+      bot.answerCallbackQuery(callbackQuery.id, { text: '▶️ Corrida retomada!', show_alert: true }) 
+      bot.sendMessage(from.id, 
+        `▶️ *Corrida retomada!*\n\n⏱️ Parada: ${duracao.toFixed(1)} min\n💰 Custo: R$ ${custo.toFixed(2)}\n\nBom trajeto!`, 
+        { parse_mode: 'Markdown' } 
+      ).catch(() => {}) 
+      return 
+    } 
+ 
+    // FINALIZAR CORRIDA 
+    if (data.startsWith('finalizar:')) { 
+      const rideId = parseInt(data.split(':')[1]) 
+      const ride = (await dbQuery('SELECT * FROM rides WHERE id = $1', [rideId])).rows[0] 
+      if (!ride) { bot.answerCallbackQuery(callbackQuery.id, { text: 'Corrida não encontrada', show_alert: true }); return } 
+ 
+      const { calculateTotalRideCost } = await import('./billing.js') 
+      const configs = (await dbQuery('SELECT chave, valor FROM configuracoes')).rows 
+      const config = {} 
+      configs.forEach(c => config[c.chave] = c.valor) 
+ 
+      const valorFinal = calculateTotalRideCost( 
+        ride.valor || 0, 
+        ride.custo_espera_inicial || 0, 
+        ride.custo_paradas || 0, 
+        config 
+      ) 
+      const valorMotorista = parseFloat((valorFinal * 0.70).toFixed(2)) 
+ 
+      await dbQuery(` 
+        UPDATE rides SET 
+          status = 'concluida', 
+          concluida_at = CURRENT_TIMESTAMP, 
+          valor_final = $1 
+        WHERE id = $2 
+      `, [valorFinal, rideId]) 
+ 
+      // Atualiza contadores 
+      if (ride.driver_id) { 
+        await dbQuery('UPDATE drivers SET total_viagens = total_viagens + 1 WHERE id = $1', [ride.driver_id]) 
+      } 
+      if (ride.client_id) { 
+        await dbQuery('UPDATE clients SET total_corridas = total_corridas + 1 WHERE id = $1', [ride.client_id]) 
+      } 
+ 
+      // Edita mensagem no grupo 
+      if (ride.telegram_message_id) { 
+        await editGroupMessage( 
+          ride.telegram_message_id, 
+          `✅ *Corrida concluída!*\n\n📍 ${ride.origem}\n🏁 ${ride.destino}\n💰 Valor final: R$ ${valorFinal.toFixed(2)}` 
+        ) 
+      } 
+ 
+      // Notifica motorista para avaliar 
+      const driver = (await dbQuery('SELECT * FROM drivers WHERE id = $1', [ride.driver_id])).rows[0] 
+      if (driver) await notifyDriverRateClient(driver, ride) 
+ 
+      bot.answerCallbackQuery(callbackQuery.id, { text: '✅ Corrida finalizada!', show_alert: true }) 
+      bot.sendMessage(from.id, ` 
+ ✅ *Corrida finalizada!* 
+ 
+ 💰 Valor base: R$ ${Number(ride.valor).toFixed(2)} 
+ ⏱️ Custo espera: R$ ${Number(ride.custo_espera_inicial || 0).toFixed(2)} 
+ ⏸️ Custo paradas: R$ ${Number(ride.custo_paradas || 0).toFixed(2)} 
+ ━━━━━━━━━━━━━━━ 
+ 💵 *Valor final: R$ ${valorFinal.toFixed(2)}* 
+ 👨‍✈️ *Seu recebimento: R$ ${valorMotorista.toFixed(2)}* 
+ 
+ Obrigado pelo serviço! 
+   `.trim(), { parse_mode: 'Markdown' }).catch(() => {}) 
       return 
     } 
   }) 
