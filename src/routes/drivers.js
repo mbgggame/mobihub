@@ -184,12 +184,180 @@ export default async function driversRoutes(fastify) {
     if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
  
     await query(` 
-      UPDATE drivers SET 
-        online = $1, 
-        online_desde = CASE WHEN $1 = 1 THEN CURRENT_TIMESTAMP ELSE NULL END 
-      WHERE id = $2 
-    `, [online ? 1 : 0, driver.id]) 
+       UPDATE drivers SET 
+         online = $1, 
+         online_desde = CASE WHEN $1 = 1 THEN CURRENT_TIMESTAMP ELSE NULL END 
+       WHERE id = $2 
+     `, [online ? 1 : 0, driver.id]) 
+   
+     return { mensagem: online ? 'Você está online' : 'Você está offline', online } 
+   }) 
  
-    return { mensagem: online ? 'Você está online' : 'Você está offline', online } 
+  // Listar veículos do motorista 
+  fastify.get('/api/motorista/:token/veiculos', async (request, reply) => { 
+    const driver = (await query( 
+      'SELECT id FROM drivers WHERE token_perfil = $1', 
+      [request.params.token] 
+    )).rows[0] 
+    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
+ 
+    const veiculos = (await query( 
+      'SELECT * FROM vehicles WHERE driver_id = $1 ORDER BY ativo DESC, created_at ASC', 
+      [driver.id] 
+    )).rows 
+ 
+    return veiculos 
+  }) 
+ 
+  // Adicionar veículo 
+  fastify.post('/api/motorista/:token/veiculos', async (request, reply) => { 
+    const { modelo, ano, cor, placa } = request.body 
+    if (!modelo || !ano || !cor || !placa) { 
+      return reply.code(400).send({ error: 'Todos os campos são obrigatórios' }) 
+    } 
+ 
+    const driver = (await query( 
+      'SELECT id FROM drivers WHERE token_perfil = $1', 
+      [request.params.token] 
+    )).rows[0] 
+    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
+ 
+    // Verifica se placa já existe 
+    const existing = (await query( 
+      'SELECT id FROM vehicles WHERE placa = $1', 
+      [placa.toUpperCase()] 
+    )).rows[0] 
+    if (existing) return reply.code(409).send({ error: 'Placa já cadastrada' }) 
+ 
+    // Conta quantos veículos o motorista tem 
+    const total = (await query( 
+      'SELECT COUNT(*) as total FROM vehicles WHERE driver_id = $1', 
+      [driver.id] 
+    )).rows[0] 
+ 
+    // Primeiro veículo é automaticamente ativo 
+    const primeiroVeiculo = parseInt(total.total) === 0 
+ 
+    const result = await query(` 
+      INSERT INTO vehicles (driver_id, modelo, ano, cor, placa, ativo) 
+      VALUES ($1, $2, $3, $4, $5, $6) 
+      RETURNING * 
+    `, [driver.id, modelo, ano, cor.toLowerCase(), placa.toUpperCase(), primeiroVeiculo ? 1 : 0]) 
+ 
+    // Se for o primeiro, atualiza também o driver 
+    if (primeiroVeiculo) { 
+      await query(` 
+        UPDATE drivers SET modelo_carro = $1, ano_carro = $2, cor_carro = $3, placa = $4 WHERE id = $5 
+      `, [modelo, ano, cor, placa.toUpperCase(), driver.id]) 
+    } 
+ 
+    return { mensagem: 'Veículo cadastrado!', veiculo: result.rows[0] } 
+  }) 
+ 
+  // Selecionar veículo ativo 
+  fastify.put('/api/motorista/:token/veiculos/:vehicleId/ativar', async (request, reply) => { 
+    const { token, vehicleId } = request.params 
+ 
+    const driver = (await query( 
+      'SELECT id, online FROM drivers WHERE token_perfil = $1', 
+      [token] 
+    )).rows[0] 
+    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
+ 
+    // Verifica se tem corrida em andamento 
+    const corridaAtiva = (await query( 
+      "SELECT id FROM rides WHERE driver_id = $1 AND status = 'aceita'", 
+      [driver.id] 
+    )).rows[0] 
+    if (corridaAtiva) { 
+      return reply.code(400).send({ error: 'Não é possível trocar de veículo com corrida em andamento' }) 
+    } 
+ 
+    // Verifica se o veículo pertence ao motorista 
+    const veiculo = (await query( 
+      'SELECT * FROM vehicles WHERE id = $1 AND driver_id = $2', 
+      [vehicleId, driver.id] 
+    )).rows[0] 
+    if (!veiculo) return reply.code(404).send({ error: 'Veículo não encontrado' }) 
+ 
+    // Desativa todos os veículos do motorista 
+    await query('UPDATE vehicles SET ativo = 0 WHERE driver_id = $1', [driver.id]) 
+ 
+    // Ativa o selecionado 
+    await query('UPDATE vehicles SET ativo = 1 WHERE id = $1', [vehicleId]) 
+ 
+    // Atualiza dados do motorista com o veículo ativo 
+    await query(` 
+      UPDATE drivers SET 
+        modelo_carro = $1, 
+        ano_carro = $2, 
+        cor_carro = $3, 
+        placa = $4 
+      WHERE id = $5 
+    `, [veiculo.modelo, veiculo.ano, veiculo.cor, veiculo.placa, driver.id]) 
+ 
+    return { mensagem: `Veículo ${veiculo.modelo} ${veiculo.placa} ativado!` } 
+  }) 
+ 
+  // Remover veículo 
+  fastify.delete('/api/motorista/:token/veiculos/:vehicleId', async (request, reply) => { 
+    const { token, vehicleId } = request.params 
+ 
+    const driver = (await query( 
+      'SELECT id FROM drivers WHERE token_perfil = $1', 
+      [token] 
+    )).rows[0] 
+    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
+ 
+    const veiculo = (await query( 
+      'SELECT * FROM vehicles WHERE id = $1 AND driver_id = $2', 
+      [vehicleId, driver.id] 
+    )).rows[0] 
+    if (!veiculo) return reply.code(404).send({ error: 'Veículo não encontrado' }) 
+ 
+    if (veiculo.ativo) { 
+      return reply.code(400).send({ error: 'Não é possível remover o veículo ativo. Ative outro primeiro.' }) 
+    } 
+ 
+    // Verifica se tem apenas 1 veículo 
+    const total = (await query( 
+      'SELECT COUNT(*) as total FROM vehicles WHERE driver_id = $1', 
+      [driver.id] 
+    )).rows[0] 
+    if (parseInt(total.total) <= 1) { 
+      return reply.code(400).send({ error: 'Você precisa ter pelo menos 1 veículo cadastrado' }) 
+    } 
+ 
+    await query('DELETE FROM vehicles WHERE id = $1', [vehicleId]) 
+    return { mensagem: 'Veículo removido' } 
+  }) 
+ 
+  // Rota admin — adicionar veículo para motorista 
+  fastify.post('/api/drivers/:id/veiculos', { preHandler: requireAuth }, async (request, reply) => { 
+    const { modelo, ano, cor, placa } = request.body 
+    const { id } = request.params 
+ 
+    if (!modelo || !ano || !cor || !placa) { 
+      return reply.code(400).send({ error: 'Todos os campos são obrigatórios' }) 
+    } 
+ 
+    const existing = (await query('SELECT id FROM vehicles WHERE placa = $1', [placa.toUpperCase()])).rows[0] 
+    if (existing) return reply.code(409).send({ error: 'Placa já cadastrada' }) 
+ 
+    const total = (await query('SELECT COUNT(*) as total FROM vehicles WHERE driver_id = $1', [id])).rows[0] 
+    const primeiroVeiculo = parseInt(total.total) === 0 
+ 
+    const result = await query(` 
+      INSERT INTO vehicles (driver_id, modelo, ano, cor, placa, ativo) 
+      VALUES ($1, $2, $3, $4, $5, $6) RETURNING * 
+    `, [id, modelo, ano, cor, placa.toUpperCase(), primeiroVeiculo ? 1 : 0]) 
+ 
+    if (primeiroVeiculo) { 
+      await query(` 
+        UPDATE drivers SET modelo_carro = $1, ano_carro = $2, cor_carro = $3, placa = $4 WHERE id = $5 
+      `, [modelo, ano, cor, placa.toUpperCase(), id]) 
+    } 
+ 
+    return { mensagem: 'Veículo cadastrado!', veiculo: result.rows[0] } 
   }) 
 }

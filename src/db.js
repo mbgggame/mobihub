@@ -164,6 +164,28 @@ export async function initDB() {
   `) 
  
   await query(` 
+    CREATE TABLE IF NOT EXISTS vehicles ( 
+      id SERIAL PRIMARY KEY, 
+      driver_id INTEGER REFERENCES drivers(id) ON DELETE CASCADE, 
+      modelo TEXT NOT NULL, 
+      ano TEXT NOT NULL, 
+      cor TEXT NOT NULL, 
+      placa TEXT NOT NULL, 
+      ativo INTEGER DEFAULT 0, 
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
+    ) 
+  `) 
+ 
+  // Migra veículos existentes dos motoristas para a nova tabela 
+  await query(` 
+    INSERT INTO vehicles (driver_id, modelo, ano, cor, placa, ativo) 
+    SELECT id, modelo_carro, ano_carro, cor_carro, placa, 1 
+    FROM drivers 
+    WHERE modelo_carro IS NOT NULL 
+    AND id NOT IN (SELECT DISTINCT driver_id FROM vehicles) 
+  `) 
+ 
+  await query(` 
     INSERT INTO configuracoes (chave, valor) VALUES 
       ('espera_minutos_gratis', '5'), 
       ('espera_valor_minuto', '0.60'), 
