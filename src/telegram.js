@@ -1,6 +1,5 @@
 import TelegramBot from 'node-telegram-bot-api' 
-import { query, pool } from './db.js' 
-import { db } from './db.js' 
+import { query as dbQuery, pool } from './db.js' 
  
 let bot 
  
@@ -8,124 +7,140 @@ export function initBot() {
   bot = new TelegramBot(process.env.TELEGRAM_TOKEN, { polling: true }) 
  
   // Recebe localização ao vivo do motorista 
-  bot.on('location', (msg) => { 
+  bot.on('location', async (msg) => { 
     const { lat, lng } = { lat: msg.location.latitude, lng: msg.location.longitude } 
     const telegramId = String(msg.from.id) 
  
-    const driver = db.prepare('SELECT * FROM drivers WHERE telegram_id = ? AND ativo = 1').get(telegramId) 
+    const driverResult = await dbQuery('SELECT * FROM drivers WHERE telegram_id = $1 AND ativo = 1', [telegramId]) 
+    const driver = driverResult.rows[0] 
     if (!driver) return 
  
     // Busca corrida ativa do motorista 
-    const ride = db.prepare(` 
+    const rideResult = await dbQuery(` 
       SELECT * FROM rides 
-      WHERE driver_id = ? AND status = 'aceita' 
+      WHERE driver_id = $1 AND status = 'aceita' 
       ORDER BY aceita_at DESC LIMIT 1 
-    `).get(driver.id) 
+    `, [driver.id]) 
+    const ride = rideResult.rows[0] 
  
     if (!ride) return 
  
     // Salva ou atualiza localização 
-    const existing = db.prepare('SELECT id FROM driver_locations WHERE ride_id = ?').get(ride.id) 
+    const existingResult = await dbQuery('SELECT id FROM driver_locations WHERE ride_id = $1', [ride.id]) 
+    const existing = existingResult.rows[0] 
     if (existing) { 
-      db.prepare(` 
-        UPDATE driver_locations SET lat = ?, lng = ?, updated_at = CURRENT_TIMESTAMP 
-        WHERE ride_id = ? 
-      `).run(lat, lng, ride.id) 
+      await dbQuery(` 
+        UPDATE driver_locations SET lat = $1, lng = $2, updated_at = CURRENT_TIMESTAMP 
+        WHERE ride_id = $3 
+      `, [lat, lng, ride.id]) 
     } else { 
-      db.prepare(` 
+      await dbQuery(` 
         INSERT INTO driver_locations (driver_id, ride_id, lat, lng) 
-        VALUES (?, ?, ?, ?) 
-      `).run(driver.id, ride.id, lat, lng) 
+        VALUES ($1, $2, $3, $4) 
+      `, [driver.id, ride.id, lat, lng]) 
     } 
   }) 
  
-  bot.on('callback_query', async (query) => { 
-    const { data, from, message } = query 
+  bot.on('callback_query', async (callbackQuery) => { 
+    const { data, from, message } = callbackQuery 
  
     // --- ACEITE DE CORRIDA --- 
     if (data.startsWith('accept:')) { 
       const rideId = parseInt(data.split(':')[1]) 
  
-      const accept = db.transaction(() => { 
-        const ride = db.prepare( 
-          "SELECT * FROM rides WHERE id = ? AND status = 'aberta'" 
-        ).get(rideId) 
-        if (!ride) return null 
+      const client = await pool.connect() 
+      try { 
+        await client.query('BEGIN') 
  
-        let driver = db.prepare( 
-          'SELECT * FROM drivers WHERE telegram_id = ? AND ativo = 1' 
-        ).get(String(from.id)) 
+        const rideResult = await client.query( 
+          "SELECT * FROM rides WHERE id = $1 AND status = 'aberta' FOR UPDATE", 
+          [rideId] 
+        ) 
+        const ride = rideResult.rows[0] 
  
-        if (!driver) { 
-          driver = db.prepare( 
-            'SELECT * FROM drivers WHERE CAST(telegram_id AS TEXT) = ? AND ativo = 1' 
-          ).get(String(from.id)) 
+        if (!ride) { 
+          await client.query('ROLLBACK') 
+          bot.answerCallbackQuery(callbackQuery.id, { 
+            text: 'Corrida já foi aceita ou não disponível.', 
+            show_alert: true 
+          }) 
+          return 
         } 
  
-        if (!driver) return null 
+        let driverResult = await client.query( 
+          'SELECT * FROM drivers WHERE telegram_id = $1 AND ativo = 1', 
+          [String(from.id)] 
+        ) 
+        let driver = driverResult.rows[0] 
+ 
+        if (!driver) { 
+          driverResult = await client.query( 
+            'SELECT * FROM drivers WHERE CAST(telegram_id AS TEXT) = $1 AND ativo = 1', 
+            [String(from.id)] 
+          ) 
+          driver = driverResult.rows[0] 
+        } 
+ 
+        if (!driver) { 
+          await client.query('ROLLBACK') 
+          bot.answerCallbackQuery(callbackQuery.id, { 
+            text: 'Motorista não encontrado ou inativo.', 
+            show_alert: true 
+          }) 
+          return 
+        } 
  
         // Verifica bloqueio por agendamento 
-        const bloqueioAtivo = db.prepare( 
+        const configResult = await client.query( 
           "SELECT valor FROM configuracoes WHERE chave = 'agendamento_bloqueio_ativo'" 
-        ).get()?.valor === 'true' 
+        ) 
+        const bloqueioAtivo = configResult.rows[0]?.valor === 'true' 
  
         if (bloqueioAtivo) { 
-          const minBloqueio = parseInt(db.prepare( 
+          const minResult = await client.query( 
             "SELECT valor FROM configuracoes WHERE chave = 'agendamento_minutos_bloqueio'" 
-          ).get()?.valor || '60') 
+          ) 
+          const minBloqueio = parseInt(minResult.rows[0]?.valor || '60') 
  
           const agora = new Date() 
           const limiteBloqueio = new Date(agora.getTime() + minBloqueio * 60 * 1000) 
  
-          const corridaAgendada = db.prepare(` 
+          const agendadaResult = await client.query(` 
             SELECT * FROM rides 
-            WHERE driver_id = ? 
+            WHERE driver_id = $1 
             AND tipo = 'agendada' 
             AND status IN ('aberta', 'aceita') 
-            AND agendada_para <= ? 
-            AND agendada_para >= ? 
-          `).get(driver.id, limiteBloqueio.toISOString(), agora.toISOString()) 
+            AND agendada_para <= $2 
+            AND agendada_para >= $3 
+            LIMIT 1 
+          `, [driver.id, limiteBloqueio.toISOString(), agora.toISOString()]) 
+          const corridaAgendada = agendadaResult.rows[0] 
  
           if (corridaAgendada) { 
-            return { bloqueado: true, horario: corridaAgendada.agendada_para } 
+            await client.query('ROLLBACK') 
+            const horario = new Date(corridaAgendada.agendada_para).toLocaleString('pt-BR') 
+            bot.answerCallbackQuery(callbackQuery.id, { 
+              text: `Você tem um agendamento para ${horario}. Disponível após concluí-lo.`, 
+              show_alert: true 
+            }) 
+            return 
           } 
         } 
  
-        db.prepare(` 
+        await client.query(` 
           UPDATE rides SET 
             status = 'aceita', 
-            driver_id = ?, 
+            driver_id = $1, 
             aceita_at = CURRENT_TIMESTAMP 
-          WHERE id = ? 
-        `).run(driver.id, rideId) 
+          WHERE id = $2 
+        `, [driver.id, rideId]) 
  
-        return { ride, driver } 
-      }) 
+        await client.query('COMMIT') 
  
-      const result = accept() 
+        bot.answerCallbackQuery(callbackQuery.id, { text: '✅ Corrida aceita! Bom trabalho.' }) 
  
-      if (!result) { 
-        bot.answerCallbackQuery(query.id, { 
-          text: 'Corrida já foi aceita ou não disponível.', 
-          show_alert: true 
-        }) 
-        return 
-      } 
- 
-      if (result.bloqueado) { 
-        const horario = new Date(result.horario).toLocaleString('pt-BR') 
-        bot.answerCallbackQuery(query.id, { 
-          text: `Você tem um agendamento para ${horario}. Disponível após concluí-lo.`, 
-          show_alert: true 
-        }) 
-        return 
-      } 
- 
-      const { ride, driver } = result 
-      bot.answerCallbackQuery(query.id, { text: '✅ Corrida aceita! Bom trabalho.' }) 
- 
-      // Atualiza mensagem no grupo 
-      const textoGrupo = ` 
+        // Atualiza mensagem no grupo 
+        const textoGrupo = ` 
  ✅ *Corrida aceita!* 
  
  📍 Origem: ${ride.origem} 
@@ -134,22 +149,22 @@ export function initBot() {
  
  🧑‍✈️ Motorista: *${driver.nome}* 
  🚗 ${driver.modelo_carro} ${driver.cor_carro} ${driver.ano_carro} — ${driver.placa} 
-      `.trim() 
+        `.trim() 
  
-      bot.editMessageText(textoGrupo, { 
-        chat_id: message.chat.id, 
-        message_id: message.message_id, 
-        parse_mode: 'Markdown' 
-      }).catch(() => {}) 
+        bot.editMessageText(textoGrupo, { 
+          chat_id: message.chat.id, 
+          message_id: message.message_id, 
+          parse_mode: 'Markdown' 
+        }).catch(() => {}) 
  
-      // Link da corrida e rota 
-      const link = `${process.env.BASE_URL}/r/${ride.token}` 
+        // Link da corrida e rota 
+        const link = `${process.env.BASE_URL}/r/${ride.token}` 
  
-      const mapsLink = (ride.origem_lat && ride.destino_lat) 
-        ? `https://www.google.com/maps/dir/?api=1&origin=${ride.origem_lat},${ride.origem_lng}&destination=${ride.destino_lat},${ride.destino_lng}&travelmode=driving` 
-        : `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(ride.origem)}&destination=${encodeURIComponent(ride.destino)}&travelmode=driving` 
+        const mapsLink = (ride.origem_lat && ride.destino_lat) 
+          ? `https://www.google.com/maps/dir/?api=1&origin=${ride.origem_lat},${ride.origem_lng}&destination=${ride.destino_lat},${ride.destino_lng}&travelmode=driving` 
+          : `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(ride.origem)}&destination=${encodeURIComponent(ride.destino)}&travelmode=driving` 
  
-      const msgMotorista = ` 
+        const msgMotorista = ` 
  🚗 *Corrida aceita! Bom trabalho!* 
  
  📍 Origem: ${ride.origem} 
@@ -164,38 +179,49 @@ export function initBot() {
  2️⃣ Toque em Localização 
  3️⃣ Selecione "Compartilhar localização ao vivo" 
  4️⃣ Escolha 1 hora e confirme 
-       `.trim() 
+         `.trim() 
  
-      bot.sendMessage(from.id, msgMotorista, { 
-        parse_mode: 'Markdown', 
-        reply_markup: { 
-          inline_keyboard: [[ 
-            { text: '🗺️ Abrir rota no Google Maps', url: mapsLink } 
-          ]] 
-        } 
-      }).catch(() => { 
-        console.warn(`[BOT] Motorista ${from.id} não iniciou o bot privado.`) 
-      }) 
+        bot.sendMessage(from.id, msgMotorista, { 
+          parse_mode: 'Markdown', 
+          reply_markup: { 
+            inline_keyboard: [[ 
+              { text: '🗺️ Abrir rota no Google Maps', url: mapsLink } 
+            ]] 
+          } 
+        }).catch(() => { 
+          console.warn(`[BOT] Motorista ${from.id} não iniciou o bot privado.`) 
+        }) 
  
-      // Manda link da corrida separado para ficar destacado 
-      bot.sendMessage(from.id, 
-        `📱 Link da corrida para o passageiro acompanhar:\n${link}`, 
-        { parse_mode: 'Markdown' } 
-      ).catch(() => {}) 
- 
-      // Busca token do perfil do motorista 
-      const driverComToken = db.prepare('SELECT token_perfil FROM drivers WHERE id = ?').get(driver.id) 
-      const linkPerfil = driverComToken?.token_perfil 
-        ? `${process.env.BASE_URL}/motorista/${driverComToken.token_perfil}` 
-        : null 
- 
-      if (linkPerfil) { 
+        // Manda link da corrida separado para ficar destacado 
         bot.sendMessage(from.id, 
-          `👤 Seu perfil e avaliações:\n${linkPerfil}`, 
+          `📱 Link da corrida para o passageiro acompanhar:\n${link}`, 
           { parse_mode: 'Markdown' } 
         ).catch(() => {}) 
-      } 
  
+        // Busca token do perfil do motorista 
+        const driverTokenResult = await dbQuery('SELECT token_perfil FROM drivers WHERE id = $1', [driver.id]) 
+        const driverComToken = driverTokenResult.rows[0] 
+        const linkPerfil = driverComToken?.token_perfil 
+          ? `${process.env.BASE_URL}/motorista/${driverComToken.token_perfil}` 
+          : null 
+ 
+        if (linkPerfil) { 
+          bot.sendMessage(from.id, 
+            `👤 Seu perfil e avaliações:\n${linkPerfil}`, 
+            { parse_mode: 'Markdown' } 
+          ).catch(() => {}) 
+        } 
+ 
+      } catch (err) { 
+        await client.query('ROLLBACK') 
+        console.error('[BOT] Erro ao aceitar corrida:', err) 
+        bot.answerCallbackQuery(callbackQuery.id, { 
+          text: 'Erro interno ao aceitar corrida.', 
+          show_alert: true 
+        }) 
+      } finally { 
+        client.release() 
+      } 
       return 
     } 
  
@@ -219,7 +245,7 @@ export function initBot() {
         console.error('[BOT] Erro ao registrar avaliação:', e) 
       } 
  
-      bot.answerCallbackQuery(query.id, { 
+      bot.answerCallbackQuery(callbackQuery.id, { 
         text: `Avaliação registrada! Obrigado.`, 
         show_alert: false 
       }) 
@@ -253,7 +279,8 @@ export async function sendRideToGroup(ride) {
   // Busca dados do passageiro 
   let infoPassageiro = '' 
   if (ride.client_id) { 
-    const client = db.prepare('SELECT nome, media_avaliacao, total_avaliacoes FROM clients WHERE id = ?').get(ride.client_id) 
+    const clientResult = await dbQuery('SELECT nome, media_avaliacao, total_avaliacoes FROM clients WHERE id = $1', [ride.client_id]) 
+    const client = clientResult.rows[0] 
     if (client) { 
       const nome = client.nome || 'Passageiro' 
       const media = client.media_avaliacao 

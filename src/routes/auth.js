@@ -1,6 +1,5 @@
 import bcrypt from 'bcrypt' 
 import { query, pool } from '../db.js' 
-import { db } from '../db.js' 
  
 export default async function authRoutes(fastify) { 
  
@@ -11,7 +10,8 @@ export default async function authRoutes(fastify) {
       return reply.code(400).send({ error: 'Email e senha obrigatórios' }) 
     } 
  
-    const admin = db.prepare('SELECT * FROM admins WHERE email = ?').get(email) 
+    const result = await query('SELECT * FROM admins WHERE email = $1', [email]) 
+    const admin = result.rows[0] 
  
     if (!admin) { 
       return reply.code(401).send({ error: 'Credenciais inválidas' }) 

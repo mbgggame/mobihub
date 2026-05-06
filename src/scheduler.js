@@ -1,10 +1,9 @@
 import { query, pool } from './db.js' 
-import { db } from './db.js' 
  
-function getConfig(chave) { 
+async function getConfig(chave) { 
   try { 
-    const r = db.prepare('SELECT valor FROM configuracoes WHERE chave = ?').get(chave) 
-    return r?.valor 
+    const r = await query('SELECT valor FROM configuracoes WHERE chave = $1', [chave]) 
+    return r.rows[0]?.valor 
   } catch { return null } 
 } 
  
@@ -19,27 +18,29 @@ export function initScheduler() {
  
 async function verificarAgendamentos() { 
   try { 
-    const disparoImediato = getConfig('agendamento_disparo_imediato') === 'true' 
-    const minAntes = parseInt(getConfig('agendamento_minutos_antes') || '30') 
+    const disparoImediato = await getConfig('agendamento_disparo_imediato') === 'true' 
+    const minAntes = parseInt(await getConfig('agendamento_minutos_antes') || '30') 
     const agora = new Date() 
     let corridas = [] 
  
     if (disparoImediato) { 
-      corridas = db.prepare(` 
+      const result = await query(` 
         SELECT * FROM rides 
         WHERE tipo = 'agendada' 
         AND status = 'agendada' 
         AND disparada_at IS NULL 
-      `).all() 
+      `) 
+      corridas = result.rows 
     } else { 
       const limite = new Date(agora.getTime() + minAntes * 60 * 1000) 
-      corridas = db.prepare(` 
+      const result = await query(` 
         SELECT * FROM rides 
         WHERE tipo = 'agendada' 
         AND status = 'agendada' 
         AND disparada_at IS NULL 
-        AND agendada_para <= ? 
-      `).all(limite.toISOString()) 
+        AND agendada_para <= $1 
+      `, [limite.toISOString()]) 
+      corridas = result.rows 
     } 
  
     for (const ride of corridas) { 
@@ -47,13 +48,13 @@ async function verificarAgendamentos() {
       try { 
         const { sendRideToGroup } = await import('./telegram.js') 
         const messageId = await sendRideToGroup(ride) 
-        db.prepare(` 
+        await query(` 
           UPDATE rides SET 
             status = 'aberta', 
             disparada_at = CURRENT_TIMESTAMP, 
-            telegram_message_id = ? 
-          WHERE id = ? 
-        `).run(messageId, ride.id) 
+            telegram_message_id = $1 
+          WHERE id = $2 
+        `, [messageId, ride.id]) 
         console.log(`[SCHEDULER] Corrida #${ride.id} disparada`) 
       } catch(err) { 
         console.error(`[SCHEDULER] Erro ao disparar corrida #${ride.id}:`, err.message) 
@@ -67,21 +68,22 @@ async function verificarAgendamentos() {
 // Verifica chegada automática do motorista ao destino 
 async function verificarChegada() { 
   try { 
-    const autoAtivo = getConfig('chegada_auto_ativo') === 'true' 
+    const autoAtivo = await getConfig('chegada_auto_ativo') === 'true' 
     if (!autoAtivo) return 
  
-    const raioMetros = parseFloat(getConfig('chegada_raio_metros') || '150') 
+    const raioMetros = parseFloat(await getConfig('chegada_raio_metros') || '150') 
  
     // Busca corridas aceitas com localização do motorista 
-    const corridas = db.prepare(` 
+    const result = await query(` 
       SELECT r.*, dl.lat as motor_lat, dl.lng as motor_lng, 
         dl.updated_at as location_updated 
       FROM rides r 
       JOIN driver_locations dl ON dl.ride_id = r.id 
       WHERE r.status = 'aceita' 
       AND r.destino_lat IS NOT NULL 
-      AND datetime(dl.updated_at) >= datetime('now', '-2 minutes') 
-    `).all() 
+      AND dl.updated_at >= NOW() - INTERVAL '2 minutes' 
+    `) 
+    const corridas = result.rows 
  
     for (const ride of corridas) { 
       const distancia = calcularDistancia( 
@@ -93,26 +95,27 @@ async function verificarChegada() {
         console.log(`[SCHEDULER] Motorista chegou ao destino da corrida #${ride.id} (${distancia.toFixed(0)}m)`) 
  
         // Conclui a corrida automaticamente 
-        db.prepare(` 
+        await query(` 
           UPDATE rides SET 
             status = 'concluida', 
             concluida_at = CURRENT_TIMESTAMP, 
             concluida_auto = 1 
-          WHERE id = ? 
-        `).run(ride.id) 
+          WHERE id = $1 
+        `, [ride.id]) 
  
         // Atualiza contadores 
         if (ride.driver_id) { 
-          db.prepare('UPDATE drivers SET total_viagens = total_viagens + 1 WHERE id = ?').run(ride.driver_id) 
+          await query('UPDATE drivers SET total_viagens = total_viagens + 1 WHERE id = $1', [ride.driver_id]) 
         } 
         if (ride.client_id) { 
-          db.prepare('UPDATE clients SET total_corridas = total_corridas + 1 WHERE id = ?').run(ride.client_id) 
+          await query('UPDATE clients SET total_corridas = total_corridas + 1 WHERE id = $1', [ride.client_id]) 
         } 
  
         // Notifica motorista para avaliar 
         try { 
           const { notifyDriverRateClient, editGroupMessage } = await import('./telegram.js') 
-          const driver = db.prepare('SELECT * FROM drivers WHERE id = ?').get(ride.driver_id) 
+          const driverResult = await query('SELECT * FROM drivers WHERE id = $1', [ride.driver_id]) 
+          const driver = driverResult.rows[0] 
           if (driver) await notifyDriverRateClient(driver, ride) 
           if (ride.telegram_message_id) { 
             await editGroupMessage( 

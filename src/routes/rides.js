@@ -1,17 +1,17 @@
 import { query as dbQuery, pool } from '../db.js' 
-import { db } from '../db.js' 
 import { requireAuth } from '../middleware/auth.js' 
 import { sendRideToGroup, notifyDriverRateClient, editGroupMessage } from '../telegram.js' 
 import { v4 as uuidv4 } from 'uuid' 
  
-function calcularTarifa(dataHoraStr, distanciaKm) { 
+async function calcularTarifa(dataHoraStr, distanciaKm) { 
   const data = new Date(dataHoraStr) 
   const diaSemana = data.getDay() 
   const hora = data.getHours() 
   const minuto = data.getMinutes() 
   const horaDecimal = hora + minuto / 60 
 
-  const tarifas = db.prepare('SELECT * FROM tarifas WHERE ativo = 1').all() 
+  const resultTarifas = await dbQuery('SELECT * FROM tarifas WHERE ativo = 1') 
+  const tarifas = resultTarifas.rows
 
   let tarifaAplicada = null 
   let maiorValor = 0 
@@ -39,7 +39,8 @@ function calcularTarifa(dataHoraStr, distanciaKm) {
   } 
 
   if (!tarifaAplicada) { 
-    tarifaAplicada = db.prepare('SELECT * FROM tarifas ORDER BY valor_minimo ASC LIMIT 1').get() 
+    const res = await dbQuery('SELECT * FROM tarifas ORDER BY valor_minimo ASC LIMIT 1')
+    tarifaAplicada = res.rows[0]
   } 
 
   const excedente = Math.max(0, distanciaKm - tarifaAplicada.km_minimo) 
@@ -63,7 +64,7 @@ export default async function ridesRoutes(fastify) {
   fastify.get('/api/rides', { preHandler: requireAuth }, async (request) => { 
     const { status } = request.query 
  
-    let query = ` 
+    let sql = ` 
       SELECT r.*, 
         d.nome as driver_nome, d.modelo_carro, d.cor_carro, d.ano_carro, 
         d.placa, d.telefone as driver_telefone, 
@@ -75,12 +76,13 @@ export default async function ridesRoutes(fastify) {
     ` 
     const params = [] 
     if (status) { 
-      query += ' WHERE r.status = ?' 
+      sql += ' WHERE r.status = $1' 
       params.push(status) 
     } 
-    query += ' ORDER BY r.created_at DESC' 
+    sql += ' ORDER BY r.created_at DESC' 
  
-    return db.prepare(query).all(...params) 
+    const result = await dbQuery(sql, params)
+    return result.rows
   }) 
  
   fastify.post('/api/rides', { preHandler: requireAuth }, async (request, reply) => { 
@@ -98,10 +100,11 @@ export default async function ridesRoutes(fastify) {
     // Cria ou encontra o cliente pelo telefone 
     let clientId = null 
     if (client_telefone) { 
-      let client = db.prepare('SELECT * FROM clients WHERE telefone = ?').get(client_telefone) 
+      let clientResult = await dbQuery('SELECT * FROM clients WHERE telefone = $1', [client_telefone])
+      let client = clientResult.rows[0]
       if (!client) { 
-        const r = db.prepare('INSERT INTO clients (telefone) VALUES (?)').run(client_telefone) 
-        clientId = r.lastInsertRowid 
+        const r = await dbQuery('INSERT INTO clients (telefone) VALUES ($1) RETURNING id', [client_telefone]) 
+        clientId = r.rows[0].id 
       } else { 
         clientId = client.id 
       } 
@@ -110,22 +113,25 @@ export default async function ridesRoutes(fastify) {
     const token = uuidv4() 
     const statusInicial = tipo === 'agendada' ? 'agendada' : 'aberta' 
  
-    const result = db.prepare(` 
+    const result = await dbQuery(` 
       INSERT INTO rides 
         (token, client_id, origem, origem_lat, origem_lng, destino, destino_lat, 
          destino_lng, valor, valor_motorista, valor_mobihub, tipo, agendada_para, status) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) 
-    `).run(token, clientId, origem, origem_lat, origem_lng, destino, 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) 
+      RETURNING id
+    `, [token, clientId, origem, origem_lat, origem_lng, destino, 
            destino_lat, destino_lng, valor, valor_motorista || null, 
-           valor_mobihub || null, tipo || 'normal', agendada_para || null, statusInicial) 
+           valor_mobihub || null, tipo || 'normal', agendada_para || null, statusInicial]) 
  
-    const ride = db.prepare('SELECT * FROM rides WHERE id = ?').get(result.lastInsertRowid) 
+    const rideId = result.rows[0].id
+    const rideResult = await dbQuery('SELECT * FROM rides WHERE id = $1', [rideId]) 
+    const ride = rideResult.rows[0]
  
     // Só dispara imediatamente se for corrida NORMAL 
     if (!tipo || tipo === 'normal') { 
       try { 
         const messageId = await sendRideToGroup(ride) 
-        db.prepare('UPDATE rides SET telegram_message_id = ? WHERE id = ?').run(messageId, ride.id) 
+        await dbQuery('UPDATE rides SET telegram_message_id = $1 WHERE id = $2', [messageId, ride.id]) 
       } catch (err) { 
         console.error('[RIDES] Erro ao enviar para Telegram:', err.message) 
       } 
@@ -148,10 +154,11 @@ export default async function ridesRoutes(fastify) {
       return reply.code(400).send({ error: 'Status inválido' }) 
     } 
  
-    const ride = db.prepare('SELECT * FROM rides WHERE id = ?').get(id) 
+    const rideResult = await dbQuery('SELECT * FROM rides WHERE id = $1', [id]) 
+    const ride = rideResult.rows[0]
     if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
  
-    let updateQuery = 'UPDATE rides SET status = ?' 
+    let updateQuery = 'UPDATE rides SET status = $1' 
     const params = [status] 
  
     if (status === 'concluida') { 
@@ -160,14 +167,15 @@ export default async function ridesRoutes(fastify) {
       updateQuery += ', cancelada_at = CURRENT_TIMESTAMP' 
     } 
  
-    updateQuery += ' WHERE id = ?' 
+    updateQuery += ' WHERE id = $2' 
     params.push(id) 
  
-    db.prepare(updateQuery).run(...params) 
+    await dbQuery(updateQuery, params) 
  
     if (status === 'concluida') { 
       if (ride.driver_id) { 
-        const driver = db.prepare('SELECT * FROM drivers WHERE id = ?').get(ride.driver_id) 
+        const driverResult = await dbQuery('SELECT * FROM drivers WHERE id = $1', [ride.driver_id]) 
+        const driver = driverResult.rows[0]
         if (driver) { 
           console.log('[DEBUG] Enviando avaliação para motorista:', driver.telegram_id) 
           try { 
@@ -176,11 +184,11 @@ export default async function ridesRoutes(fastify) {
           } catch(err) { 
             console.error('[DEBUG] Erro ao enviar avaliação:', err.message) 
           } 
-          db.prepare('UPDATE drivers SET total_viagens = total_viagens + 1 WHERE id = ?').run(driver.id) 
+          await dbQuery('UPDATE drivers SET total_viagens = total_viagens + 1 WHERE id = $1', [driver.id]) 
         } 
       } 
       if (ride.client_id) { 
-        db.prepare('UPDATE clients SET total_corridas = total_corridas + 1 WHERE id = ?').run(ride.client_id) 
+        await dbQuery('UPDATE clients SET total_corridas = total_corridas + 1 WHERE id = $1', [ride.client_id]) 
       } 
       if (ride.telegram_message_id) { 
         await editGroupMessage( 
@@ -204,100 +212,107 @@ export default async function ridesRoutes(fastify) {
     const { maps_link } = request.body 
     const { id } = request.params 
  
-    const ride = db.prepare('SELECT id FROM rides WHERE id = ?').get(id) 
+    const rideResult = await dbQuery('SELECT id FROM rides WHERE id = $1', [id]) 
+    const ride = rideResult.rows[0]
     if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
  
-    db.prepare('UPDATE rides SET maps_link = ? WHERE id = ?').run(maps_link, id) 
+    await dbQuery('UPDATE rides SET maps_link = $1 WHERE id = $2', [maps_link, id]) 
     return { mensagem: 'Link do mapa salvo' } 
   }) 
  
   // Listar tarifas 
   fastify.get('/api/tarifas', { preHandler: requireAuth }, async () => { 
-    return db.prepare('SELECT * FROM tarifas ORDER BY valor_minimo').all() 
+    const result = await dbQuery('SELECT * FROM tarifas ORDER BY valor_minimo') 
+    return result.rows
   }) 
  
   // Atualizar tarifa 
   fastify.put('/api/tarifas/:id', { preHandler: requireAuth }, async (request, reply) => { 
     const { nome, dias, hora_inicio, hora_fim, valor_minimo, valor_km, km_minimo, ativo } = request.body 
     const { id } = request.params 
-    db.prepare(` 
+    await dbQuery(` 
       UPDATE tarifas SET 
-        nome = COALESCE(?, nome), 
-        dias = COALESCE(?, dias), 
-        hora_inicio = COALESCE(?, hora_inicio), 
-        hora_fim = COALESCE(?, hora_fim), 
-        valor_minimo = COALESCE(?, valor_minimo), 
-        valor_km = COALESCE(?, valor_km), 
-        km_minimo = COALESCE(?, km_minimo), 
-        ativo = COALESCE(?, ativo) 
-      WHERE id = ? 
-    `).run(nome, dias, hora_inicio, hora_fim, valor_minimo, valor_km, km_minimo, ativo, id) 
+        nome = COALESCE($1, nome), 
+        dias = COALESCE($2, dias), 
+        hora_inicio = COALESCE($3, hora_inicio), 
+        hora_fim = COALESCE($4, hora_fim), 
+        valor_minimo = COALESCE($5, valor_minimo), 
+        valor_km = COALESCE($6, valor_km), 
+        km_minimo = COALESCE($7, km_minimo), 
+        ativo = COALESCE($8, ativo) 
+      WHERE id = $9 
+    `, [nome, dias, hora_inicio, hora_fim, valor_minimo, valor_km, km_minimo, ativo, id]) 
     return { mensagem: 'Tarifa atualizada' } 
   }) 
  
   // Rota pública para o cliente calcular o valor 
   fastify.get('/api/tarifas/calcular', async (request) => { 
     const { data_hora, distancia_km } = request.query 
-    const resultado = calcularTarifa(data_hora, parseFloat(distancia_km)) 
+    const resultado = await calcularTarifa(data_hora, parseFloat(distancia_km)) 
     return resultado 
   }) 
  
   // Métricas para o Dashboard 
   fastify.get('/api/metricas', { preHandler: requireAuth }, async () => { 
-    const hoje = new Date().toLocaleDateString('pt-BR').split('/').reverse().join('-') 
- 
-    const resumoDia = db.prepare(` 
+    const resumoDiaResult = await dbQuery(` 
       SELECT 
         COUNT(*) as total_hoje, 
-        ROUND(SUM(CASE WHEN status = 'concluida' THEN valor ELSE 0 END), 2) as receita_hoje, 
+        ROUND(SUM(CASE WHEN status = 'concluida' THEN valor ELSE 0 END)::numeric, 2) as receita_hoje, 
         SUM(CASE WHEN status = 'aberta' THEN 1 ELSE 0 END) as abertas, 
         SUM(CASE WHEN status = 'agendada' THEN 1 ELSE 0 END) as agendadas, 
         SUM(CASE WHEN status = 'concluida' THEN 1 ELSE 0 END) as concluidas 
       FROM rides 
-      WHERE DATE(created_at, 'localtime') = DATE('now', 'localtime') 
-    `).get() 
+      WHERE created_at::date = CURRENT_DATE 
+    `) 
+    const resumoDia = resumoDiaResult.rows[0]
  
-    const motoristasAtivos = db.prepare( 
+    const motoristasAtivosResult = await dbQuery( 
       'SELECT COUNT(*) as total FROM drivers WHERE ativo = 1' 
-    ).get() 
+    ) 
+    const motoristasAtivos = motoristasAtivosResult.rows[0]
  
-    const ultimos15dias = db.prepare(` 
+    const ultimos15diasResult = await dbQuery(` 
       SELECT 
-        DATE(created_at) as dia, 
+        created_at::date as dia, 
         COUNT(*) as corridas, 
-        ROUND(SUM(CASE WHEN status='concluida' THEN valor ELSE 0 END), 2) as receita, 
+        ROUND(SUM(CASE WHEN status='concluida' THEN valor ELSE 0 END)::numeric, 2) as receita, 
         SUM(CASE WHEN status='concluida' THEN 1 ELSE 0 END) as concluidas 
       FROM rides 
-      WHERE created_at >= datetime('now', '-15 days') 
-      GROUP BY DATE(created_at) 
+      WHERE created_at >= CURRENT_TIMESTAMP - INTERVAL '15 days' 
+      GROUP BY created_at::date 
       ORDER BY dia ASC 
-    `).all() 
+    `) 
+    const ultimos15dias = ultimos15diasResult.rows
+
+    const tempoMedioAceiteResult = await dbQuery(` 
+      SELECT ROUND(AVG(EXTRACT(EPOCH FROM (aceita_at - created_at)) / 60)::numeric, 1) as minutos 
+      FROM rides WHERE aceita_at IS NOT NULL AND created_at >= CURRENT_TIMESTAMP - INTERVAL '15 days' 
+    `) 
+    const tempoMedioAceite = tempoMedioAceiteResult.rows[0]
  
-    const tempoMedioAceite = db.prepare(` 
-      SELECT ROUND(AVG((julianday(aceita_at) - julianday(created_at)) * 1440), 1) as minutos 
-      FROM rides WHERE aceita_at IS NOT NULL AND created_at >= datetime('now', '-15 days') 
-    `).get() 
- 
-    const topMotoristas = db.prepare(` 
-      SELECT d.nome, d.total_viagens, ROUND(d.media_avaliacao, 1) as nota, 
-        ROUND(SUM(r.valor), 2) as receita 
+    const topMotoristasResult = await dbQuery(` 
+      SELECT d.nome, d.total_viagens, ROUND(d.media_avaliacao::numeric, 1) as nota, 
+        ROUND(SUM(r.valor)::numeric, 2) as receita 
       FROM drivers d JOIN rides r ON r.driver_id = d.id 
       WHERE r.status = 'concluida' 
-      GROUP BY d.id ORDER BY receita DESC LIMIT 5 
-    `).all() 
- 
-    const avaliacaoMedia = db.prepare(` 
-      SELECT ROUND(AVG(estrelas_motorista), 1) as motoristas, 
-        ROUND(AVG(estrelas_cliente), 1) as clientes 
+      GROUP BY d.id, d.nome, d.total_viagens, d.media_avaliacao ORDER BY receita DESC LIMIT 5 
+    `) 
+    const topMotoristas = topMotoristasResult.rows
+
+    const avaliacaoMediaResult = await dbQuery(` 
+      SELECT ROUND(AVG(estrelas_motorista)::numeric, 1) as motoristas, 
+        ROUND(AVG(estrelas_cliente)::numeric, 1) as clientes 
       FROM ratings 
-    `).get() 
+    `) 
+    const avaliacaoMedia = avaliacaoMediaResult.rows[0]
  
-    const corridasAtivas = db.prepare(` 
+    const corridasAtivasResult = await dbQuery(` 
       SELECT r.*, d.nome as driver_nome, d.placa 
       FROM rides r LEFT JOIN drivers d ON r.driver_id = d.id 
       WHERE r.status IN ('aberta', 'aceita', 'agendada') 
       ORDER BY r.created_at DESC 
-    `).all() 
+    `) 
+    const corridasAtivas = corridasAtivasResult.rows
  
     return { 
       resumoDia: { ...resumoDia, motoristas_ativos: motoristasAtivos.total }, 
@@ -311,7 +326,8 @@ export default async function ridesRoutes(fastify) {
  
   // Configurações gerais 
   fastify.get('/api/configuracoes', { preHandler: requireAuth }, async () => { 
-    const configs = db.prepare('SELECT * FROM configuracoes').all() 
+    const result = await dbQuery('SELECT * FROM configuracoes') 
+    const configs = result.rows
     const obj = {} 
     configs.forEach(c => obj[c.chave] = c.valor) 
     return obj 
@@ -319,23 +335,22 @@ export default async function ridesRoutes(fastify) {
  
   fastify.put('/api/configuracoes', { preHandler: requireAuth }, async (request) => { 
     const configs = request.body 
-    const upsert = db.prepare(` 
-      INSERT INTO configuracoes (chave, valor) VALUES (?, ?) 
-      ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor 
-    `) 
-    const transaction = db.transaction((configs) => { 
-      for (const [chave, valor] of Object.entries(configs)) { 
-        upsert.run(chave, String(valor)) 
-      } 
-    }) 
-    transaction(configs) 
+    
+    for (const [chave, valor] of Object.entries(configs)) { 
+      await dbQuery(` 
+        INSERT INTO configuracoes (chave, valor) VALUES ($1, $2) 
+        ON CONFLICT(chave) DO UPDATE SET valor = EXCLUDED.valor 
+      `, [chave, String(valor)]) 
+    } 
+    
     return { mensagem: 'Configurações salvas' } 
   }) 
  
   fastify.get('/api/clients', { preHandler: requireAuth }, async () => { 
-    return db.prepare(` 
+    const result = await dbQuery(` 
       SELECT id, nome, telefone, total_corridas, media_avaliacao, total_avaliacoes 
       FROM clients ORDER BY nome 
-    `).all() 
+    `) 
+    return result.rows
   }) 
 }
