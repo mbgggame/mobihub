@@ -4,7 +4,10 @@ import { requireAuth } from '../middleware/auth.js'
 export default async function publicRoutes(fastify) { 
  
   fastify.get('/api/ride/:token', async (request, reply) => { 
-    const result = await query(` 
+    const { token } = request.params 
+    console.log('[DEBUG] Buscando corrida pelo token:', token) 
+    
+    const ride = (await query(` 
       SELECT r.*, 
         d.nome as driver_nome, 
         d.modelo_carro, d.ano_carro, d.cor_carro, d.placa, 
@@ -16,30 +19,29 @@ export default async function publicRoutes(fastify) {
       LEFT JOIN drivers d ON r.driver_id = d.id 
       LEFT JOIN clients c ON r.client_id = c.id 
       WHERE r.token = $1 
-    `, [request.params.token]) 
-    const ride = result.rows[0] 
- 
-    console.log('[DEBUG] Ride status:', ride?.status, 'token:', request.params.token) 
- 
+    `, [token])).rows[0] 
+  
+    console.log('[DEBUG] Status da corrida:', ride?.status, '| Driver:', ride?.driver_nome) 
+  
     if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
- 
-    const ratingResult = await query('SELECT estrelas_motorista, comentario_cliente, avaliado_em_cliente FROM ratings WHERE ride_id = $1', [ride.id]) 
-    const rating = ratingResult.rows[0] 
- 
-    const paradasResult = await query( 
+  
+    const rating = (await query( 
+      'SELECT estrelas_motorista, comentario_cliente, avaliado_em_cliente FROM ratings WHERE ride_id = $1', 
+      [ride.id] 
+    )).rows[0] 
+  
+    const paradas = (await query( 
       'SELECT duracao_min, custo, iniciada_at, finalizada_at FROM ride_stops WHERE ride_id = $1 ORDER BY iniciada_at', 
       [ride.id] 
-    ) 
-    const paradas = paradasResult.rows 
- 
-    const configsResult = await query('SELECT chave, valor FROM configuracoes') 
+    )).rows 
+  
+    const configs = (await query('SELECT chave, valor FROM configuracoes')).rows 
     const config = {} 
-    configsResult.rows.forEach(c => config[c.chave] = c.valor) 
- 
-    // Remove dados sensíveis antes de retornar 
+    configs.forEach(c => config[c.chave] = c.valor) 
+  
     delete ride.client_id 
     delete ride.driver_id 
- 
+  
     return { ride, rating, paradas, config } 
   }) 
  
