@@ -157,13 +157,21 @@
        class="w-full bg-green-600 text-white rounded-lg py-2.5 font-semibold text-sm"> 
        Enviar avaliação 
      </button> 
+     <a href="/solicitar" 
+       class="block w-full text-center text-gray-400 text-xs py-2 mt-1 hover:text-gray-600"> 
+       Pular avaliação e solicitar nova corrida → 
+     </a> 
    </div> 
  
    <!-- AGRADECIMENTO --> 
    <div id="card-obrigado" class="hidden bg-green-50 border border-green-200 rounded-xl p-4 text-center"> 
      <p class="text-2xl mb-2">⭐</p> 
      <p class="font-semibold text-green-800">Obrigado pela avaliação!</p> 
-     <p class="text-sm text-green-600 mt-1">Sua opinião melhora o serviço para todos.</p> 
+     <p class="text-sm text-green-600 mt-1 mb-4">Sua opinião melhora o serviço para todos.</p> 
+     <a href="/solicitar" 
+       class="block w-full bg-green-600 text-white rounded-xl py-3 font-semibold text-sm hover:bg-green-700"> 
+       🚗 Solicitar nova corrida 
+     </a> 
    </div> 
  
  </div> 
@@ -334,6 +342,22 @@
        document.getElementById('card-obrigado').classList.remove('hidden') 
      } 
    } 
+ 
+   if (ride.status === 'cancelada') { 
+     document.getElementById('card-obrigado').classList.remove('hidden') 
+     document.getElementById('card-obrigado').innerHTML = ` 
+       <p class="text-2xl mb-2">❌</p> 
+       <p class="font-semibold text-gray-700">Corrida cancelada</p> 
+       <p class="text-sm text-gray-500 mt-1 mb-4"> 
+         ${ride.cancelado_por_espera ? 'Cancelada por excesso de tempo de espera.' : 'Esta corrida foi cancelada.'} 
+         ${ride.taxa_cancelamento > 0 ? `Taxa de cancelamento: R$ ${Number(ride.taxa_cancelamento).toFixed(2)}` : ''} 
+       </p> 
+       <a href="/solicitar" 
+         class="block w-full bg-green-600 text-white rounded-xl py-3 font-semibold text-sm hover:bg-green-700 text-center"> 
+         🚗 Solicitar nova corrida 
+       </a> 
+     ` 
+   } 
  } 
  
  let timerInterval = null 
@@ -467,9 +491,9 @@
      }) 
    }) 
    if (r.ok) { 
-     document.getElementById('card-avaliacao').classList.add('hidden') 
-     document.getElementById('card-obrigado').classList.remove('hidden') 
-   } else { 
+       document.getElementById('card-avaliacao').classList.add('hidden') 
+       document.getElementById('card-obrigado').classList.remove('hidden') 
+     } else { 
      btn.textContent = 'Enviar avaliação' 
      btn.disabled = false 
      alert('Erro ao enviar. Tente novamente.') 
