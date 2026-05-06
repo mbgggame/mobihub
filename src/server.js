@@ -38,6 +38,7 @@ fastify.get('/admin/reputacao', (req, reply) => reply.sendFile('admin/reputacao.
 fastify.get('/solicitar', (req, reply) => reply.sendFile('solicitar/index.html')) 
 fastify.get('/r/:token', (req, reply) => reply.sendFile('ride/index.html')) 
 fastify.get('/motorista/:token', (req, reply) => reply.sendFile('motorista/index.html')) 
+fastify.get('/cadastro-motorista/:token', (req, reply) => reply.sendFile('cadastro-motorista/index.html')) 
 fastify.get('/favicon.ico', (req, reply) => reply.code(204).send()) 
  
 // Rotas API 

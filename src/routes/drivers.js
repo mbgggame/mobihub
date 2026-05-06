@@ -107,4 +107,89 @@ export default async function driversRoutes(fastify) {
     await query('DELETE FROM drivers WHERE id = $1', [id]) 
     return { mensagem: 'Motorista excluído com sucesso' } 
   }) 
+ 
+  // Gerar link de convite para motorista 
+  fastify.post('/api/drivers/convite', { preHandler: requireAuth }, async (request, reply) => { 
+    const { v4: uuidv4 } = await import('uuid') 
+    const token = uuidv4() 
+    const expira = new Date() 
+    expira.setDate(expira.getDate() + 7) 
+ 
+    await query(` 
+      INSERT INTO convites (token, expira_em, usado) VALUES ($1, $2, false) 
+    `, [token, expira.toISOString()]) 
+ 
+    const link = `${process.env.BASE_URL}/cadastro-motorista/${token}` 
+    return { token, link, expira: expira.toISOString() } 
+  }) 
+ 
+  // Listar motoristas pendentes 
+  fastify.get('/api/drivers/pendentes', { preHandler: requireAuth }, async () => { 
+    const result = await query(` 
+      SELECT * FROM drivers WHERE status_cadastro = 'pendente' ORDER BY created_at DESC 
+    `) 
+    return result.rows 
+  }) 
+ 
+  // Aprovar motorista 
+  fastify.put('/api/drivers/:id/aprovar', { preHandler: requireAuth }, async (request, reply) => { 
+    const { id } = request.params 
+    await query(` 
+      UPDATE drivers SET status_cadastro = 'aprovado', ativo = 1 WHERE id = $1 
+    `, [id]) 
+ 
+    // Notifica motorista via Telegram 
+    const driverResult = await query('SELECT * FROM drivers WHERE id = $1', [id]) 
+    const driver = driverResult.rows[0]
+    if (driver?.telegram_id) { 
+      const { getBot } = await import('../telegram.js') 
+      const bot = getBot() 
+      const linkPerfil = `${process.env.BASE_URL}/motorista/${driver.token_perfil}` 
+      bot?.sendMessage(driver.telegram_id, 
+        `✅ Seu cadastro foi *aprovado!*\n\nBem-vindo ao MobiHub!\n\n👤 Acesse seu painel:\n${linkPerfil}`, 
+        { parse_mode: 'Markdown' } 
+      ).catch(() => {}) 
+    } 
+ 
+    return { mensagem: 'Motorista aprovado com sucesso' } 
+  }) 
+ 
+  // Reprovar motorista 
+  fastify.put('/api/drivers/:id/reprovar', { preHandler: requireAuth }, async (request, reply) => { 
+    const { motivo } = request.body 
+    const { id } = request.params 
+    await query(` 
+      UPDATE drivers SET status_cadastro = 'reprovado', ativo = 0, motivo_reprovacao = $1 WHERE id = $2 
+    `, [motivo || null, id]) 
+ 
+    const driverResult = await query('SELECT * FROM drivers WHERE id = $1', [id]) 
+    const driver = driverResult.rows[0]
+    if (driver?.telegram_id) { 
+      const { getBot } = await import('../telegram.js') 
+      const bot = getBot() 
+      bot?.sendMessage(driver.telegram_id, 
+        `❌ Seu cadastro não foi aprovado.\n${motivo ? `\nMotivo: ${motivo}` : ''}`, 
+        { parse_mode: 'Markdown' } 
+      ).catch(() => {}) 
+    } 
+ 
+    return { mensagem: 'Motorista reprovado' } 
+  }) 
+ 
+  // Atualizar status online/offline 
+  fastify.put('/api/motorista/:token/online', async (request, reply) => { 
+    const { online } = request.body 
+    const driverResult = await query('SELECT id FROM drivers WHERE token_perfil = $1', [request.params.token]) 
+    const driver = driverResult.rows[0]
+    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
+ 
+    await query(` 
+      UPDATE drivers SET 
+        online = $1, 
+        online_desde = CASE WHEN $1 = 1 THEN CURRENT_TIMESTAMP ELSE NULL END 
+      WHERE id = $2 
+    `, [online ? 1 : 0, driver.id]) 
+ 
+    return { mensagem: online ? 'Você está online' : 'Você está offline', online } 
+  }) 
 }

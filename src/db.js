@@ -116,6 +116,27 @@ export async function initDB() {
     ); 
   `) 
  
+  await query(` 
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS status_cadastro TEXT DEFAULT 'aprovado'; 
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS token_convite TEXT; 
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS convite_expira_em TIMESTAMP; 
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS motivo_reprovacao TEXT; 
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS online INTEGER DEFAULT 0; 
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS online_desde TIMESTAMP; 
+  `) 
+ 
+  await query(` 
+    CREATE TABLE IF NOT EXISTS convites ( 
+      id SERIAL PRIMARY KEY, 
+      token TEXT UNIQUE NOT NULL, 
+      expira_em TIMESTAMP NOT NULL, 
+      usado BOOLEAN DEFAULT false, 
+      usado_em TIMESTAMP, 
+      driver_id INTEGER REFERENCES drivers(id), 
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
+    ) 
+  `) 
+ 
   await seedAdmin() 
   await seedConfigs() 
   await seedTarifas() 

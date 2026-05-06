@@ -276,6 +276,17 @@ export async function sendRideToGroup(ride) {
     ? `\n📅 Data: ${new Date(ride.agendada_para).toLocaleString('pt-BR')}` 
     : '' 
  
+  // Busca motoristas online 
+  const motoristasOnline = (await dbQuery( 
+    'SELECT COUNT(*) as total FROM drivers WHERE ativo = 1 AND online = 1 AND status_cadastro = $1', 
+    ['aprovado'] 
+  )).rows[0] 
+ 
+  const qtdOnline = parseInt(motoristasOnline?.total || 0) 
+  const infoOnline = qtdOnline > 0 
+    ? `\n👥 ${qtdOnline} motorista${qtdOnline > 1 ? 's' : ''} online` 
+    : '\n⚠️ Nenhum motorista online' 
+ 
   // Busca dados do passageiro 
   let infoPassageiro = '' 
   if (ride.client_id) { 
@@ -305,6 +316,7 @@ ${titulo}
 🏁 Destino: ${ride.destino}${dataAgendada}${infoPassageiro} 
 💰 Valor total: R$ ${Number(ride.valor).toFixed(2)} 
 👨‍✈️ Seu recebimento (70%): *${valorMotorista}* 
+${infoOnline} 
  
 📌 Toque para ver onde o passageiro está: 
   `.trim() 
