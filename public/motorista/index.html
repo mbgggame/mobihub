@@ -585,7 +585,244 @@
    } catch(e) { alert('Erro de conexão') } 
  } 
  
- // AGUARDE PARTE B 
+ // ── POLLING DE CORRIDAS ──────────────────────────── 
+ async function verificarNovasCorridas() { 
+   if (!motoristOnline) return 
+   try { 
+     const r = await fetch(`/api/motorista/${tokenMotorista}/corrida-disponivel`) 
+     if (!r.ok) return 
+     const { corrida } = await r.json() 
+     if (corrida && !corridasIgnoradas.includes(corrida.id) && !corridaAtualId) { 
+       mostrarNovaCorrida(corrida) 
+     } else if (!corrida && !corridaAtualId) { 
+       esconderNovaCorrida() 
+     } 
+   } catch(e) {} 
+ } 
+ 
+ async function verificarCorridaAtiva() { 
+   try { 
+     const r = await fetch(`/api/motorista/${tokenMotorista}/corrida-ativa`) 
+     if (!r.ok) return 
+     const { corrida } = await r.json() 
+     if (corrida) { 
+       corridaAtualId = corrida.id 
+       corridaAtualToken = corrida.token 
+       mostrarCorridaAtiva(corrida) 
+     } else if (corridaAtualId) { 
+       corridaAtualId = null 
+       corridaAtualToken = null 
+       esconderCorridaAtiva() 
+     } 
+   } catch(e) {} 
+ } 
+ 
+ function mostrarNovaCorrida(corrida) { 
+   document.getElementById('corrida-origem').textContent = corrida.origem 
+   document.getElementById('corrida-destino').textContent = corrida.destino 
+   document.getElementById('corrida-passageiro').textContent = corrida.client_nome 
+     ? `${corrida.client_nome} ⭐ ${Number(corrida.client_media || 0).toFixed(1)}` 
+     : 'Novo passageiro' 
+   document.getElementById('corrida-valor').textContent = moeda(corrida.valor) 
+   document.getElementById('corrida-ganho').textContent = moeda(corrida.valor_motorista || corrida.valor * 0.70) 
+   document.getElementById('card-nova-corrida').classList.remove('hidden') 
+   document.getElementById('card-sem-corrida').classList.add('hidden') 
+   document.getElementById('badge-nova-corrida').classList.remove('hidden') 
+   tocarSom() 
+   let segundos = 0 
+   if (timerInterval) clearInterval(timerInterval) 
+   timerInterval = setInterval(() => { 
+     segundos++ 
+     document.getElementById('timer-corrida').textContent = `${segundos}s` 
+   }, 1000) 
+   window._corridaDisponivel = corrida 
+   mudarAba('corridas') 
+ } 
+ 
+ function esconderNovaCorrida() { 
+   document.getElementById('card-nova-corrida').classList.add('hidden') 
+   document.getElementById('card-sem-corrida').classList.remove('hidden') 
+   if (timerInterval) clearInterval(timerInterval) 
+   pararSom() 
+ } 
+ 
+ function mostrarCorridaAtiva(corrida) { 
+   document.getElementById('ativa-origem').textContent = corrida.origem 
+   document.getElementById('ativa-destino').textContent = corrida.destino 
+   document.getElementById('ativa-valor').textContent = `💰 ${moeda(corrida.valor_motorista || corrida.valor * 0.70)}` 
+   document.getElementById('card-corrida-ativa').classList.remove('hidden') 
+   document.getElementById('card-sem-corrida').classList.add('hidden') 
+   document.getElementById('card-nova-corrida').classList.add('hidden') 
+   if (corrida.origem_lat) { 
+     document.getElementById('link-navegar').href = 
+       `https://www.google.com/maps/dir/?api=1&destination=${corrida.origem_lat},${corrida.origem_lng}&travelmode=driving` 
+     document.getElementById('link-rota-completa').href = 
+       `https://www.google.com/maps/dir/?api=1&origin=${corrida.origem_lat},${corrida.origem_lng}&destination=${corrida.destino_lat},${corrida.destino_lng}&travelmode=driving` 
+   } 
+   iniciarMapaCorrida(corrida) 
+ } 
+ 
+ function esconderCorridaAtiva() { 
+   document.getElementById('card-corrida-ativa').classList.add('hidden') 
+   document.getElementById('card-sem-corrida').classList.remove('hidden') 
+   if (mapCorrida) { mapCorrida.remove(); mapCorrida = null } 
+ } 
+ 
+ function iniciarMapaCorrida(corrida) { 
+   if (!corrida || !corrida.origem_lat) return 
+   setTimeout(() => { 
+     if (!mapCorrida) { 
+       mapCorrida = L.map('map-corrida').setView([-20.3222, -40.3381], 13) 
+       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(mapCorrida) 
+     } 
+     L.marker([corrida.origem_lat, corrida.origem_lng]).addTo(mapCorrida).bindPopup('📍 Origem') 
+     L.marker([corrida.destino_lat, corrida.destino_lng]).addTo(mapCorrida).bindPopup('🏁 Destino') 
+     mapCorrida.fitBounds([[corrida.origem_lat, corrida.origem_lng],[corrida.destino_lat, corrida.destino_lng]], { padding: [30,30] }) 
+   }, 300) 
+ } 
+ 
+ async function aceitarCorrida() { 
+   const corrida = window._corridaDisponivel 
+   if (!corrida) return 
+   pararSom() 
+   if (timerInterval) clearInterval(timerInterval) 
+   try { 
+     const r = await fetch(`/api/rides/${corrida.id}/aceitar-motorista`, { 
+       method: 'PUT', 
+       headers: { 'Content-Type': 'application/json' }, 
+       body: JSON.stringify({ token_motorista: tokenMotorista }) 
+     }) 
+     const d = await r.json() 
+     if (!r.ok) { alert('Erro: ' + d.error); return } 
+     corridaAtualId = corrida.id 
+     corridaAtualToken = corrida.token 
+     window._corridaDisponivel = null 
+     mostrarCorridaAtiva(corrida) 
+   } catch(e) { alert('Erro de conexão') } 
+ } 
+ 
+ function recusarCorrida() { 
+   const corrida = window._corridaDisponivel 
+   if (!corrida) return 
+   corridasIgnoradas.push(corrida.id) 
+   window._corridaDisponivel = null 
+   esconderNovaCorrida() 
+ } 
+ 
+ function ignorarCorrida() { 
+   pararSom() 
+   if (timerInterval) clearInterval(timerInterval) 
+   document.getElementById('card-nova-corrida').classList.add('hidden') 
+ } 
+ 
+ async function acaoCorridaAtiva(acao) { 
+   if (!corridaAtualId) return 
+   try { 
+     let url = '', method = 'PUT' 
+     if (acao === 'chegou') url = `/api/rides/${corridaAtualId}/motorista-chegou` 
+     else if (acao === 'embarcou') url = `/api/rides/${corridaAtualId}/passageiro-embarcou` 
+     else if (acao === 'parada') { 
+       const btn = document.getElementById('btn-parada') 
+       if (btn.textContent.includes('Parar')) { 
+         url = `/api/rides/${corridaAtualId}/parada/iniciar` 
+         method = 'POST' 
+         btn.textContent = '▶️ Retomar' 
+         btn.className = 'bg-green-50 text-green-700 border border-green-200 rounded-lg py-2.5 text-sm font-medium' 
+       } else { 
+         url = `/api/rides/${corridaAtualId}/parada/ultima/finalizar` 
+         btn.textContent = '⏸️ Parar' 
+         btn.className = 'bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-lg py-2.5 text-sm font-medium' 
+       } 
+     } else if (acao === 'finalizar') { 
+       if (!confirm('Finalizar a corrida?')) return 
+       url = `/api/rides/${corridaAtualId}/finalizar-motorista` 
+     } 
+ 
+     const r = await fetch(url, { 
+       method, 
+       headers: { 'Content-Type': 'application/json' }, 
+       body: JSON.stringify({ token_motorista: tokenMotorista }) 
+     }) 
+     const d = await r.json() 
+     if (r.ok) { 
+       if (acao === 'finalizar') { 
+         alert(`✅ Corrida finalizada!\n\n💰 Valor: ${moeda(d.valor_final)}\n👨‍✈️ Seu ganho: ${moeda(d.valor_motorista)}`) 
+         corridaAtualId = null 
+         corridaAtualToken = null 
+         esconderCorridaAtiva() 
+         carregar() 
+       } else { 
+         alert(d.mensagem || '✅ Ação registrada!') 
+       } 
+     } else { 
+       alert('Erro: ' + (d.error || 'Tente novamente')) 
+     } 
+   } catch(e) { alert('Erro de conexão') } 
+ } 
+ 
+ function tocarSom() { 
+   const audio = document.getElementById('audio-corrida') 
+   if (audio.src && audio.src !== window.location.href) { 
+     audio.play().catch(() => {}) 
+     audioAtivo = true 
+   } 
+ } 
+ 
+ function pararSom() { 
+   const audio = document.getElementById('audio-corrida') 
+   audio.pause() 
+   audio.currentTime = 0 
+   audioAtivo = false 
+ } 
+ 
+ async function carregarHistorico() { 
+   try { 
+     const r = await fetch(`/api/motorista/${tokenMotorista}`) 
+     if (!r.ok) return 
+     const { driver, corridas, financeiro } = await r.json() 
+     document.getElementById('hist-stars').textContent = estrelas(driver.media_avaliacao) 
+     document.getElementById('hist-media').textContent = 
+       driver.media_avaliacao ? `${Number(driver.media_avaliacao).toFixed(1)} / 5.0` : '—' 
+     document.getElementById('hist-total-aval').textContent = `${driver.total_avaliacoes || 0} avaliações recebidas` 
+     document.getElementById('hist-viagens').textContent = driver.total_viagens || 0 
+     document.getElementById('hist-ganhos-total').textContent = moeda(financeiro?.ganhos_total) 
+ 
+     const lista = document.getElementById('hist-lista-corridas') 
+     if (!corridas.length) { 
+       lista.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">Nenhuma corrida ainda</p>' 
+       return 
+     } 
+     const statusCls = { 
+       concluida: 'bg-green-100 text-green-700', 
+       cancelada: 'bg-red-100 text-red-700', 
+       aceita: 'bg-yellow-100 text-yellow-700' 
+     } 
+     lista.innerHTML = corridas.map(c => ` 
+       <div class="border border-gray-100 rounded-xl px-3 py-2.5"> 
+         <div class="flex items-start justify-between"> 
+           <div class="flex-1 min-w-0 mr-2"> 
+             <p class="text-sm text-gray-800 font-medium truncate">${c.origem.split(',')[0]} → ${c.destino.split(',')[0]}</p> 
+             <p class="text-xs text-gray-400 mt-0.5">${new Date(c.created_at).toLocaleDateString('pt-BR')}</p> 
+           </div> 
+           <div class="text-right flex-shrink-0"> 
+             <span class="text-xs px-2 py-0.5 rounded-full ${statusCls[c.status] || 'bg-gray-100 text-gray-600'}">${c.status}</span> 
+             ${c.status === 'concluida' ? `<p class="text-sm font-bold text-green-700 mt-1">${moeda(c.valor_motorista || c.valor * 0.70)}</p>` : ''} 
+           </div> 
+         </div> 
+       </div> 
+     `).join('') 
+   } catch(e) { console.error(e) } 
+ } 
+ 
+ async function polling() { 
+   if (!pollingAtivo) return 
+   await verificarCorridaAtiva() 
+   if (!corridaAtualId) await verificarNovasCorridas() 
+   setTimeout(polling, 8000) 
+ } 
+ 
+ carregar() 
+ setTimeout(polling, 3000) 
  </script> 
 </body> 
 </html>

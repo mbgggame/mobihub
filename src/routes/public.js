@@ -530,4 +530,163 @@ export default async function publicRoutes(fastify) {
  
     return { mensagem: 'Cadastro enviado com sucesso! Aguarde aprovação.' } 
   }) 
+ 
+  fastify.get('/api/motorista/:token/corrida-disponivel', async (request, reply) => { 
+    const driver = (await query( 
+      "SELECT id FROM drivers WHERE token_perfil = $1 AND ativo = 1 AND online = 1 AND status_cadastro = 'aprovado'", 
+      [request.params.token] 
+    )).rows[0] 
+    if (!driver) return { corrida: null } 
+ 
+    const corrida = (await query(` 
+      SELECT r.*, c.nome as client_nome, c.media_avaliacao as client_media 
+      FROM rides r 
+      LEFT JOIN clients c ON r.client_id = c.id 
+      WHERE r.status = 'aberta' 
+      AND r.driver_id IS NULL 
+      ORDER BY r.created_at ASC 
+      LIMIT 1 
+    `)).rows[0] 
+ 
+    return { corrida: corrida || null } 
+  }) 
+ 
+  fastify.get('/api/motorista/:token/corrida-ativa', async (request, reply) => { 
+    const driver = (await query( 
+      'SELECT id FROM drivers WHERE token_perfil = $1', 
+      [request.params.token] 
+    )).rows[0] 
+    if (!driver) return { corrida: null } 
+ 
+    const corrida = (await query( 
+      "SELECT * FROM rides WHERE driver_id = $1 AND status = 'aceita' ORDER BY aceita_at DESC LIMIT 1", 
+      [driver.id] 
+    )).rows[0] 
+ 
+    return { corrida: corrida || null } 
+  }) 
+ 
+  fastify.put('/api/rides/:id/aceitar-motorista', async (request, reply) => { 
+    const { token_motorista } = request.body 
+    const { id } = request.params 
+ 
+    const driver = (await query( 
+      "SELECT * FROM drivers WHERE token_perfil = $1 AND ativo = 1 AND status_cadastro = 'aprovado'", 
+      [token_motorista] 
+    )).rows[0] 
+    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
+ 
+    const ride = (await query( 
+      "SELECT * FROM rides WHERE id = $1 AND status = 'aberta'", 
+      [id] 
+    )).rows[0] 
+    if (!ride) return reply.code(400).send({ error: 'Corrida não disponível' }) 
+ 
+    await query( 
+      "UPDATE rides SET status = 'aceita', driver_id = $1, aceita_at = CURRENT_TIMESTAMP WHERE id = $2", 
+      [driver.id, id] 
+    ) 
+ 
+    if (ride.telegram_message_id) { 
+      try { 
+        const { editGroupMessage } = await import('../telegram.js') 
+        await editGroupMessage(ride.telegram_message_id, 
+          `✅ *Corrida aceita!*\n\n📍 ${ride.origem}\n🏁 ${ride.destino}\n\n🧑‍✈️ *${driver.nome}*\n🚗 ${driver.modelo_carro} ${driver.cor_carro} — ${driver.placa}` 
+        ) 
+      } catch(e) {} 
+    } 
+ 
+    return { mensagem: 'Corrida aceita!', token: ride.token } 
+  }) 
+ 
+  fastify.put('/api/rides/:id/finalizar-motorista', async (request, reply) => { 
+    const { token_motorista } = request.body 
+    const { id } = request.params 
+ 
+    const driver = (await query( 
+      'SELECT * FROM drivers WHERE token_perfil = $1', 
+      [token_motorista] 
+    )).rows[0] 
+    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
+ 
+    const ride = (await query( 
+      "SELECT * FROM rides WHERE id = $1 AND driver_id = $2 AND status = 'aceita'", 
+      [id, driver.id] 
+    )).rows[0] 
+    if (!ride) return reply.code(400).send({ error: 'Corrida não encontrada' }) 
+ 
+    const { calculateTotalRideCost } = await import('../billing.js') 
+    const configs = (await query('SELECT chave, valor FROM configuracoes')).rows 
+    const config = {} 
+    configs.forEach(c => config[c.chave] = c.valor) 
+ 
+    const valorFinal = calculateTotalRideCost( 
+      ride.valor || 0, 
+      ride.custo_espera_inicial || 0, 
+      ride.custo_paradas || 0, 
+      config 
+    ) 
+    const valorMotorista = parseFloat((valorFinal * 0.70).toFixed(2)) 
+ 
+    await query( 
+      "UPDATE rides SET status = 'concluida', concluida_at = CURRENT_TIMESTAMP, valor_final = $1 WHERE id = $2", 
+      [valorFinal, id] 
+    ) 
+ 
+    await query('UPDATE drivers SET total_viagens = total_viagens + 1 WHERE id = $1', [driver.id]) 
+    if (ride.client_id) { 
+      await query('UPDATE clients SET total_corridas = total_corridas + 1 WHERE id = $1', [ride.client_id]) 
+    } 
+ 
+    try { 
+      const { notifyDriverRateClient, editGroupMessage } = await import('../telegram.js') 
+      await notifyDriverRateClient(driver, ride) 
+      if (ride.telegram_message_id) { 
+        await editGroupMessage(ride.telegram_message_id, 
+          `✅ *Corrida concluída!*\n\n📍 ${ride.origem}\n🏁 ${ride.destino}\n💰 R$ ${valorFinal.toFixed(2)}` 
+        ) 
+      } 
+    } catch(e) {} 
+ 
+    return { 
+      mensagem: 'Corrida finalizada!', 
+      valor_final: valorFinal, 
+      valor_motorista: valorMotorista 
+    } 
+  }) 
+ 
+  fastify.put('/api/rides/:id/parada/ultima/finalizar', async (request, reply) => { 
+    const { id } = request.params 
+ 
+    const stop = (await query( 
+      'SELECT * FROM ride_stops WHERE ride_id = $1 AND finalizada_at IS NULL ORDER BY iniciada_at DESC LIMIT 1', 
+      [id] 
+    )).rows[0] 
+    if (!stop) return reply.code(404).send({ error: 'Nenhuma parada em andamento' }) 
+ 
+    const { calculateStopCost, calcularTempoMinutos } = await import('../billing.js') 
+    const configs = (await query('SELECT chave, valor FROM configuracoes')).rows 
+    const config = {} 
+    configs.forEach(c => config[c.chave] = c.valor) 
+ 
+    const duracao = calcularTempoMinutos(stop.iniciada_at) 
+    const custo = calculateStopCost(duracao, config) 
+ 
+    await query( 
+      'UPDATE ride_stops SET finalizada_at = CURRENT_TIMESTAMP, duracao_min = $1, custo = $2 WHERE id = $3', 
+      [duracao, custo, stop.id] 
+    ) 
+ 
+    const totalParadas = (await query( 
+      'SELECT COALESCE(SUM(custo),0) as total, COALESCE(SUM(duracao_min),0) as tempo FROM ride_stops WHERE ride_id = $1', 
+      [id] 
+    )).rows[0] 
+ 
+    await query( 
+      "UPDATE rides SET status_detalhe = 'em_andamento', custo_paradas = $1, tempo_paradas_total_min = $2 WHERE id = $3", 
+      [totalParadas.total, totalParadas.tempo, id] 
+    ) 
+ 
+    return { mensagem: 'Parada finalizada!', custo_parada: custo } 
+  }) 
 } 
