@@ -142,6 +142,12 @@
      </div> 
    </div> 
    
+   <div id="card-sem-localizacao" class="hidden bg-blue-50 border border-blue-200 rounded-xl p-3"> 
+     <p class="text-xs text-blue-700 text-center"> 
+       📍 Aguardando localização do motorista em tempo real... 
+     </p> 
+   </div> 
+   
    <!-- CHAT ANÔNIMO --> 
    <div id="card-chat" class="hidden bg-white border border-gray-200 rounded-xl overflow-hidden"> 
      <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between"> 
@@ -256,6 +262,14 @@
    cancelada: { label: '❌ Corrida cancelada',    cls: 'bg-red-100 text-red-700' } 
  } 
  
+ const statusDetalheConfig = { 
+   aguardando_passageiro: { label: '📍 Motorista chegou! Dirija-se ao veículo', cls: 'bg-orange-100 text-orange-700' }, 
+   em_andamento:          { label: '🚗 Em rota ao destino',                     cls: 'bg-green-100 text-green-700' }, 
+   em_parada:             { label: '⏸️ Corrida em parada',                      cls: 'bg-yellow-100 text-yellow-700' }, 
+   cancelada_passageiro:  { label: '❌ Cancelada por você',                     cls: 'bg-red-100 text-red-700' }, 
+   cancelada_motorista:   { label: '❌ Cancelada pelo motorista',               cls: 'bg-red-100 text-red-700' } 
+ } 
+ 
  function initMap() { 
    map = L.map('map', { zoomControl: true }) 
    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
@@ -317,18 +331,21 @@
  } 
  
  function renderizar(ride, rating, paradas, config) { 
-   console.log('[RENDER] Renderizando status:', ride.status) 
-   const badge = document.getElementById('badge-status') 
-   console.log('[RENDER] Badge element:', badge) 
-   if (!badge) { 
-     console.error('[RENDER] Elemento badge-status não encontrado!') 
-     return 
+   console.log('[RENDER] status:', ride.status, '| detalhe:', ride.status_detalhe) 
+ 
+   // Usa status_detalhe se disponível e relevante 
+   let cfgStatus 
+   if (ride.status_detalhe && statusDetalheConfig[ride.status_detalhe]) { 
+     cfgStatus = statusDetalheConfig[ride.status_detalhe] 
+   } else { 
+     cfgStatus = statusConfig[ride.status] || statusConfig.aberta 
    } 
  
-   // Status 
-   const cfg = statusConfig[ride.status] || statusConfig.aberta 
-   badge.textContent = cfg.label 
-   badge.className = `inline-block mt-1 px-3 py-1 rounded-full text-sm font-semibold ${cfg.cls}` 
+   const badge = document.getElementById('badge-status') 
+   if (badge) { 
+     badge.textContent = cfgStatus.label 
+     badge.className = `inline-block mt-1 px-3 py-1 rounded-full text-sm font-semibold ${cfgStatus.cls}` 
+   } 
  
    const btnCancelar = document.getElementById('card-cancelar-passageiro') 
    if ((ride.status === 'aberta' || ride.status === 'aceita') && !ride.passageiro_embarcou_at) { 
@@ -523,27 +540,48 @@
  async function atualizarLocalizacaoMotorista(ride) { 
    try { 
      const r = await fetch(`/api/ride/${token}/motorista-location`) 
-     if (!r.ok) return 
-     const { location } = await r.json() 
- 
-     if (!location || !location.ativo) { 
-       document.getElementById('txt-mapa-info').textContent = 'Aguardando localização do motorista...' 
+     if (!r.ok) { 
+       console.log('[LOCATION] Erro na rota:', r.status) 
        return 
      } 
+     const { location } = await r.json() 
+     console.log('[LOCATION] Dados:', location) 
+ 
+     if (!location) { 
+       document.getElementById('txt-mapa-info').textContent = 
+         'Motorista ainda não compartilhou localização' 
+       document.getElementById('card-sem-localizacao')?.classList.remove('hidden') 
+       document.getElementById('card-eta')?.classList.add('hidden') 
+       return 
+     } 
+ 
+     if (!location.ativo) { 
+       document.getElementById('txt-mapa-info').textContent = 
+         'Localização desatualizada — aguardando GPS do motorista' 
+       document.getElementById('card-sem-localizacao')?.classList.remove('hidden') 
+       document.getElementById('card-eta')?.classList.add('hidden') 
+       return 
+     } 
+ 
+     document.getElementById('card-sem-localizacao')?.classList.add('hidden') 
  
      // Atualiza pin do motorista 
      if (markerMotorista) { 
        markerMotorista.setLatLng([location.lat, location.lng]) 
      } else { 
        markerMotorista = L.marker([location.lat, location.lng], { icon: iconMotorista }) 
-         .addTo(map).bindPopup('🚗 Motorista') 
+         .addTo(map).bindPopup('🚗 ' + (ride.driver_nome || 'Motorista')) 
+       console.log('[LOCATION] Pin criado no mapa') 
      } 
  
      // Ajusta mapa 
      const destLat = location.fase === 'em_rota' ? ride.destino_lat : ride.origem_lat 
      const destLng = location.fase === 'em_rota' ? ride.destino_lng : ride.origem_lng 
-     if (destLat) { 
-       map.fitBounds([[location.lat, location.lng],[destLat, destLng]], { padding: [40,40] }) 
+     if (destLat && markerMotorista) { 
+       map.fitBounds([ 
+         [location.lat, location.lng], 
+         [destLat, destLng] 
+       ], { padding: [40, 40] }) 
      } 
  
      // ETA 
