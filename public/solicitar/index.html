@@ -75,10 +75,16 @@
  
     <div class="bg-white border border-gray-200 rounded-xl p-4 space-y-3"> 
       <div> 
-        <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">📍 Origem</label> 
-        <input id="busca-orig" type="text" placeholder="Ex: Aeroporto, Shopping, Rua X 123..." 
-          class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-      </div> 
+         <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">📍 Origem</label> 
+         <div class="flex gap-2 mt-1"> 
+           <input id="busca-orig" type="text" placeholder="Ex: Aeroporto, Shopping, Rua X 123..." 
+             class="flex-1 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+           <button onclick="usarLocalizacaoAtual()" 
+             class="text-xs text-green-600 border border-green-200 rounded-lg px-2 py-1 hover:bg-green-50 flex-shrink-0 flex items-center gap-1"> 
+             📍 Minha localização 
+           </button> 
+         </div> 
+       </div> 
       <div> 
         <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">🏁 Destino</label> 
         <input id="busca-dest" type="text" placeholder="Ex: Aeroporto, Shopping, Rua X 123..." 
@@ -204,6 +210,7 @@
  let marcadores = { origem: null, destino: null } 
  let pontos = { origem: null, destino: null } 
  let origem = null, destino = null 
+ let origemLat, origemLng, origemEndereco, destinoLat, destinoLng 
  let tipoCorreida = 'normal' 
  let valorCalculado = 0 
  let intervalRedirect = null 
@@ -365,6 +372,10 @@
        txt.className = 'text-xs text-center text-green-600 font-medium' 
      } 
  
+     if (typeof origemLat !== 'undefined' && origemLat) { 
+       desenharLinhasMotoristas(origemLat, origemLng) 
+     } 
+ 
    } catch(e) { 
      console.error('[MOTORISTAS ONLINE]', e) 
    } 
@@ -386,9 +397,113 @@
      if (!place.geometry) return 
      const lat = place.geometry.location.lat() 
      const lng = place.geometry.location.lng() 
+ 
+     if (tipo === 'origem') { 
+       origemLat = lat 
+       origemLng = lng 
+       origemEndereco = place.formatted_address 
+       mostrarOrigemNoMapa(origemLat, origemLng, origemEndereco) 
+       if (destinoLat) calcularValor() 
+     } else { 
+       destinoLat = lat 
+       destinoLng = lng 
+       if (origemLat) calcularValor() 
+     } 
+ 
      marcarPonto(lat, lng, place.formatted_address || place.name, tipo) 
      map.setCenter({ lat, lng }) 
      map.setZoom(15) 
+   }) 
+ } 
+ 
+ function mostrarOrigemNoMapa(lat, lng, endereco) { 
+   if (window.markerOrigem) { 
+     window.markerOrigem.setMap(null) 
+   } 
+ 
+   window.markerOrigem = new google.maps.Marker({ 
+     position: { lat, lng }, 
+     map, 
+     icon: { 
+       url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(` 
+         <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"> 
+           <circle cx="20" cy="20" r="18" fill="#16a34a" stroke="white" stroke-width="2"/> 
+           <text x="20" y="26" text-anchor="middle" font-size="16" font-weight="bold" fill="white">A</text> 
+         </svg> 
+       `), 
+       scaledSize: new google.maps.Size(40, 40), 
+       anchor: new google.maps.Point(20, 20) 
+     }, 
+     title: 'Sua localização: ' + endereco 
+   }) 
+ 
+   map.panTo({ lat, lng }) 
+   map.setZoom(14) 
+ 
+   // Desenha linhas tracejadas dos motoristas até a origem 
+   desenharLinhasMotoristas(lat, lng) 
+ } 
+ 
+ let linhasMotoristas = [] 
+ 
+ function desenharLinhasMotoristas(origemLat, origemLng) { 
+   // Remove linhas anteriores 
+   linhasMotoristas.forEach(l => l.setMap(null)) 
+   linhasMotoristas = [] 
+ 
+   marcadoresMotoristas.forEach(item => { 
+     if (!item.marker) return 
+     const pos = item.marker.getPosition() 
+     if (!pos) return 
+ 
+     const linha = new google.maps.Polyline({ 
+       path: [ 
+         { lat: pos.lat(), lng: pos.lng() }, 
+         { lat: origemLat, lng: origemLng } 
+       ], 
+       geodesic: true, 
+       strokeColor: '#2563eb', 
+       strokeOpacity: 0, 
+       icons: [{ 
+         icon: { 
+           path: 'M 0,-1 0,1', 
+           strokeOpacity: 0.6, 
+           scale: 3, 
+           strokeColor: '#2563eb' 
+         }, 
+         offset: '0', 
+         repeat: '15px' 
+       }], 
+       map 
+     }) 
+ 
+     linhasMotoristas.push(linha) 
+   }) 
+ } 
+ 
+ function usarLocalizacaoAtual() { 
+   if (!navigator.geolocation) { 
+     alert('Geolocalização não suportada') 
+     return 
+   } 
+   navigator.geolocation.getCurrentPosition(pos => { 
+     const lat = pos.coords.latitude 
+     const lng = pos.coords.longitude 
+ 
+     // Geocodifica para obter o endereço 
+     const geocoder = new google.maps.Geocoder() 
+     geocoder.geocode({ location: { lat, lng } }, (results, status) => { 
+       if (status === 'OK' && results[0]) { 
+         origemLat = lat 
+         origemLng = lng 
+         origemEndereco = results[0].formatted_address 
+         document.getElementById('busca-orig').value = origemEndereco 
+         mostrarOrigemNoMapa(lat, lng, origemEndereco) 
+         if (destinoLat) calcularValor() 
+       } 
+     }) 
+   }, () => { 
+     alert('Não foi possível obter sua localização') 
    }) 
  } 
  
