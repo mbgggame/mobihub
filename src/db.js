@@ -176,6 +176,17 @@ export async function initDB() {
     ) 
   `) 
  
+  await query(` 
+    CREATE TABLE IF NOT EXISTS ride_messages ( 
+      id SERIAL PRIMARY KEY, 
+      ride_id INTEGER REFERENCES rides(id), 
+      remetente TEXT NOT NULL CHECK(remetente IN ('motorista', 'passageiro')), 
+      mensagem TEXT NOT NULL, 
+      lida INTEGER DEFAULT 0, 
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
+    ) 
+  `) 
+ 
   // Migra veículos existentes dos motoristas para a nova tabela 
   await query(` 
     INSERT INTO vehicles (driver_id, modelo, ano, cor, placa, ativo) 
