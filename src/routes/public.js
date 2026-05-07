@@ -441,27 +441,34 @@ export default async function publicRoutes(fastify) {
       SELECT 
         d.id, d.nome, d.modelo_carro, d.cor_carro, d.ano_carro, 
         d.media_avaliacao, d.total_viagens, 
-        dl.lat, dl.lng, dl.updated_at as location_updated 
+        dl.lat, dl.lng, 
+        EXTRACT(EPOCH FROM (NOW() - dl.updated_at)) as segundos_atras 
       FROM drivers d 
-      LEFT JOIN driver_locations dl ON dl.id = ( 
-        SELECT id FROM driver_locations 
+      LEFT JOIN LATERAL ( 
+        SELECT lat, lng, updated_at 
+        FROM driver_locations 
         WHERE driver_id = d.id 
-        ORDER BY updated_at DESC LIMIT 1 
-      ) 
+        ORDER BY updated_at DESC 
+        LIMIT 1 
+      ) dl ON true 
       WHERE d.ativo = 1 
       AND d.online = 1 
       AND d.status_cadastro = 'aprovado' 
+      AND NOT EXISTS ( 
+        SELECT 1 FROM rides r 
+        WHERE r.driver_id = d.id AND r.status = 'aceita' 
+      ) 
     `)).rows 
- 
+  
     return motoristas.map(m => ({ 
       id: m.id, 
-      nome: m.nome.split(' ')[0], // Só o primeiro nome 
+      nome: m.nome.split(' ')[0], 
       carro: `${m.modelo_carro} ${m.cor_carro}`, 
       media: m.media_avaliacao, 
       viagens: m.total_viagens, 
-      lat: m.lat || null, 
-      lng: m.lng || null, 
-      tem_localizacao: !!(m.lat && m.lng) 
+      lat: m.lat && m.segundos_atras < 300 ? m.lat : null, 
+      lng: m.lng && m.segundos_atras < 300 ? m.lng : null, 
+      tem_localizacao: !!(m.lat && m.segundos_atras < 300) 
     })) 
   }) 
  

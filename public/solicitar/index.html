@@ -305,57 +305,65 @@
      const motoristas = await r.json() 
  
      // Remove pins anteriores 
-     marcadoresMotoristas.forEach(m => m.setMap(null)) 
+     marcadoresMotoristas.forEach(m => { 
+       if (m.marker) m.marker.setMap(null) 
+       if (m.infoWindow) m.infoWindow.close() 
+     }) 
      marcadoresMotoristas = [] 
  
+     const txt = document.getElementById('txt-motoristas-online') 
+ 
      if (!motoristas.length) { 
-       document.getElementById('txt-motoristas-online').textContent = '😔 Nenhum motorista disponível agora' 
-       document.getElementById('txt-motoristas-online').className = 'text-xs text-center text-red-400 py-1' 
+       if (txt) { 
+         txt.textContent = '😔 Nenhum motorista disponível agora' 
+         txt.className = 'text-xs text-center text-red-400' 
+       } 
        return 
      } 
  
      const comLocalizacao = motoristas.filter(m => m.lat && m.lng) 
  
-     // Adiciona pins dos motoristas com localização 
      comLocalizacao.forEach(m => { 
        const marker = new google.maps.Marker({ 
          position: { lat: parseFloat(m.lat), lng: parseFloat(m.lng) }, 
          map, 
          icon: { 
            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(` 
-             <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"> 
-               <circle cx="20" cy="20" r="18" fill="#2563eb" stroke="white" stroke-width="2"/> 
-               <text x="20" y="26" text-anchor="middle" font-size="20" fill="white">🚗</text> 
+             <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44"> 
+               <circle cx="22" cy="22" r="20" fill="#2563eb" stroke="white" stroke-width="2"/> 
+               <text x="22" y="30" text-anchor="middle" font-size="22" fill="white">🚗</text> 
              </svg> 
            `), 
-           scaledSize: new google.maps.Size(40, 40), 
-           anchor: new google.maps.Point(20, 20) 
+           scaledSize: new google.maps.Size(44, 44), 
+           anchor: new google.maps.Point(22, 22) 
          }, 
          title: `${m.nome} — ${m.carro}` 
        }) 
  
        const infoWindow = new google.maps.InfoWindow({ 
          content: ` 
-           <div style="font-size:13px;padding:4px"> 
-             <p style="font-weight:bold;margin:0">${m.nome}</p> 
-             <p style="color:#666;margin:2px 0">${m.carro}</p> 
-             <p style="color:#f59e0b;margin:0">${'★'.repeat(Math.round(m.media || 0))} ${Number(m.media || 0).toFixed(1)}</p> 
-             <p style="color:#16a34a;font-size:11px;margin:2px 0">${m.viagens} viagens</p> 
+           <div style="font-size:13px;padding:4px;min-width:120px"> 
+             <p style="font-weight:bold;margin:0;color:#1f2937">${m.nome}</p> 
+             <p style="color:#6b7280;margin:2px 0;font-size:12px">${m.carro}</p> 
+             <p style="color:#f59e0b;margin:0">${'★'.repeat(Math.round(m.media || 0))}${'☆'.repeat(5 - Math.round(m.media || 0))} ${Number(m.media || 0).toFixed(1)}</p> 
+             <p style="color:#16a34a;font-size:11px;margin:2px 0">${m.viagens || 0} viagens</p> 
+             <p style="color:#16a34a;font-size:11px;font-weight:bold">✅ Disponível</p> 
            </div> 
          ` 
        }) 
  
        marker.addListener('click', () => { 
+         marcadoresMotoristas.forEach(item => item.infoWindow?.close()) 
          infoWindow.open(map, marker) 
        }) 
  
-       marcadoresMotoristas.push(marker) 
+       marcadoresMotoristas.push({ marker, infoWindow }) 
      }) 
  
-     const total = motoristas.length 
-     const txt = document.getElementById('txt-motoristas-online') 
-     txt.textContent = `🟢 ${total} motorista${total > 1 ? 's' : ''} disponível${total > 1 ? 'is' : ''} agora` 
-     txt.className = 'text-xs text-center text-green-600 py-1 font-medium' 
+     if (txt) { 
+       txt.textContent = `🟢 ${motoristas.length} motorista${motoristas.length > 1 ? 's' : ''} disponível${motoristas.length > 1 ? 'is' : ''} agora` 
+       txt.className = 'text-xs text-center text-green-600 font-medium' 
+     } 
  
    } catch(e) { 
      console.error('[MOTORISTAS ONLINE]', e) 
