@@ -656,6 +656,28 @@
        corridaAtualToken = corrida.token 
        mostrarCorridaAtiva(corrida) 
      } else if (corridaAtualId) { 
+       // Verifica motivo — cancelada ou concluída 
+       try { 
+         const rc = await fetch(`/api/motorista/${tokenMotorista}/ultima-corrida`) 
+         if (rc.ok) { 
+           const { corrida: ultima } = await rc.json() 
+           const foiCancelada = ultima?.status === 'cancelada' 
+           const resumoDiv = document.getElementById('card-sem-corrida') 
+ 
+           if (foiCancelada) { 
+             const canceladaPor = ultima?.status_detalhe === 'cancelada_passageiro' 
+               ? 'pelo passageiro' : 'por você' 
+             resumoDiv.innerHTML = ` 
+               <div class="text-center py-4"> 
+                 <p class="text-3xl mb-2">❌</p> 
+                 <p class="font-bold text-gray-800 text-lg">Corrida cancelada ${canceladaPor}</p> 
+                 <p class="text-sm text-gray-400 mt-2">Aguardando próxima corrida...</p> 
+               </div> 
+             ` 
+           } 
+         } 
+       } catch(e) {} 
+ 
        corridaAtualId = null 
        corridaAtualToken = null 
        esconderCorridaAtiva() 
@@ -843,7 +865,7 @@
        } 
        return 
      } else if (acao === 'cancelar') { 
-       if (!confirm('Cancelar a corrida? Esta ação não pode ser desfeita.')) return 
+       if (!confirm('Cancelar a corrida?')) return 
        try { 
          const r = await fetch(`/api/motorista/${tokenMotorista}/cancelar-corrida/${corridaAtualId}`, { 
            method: 'PUT', 
@@ -854,7 +876,6 @@
            corridaAtualId = null 
            corridaAtualToken = null 
            esconderCorridaAtiva() 
-     
            const resumoDiv = document.getElementById('card-sem-corrida') 
            resumoDiv.innerHTML = ` 
              <div class="text-center py-4"> 
@@ -864,10 +885,7 @@
              </div> 
            ` 
            resumoDiv.classList.remove('hidden') 
-     
-           // Restaura status online 
            setTimeout(() => { 
-             renderizarStatusOnline({ online: motoristOnline ? 1 : 0 }) 
              resumoDiv.innerHTML = ` 
                <div class="text-center py-8"> 
                  <p class="text-4xl mb-3">🚗</p> 

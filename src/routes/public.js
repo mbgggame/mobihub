@@ -856,4 +856,19 @@ export default async function publicRoutes(fastify) {
    
      return { ok: true } 
    }) 
+ 
+   fastify.get('/api/motorista/:token/ultima-corrida', async (request, reply) => { 
+     const driver = (await query( 
+       'SELECT id FROM drivers WHERE token_perfil = $1', [request.params.token] 
+     )).rows[0] 
+     if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
+   
+     const corrida = (await query(` 
+       SELECT id, status, status_detalhe, valor, valor_motorista, origem, destino 
+       FROM rides WHERE driver_id = $1 
+       ORDER BY updated_at DESC LIMIT 1 
+     `, [driver.id])).rows[0] 
+   
+     return { corrida: corrida || null } 
+   }) 
  } 
