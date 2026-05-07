@@ -136,9 +136,11 @@ export default async function publicRoutes(fastify) {
     if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
   
     const corrida = (await query(` 
-      SELECT id, status, status_detalhe, valor, valor_motorista, origem, destino 
+      SELECT id, status, status_detalhe, valor, valor_motorista, valor_final, 
+        origem, destino, concluida_at, cancelada_at 
       FROM rides WHERE driver_id = $1 
-      ORDER BY updated_at DESC LIMIT 1 
+      ORDER BY COALESCE(concluida_at, cancelada_at, created_at) DESC 
+      LIMIT 1 
     `, [driver.id])).rows[0] 
   
     return { corrida: corrida || null } 
@@ -485,22 +487,30 @@ export default async function publicRoutes(fastify) {
     if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
   
     const ride = (await query( 
-      "SELECT * FROM rides WHERE id = $1 AND driver_id = $2 AND status = 'aceita'", 
+      "SELECT * FROM rides WHERE id = $1 AND driver_id = $2 AND status IN ('aceita', 'aberta')", 
       [rideId, driver.id] 
     )).rows[0] 
-    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
   
-    // Não pode cancelar se passageiro já embarcou 
+    if (!ride) { 
+      // Verifica se a corrida existe mas já foi finalizada 
+      const corridaExiste = (await query( 
+        'SELECT status FROM rides WHERE id = $1', [rideId] 
+      )).rows[0] 
+      if (corridaExiste) { 
+        return reply.code(400).send({ error: `Não é possível cancelar corrida com status: ${corridaExiste.status}` }) 
+      } 
+      return reply.code(404).send({ error: 'Corrida não encontrada' }) 
+    } 
+  
     if (ride.passageiro_embarcou_at) { 
-      return reply.code(400).send({ error: 'Não é possível cancelar após embarque' }) 
+      return reply.code(400).send({ error: 'Não é possível cancelar após embarque do passageiro' }) 
     } 
   
     await query(` 
       UPDATE rides SET 
         status = 'cancelada', 
         cancelada_at = CURRENT_TIMESTAMP, 
-        status_detalhe = 'cancelada_motorista', 
-        driver_id = NULL 
+        status_detalhe = 'cancelada_motorista' 
       WHERE id = $1 
     `, [rideId]) 
   
@@ -509,12 +519,12 @@ export default async function publicRoutes(fastify) {
       const { editGroupMessage } = await import('../telegram.js') 
       if (ride.telegram_message_id) { 
         await editGroupMessage(ride.telegram_message_id, 
-          `❌ *Corrida cancelada pelo motorista*\n\n📍 ${ride.origem}\n🏁 ${ride.destino}\n\nA corrida voltou a estar disponível.` 
+          `❌ *Corrida cancelada pelo motorista*\n\n📍 ${ride.origem}\n🏁 ${ride.destino}` 
         ) 
       } 
     } catch(e) {} 
   
-    return { mensagem: 'Corrida cancelada' } 
+    return { mensagem: 'Corrida cancelada com sucesso' } 
   }) 
 
   // --- REPUTAÇÃO E AVALIAÇÕES ---

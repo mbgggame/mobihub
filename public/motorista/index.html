@@ -657,7 +657,13 @@
        corridaAtualToken = corrida.token 
        mostrarCorridaAtiva(corrida) 
      } else if (corridaAtualId) { 
-       // Busca última corrida para saber motivo 
+       const idAnterior = corridaAtualId 
+       corridaAtualId = null 
+       corridaAtualToken = null 
+       esconderCorridaAtiva() 
+       pararLocalizacao() 
+ 
+       // Verifica o motivo pelo qual a corrida sumiu 
        try { 
          const rc = await fetch(`/api/motorista/${tokenMotorista}/ultima-corrida`) 
          if (rc.ok) { 
@@ -666,8 +672,8 @@
  
            if (ultima?.status === 'cancelada' && ultima?.status_detalhe === 'cancelada_passageiro') { 
              resumoDiv.innerHTML = ` 
-               <div class="text-center py-4"> 
-                 <p class="text-3xl mb-2">❌</p> 
+               <div class="text-center py-6"> 
+                 <p class="text-4xl mb-3">❌</p> 
                  <p class="font-bold text-red-600 text-lg">Corrida cancelada pelo passageiro</p> 
                  <p class="text-sm text-gray-400 mt-2">Aguardando próxima corrida...</p> 
                </div> 
@@ -682,14 +688,25 @@
                  </div> 
                ` 
              }, 4000) 
+           } else if (ultima?.status === 'concluida') { 
+             // Só mostra resumo financeiro se foi concluída 
+             resumoDiv.innerHTML = ` 
+               <div class="text-center py-4"> 
+                 <p class="text-3xl mb-2">✅</p> 
+                 <p class="font-bold text-gray-800 text-lg">Corrida finalizada!</p> 
+                 <div class="bg-green-50 border border-green-200 rounded-xl p-4 mt-3 text-left space-y-1"> 
+                   <p class="text-sm text-gray-600">💰 Valor total: <span class="font-bold text-green-700">R$ ${Number(ultima.valor_final || ultima.valor || 0).toFixed(2)}</span></p> 
+                   <p class="text-sm text-gray-600">👨‍✈️ Seu ganho: <span class="font-bold text-blue-700">R$ ${Number(ultima.valor_motorista || (ultima.valor * 0.70) || 0).toFixed(2)}</span></p> 
+                 </div> 
+                 <p class="text-xs text-gray-400 mt-3">Aguardando próxima corrida...</p> 
+               </div> 
+             ` 
+             resumoDiv.classList.remove('hidden') 
            } 
          } 
-       } catch(e) {} 
- 
-       corridaAtualId = null 
-       corridaAtualToken = null 
-       esconderCorridaAtiva() 
-       pararLocalizacao() 
+       } catch(e) { 
+         console.error('[CORRIDA] Erro ao buscar última corrida:', e) 
+       } 
      } 
    } catch(e) {} 
  } 
