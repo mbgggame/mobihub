@@ -325,9 +325,16 @@ export default async function ridesRoutes(fastify) {
     const corridasAtivas = corridasAtivasResult.rows
  
     return { 
-      resumoDia: { ...resumoDia, motoristas_ativos: motoristasAtivos.total }, 
+      resumoDia: { 
+        total_hoje: parseInt(resumoDia.total_hoje) || 0, 
+        receita_hoje: parseFloat(resumoDia.receita_hoje) || 0, 
+        abertas: parseInt(resumoDia.abertas) || 0, 
+        agendadas: parseInt(resumoDia.agendadas) || 0, 
+        concluidas: parseInt(resumoDia.concluidas) || 0, 
+        motoristas_ativos: parseInt(motoristasAtivos.total) || 0 
+      }, 
       ultimos15dias, 
-      tempoMedioAceite: tempoMedioAceite.minutos || 0, 
+      tempoMedioAceite: parseFloat(tempoMedioAceite.minutos) || 0, 
       topMotoristas, 
       avaliacaoMedia, 
       corridasAtivas 

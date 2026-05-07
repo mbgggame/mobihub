@@ -322,8 +322,9 @@
  } 
  
  function renderCards(r) { 
+   console.log('[DASHBOARD] renderCards:', r) 
    document.getElementById('card-total').textContent = r.total_hoje || 0 
-   document.getElementById('card-receita').textContent = `R$ ${(r.receita_hoje || 0).toFixed(2)}` 
+   document.getElementById('card-receita').textContent = `R$ ${Number(r.receita_hoje || 0).toFixed(2)}` 
    document.getElementById('card-abertas').textContent = r.abertas || 0 
    document.getElementById('card-agendadas').textContent = r.agendadas || 0 
    document.getElementById('card-motoristas').textContent = r.motoristas_ativos || 0 
