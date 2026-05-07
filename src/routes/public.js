@@ -691,4 +691,94 @@ export default async function publicRoutes(fastify) {
  
     return { mensagem: 'Parada finalizada!', custo_parada: custo } 
   }) 
+ 
+  // Buscar mensagens da corrida (passageiro) 
+  fastify.get('/api/ride/:token/mensagens', async (request, reply) => { 
+    const ride = (await query('SELECT id FROM rides WHERE token = $1', [request.params.token])).rows[0] 
+    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
+    const mensagens = (await query( 
+      'SELECT id, remetente, mensagem, created_at FROM ride_messages WHERE ride_id = $1 ORDER BY created_at ASC', 
+      [ride.id] 
+    )).rows 
+    await query("UPDATE ride_messages SET lida = 1 WHERE ride_id = $1 AND remetente = 'motorista' AND lida = 0", [ride.id]) 
+    return { mensagens } 
+  }) 
+ 
+  // Passageiro envia mensagem 
+  fastify.post('/api/ride/:token/mensagem', async (request, reply) => { 
+    const { mensagem } = request.body 
+    if (!mensagem?.trim()) return reply.code(400).send({ error: 'Mensagem vazia' }) 
+    const ride = (await query("SELECT id FROM rides WHERE token = $1 AND status = 'aceita'", [request.params.token])).rows[0] 
+    if (!ride) return reply.code(404).send({ error: 'Corrida não ativa' }) 
+    await query('INSERT INTO ride_messages (ride_id, remetente, mensagem) VALUES ($1, $2, $3)', [ride.id, 'passageiro', mensagem.trim()]) 
+    return { mensagem: 'Enviado' } 
+  }) 
+ 
+  // Motorista envia mensagem 
+  fastify.post('/api/motorista/:token/mensagem/:rideId', async (request, reply) => { 
+    const { mensagem } = request.body 
+    const { token, rideId } = request.params 
+    if (!mensagem?.trim()) return reply.code(400).send({ error: 'Mensagem vazia' }) 
+    const driver = (await query('SELECT id FROM drivers WHERE token_perfil = $1', [token])).rows[0] 
+    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
+    const ride = (await query("SELECT id FROM rides WHERE id = $1 AND driver_id = $2 AND status = 'aceita'", [rideId, driver.id])).rows[0] 
+    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
+    await query('INSERT INTO ride_messages (ride_id, remetente, mensagem) VALUES ($1, $2, $3)', [ride.id, 'motorista', mensagem.trim()]) 
+    return { mensagem: 'Enviado' } 
+  }) 
+ 
+  // Motorista busca mensagens 
+  fastify.get('/api/motorista/:token/mensagens/:rideId', async (request, reply) => { 
+    const { token, rideId } = request.params 
+    const driver = (await query('SELECT id FROM drivers WHERE token_perfil = $1', [token])).rows[0] 
+    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
+    const mensagens = (await query( 
+      'SELECT id, remetente, mensagem, created_at FROM ride_messages WHERE ride_id = $1 ORDER BY created_at ASC', 
+      [rideId] 
+    )).rows 
+    await query("UPDATE ride_messages SET lida = 1 WHERE ride_id = $1 AND remetente = 'passageiro' AND lida = 0", [rideId]) 
+    return { mensagens } 
+  }) 
+ 
+  // ETA e localização do motorista 
+  fastify.get('/api/ride/:token/motorista-location', async (request, reply) => { 
+    const ride = (await query('SELECT * FROM rides WHERE token = $1', [request.params.token])).rows[0] 
+    if (!ride || !ride.driver_id) return { location: null } 
+ 
+    const location = (await query(` 
+      SELECT lat, lng, EXTRACT(EPOCH FROM (NOW() - updated_at)) as segundos_atras 
+      FROM driver_locations WHERE driver_id = $1 ORDER BY updated_at DESC LIMIT 1 
+    `, [ride.driver_id])).rows[0] 
+ 
+    if (!location) return { location: null } 
+ 
+    const destLat = ride.passageiro_embarcou_at ? ride.destino_lat : ride.origem_lat 
+    const destLng = ride.passageiro_embarcou_at ? ride.destino_lng : ride.origem_lng 
+ 
+    let etaMinutos = null 
+    let distanciaKm = null 
+ 
+    if (destLat && destLng) { 
+      const R = 6371 
+      const dLat = (destLat - location.lat) * Math.PI / 180 
+      const dLng = (destLng - location.lng) * Math.PI / 180 
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) + 
+        Math.cos(location.lat * Math.PI / 180) * Math.cos(destLat * Math.PI / 180) * 
+        Math.sin(dLng/2) * Math.sin(dLng/2) 
+      distanciaKm = parseFloat((R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(1)) 
+      etaMinutos = Math.max(1, Math.round(distanciaKm / 0.5)) 
+    } 
+ 
+    return { 
+      location: { 
+        lat: location.lat, 
+        lng: location.lng, 
+        segundos_atras: Math.round(location.segundos_atras), 
+        ativo: location.segundos_atras < 120, 
+        eta_minutos: etaMinutos, 
+        distancia_km: distanciaKm, 
+        fase: ride.passageiro_embarcou_at ? 'em_rota' : 'a_caminho' 
+      } 
+    } 
+  }) 
 } 
