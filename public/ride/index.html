@@ -151,54 +151,53 @@
      <div class="fixed inset-0 bg-black bg-opacity-50 z-40"></div> 
      
      <!-- Card de avaliação centralizado --> 
-     <div class="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl p-6 shadow-2xl"> 
-       <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto mb-4"></div> 
-       
-       <div class="text-center mb-4"> 
-         <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3"> 
-           <svg class="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"> 
-             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/> 
-           </svg> 
+     <div class="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl shadow-2xl" 
+       style="max-height: 90vh; overflow-y: auto;"> 
+       <div class="p-6"> 
+         <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto mb-4"></div> 
+   
+         <div class="text-center mb-4"> 
+           <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3"> 
+             <svg class="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"> 
+               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/> 
+             </svg> 
+           </div> 
+           <h2 class="text-xl font-bold text-gray-900">Corrida concluída!</h2> 
+           <p class="text-sm text-gray-500 mt-1">Como foi sua experiência?</p> 
          </div> 
-         <h2 class="text-xl font-bold text-gray-900">Corrida concluída!</h2> 
-         <p class="text-sm text-gray-500 mt-1">Como foi sua experiência?</p> 
-       </div> 
    
-       <!-- Info do motorista --> 
-       <div class="flex items-center gap-3 bg-gray-50 rounded-xl p-3 mb-5"> 
-         <div id="aval-avatar" 
-           class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold text-lg flex-shrink-0"> 
+         <div class="flex items-center gap-3 bg-gray-50 rounded-xl p-3 mb-5"> 
+           <div id="aval-avatar" 
+             class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold text-lg flex-shrink-0 overflow-hidden"> 
+           </div> 
+           <div> 
+             <p id="aval-nome-motorista" class="font-semibold text-gray-900"></p> 
+             <p id="aval-carro-motorista" class="text-xs text-gray-500"></p> 
+           </div> 
          </div> 
-         <div> 
-           <p id="aval-nome-motorista" class="font-semibold text-gray-900"></p> 
-           <p id="aval-carro-motorista" class="text-xs text-gray-500"></p> 
+   
+         <div class="flex justify-center gap-3 mb-3"> 
+           <button class="star-aval text-5xl transition-transform active:scale-125" data-v="1">☆</button> 
+           <button class="star-aval text-5xl transition-transform active:scale-125" data-v="2">☆</button> 
+           <button class="star-aval text-5xl transition-transform active:scale-125" data-v="3">☆</button> 
+           <button class="star-aval text-5xl transition-transform active:scale-125" data-v="4">☆</button> 
+           <button class="star-aval text-5xl transition-transform active:scale-125" data-v="5">☆</button> 
          </div> 
+         <p id="txt-nota-selecionada" class="text-center text-sm text-gray-400 mb-4">Toque nas estrelas para avaliar</p> 
+   
+         <textarea id="comentario" rows="2" placeholder="Comentário opcional..." 
+           class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 mb-4 resize-none"> 
+         </textarea> 
+   
+         <button id="btn-avaliar" onclick="enviarAvaliacao()" 
+           class="w-full bg-green-600 text-white rounded-xl py-4 font-bold text-base hover:bg-green-700 mb-3"> 
+           ⭐ Enviar avaliação 
+         </button> 
+         <a href="/solicitar" 
+           class="block w-full text-center text-gray-400 text-sm py-2 hover:text-gray-600 mb-4"> 
+           Pular → Solicitar nova corrida 
+         </a> 
        </div> 
-   
-       <!-- Estrelas grandes --> 
-       <div class="flex justify-center gap-3 mb-4"> 
-         <button class="star-aval text-5xl transition-transform hover:scale-110" data-v="1">☆</button> 
-         <button class="star-aval text-5xl transition-transform hover:scale-110" data-v="2">☆</button> 
-         <button class="star-aval text-5xl transition-transform hover:scale-110" data-v="3">☆</button> 
-         <button class="star-aval text-5xl transition-transform hover:scale-110" data-v="4">☆</button> 
-         <button class="star-aval text-5xl transition-transform hover:scale-110" data-v="5">☆</button> 
-       </div> 
-       <p id="txt-nota-selecionada" class="text-center text-sm text-gray-400 mb-4">Toque nas estrelas para avaliar</p> 
-   
-       <!-- Comentário --> 
-       <textarea id="comentario" rows="2" placeholder="Comentário opcional..." 
-         class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 mb-4 resize-none"> 
-       </textarea> 
-   
-       <!-- Botões --> 
-       <button id="btn-avaliar" onclick="enviarAvaliacao()" 
-         class="w-full bg-green-600 text-white rounded-xl py-4 font-bold text-base hover:bg-green-700 mb-3 disabled:opacity-50"> 
-         ⭐ Enviar avaliação 
-       </button> 
-       <a href="/solicitar" 
-         class="block w-full text-center text-gray-400 text-sm py-2 hover:text-gray-600"> 
-         Pular → Solicitar nova corrida 
-       </a> 
      </div> 
    </div> 
  
@@ -384,7 +383,10 @@
    if (ride.status === 'concluida') { 
      if (!rating?.estrelas_motorista) { 
        document.getElementById('card-avaliacao').classList.remove('hidden') 
- 
+       // Esconde mapa para não obstruir avaliação 
+       document.getElementById('mapa-section').classList.add('hidden') 
+       // Esconde card financeiro também 
+       document.getElementById('card-financeiro')?.classList.add('hidden') 
        // Preenche dados do motorista no card 
        if (ride.driver_nome) { 
          const avatar = document.getElementById('aval-avatar') 
@@ -399,6 +401,8 @@
        } 
      } else { 
        document.getElementById('card-obrigado').classList.remove('hidden') 
+       // Mostra mapa e financeiro após avaliar 
+       document.getElementById('mapa-section').classList.remove('hidden') 
      } 
    } 
  
