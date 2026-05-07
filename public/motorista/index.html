@@ -745,9 +745,54 @@
          btn.textContent = '⏸️ Parar' 
          btn.className = 'bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-lg py-2.5 text-sm font-medium' 
        } 
-     } else if (acao === 'finalizar') { 
+     } 
+ 
+     if (acao === 'finalizar') { 
        if (!confirm('Finalizar a corrida?')) return 
-       url = `/api/rides/${corridaAtualId}/finalizar-motorista` 
+       
+       const r = await fetch(`/api/rides/${corridaAtualId}/finalizar-motorista`, { 
+         method: 'PUT', 
+         headers: { 'Content-Type': 'application/json' }, 
+         body: JSON.stringify({ token_motorista: tokenMotorista }) 
+       }) 
+       const d = await r.json() 
+       
+       if (r.ok) { 
+         // Salva status online atual ANTES de qualquer atualização 
+         const eraOnline = motoristOnline 
+         
+         // Limpa corrida atual 
+         corridaAtualId = null 
+         corridaAtualToken = null 
+         esconderCorridaAtiva() 
+ 
+         // Mostra resumo sem usar alert() que pode interferir 
+         const resumoDiv = document.getElementById('card-sem-corrida') 
+         resumoDiv.innerHTML = ` 
+           <div class="text-center py-4"> 
+             <p class="text-3xl mb-2">✅</p> 
+             <p class="font-bold text-gray-800 text-lg">Corrida finalizada!</p> 
+             <div class="bg-green-50 border border-green-200 rounded-xl p-4 mt-3 text-left space-y-1"> 
+               <p class="text-sm text-gray-600">💰 Valor total: <span class="font-bold text-green-700">R$ ${Number(d.valor_final || 0).toFixed(2)}</span></p> 
+               <p class="text-sm text-gray-600">👨‍✈️ Seu ganho: <span class="font-bold text-blue-700">R$ ${Number(d.valor_motorista || 0).toFixed(2)}</span></p> 
+             </div> 
+             <p class="text-xs text-gray-400 mt-3">Aguardando próxima corrida...</p> 
+           </div> 
+         ` 
+         resumoDiv.classList.remove('hidden') 
+ 
+         // Restaura status online sem chamar carregar() 
+         // que pode resetar o status 
+         setTimeout(() => { 
+           motoristOnline = eraOnline 
+           renderizarStatusOnline({ online: eraOnline ? 1 : 0 }) 
+           // Atualiza apenas ganhos sem afetar o online 
+           atualizarGanhos() 
+         }, 500) 
+       } else { 
+         alert('Erro: ' + (d.error || 'Tente novamente')) 
+       } 
+       return 
      } 
  
      const r = await fetch(url, { 
@@ -757,20 +802,20 @@
      }) 
      const d = await r.json() 
      if (r.ok) { 
-       if (acao === 'finalizar') { 
-         alert(`✅ Corrida finalizada!\n\n💰 Valor: ${moeda(d.valor_final)}\n👨‍✈️ Seu ganho: ${moeda(d.valor_motorista)}`) 
-         corridaAtualId = null 
-         corridaAtualToken = null 
-         esconderCorridaAtiva() 
-         // NÃO coloca offline — mantém motorista online para próxima corrida 
-         carregar() // Só atualiza os dados do perfil/ganhos 
-       } else { 
-         alert(d.mensagem || '✅ Ação registrada!') 
-       } 
+       alert(d.mensagem || '✅ Ação registrada!') 
      } else { 
        alert('Erro: ' + (d.error || 'Tente novamente')) 
      } 
    } catch(e) { alert('Erro de conexão') } 
+ } 
+ 
+ async function atualizarGanhos() { 
+   try { 
+     const r = await fetch(`/api/motorista/${tokenMotorista}`) 
+     if (!r.ok) return 
+     const { financeiro } = await r.json() 
+     renderizarFinanceiro(financeiro) 
+   } catch(e) {} 
  } 
  
  async function desbloquearAudio() { 
