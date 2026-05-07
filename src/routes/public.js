@@ -57,20 +57,25 @@ export default async function publicRoutes(fastify) {
 
   fastify.post('/api/motorista/:token/location', async (request, reply) => { 
     const { lat, lng, ride_id } = request.body 
+    console.log('[LOCATION] Recebendo:', { lat, lng, ride_id, token: request.params.token }) 
+
     const driver = (await query( 
       'SELECT id FROM drivers WHERE token_perfil = $1', [request.params.token] 
     )).rows[0] 
-    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
-  
+    if (!driver) { 
+      console.log('[LOCATION] Motorista não encontrado') 
+      return reply.code(404).send({ error: 'Motorista não encontrado' }) 
+    } 
+
     const existing = (await query( 
-      'SELECT id FROM driver_locations WHERE driver_id = $1 AND ride_id = $2', 
-      [driver.id, ride_id] 
+      'SELECT id FROM driver_locations WHERE driver_id = $1', 
+      [driver.id] 
     )).rows[0] 
-  
+
     if (existing) { 
       await query( 
-        'UPDATE driver_locations SET lat = $1, lng = $2, updated_at = CURRENT_TIMESTAMP WHERE driver_id = $3 AND ride_id = $4', 
-        [lat, lng, driver.id, ride_id] 
+        'UPDATE driver_locations SET lat = $1, lng = $2, updated_at = CURRENT_TIMESTAMP, ride_id = $3 WHERE driver_id = $4', 
+        [lat, lng, ride_id, driver.id] 
       ) 
     } else { 
       await query( 
@@ -78,7 +83,8 @@ export default async function publicRoutes(fastify) {
         [driver.id, ride_id, lat, lng] 
       ) 
     } 
-  
+
+    console.log('[LOCATION] Salvo com sucesso') 
     return { ok: true } 
   }) 
 
@@ -438,30 +444,77 @@ export default async function publicRoutes(fastify) {
   }) 
 
   fastify.put('/api/ride/:token/cancelar', async (request, reply) => { 
-    const ride = (await query("SELECT * FROM rides WHERE token = $1 AND status IN ('aberta', 'aceita')", [request.params.token])).rows[0] 
-    if (!ride) return reply.code(404).send({ error: 'Corrida não cancelável' }) 
-    if (ride.passageiro_embarcou_at) return reply.code(400).send({ error: 'Após embarque não cancela' }) 
-    await query(`UPDATE rides SET status = 'cancelada', cancelada_at = CURRENT_TIMESTAMP, status_detalhe = 'cancelada_passageiro' WHERE id = $1`, [ride.id]) 
+    const ride = (await query( 
+      "SELECT * FROM rides WHERE token = $1 AND status IN ('aberta', 'aceita')", 
+      [request.params.token] 
+    )).rows[0] 
+    if (!ride) return reply.code(404).send({ error: 'Corrida não pode ser cancelada' }) 
+  
+    // Não pode cancelar se passageiro já embarcou 
+    if (ride.passageiro_embarcou_at) { 
+      return reply.code(400).send({ error: 'Não é possível cancelar após embarque' }) 
+    } 
+  
+    await query(` 
+      UPDATE rides SET 
+        status = 'cancelada', 
+        cancelada_at = CURRENT_TIMESTAMP, 
+        status_detalhe = 'cancelada_passageiro' 
+      WHERE id = $1 
+    `, [ride.id]) 
+  
+    // Notifica grupo Telegram 
     try { 
       const { editGroupMessage } = await import('../telegram.js') 
-      if (ride.telegram_message_id) await editGroupMessage(ride.telegram_message_id, `❌ *Cancelada pelo passageiro*\n\n📍 ${ride.origem}\n🏁 ${ride.destino}`) 
+      if (ride.telegram_message_id) { 
+        await editGroupMessage(ride.telegram_message_id, 
+          `❌ *Corrida cancelada pelo passageiro*\n\n📍 ${ride.origem}\n🏁 ${ride.destino}` 
+        ) 
+      } 
     } catch(e) {} 
-    return { mensagem: 'Cancelada' } 
-  }) 
   
+    return { mensagem: 'Corrida cancelada' } 
+  }) 
+
   fastify.put('/api/motorista/:token/cancelar-corrida/:rideId', async (request, reply) => { 
     const { token, rideId } = request.params 
-    const driver = (await query('SELECT id FROM drivers WHERE token_perfil = $1', [token])).rows[0] 
+  
+    const driver = (await query( 
+      'SELECT id FROM drivers WHERE token_perfil = $1', [token] 
+    )).rows[0] 
     if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
-    const ride = (await query("SELECT * FROM rides WHERE id = $1 AND driver_id = $2 AND status = 'aceita'", [rideId, driver.id])).rows[0] 
-    if (!ride) return reply.code(404).send({ error: 'Não encontrada' }) 
-    if (ride.passageiro_embarcou_at) return reply.code(400).send({ error: 'Após embarque não cancela' }) 
-    await query(`UPDATE rides SET status = 'cancelada', cancelada_at = CURRENT_TIMESTAMP, status_detalhe = 'cancelada_motorista', driver_id = NULL WHERE id = $1`, [rideId]) 
+  
+    const ride = (await query( 
+      "SELECT * FROM rides WHERE id = $1 AND driver_id = $2 AND status = 'aceita'", 
+      [rideId, driver.id] 
+    )).rows[0] 
+    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
+  
+    // Não pode cancelar se passageiro já embarcou 
+    if (ride.passageiro_embarcou_at) { 
+      return reply.code(400).send({ error: 'Não é possível cancelar após embarque' }) 
+    } 
+  
+    await query(` 
+      UPDATE rides SET 
+        status = 'cancelada', 
+        cancelada_at = CURRENT_TIMESTAMP, 
+        status_detalhe = 'cancelada_motorista', 
+        driver_id = NULL 
+      WHERE id = $1 
+    `, [rideId]) 
+  
+    // Notifica grupo Telegram 
     try { 
       const { editGroupMessage } = await import('../telegram.js') 
-      if (ride.telegram_message_id) await editGroupMessage(ride.telegram_message_id, `❌ *Cancelada pelo motorista*\n\n📍 ${ride.origem}\n🏁 ${ride.destino}`) 
+      if (ride.telegram_message_id) { 
+        await editGroupMessage(ride.telegram_message_id, 
+          `❌ *Corrida cancelada pelo motorista*\n\n📍 ${ride.origem}\n🏁 ${ride.destino}\n\nA corrida voltou a estar disponível.` 
+        ) 
+      } 
     } catch(e) {} 
-    return { mensagem: 'Cancelada' } 
+  
+    return { mensagem: 'Corrida cancelada' } 
   }) 
 
   // --- REPUTAÇÃO E AVALIAÇÕES ---

@@ -651,29 +651,37 @@
      const r = await fetch(`/api/motorista/${tokenMotorista}/corrida-ativa`) 
      if (!r.ok) return 
      const { corrida } = await r.json() 
+ 
      if (corrida) { 
        corridaAtualId = corrida.id 
        corridaAtualToken = corrida.token 
        mostrarCorridaAtiva(corrida) 
      } else if (corridaAtualId) { 
-       // Verifica motivo — cancelada ou concluída 
+       // Busca última corrida para saber motivo 
        try { 
          const rc = await fetch(`/api/motorista/${tokenMotorista}/ultima-corrida`) 
          if (rc.ok) { 
            const { corrida: ultima } = await rc.json() 
-           const foiCancelada = ultima?.status === 'cancelada' 
            const resumoDiv = document.getElementById('card-sem-corrida') 
  
-           if (foiCancelada) { 
-             const canceladaPor = ultima?.status_detalhe === 'cancelada_passageiro' 
-               ? 'pelo passageiro' : 'por você' 
+           if (ultima?.status === 'cancelada' && ultima?.status_detalhe === 'cancelada_passageiro') { 
              resumoDiv.innerHTML = ` 
                <div class="text-center py-4"> 
                  <p class="text-3xl mb-2">❌</p> 
-                 <p class="font-bold text-gray-800 text-lg">Corrida cancelada ${canceladaPor}</p> 
+                 <p class="font-bold text-red-600 text-lg">Corrida cancelada pelo passageiro</p> 
                  <p class="text-sm text-gray-400 mt-2">Aguardando próxima corrida...</p> 
                </div> 
              ` 
+             resumoDiv.classList.remove('hidden') 
+             setTimeout(() => { 
+               resumoDiv.innerHTML = ` 
+                 <div class="text-center py-8"> 
+                   <p class="text-4xl mb-3">🚗</p> 
+                   <p class="font-semibold text-gray-700">Aguardando corridas...</p> 
+                   <p class="text-sm text-gray-400 mt-1">Fique online para receber corridas</p> 
+                 </div> 
+               ` 
+             }, 4000) 
            } 
          } 
        } catch(e) {} 
@@ -681,6 +689,7 @@
        corridaAtualId = null 
        corridaAtualToken = null 
        esconderCorridaAtiva() 
+       pararLocalizacao() 
      } 
    } catch(e) {} 
  } 
@@ -1101,7 +1110,7 @@
  
  function iniciarLocalizacao() { 
    if (!navigator.geolocation) { 
-     alert('Geolocalização não suportada neste dispositivo') 
+     alert('Geolocalização não suportada') 
      return 
    } 
  
@@ -1109,19 +1118,30 @@
      async (pos) => { 
        const lat = pos.coords.latitude 
        const lng = pos.coords.longitude 
+       console.log('[GPS] Posição:', lat, lng, '| Corrida:', corridaAtualId) 
  
-       if (!corridaAtualId) return 
+       if (!corridaAtualId) { 
+         console.log('[GPS] Sem corrida ativa, não enviando') 
+         return 
+       } 
  
        try { 
-         await fetch(`/api/motorista/${tokenMotorista}/location`, { 
+         const r = await fetch(`/api/motorista/${tokenMotorista}/location`, { 
            method: 'POST', 
            headers: { 'Content-Type': 'application/json' }, 
            body: JSON.stringify({ lat, lng, ride_id: corridaAtualId }) 
          }) 
-       } catch(e) {} 
+         const d = await r.json() 
+         console.log('[GPS] Resposta servidor:', d) 
+       } catch(e) { 
+         console.error('[GPS] Erro ao enviar:', e) 
+       } 
      }, 
-     (err) => console.error('[GPS]', err), 
-     { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 } 
+     (err) => { 
+       console.error('[GPS] Erro geolocalização:', err.code, err.message) 
+       alert('Erro ao obter localização: ' + err.message) 
+     }, 
+     { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 } 
    ) 
  
    const btn = document.getElementById('btn-compartilhar-loc') 
@@ -1131,6 +1151,7 @@
      btn.className = 'w-full text-center text-sm text-red-600 border border-red-200 rounded-lg py-2 hover:bg-red-50' 
    } 
    if (txt) txt.classList.remove('hidden') 
+   console.log('[GPS] Iniciado watchPosition id:', watchId) 
  } 
  
  function pararLocalizacao() { 

@@ -476,18 +476,33 @@
    } 
  
    if (ride.status === 'cancelada') { 
+     pollingAtivo = false 
+   
+     const canceladaPor = ride.status_detalhe === 'cancelada_motorista' 
+       ? 'pelo motorista' : 'por você' 
+   
+     const icone = ride.status_detalhe === 'cancelada_motorista' ? '🚗❌' : '❌' 
+     const msg = ride.status_detalhe === 'cancelada_motorista' 
+       ? 'O motorista cancelou a corrida' 
+       : 'Você cancelou a corrida' 
+   
+     document.getElementById('card-cancelar-passageiro')?.classList.add('hidden') 
+     document.getElementById('card-motorista')?.classList.add('hidden') 
+     document.getElementById('card-eta')?.classList.add('hidden') 
+     document.getElementById('card-chat')?.classList.add('hidden') 
+     document.getElementById('card-sem-localizacao')?.classList.add('hidden') 
+   
      document.getElementById('card-obrigado').classList.remove('hidden') 
      document.getElementById('card-obrigado').innerHTML = ` 
-       <p class="text-2xl mb-2">❌</p> 
-       <p class="font-semibold text-gray-700">Corrida cancelada</p> 
-       <p class="text-sm text-gray-500 mt-1 mb-4"> 
-         ${ride.cancelado_por_espera ? 'Cancelada por excesso de tempo de espera.' : 'Esta corrida foi cancelada.'} 
-         ${ride.taxa_cancelamento > 0 ? `Taxa de cancelamento: R$ ${Number(ride.taxa_cancelamento).toFixed(2)}` : ''} 
-       </p> 
-       <a href="/solicitar" 
-         class="block w-full bg-green-600 text-white rounded-xl py-3 font-semibold text-sm hover:bg-green-700 text-center"> 
-         🚗 Solicitar nova corrida 
-       </a> 
+       <div class="text-center py-2"> 
+         <p class="text-4xl mb-3">${icone}</p> 
+         <p class="text-lg font-bold text-gray-800">Corrida cancelada ${canceladaPor}</p> 
+         <p class="text-sm text-gray-500 mt-1">${msg}</p> 
+         <a href="/solicitar" 
+           class="block mt-4 w-full bg-green-600 text-white rounded-xl py-3 font-semibold text-sm text-center hover:bg-green-700"> 
+           🚗 Solicitar nova corrida 
+         </a> 
+       </div> 
      ` 
    } 
  
