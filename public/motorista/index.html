@@ -285,9 +285,14 @@
           class="bg-green-600 text-white rounded-lg py-2.5 text-sm font-bold hover:bg-green-700"> 
           ✅ Finalizar 
         </button> 
+        <button onclick="acaoCorridaAtiva('cancelar')" 
+          class="col-span-2 bg-red-50 text-red-600 border border-red-200 rounded-lg py-2.5 text-sm font-medium hover:bg-red-100" 
+          id="btn-cancelar-corrida"> 
+          ❌ Cancelar corrida 
+        </button> 
       </div> 
     </div> 
-
+ 
     <!-- Mapa da corrida ativa --> 
     <div class="bg-white border border-gray-200 rounded-xl overflow-hidden"> 
       <p class="text-xs text-gray-500 font-medium uppercase tracking-wide px-4 pt-3 pb-2">Rota</p> 
@@ -301,6 +306,14 @@
           class="flex-1 text-center text-sm text-green-600 border border-green-200 rounded-lg py-2 hover:bg-green-50"> 
           🗺️ Rota completa 
         </a> 
+      </div> 
+      <!-- Compartilhar localização --> 
+      <div class="px-4 py-2 border-t border-gray-100"> 
+        <button id="btn-compartilhar-loc" onclick="toggleCompartilharLocalizacao()" 
+          class="w-full text-center text-sm text-blue-600 border border-blue-200 rounded-lg py-2 hover:bg-blue-50"> 
+          📍 Compartilhar localização ao vivo 
+        </button> 
+        <p id="txt-loc-status" class="text-xs text-center text-gray-400 mt-1 hidden">● Compartilhando localização</p> 
       </div> 
     </div> 
    </div> 
@@ -381,6 +394,7 @@
  let mapCorrida = null 
  let timerInterval = null 
  let pollingAtivo = true 
+ let watchId = null 
  
  function estrelas(media) { 
    if (!media) return '☆☆☆☆☆' 
@@ -696,6 +710,16 @@
  
    iniciarMapaCorrida(corrida) 
    carregarMsgMotorista() 
+ 
+   // Mostra ou esconde botão cancelar 
+   const btnCancelar = document.getElementById('btn-cancelar-corrida') 
+   if (btnCancelar) { 
+     if (corrida.passageiro_embarcou_at) { 
+       btnCancelar.classList.add('hidden') 
+     } else { 
+       btnCancelar.classList.remove('hidden') 
+     } 
+   } 
  } 
  
  function esconderCorridaAtiva() { 
@@ -817,6 +841,45 @@
        } else { 
          alert('Erro: ' + (d.error || 'Tente novamente')) 
        } 
+       return 
+     } else if (acao === 'cancelar') { 
+       if (!confirm('Cancelar a corrida? Esta ação não pode ser desfeita.')) return 
+       try { 
+         const r = await fetch(`/api/motorista/${tokenMotorista}/cancelar-corrida/${corridaAtualId}`, { 
+           method: 'PUT', 
+           headers: { 'Content-Type': 'application/json' } 
+         }) 
+         const d = await r.json() 
+         if (r.ok) { 
+           corridaAtualId = null 
+           corridaAtualToken = null 
+           esconderCorridaAtiva() 
+     
+           const resumoDiv = document.getElementById('card-sem-corrida') 
+           resumoDiv.innerHTML = ` 
+             <div class="text-center py-4"> 
+               <p class="text-3xl mb-2">❌</p> 
+               <p class="font-bold text-gray-800 text-lg">Corrida cancelada</p> 
+               <p class="text-sm text-gray-400 mt-2">Aguardando próxima corrida...</p> 
+             </div> 
+           ` 
+           resumoDiv.classList.remove('hidden') 
+     
+           // Restaura status online 
+           setTimeout(() => { 
+             renderizarStatusOnline({ online: motoristOnline ? 1 : 0 }) 
+             resumoDiv.innerHTML = ` 
+               <div class="text-center py-8"> 
+                 <p class="text-4xl mb-3">🚗</p> 
+                 <p class="font-semibold text-gray-700">Aguardando corridas...</p> 
+                 <p class="text-sm text-gray-400 mt-1">Fique online para receber corridas</p> 
+               </div> 
+             ` 
+           }, 3000) 
+         } else { 
+           alert('Erro: ' + d.error) 
+         } 
+       } catch(e) { alert('Erro de conexão') } 
        return 
      } 
  
@@ -1008,6 +1071,62 @@
  
    input.disabled = false 
    input.focus() 
+ } 
+ 
+ function toggleCompartilharLocalizacao() { 
+   if (watchId) { 
+     pararLocalizacao() 
+   } else { 
+     iniciarLocalizacao() 
+   } 
+ } 
+ 
+ function iniciarLocalizacao() { 
+   if (!navigator.geolocation) { 
+     alert('Geolocalização não suportada neste dispositivo') 
+     return 
+   } 
+ 
+   watchId = navigator.geolocation.watchPosition( 
+     async (pos) => { 
+       const lat = pos.coords.latitude 
+       const lng = pos.coords.longitude 
+ 
+       if (!corridaAtualId) return 
+ 
+       try { 
+         await fetch(`/api/motorista/${tokenMotorista}/location`, { 
+           method: 'POST', 
+           headers: { 'Content-Type': 'application/json' }, 
+           body: JSON.stringify({ lat, lng, ride_id: corridaAtualId }) 
+         }) 
+       } catch(e) {} 
+     }, 
+     (err) => console.error('[GPS]', err), 
+     { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 } 
+   ) 
+ 
+   const btn = document.getElementById('btn-compartilhar-loc') 
+   const txt = document.getElementById('txt-loc-status') 
+   if (btn) { 
+     btn.textContent = '⏹️ Parar compartilhamento' 
+     btn.className = 'w-full text-center text-sm text-red-600 border border-red-200 rounded-lg py-2 hover:bg-red-50' 
+   } 
+   if (txt) txt.classList.remove('hidden') 
+ } 
+ 
+ function pararLocalizacao() { 
+   if (watchId) { 
+     navigator.geolocation.clearWatch(watchId) 
+     watchId = null 
+   } 
+   const btn = document.getElementById('btn-compartilhar-loc') 
+   const txt = document.getElementById('txt-loc-status') 
+   if (btn) { 
+     btn.textContent = '📍 Compartilhar localização ao vivo' 
+     btn.className = 'w-full text-center text-sm text-blue-600 border border-blue-200 rounded-lg py-2 hover:bg-blue-50' 
+   } 
+   if (txt) txt.classList.add('hidden') 
  } 
  
  // Enter para enviar 

@@ -41,6 +41,12 @@
          </svg> 
        </div> 
      </div> 
+     <div id="card-cancelar-passageiro" class="hidden mt-3"> 
+       <button onclick="cancelarCorrida()" 
+         class="w-full flex items-center justify-center gap-2 border border-red-200 text-red-500 rounded-xl py-2.5 text-sm font-medium hover:bg-red-50"> 
+         ❌ Cancelar corrida 
+       </button> 
+     </div> 
      <div class="mt-3 space-y-1"> 
        <p class="text-sm text-gray-700"><span class="font-medium">De:</span> <span id="txt-origem">—</span></p> 
        <p class="text-sm text-gray-700"><span class="font-medium">Para:</span> <span id="txt-destino">—</span></p> 
@@ -273,6 +279,20 @@
    className: '', iconSize: [36, 36], iconAnchor: [18, 18] 
  }) 
  
+ async function cancelarCorrida() { 
+   if (!confirm('Tem certeza que deseja cancelar a corrida?')) return 
+   try { 
+     const r = await fetch(`/api/ride/${token}/cancelar`, { method: 'PUT' }) 
+     const d = await r.json() 
+     if (r.ok) { 
+       document.getElementById('card-cancelar-passageiro').classList.add('hidden') 
+       carregar() 
+     } else { 
+       alert('Erro: ' + d.error) 
+     } 
+   } catch(e) { alert('Erro de conexão') } 
+ } 
+ 
  async function carregar() { 
    try { 
      const r = await fetch(`/api/ride/${token}`) 
@@ -309,6 +329,13 @@
    const cfg = statusConfig[ride.status] || statusConfig.aberta 
    badge.textContent = cfg.label 
    badge.className = `inline-block mt-1 px-3 py-1 rounded-full text-sm font-semibold ${cfg.cls}` 
+ 
+   const btnCancelar = document.getElementById('card-cancelar-passageiro') 
+   if ((ride.status === 'aberta' || ride.status === 'aceita') && !ride.passageiro_embarcou_at) { 
+     btnCancelar.classList.remove('hidden') 
+   } else { 
+     btnCancelar.classList.add('hidden') 
+   } 
  
    document.getElementById('txt-origem').textContent = ride.origem 
    document.getElementById('txt-destino').textContent = ride.destino 
