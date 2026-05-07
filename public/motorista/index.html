@@ -303,9 +303,29 @@
         </a> 
       </div> 
     </div> 
-  </div> 
-
-  <!-- SEM CORRIDA --> 
+   </div> 
+ 
+   <!-- CHAT COM PASSAGEIRO --> 
+   <div id="card-chat-motorista" class="hidden bg-white border border-gray-200 rounded-xl overflow-hidden"> 
+     <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between"> 
+       <p class="text-sm font-semibold text-gray-800">💬 Passageiro</p> 
+       <span id="badge-msg-motorista" class="hidden bg-red-500 text-white text-xs rounded-full px-2 py-0.5">Nova</span> 
+     </div> 
+     <div id="lista-msg-motorista" class="px-4 py-3 space-y-2 max-h-48 overflow-y-auto bg-gray-50"> 
+       <p class="text-xs text-gray-400 text-center py-4">Nenhuma mensagem ainda</p> 
+     </div> 
+     <div class="px-4 py-3 border-t border-gray-100 flex gap-2"> 
+       <input id="input-msg-motorista" type="text" placeholder="Digite uma mensagem..." 
+         maxlength="200" 
+         class="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+       <button onclick="enviarMsgMotorista()" 
+         class="bg-green-600 text-white rounded-xl px-4 py-2 text-sm font-medium hover:bg-green-700 flex-shrink-0"> 
+         Enviar 
+       </button> 
+     </div> 
+   </div> 
+ 
+   <!-- SEM CORRIDA --> 
   <div id="card-sem-corrida" class="bg-white border border-gray-200 rounded-xl p-8 text-center"> 
     <p class="text-4xl mb-3">🚗</p> 
     <p class="font-semibold text-gray-700" id="txt-aguardando">Aguardando corridas...</p> 
@@ -663,19 +683,24 @@
    document.getElementById('ativa-destino').textContent = corrida.destino 
    document.getElementById('ativa-valor').textContent = `💰 ${moeda(corrida.valor_motorista || corrida.valor * 0.70)}` 
    document.getElementById('card-corrida-ativa').classList.remove('hidden') 
+   document.getElementById('card-chat-motorista').classList.remove('hidden') 
    document.getElementById('card-sem-corrida').classList.add('hidden') 
    document.getElementById('card-nova-corrida').classList.add('hidden') 
+ 
    if (corrida.origem_lat) { 
      document.getElementById('link-navegar').href = 
        `https://www.google.com/maps/dir/?api=1&destination=${corrida.origem_lat},${corrida.origem_lng}&travelmode=driving` 
      document.getElementById('link-rota-completa').href = 
        `https://www.google.com/maps/dir/?api=1&origin=${corrida.origem_lat},${corrida.origem_lng}&destination=${corrida.destino_lat},${corrida.destino_lng}&travelmode=driving` 
    } 
+ 
    iniciarMapaCorrida(corrida) 
+   carregarMsgMotorista() 
  } 
  
  function esconderCorridaAtiva() { 
    document.getElementById('card-corrida-ativa').classList.add('hidden') 
+   document.getElementById('card-chat-motorista').classList.add('hidden') 
    document.getElementById('card-sem-corrida').classList.remove('hidden') 
    if (mapCorrida) { mapCorrida.remove(); mapCorrida = null } 
  } 
@@ -909,9 +934,88 @@
  async function polling() { 
    if (!pollingAtivo) return 
    await verificarCorridaAtiva() 
-   if (!corridaAtualId) await verificarNovasCorridas() 
+   if (!corridaAtualId) { 
+     await verificarNovasCorridas() 
+   } else { 
+     await carregarMsgMotorista() 
+   } 
    setTimeout(polling, 8000) 
  } 
+ 
+ // ── CHAT MOTORISTA ──────────────────────────────── 
+ async function carregarMsgMotorista() { 
+   if (!corridaAtualId) return 
+   try { 
+     const r = await fetch(`/api/motorista/${tokenMotorista}/mensagens/${corridaAtualId}`) 
+     if (!r.ok) return 
+     const { mensagens } = await r.json() 
+ 
+     const lista = document.getElementById('lista-msg-motorista') 
+     if (!mensagens.length) { 
+       lista.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">Nenhuma mensagem ainda</p>' 
+       return 
+     } 
+ 
+     lista.innerHTML = mensagens.map(m => ` 
+       <div class="flex ${m.remetente === 'motorista' ? 'justify-end' : 'justify-start'}"> 
+         <div class="max-w-xs px-3 py-2 rounded-2xl text-sm ${ 
+           m.remetente === 'motorista' 
+             ? 'bg-green-600 text-white rounded-br-none' 
+             : 'bg-white border border-gray-200 text-gray-800 rounded-bl-none' 
+         }"> 
+           <p>${m.mensagem}</p> 
+           <p class="text-xs mt-0.5 ${m.remetente === 'motorista' ? 'text-green-200' : 'text-gray-400'}"> 
+             ${new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} 
+           </p> 
+         </div> 
+       </div> 
+     `).join('') 
+ 
+     lista.scrollTop = lista.scrollHeight 
+ 
+     // Verifica mensagens novas do passageiro 
+     const novas = mensagens.filter(m => m.remetente === 'passageiro') 
+     if (novas.length) { 
+       document.getElementById('badge-msg-motorista').classList.remove('hidden') 
+       setTimeout(() => { 
+         document.getElementById('badge-msg-motorista').classList.add('hidden') 
+       }, 5000) 
+     } 
+ 
+   } catch(e) { console.error('[CHAT-MOTORISTA]', e) } 
+ } 
+ 
+ async function enviarMsgMotorista() { 
+   if (!corridaAtualId) return 
+   const input = document.getElementById('input-msg-motorista') 
+   const texto = input.value.trim() 
+   if (!texto) return 
+ 
+   input.value = '' 
+   input.disabled = true 
+ 
+   try { 
+     await fetch(`/api/motorista/${tokenMotorista}/mensagem/${corridaAtualId}`, { 
+       method: 'POST', 
+       headers: { 'Content-Type': 'application/json' }, 
+       body: JSON.stringify({ mensagem: texto }) 
+     }) 
+     await carregarMsgMotorista() 
+   } catch(e) { 
+     input.value = texto 
+     alert('Erro ao enviar mensagem') 
+   } 
+ 
+   input.disabled = false 
+   input.focus() 
+ } 
+ 
+ // Enter para enviar 
+ document.addEventListener('DOMContentLoaded', () => { 
+   document.getElementById('input-msg-motorista')?.addEventListener('keypress', (e) => { 
+     if (e.key === 'Enter') enviarMsgMotorista() 
+   }) 
+ }) 
  
  carregar() 
  setTimeout(polling, 3000) 
