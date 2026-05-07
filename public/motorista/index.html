@@ -741,6 +741,10 @@
  } 
  
  function mostrarCorridaAtiva(corrida) { 
+   console.log('[CORRIDA ATIVA] ID:', corrida.id, '| Token:', corrida.token) 
+   corridaAtualId = corrida.id 
+   corridaAtualToken = corrida.token 
+ 
    document.getElementById('ativa-origem').textContent = corrida.origem 
    document.getElementById('ativa-destino').textContent = corrida.destino 
    document.getElementById('ativa-valor').textContent = `💰 ${moeda(corrida.valor_motorista || corrida.valor * 0.70)}` 
@@ -748,6 +752,15 @@
    document.getElementById('card-chat-motorista').classList.remove('hidden') 
    document.getElementById('card-sem-corrida').classList.add('hidden') 
    document.getElementById('card-nova-corrida').classList.add('hidden') 
+ 
+   const btnCancelar = document.getElementById('btn-cancelar-corrida') 
+   if (btnCancelar) { 
+     if (corrida.passageiro_embarcou_at) { 
+       btnCancelar.classList.add('hidden') 
+     } else { 
+       btnCancelar.classList.remove('hidden') 
+     } 
+   } 
  
    if (corrida.origem_lat) { 
      document.getElementById('link-navegar').href = 
@@ -758,16 +771,6 @@
  
    iniciarMapaCorrida(corrida) 
    carregarMsgMotorista() 
- 
-   // Mostra ou esconde botão cancelar 
-   const btnCancelar = document.getElementById('btn-cancelar-corrida') 
-   if (btnCancelar) { 
-     if (corrida.passageiro_embarcou_at) { 
-       btnCancelar.classList.add('hidden') 
-     } else { 
-       btnCancelar.classList.remove('hidden') 
-     } 
-   } 
  } 
  
  function esconderCorridaAtiva() { 
@@ -891,17 +894,33 @@
        } 
        return 
      } else if (acao === 'cancelar') { 
-       if (!confirm('Cancelar a corrida?')) return 
+       console.log('[CANCELAR] corridaAtualId:', corridaAtualId) 
+       if (!corridaAtualId) { 
+         alert('Nenhuma corrida ativa encontrada') 
+         return 
+       } 
+       if (!confirm('Cancelar a corrida? Esta ação não pode ser desfeita.')) return 
+     
        try { 
-         const r = await fetch(`/api/motorista/${tokenMotorista}/cancelar-corrida/${corridaAtualId}`, { 
+         const url = `/api/motorista/${tokenMotorista}/cancelar-corrida/${corridaAtualId}` 
+         console.log('[CANCELAR] URL:', url) 
+     
+         const r = await fetch(url, { 
            method: 'PUT', 
-           headers: { 'Content-Type': 'application/json' } 
+           headers: { 'Content-Type': 'application/json' }, 
+           body: JSON.stringify({}) 
          }) 
+     
          const d = await r.json() 
+         console.log('[CANCELAR] Resposta:', r.status, d) 
+     
          if (r.ok) { 
+           const idCancelado = corridaAtualId 
            corridaAtualId = null 
            corridaAtualToken = null 
            esconderCorridaAtiva() 
+           pararLocalizacao() 
+     
            const resumoDiv = document.getElementById('card-sem-corrida') 
            resumoDiv.innerHTML = ` 
              <div class="text-center py-4"> 
@@ -911,6 +930,7 @@
              </div> 
            ` 
            resumoDiv.classList.remove('hidden') 
+     
            setTimeout(() => { 
              resumoDiv.innerHTML = ` 
                <div class="text-center py-8"> 
@@ -921,9 +941,13 @@
              ` 
            }, 3000) 
          } else { 
-           alert('Erro: ' + d.error) 
+           console.error('[CANCELAR] Erro:', d.error) 
+           alert('Erro ao cancelar: ' + (d.error || 'Tente novamente')) 
          } 
-       } catch(e) { alert('Erro de conexão') } 
+       } catch(e) { 
+         console.error('[CANCELAR] Exceção:', e) 
+         alert('Erro de conexão ao cancelar') 
+       } 
        return 
      } 
  

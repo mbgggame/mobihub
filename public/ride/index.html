@@ -347,6 +347,36 @@
      badge.className = `inline-block mt-1 px-3 py-1 rounded-full text-sm font-semibold ${cfgStatus.cls}` 
    } 
  
+   if (ride.status === 'cancelada') { 
+     pollingAtivo = false 
+     document.getElementById('card-cancelar-passageiro')?.classList.add('hidden') 
+     document.getElementById('card-motorista')?.classList.add('hidden') 
+     document.getElementById('card-eta')?.classList.add('hidden') 
+     document.getElementById('card-chat')?.classList.add('hidden') 
+   
+     const canceladaPor = ride.status_detalhe === 'cancelada_motorista' 
+       ? 'pelo motorista' : 'por você' 
+     const icone = ride.status_detalhe === 'cancelada_motorista' ? '🚗❌' : '❌' 
+     const msg = ride.status_detalhe === 'cancelada_motorista' 
+       ? 'O motorista cancelou a corrida' 
+       : 'Você cancelou a corrida' 
+   
+     const cardObrigado = document.getElementById('card-obrigado') 
+     cardObrigado.classList.remove('hidden') 
+     cardObrigado.innerHTML = ` 
+       <div class="text-center py-4 px-2"> 
+         <p class="text-4xl mb-3">${icone}</p> 
+         <p class="text-lg font-bold text-gray-800">Corrida cancelada ${canceladaPor}</p> 
+         <p class="text-sm text-gray-500 mt-1 mb-4">${msg}</p> 
+         <a href="/solicitar" 
+           class="block w-full bg-green-600 text-white rounded-xl py-3 font-semibold text-sm text-center hover:bg-green-700"> 
+           🚗 Solicitar nova corrida 
+         </a> 
+       </div> 
+     ` 
+     return 
+   } 
+ 
    const btnCancelar = document.getElementById('card-cancelar-passageiro') 
    if ((ride.status === 'aberta' || ride.status === 'aceita') && !ride.passageiro_embarcou_at) { 
      btnCancelar.classList.remove('hidden') 
@@ -473,37 +503,6 @@
        // Mostra mapa e financeiro após avaliar 
        document.getElementById('mapa-section').classList.remove('hidden') 
      } 
-   } 
- 
-   if (ride.status === 'cancelada') { 
-     pollingAtivo = false 
-   
-     const canceladaPor = ride.status_detalhe === 'cancelada_motorista' 
-       ? 'pelo motorista' : 'por você' 
-   
-     const icone = ride.status_detalhe === 'cancelada_motorista' ? '🚗❌' : '❌' 
-     const msg = ride.status_detalhe === 'cancelada_motorista' 
-       ? 'O motorista cancelou a corrida' 
-       : 'Você cancelou a corrida' 
-   
-     document.getElementById('card-cancelar-passageiro')?.classList.add('hidden') 
-     document.getElementById('card-motorista')?.classList.add('hidden') 
-     document.getElementById('card-eta')?.classList.add('hidden') 
-     document.getElementById('card-chat')?.classList.add('hidden') 
-     document.getElementById('card-sem-localizacao')?.classList.add('hidden') 
-   
-     document.getElementById('card-obrigado').classList.remove('hidden') 
-     document.getElementById('card-obrigado').innerHTML = ` 
-       <div class="text-center py-2"> 
-         <p class="text-4xl mb-3">${icone}</p> 
-         <p class="text-lg font-bold text-gray-800">Corrida cancelada ${canceladaPor}</p> 
-         <p class="text-sm text-gray-500 mt-1">${msg}</p> 
-         <a href="/solicitar" 
-           class="block mt-4 w-full bg-green-600 text-white rounded-xl py-3 font-semibold text-sm text-center hover:bg-green-700"> 
-           🚗 Solicitar nova corrida 
-         </a> 
-       </div> 
-     ` 
    } 
  
    // Força atualização visual 
