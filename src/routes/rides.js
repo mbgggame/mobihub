@@ -357,41 +357,73 @@ export default async function ridesRoutes(fastify) {
   }) 
  
   // Motorista chegou ao ponto de embarque 
-  fastify.put('/api/rides/:id/motorista-chegou', { preHandler: requireAuth }, async (request, reply) => { 
+  fastify.put('/api/rides/:id/motorista-chegou', async (request, reply) => { 
     const { id } = request.params 
+    const { token_motorista } = request.body || {} 
+  
+    // Aceita tanto admin quanto motorista 
+    let autorizado = false 
+    try { 
+      await request.jwtVerify() 
+      autorizado = true 
+    } catch(e) { 
+      // Verifica token do motorista 
+      if (token_motorista) { 
+        const driver = (await query( 
+          'SELECT id FROM drivers WHERE token_perfil = $1', [token_motorista] 
+        )).rows[0] 
+        if (driver) autorizado = true 
+      } 
+    } 
+    if (!autorizado) return reply.code(401).send({ error: 'Não autorizado' }) 
+  
     const ride = (await query('SELECT * FROM rides WHERE id = $1', [id])).rows[0] 
     if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
     if (ride.status !== 'aceita') return reply.code(400).send({ error: 'Corrida não está aceita' }) 
- 
+  
     await query(` 
       UPDATE rides SET 
         status_detalhe = 'aguardando_passageiro', 
         motorista_chegou_at = CURRENT_TIMESTAMP 
-      WHERE id = $1 
+      WHERE id = $1 AND motorista_chegou_at IS NULL 
     `, [id]) 
- 
+  
     const config = await getConfig() 
- 
     return { 
       mensagem: 'Chegada registrada. Timer de espera iniciado.', 
       minutos_gratis: config.espera_minutos_gratis, 
-      valor_por_minuto: config.espera_valor_minuto, 
-      max_espera: config.espera_max_cancelamento, 
-      taxa_cancelamento: config.espera_taxa_cancelamento 
+      valor_por_minuto: config.espera_valor_minuto 
     } 
   }) 
- 
+  
   // Passageiro embarcou 
-  fastify.put('/api/rides/:id/passageiro-embarcou', { preHandler: requireAuth }, async (request, reply) => { 
+  fastify.put('/api/rides/:id/passageiro-embarcou', async (request, reply) => { 
     const { id } = request.params 
+    const { token_motorista } = request.body || {} 
+  
+    let autorizado = false 
+    try { 
+      await request.jwtVerify() 
+      autorizado = true 
+    } catch(e) { 
+      if (token_motorista) { 
+        const driver = (await query( 
+          'SELECT id FROM drivers WHERE token_perfil = $1', [token_motorista] 
+        )).rows[0] 
+        if (driver) autorizado = true 
+      } 
+    } 
+    if (!autorizado) return reply.code(401).send({ error: 'Não autorizado' }) 
+  
     const ride = (await query('SELECT * FROM rides WHERE id = $1', [id])).rows[0] 
     if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
-    if (!ride.motorista_chegou_at) return reply.code(400).send({ error: 'Motorista ainda não chegou' }) 
- 
+    if (!ride.motorista_chegou_at) return reply.code(400).send({ error: 'Registre chegada primeiro' }) 
+  
     const config = await getConfig() 
+    const { calcularTempoMinutos, calculateInitialWaitCost } = await import('../billing.js') 
     const tempoEspera = calcularTempoMinutos(ride.motorista_chegou_at) 
     const custoEspera = calculateInitialWaitCost(tempoEspera, config) 
- 
+  
     await query(` 
       UPDATE rides SET 
         status_detalhe = 'em_andamento', 
@@ -400,46 +432,50 @@ export default async function ridesRoutes(fastify) {
         custo_espera_inicial = $2 
       WHERE id = $3 
     `, [tempoEspera, custoEspera, id]) 
- 
+  
     return { 
-      mensagem: 'Passageiro embarcou. Corrida iniciada!', 
+      mensagem: 'Passageiro embarcou! Corrida iniciada!', 
       tempo_espera_min: tempoEspera.toFixed(1), 
       custo_espera: custoEspera 
     } 
   }) 
- 
+  
   // Iniciar parada 
-  fastify.post('/api/rides/:id/parada/iniciar', { preHandler: requireAuth }, async (request, reply) => { 
+  fastify.post('/api/rides/:id/parada/iniciar', async (request, reply) => { 
     const { id } = request.params 
-    const ride = (await query('SELECT * FROM rides WHERE id = $1', [id])).rows[0] 
-    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
- 
-    // Verifica se já tem parada aberta 
+    const { token_motorista } = request.body || {} 
+  
+    let autorizado = false 
+    try { 
+      await request.jwtVerify() 
+      autorizado = true 
+    } catch(e) { 
+      if (token_motorista) { 
+        const driver = (await query( 
+          'SELECT id FROM drivers WHERE token_perfil = $1', [token_motorista] 
+        )).rows[0] 
+        if (driver) autorizado = true 
+      } 
+    } 
+    if (!autorizado) return reply.code(401).send({ error: 'Não autorizado' }) 
+  
     const paradaAberta = (await query( 
-      'SELECT id FROM ride_stops WHERE ride_id = $1 AND finalizada_at IS NULL', 
-      [id] 
+      'SELECT id FROM ride_stops WHERE ride_id = $1 AND finalizada_at IS NULL', [id] 
     )).rows[0] 
-    if (paradaAberta) return reply.code(400).send({ error: 'Já existe uma parada em andamento' }) 
- 
+    if (paradaAberta) return reply.code(400).send({ error: 'Já existe parada em andamento' }) 
+  
     const result = await query( 
-      'INSERT INTO ride_stops (ride_id) VALUES ($1) RETURNING id', 
-      [id] 
+      'INSERT INTO ride_stops (ride_id) VALUES ($1) RETURNING id', [id] 
     ) 
- 
-    await query(` 
-      UPDATE rides SET 
-        status_detalhe = 'em_parada', 
-        num_paradas = num_paradas + 1 
-      WHERE id = $1 
-    `, [id]) 
- 
+    await query( 
+      "UPDATE rides SET status_detalhe = 'em_parada', num_paradas = num_paradas + 1 WHERE id = $1", [id] 
+    ) 
+  
     const config = await getConfig() 
- 
     return { 
       mensagem: 'Parada iniciada', 
       stop_id: result.rows[0].id, 
-      minutos_gratis: config.parada_minutos_gratis, 
-      valor_por_minuto: config.parada_valor_minuto 
+      minutos_gratis: config.parada_minutos_gratis 
     } 
   }) 
  
