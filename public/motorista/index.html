@@ -762,7 +762,8 @@
          corridaAtualId = null 
          corridaAtualToken = null 
          esconderCorridaAtiva() 
-         carregar() 
+         // NÃO coloca offline — mantém motorista online para próxima corrida 
+         carregar() // Só atualiza os dados do perfil/ganhos 
        } else { 
          alert(d.mensagem || '✅ Ação registrada!') 
        } 
