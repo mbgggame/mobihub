@@ -145,27 +145,61 @@
      <p id="txt-mapa-info" class="text-xs text-center text-gray-400 py-2"></p> 
    </div> 
  
-   <!-- AVALIAÇÃO --> 
-   <div id="card-avaliacao" class="hidden bg-white rounded-xl border border-gray-200 p-4"> 
-     <p class="text-sm font-semibold text-gray-800 mb-1">Como foi sua corrida?</p> 
-     <p class="text-xs text-gray-500 mb-3">Avalie o motorista</p> 
-     <div class="flex gap-2 justify-center mb-4" id="estrelas-container"> 
-       <span class="star text-4xl cursor-pointer text-gray-300" data-v="1">★</span> 
-       <span class="star text-4xl cursor-pointer text-gray-300" data-v="2">★</span> 
-       <span class="star text-4xl cursor-pointer text-gray-300" data-v="3">★</span> 
-       <span class="star text-4xl cursor-pointer text-gray-300" data-v="4">★</span> 
-       <span class="star text-4xl cursor-pointer text-gray-300" data-v="5">★</span> 
+   <!-- AVALIAÇÃO EM DESTAQUE --> 
+   <div id="card-avaliacao" class="hidden"> 
+     <!-- Overlay de fundo --> 
+     <div class="fixed inset-0 bg-black bg-opacity-50 z-40"></div> 
+     
+     <!-- Card de avaliação centralizado --> 
+     <div class="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl p-6 shadow-2xl"> 
+       <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto mb-4"></div> 
+       
+       <div class="text-center mb-4"> 
+         <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3"> 
+           <svg class="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"> 
+             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/> 
+           </svg> 
+         </div> 
+         <h2 class="text-xl font-bold text-gray-900">Corrida concluída!</h2> 
+         <p class="text-sm text-gray-500 mt-1">Como foi sua experiência?</p> 
+       </div> 
+   
+       <!-- Info do motorista --> 
+       <div class="flex items-center gap-3 bg-gray-50 rounded-xl p-3 mb-5"> 
+         <div id="aval-avatar" 
+           class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold text-lg flex-shrink-0"> 
+         </div> 
+         <div> 
+           <p id="aval-nome-motorista" class="font-semibold text-gray-900"></p> 
+           <p id="aval-carro-motorista" class="text-xs text-gray-500"></p> 
+         </div> 
+       </div> 
+   
+       <!-- Estrelas grandes --> 
+       <div class="flex justify-center gap-3 mb-4"> 
+         <button class="star-aval text-5xl transition-transform hover:scale-110" data-v="1">☆</button> 
+         <button class="star-aval text-5xl transition-transform hover:scale-110" data-v="2">☆</button> 
+         <button class="star-aval text-5xl transition-transform hover:scale-110" data-v="3">☆</button> 
+         <button class="star-aval text-5xl transition-transform hover:scale-110" data-v="4">☆</button> 
+         <button class="star-aval text-5xl transition-transform hover:scale-110" data-v="5">☆</button> 
+       </div> 
+       <p id="txt-nota-selecionada" class="text-center text-sm text-gray-400 mb-4">Toque nas estrelas para avaliar</p> 
+   
+       <!-- Comentário --> 
+       <textarea id="comentario" rows="2" placeholder="Comentário opcional..." 
+         class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 mb-4 resize-none"> 
+       </textarea> 
+   
+       <!-- Botões --> 
+       <button id="btn-avaliar" onclick="enviarAvaliacao()" 
+         class="w-full bg-green-600 text-white rounded-xl py-4 font-bold text-base hover:bg-green-700 mb-3 disabled:opacity-50"> 
+         ⭐ Enviar avaliação 
+       </button> 
+       <a href="/solicitar" 
+         class="block w-full text-center text-gray-400 text-sm py-2 hover:text-gray-600"> 
+         Pular → Solicitar nova corrida 
+       </a> 
      </div> 
-     <textarea id="comentario" placeholder="Comentário opcional..." rows="2" 
-       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-green-400 mb-3"></textarea> 
-     <button id="btn-avaliar" onclick="enviarAvaliacao()" 
-       class="w-full bg-green-600 text-white rounded-lg py-2.5 font-semibold text-sm"> 
-       Enviar avaliação 
-     </button> 
-     <a href="/solicitar" 
-       class="block w-full text-center text-gray-400 text-xs py-2 mt-1 hover:text-gray-600"> 
-       Pular avaliação e solicitar nova corrida → 
-     </a> 
    </div> 
  
    <!-- AGRADECIMENTO --> 
@@ -350,6 +384,19 @@
    if (ride.status === 'concluida') { 
      if (!rating?.estrelas_motorista) { 
        document.getElementById('card-avaliacao').classList.remove('hidden') 
+ 
+       // Preenche dados do motorista no card 
+       if (ride.driver_nome) { 
+         const avatar = document.getElementById('aval-avatar') 
+         if (ride.driver_foto) { 
+           avatar.innerHTML = `<img src="${ride.driver_foto}" class="w-full h-full object-cover rounded-full"/>` 
+         } else { 
+           avatar.textContent = ride.driver_nome.charAt(0).toUpperCase() 
+         } 
+         document.getElementById('aval-nome-motorista').textContent = ride.driver_nome 
+         document.getElementById('aval-carro-motorista').textContent = 
+           `${ride.modelo_carro} ${ride.cor_carro} — ${ride.placa}` 
+       } 
      } else { 
        document.getElementById('card-obrigado').classList.remove('hidden') 
      } 
@@ -483,20 +530,29 @@
  } 
  
  // Estrelas avaliação 
- document.querySelectorAll('.star').forEach(s => { 
+ document.querySelectorAll('.star-aval').forEach(s => { 
    s.addEventListener('click', () => { 
      estrelaSelecionada = parseInt(s.dataset.v) 
-     document.querySelectorAll('.star').forEach((st, i) => { 
+     const notas = ['', 'Ruim 😞', 'Regular 😐', 'Bom 😊', 'Ótimo 😄', 'Excelente! 🤩'] 
+     document.getElementById('txt-nota-selecionada').textContent = notas[estrelaSelecionada] 
+     document.getElementById('txt-nota-selecionada').style.color = '#9ca3af' 
+     document.querySelectorAll('.star-aval').forEach((st, i) => { 
+       st.textContent = i < estrelaSelecionada ? '★' : '☆' 
        st.style.color = i < estrelaSelecionada ? '#f59e0b' : '#d1d5db' 
      }) 
    }) 
  }) 
  
  async function enviarAvaliacao() { 
-   if (!estrelaSelecionada) { alert('Selecione uma nota!'); return } 
+   if (!estrelaSelecionada) { 
+     document.getElementById('txt-nota-selecionada').textContent = '⚠️ Selecione uma nota!' 
+     document.getElementById('txt-nota-selecionada').style.color = '#ef4444' 
+     return 
+   } 
    const btn = document.getElementById('btn-avaliar') 
    btn.textContent = 'Enviando...' 
    btn.disabled = true 
+ 
    const r = await fetch(`/api/ride/${token}/avaliar-motorista`, { 
      method: 'POST', 
      headers: { 'Content-Type': 'application/json' }, 
@@ -505,13 +561,15 @@
        comentario: document.getElementById('comentario').value 
      }) 
    }) 
+ 
    if (r.ok) { 
-       document.getElementById('card-avaliacao').classList.add('hidden') 
-       document.getElementById('card-obrigado').classList.remove('hidden') 
-     } else { 
-     btn.textContent = 'Enviar avaliação' 
+     document.getElementById('card-avaliacao').classList.add('hidden') 
+     document.getElementById('card-obrigado').classList.remove('hidden') 
+   } else { 
+     btn.textContent = '⭐ Enviar avaliação' 
      btn.disabled = false 
-     alert('Erro ao enviar. Tente novamente.') 
+     document.getElementById('txt-nota-selecionada').textContent = '❌ Erro ao enviar. Tente novamente.' 
+     document.getElementById('txt-nota-selecionada').style.color = '#ef4444' 
    } 
  } 
  

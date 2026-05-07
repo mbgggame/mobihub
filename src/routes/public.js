@@ -631,8 +631,8 @@ export default async function publicRoutes(fastify) {
     const valorMotorista = parseFloat((valorFinal * 0.70).toFixed(2)) 
  
     await query( 
-      "UPDATE rides SET status = 'concluida', concluida_at = CURRENT_TIMESTAMP, valor_final = $1 WHERE id = $2", 
-      [valorFinal, id] 
+      "UPDATE rides SET status = 'concluida', concluida_at = CURRENT_TIMESTAMP, valor_final = $1, valor_motorista = $2, valor_mobihub = $3 WHERE id = $4", 
+      [valorFinal, valorMotorista, parseFloat((valorFinal - valorMotorista).toFixed(2)), id] 
     ) 
  
     await query('UPDATE drivers SET total_viagens = total_viagens + 1 WHERE id = $1', [driver.id]) 
