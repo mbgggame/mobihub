@@ -45,41 +45,6 @@ export default async function publicRoutes(fastify) {
     return { ride, rating, paradas, config } 
   }) 
  
-  fastify.get('/api/ride/:token/motorista-location', async (request, reply) => { 
-    const result = await query(` 
-      SELECT r.*, d.nome as driver_nome, d.modelo_carro, d.cor_carro, d.ano_carro, d.placa 
-      FROM rides r 
-      LEFT JOIN drivers d ON r.driver_id = d.id 
-      WHERE r.token = $1 
-    `, [request.params.token]) 
-    const ride = result.rows[0] 
- 
-    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
-    if (!ride.driver_id) return { location: null } 
- 
-    const locationResult = await query(` 
-      SELECT lat, lng, updated_at FROM driver_locations 
-      WHERE ride_id = $1 
-      ORDER BY updated_at DESC LIMIT 1 
-    `, [ride.id]) 
-    const location = locationResult.rows[0] 
- 
-    if (!location) return { location: null, mensagem: 'Aguardando localização do motorista' } 
- 
-    // Calcula tempo desde última atualização 
-    const segundos = Math.floor((Date.now() - new Date(location.updated_at).getTime()) / 1000) 
- 
-    return { 
-      location: { 
-        lat: location.lat, 
-        lng: location.lng, 
-        updated_at: location.updated_at, 
-        segundos_atras: segundos, 
-        ativo: segundos < 60 
-      } 
-    } 
-  }) 
- 
   // Cliente avalia motorista 
    fastify.post('/api/ride/:token/avaliar-motorista', async (request, reply) => { 
      const { estrelas, comentario } = request.body 
