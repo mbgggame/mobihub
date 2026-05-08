@@ -504,7 +504,7 @@
    }
  
    const btnCancelar = document.getElementById('card-cancelar-passageiro') 
-   if ((ride.status === 'aberta' || ride.status === 'aceita') && !ride.passageiro_embarcou_at) { 
+   if (ride.status === 'aberta' && !ride.passageiro_embarcou_at) { 
      btnCancelar.classList.remove('hidden') 
    } else { 
      btnCancelar.classList.add('hidden') 

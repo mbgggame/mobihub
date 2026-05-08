@@ -188,6 +188,10 @@ export default async function ridesRoutes(fastify) {
  
     await dbQuery(updateQuery, params) 
  
+    if (status === 'cancelada') {
+      await dbQuery("UPDATE rides SET cancelado_por = 'admin' WHERE id = $1", [id])
+    }
+
     if (status === 'concluida') { 
       if (ride.driver_id) { 
         const driverResult = await dbQuery('SELECT * FROM drivers WHERE id = $1', [ride.driver_id]) 

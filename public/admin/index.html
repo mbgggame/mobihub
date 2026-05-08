@@ -234,8 +234,8 @@ function renderizar(corridas) {
           </button> 
         </div> 
         ` : ''} 
-        ${['aberta','aceita'].includes(c.status) ? `<button onclick="atualizarStatus('cancelada')" class="flex-1 bg-red-50 text-red-600 border border-red-200 rounded-lg py-2 text-sm font-medium">✕ Cancelar</button>` : ''} 
-        ${msgCliente ? `<button onclick="copiarMensagem()" class="w-full bg-green-50 text-green-700 border border-green-200 rounded-lg py-2 text-sm font-medium">📋 Copiar mensagem para cliente</button>` : ''} 
+      ${['aberta','aceita','em_viagem'].includes(c.status) ? `<button onclick="confirmarCancelamento(${c.id})" class="flex-1 bg-red-50 text-red-600 border border-red-200 rounded-lg py-2 text-sm font-medium">❌ Cancelar corrida</button>` : ''} 
+      ${msgCliente ? `<button onclick="copiarMensagem()" class="w-full bg-green-50 text-green-700 border border-green-200 rounded-lg py-2 text-sm font-medium">📋 Copiar mensagem para cliente</button>` : ''} 
       </div> 
     </div> 
   ` 
@@ -257,6 +257,23 @@ async function atualizarStatus(status) {
     alert('Erro ao atualizar status') 
   } 
 } 
+
+async function confirmarCancelamento(id) {
+  if (confirm("Tem certeza que deseja cancelar esta corrida?")) {
+    const r = await fetch(`/api/rides/${id}/status`, {
+      method: 'PUT',
+      headers: headers(),
+      body: JSON.stringify({ status: 'cancelada' })
+    })
+    if (r.ok) {
+      fecharModal()
+      carregar()
+      alert("Corrida cancelada com sucesso!")
+    } else {
+      alert("Erro ao cancelar corrida")
+    }
+  }
+}
  
 async function controlarCorrida(id, acao, method = 'PUT') { 
   const r = await fetch(`/api/rides/${id}/${acao}`, { 
