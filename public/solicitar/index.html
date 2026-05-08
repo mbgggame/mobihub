@@ -202,6 +202,15 @@
  
 </div> 
 <script> 
+ console.log('[SOLICITAR] Página carregada') 
+ window.origemLat = null 
+ window.origemLng = null 
+ window.destinoLat = null 
+ window.destinoLng = null 
+ window.origem = null 
+ window.destino = null 
+ window.valorCalculado = null 
+ 
  const STORAGE_CLIENTE = 'mobihub_cliente' 
  const STORAGE_FAV = 'mobihub_favoritos' 
  const STORAGE_HIST = 'mobihub_historico' 
@@ -243,6 +252,25 @@
    localStorage.removeItem(STORAGE_CLIENTE) 
    document.getElementById('tela-solicitar').classList.add('hidden') 
    document.getElementById('tela-cadastro').classList.remove('hidden') 
+ } 
+ 
+ function verificarBotaoSolicitar() { 
+   const btn = document.getElementById('btn-solicitar') 
+   const temOrigem = origem && origemLat 
+   const temDestino = destino && destinoLat 
+   const temCliente = !!localStorage.getItem('mobihub_cliente') 
+ 
+   console.log('[BTN] origem:', !!temOrigem, '| destino:', !!temDestino, '| cliente:', temCliente) 
+ 
+   if (temOrigem && temDestino) { 
+     btn.disabled = false 
+     btn.classList.remove('opacity-40', 'cursor-not-allowed') 
+     btn.classList.add('bg-green-600') 
+     btn.classList.remove('bg-green-300') 
+   } else { 
+     btn.disabled = true 
+     btn.classList.add('opacity-40', 'cursor-not-allowed') 
+   } 
  } 
  
  function setTipo(tipo) { 
@@ -402,11 +430,15 @@
        origemLat = lat 
        origemLng = lng 
        origemEndereco = place.formatted_address 
+       origem = place.formatted_address 
        mostrarOrigemNoMapa(origemLat, origemLng, origemEndereco) 
+       verificarBotaoSolicitar() 
        if (destinoLat) calcularValor() 
      } else { 
        destinoLat = lat 
        destinoLng = lng 
+       destino = place.formatted_address 
+       verificarBotaoSolicitar() 
        if (origemLat) calcularValor() 
      } 
  
@@ -609,40 +641,54 @@
  } 
  
  async function solicitar() { 
-   const cliente = JSON.parse(localStorage.getItem(STORAGE_CLIENTE) || 'null') 
-   if (!cliente || !origem || !destino || !valorCalculado) return 
+   const clienteStr = localStorage.getItem('mobihub_cliente') 
+   const cliente = clienteStr ? JSON.parse(clienteStr) : null 
+ 
+   if (!origem || !origemLat) { 
+     alert('Por favor informe o endereço de origem') 
+     return 
+   } 
+   if (!destino || !destinoLat) { 
+     alert('Por favor informe o endereço de destino') 
+     return 
+   } 
+   if (!cliente) { 
+     // Abre modal de cadastro (ou tela de cadastro no seu caso) 
+     document.getElementById('tela-cadastro')?.classList.remove('hidden') 
+     document.getElementById('tela-solicitar')?.classList.add('hidden') 
+     return 
+   } 
+ 
    const btn = document.getElementById('btn-solicitar') 
-   const erro = document.getElementById('erro-solicitar') 
-   btn.textContent = 'Enviando...' 
    btn.disabled = true 
-   erro.classList.add('hidden') 
+   btn.textContent = 'Solicitando...' 
+ 
+   // Usa valor calculado ou valor mínimo 
+   const valor = valorCalculado || 15.00 
+ 
    try { 
-     const agendadaPara = tipoCorreida === 'agendada' 
-       ? document.getElementById('data-agendamento').value : null 
-     const r = await fetch('/api/solicitar', { 
+     const r = await fetch('/api/rides', { 
        method: 'POST', 
        headers: { 'Content-Type': 'application/json' }, 
        body: JSON.stringify({ 
-         nome: cliente.nome, 
-         celular: cliente.celular, 
-         email: cliente.email || null, 
-         origem: origem.endereco, 
-         origem_lat: origem.lat, 
-         origem_lng: origem.lng, 
-         destino: destino.endereco, 
-         destino_lat: destino.lat, 
-         destino_lng: destino.lng, 
-         valor: valorCalculado, 
-         tipo: tipoCorreida, 
-         agendada_para: agendadaPara 
+         origem, 
+         origem_lat: origemLat, 
+         origem_lng: origemLng, 
+         destino, 
+         destino_lat: destinoLat, 
+         destino_lng: destinoLng, 
+         valor, 
+         client_id: cliente.id, 
+         tipo: tipoCorreida || 'normal', 
+         agendada_para: (tipoCorreida === 'agendada' ? document.getElementById('data-agendamento').value : null) 
        }) 
      }) 
+ 
      const d = await r.json() 
      if (!r.ok) { 
-       erro.textContent = d.error || 'Erro ao solicitar' 
-       erro.classList.remove('hidden') 
-       btn.textContent = 'Solicitar corrida' 
+       alert('Erro: ' + (d.error || 'Tente novamente')) 
        btn.disabled = false 
+       btn.textContent = 'Solicitar corrida' 
        return 
      } 
  
@@ -667,10 +713,9 @@
        } 
      }, 1000) 
    } catch(e) { 
-     erro.textContent = 'Erro de conexão. Tente novamente.' 
-     erro.classList.remove('hidden') 
-     btn.textContent = 'Solicitar corrida' 
+     alert('Erro de conexão') 
      btn.disabled = false 
+     btn.textContent = 'Solicitar corrida' 
    } 
  } 
  
