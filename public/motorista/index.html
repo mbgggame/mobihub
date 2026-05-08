@@ -765,10 +765,15 @@
          detalheDiv.classList.add('hidden') 
        } 
      } else if (corridaAtualId) { 
-       corridaAtualId = null; corridaAtualToken = null 
+       // Se tínhamos uma corrida e agora o servidor diz que não tem, 
+       // limpamos o estado para voltar a aguardar.
+       corridaAtualId = null; 
+       corridaAtualToken = null 
        esconderCorridaAtiva() 
      } 
-   } catch(e) {} 
+   } catch(e) {
+     console.error('[POLLING ATIVA]', e);
+   } 
  } 
  
  function mostrarNovaCorrida(corrida) { 
@@ -891,8 +896,20 @@
    pararAudio() 
    try { 
      const r = await fetch(`/api/rides/${c.id}/aceitar-motorista`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token_motorista: tokenMotorista }) }) 
-     if (r.ok) { const d = await r.json(); corridaAtualId = c.id; corridaAtualToken = c.token; mostrarCorridaAtiva(c) } 
-   } catch(e) {} 
+     if (r.ok) { 
+       const d = await r.json(); 
+       corridaAtualId = c.id; 
+       corridaAtualToken = d.token || c.token; 
+       
+       // Chama o polling de corrida ativa imediatamente para pegar os dados reais do banco
+       await verificarCorridaAtiva();
+       
+       // Muda para a aba de corridas para ver o card ativo
+       mudarAba('corridas');
+     } 
+   } catch(e) {
+     console.error('[ACEITAR]', e);
+   } 
  } 
  
  function recusarCorrida() { pararAudio(); if (window._corridaDisponivel) corridasIgnoradas.push(window._corridaDisponivel.id); esconderNovaCorrida() } 
@@ -961,7 +978,20 @@
    } 
  } 
  
- async function polling() { if (pollingAtivo) { await verificarCorridaAtiva(); if (!corridaAtualId) await verificarNovasCorridas(); await carregarMsgMotorista(); setTimeout(polling, 8000) } } 
+ async function polling() { 
+   if (pollingAtivo) { 
+     try {
+       await verificarCorridaAtiva(); 
+       if (!corridaAtualId) {
+         await verificarNovasCorridas(); 
+       }
+       await carregarMsgMotorista(); 
+     } catch(e) {
+       console.error('[POLLING ERROR]', e);
+     }
+     setTimeout(polling, 8000) 
+   } 
+ } 
  
  async function carregarMsgMotorista() { 
    if (!corridaAtualId) return 

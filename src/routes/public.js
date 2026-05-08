@@ -56,7 +56,7 @@ export default async function publicRoutes(fastify) {
     if (!mensagem?.trim()) return reply.code(400).send({ error: 'Mensagem vazia' }) 
     const driver = (await query('SELECT id FROM drivers WHERE token_perfil = $1', [token])).rows[0] 
     if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
-    const ride = (await query("SELECT id FROM rides WHERE id = $1 AND driver_id = $2 AND status = 'aceita'", [rideId, driver.id])).rows[0] 
+    const ride = (await query("SELECT id FROM rides WHERE id = $1 AND driver_id = $2 AND status IN ('aceita', 'em_viagem')", [rideId, driver.id])).rows[0] 
     if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
     await query('INSERT INTO ride_messages (ride_id, remetente, mensagem) VALUES ($1, $2, $3)', [ride.id, 'motorista', mensagem.trim()]) 
     return { mensagem: 'Enviado' } 
@@ -272,7 +272,7 @@ export default async function publicRoutes(fastify) {
     if (!driver) return { corrida: null } 
  
     const corrida = (await query( 
-      "SELECT * FROM rides WHERE driver_id = $1 AND status = 'aceita' ORDER BY aceita_at DESC LIMIT 1", 
+      "SELECT * FROM rides WHERE driver_id = $1 AND status IN ('aceita', 'em_viagem') ORDER BY aceita_at DESC LIMIT 1", 
       [driver.id] 
     )).rows[0] 
     return { corrida: corrida || null } 
@@ -298,7 +298,7 @@ export default async function publicRoutes(fastify) {
       AND d.status_cadastro = 'aprovado' 
       AND NOT EXISTS ( 
         SELECT 1 FROM rides r 
-        WHERE r.driver_id = d.id AND r.status = 'aceita' 
+        WHERE r.driver_id = d.id AND r.status IN ('aceita', 'em_viagem') 
       ) 
     `)).rows 
   
@@ -438,7 +438,7 @@ export default async function publicRoutes(fastify) {
         num_paradas, tempo_espera_inicial_min, tempo_paradas_total_min, 
         origem, destino, telegram_message_id, client_id 
       FROM rides 
-      WHERE id = $1 AND driver_id = $2 AND status = 'aceita' 
+      WHERE id = $1 AND driver_id = $2 AND status IN ('aceita', 'em_viagem') 
     `, [id, driver.id])).rows[0] 
     if (!ride) return reply.code(400).send({ error: 'Corrida não encontrada' }) 
     const { calculateTotalRideCost, calculateInitialWaitCost } = await import('../billing.js') 
