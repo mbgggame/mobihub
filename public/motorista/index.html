@@ -5,8 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
   <title>MobiHub — Motorista</title> 
   <script src="https://cdn.tailwindcss.com"></script> 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/> 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script> 
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBz0TOxlMbWgEQuDoMSqneGN0UFywnX-7s&libraries=places&language=pt-BR"></script> 
   <style> 
     #video-camera { width:100%; max-height:220px; object-fit:cover; background:#000; border-radius:12px; } 
     #canvas-hidden { display:none; } 
@@ -415,6 +414,9 @@
  let corridasIgnoradas = [] 
  let audioAtivo = false 
  let mapCorrida = null 
+ let directionsService = null 
+ let directionsRenderer = null 
+ let minhaPos = null 
  let timerInterval = null 
  let pollingAtivo = true 
  let watchId = null 
@@ -440,6 +442,8 @@
    if (aba === 'historico') carregarHistorico() 
  } 
  
+ let dadosAtuaisDriver = null 
+ 
  async function carregar() { 
    try { 
      const r = await fetch(`/api/motorista/${tokenMotorista}`) 
@@ -448,6 +452,7 @@
        return 
      } 
      const { driver, financeiro } = await r.json() 
+     dadosAtuaisDriver = driver 
      renderizarPerfil(driver) 
      renderizarFinanceiro(financeiro) 
      renderizarStatusOnline(driver) 
@@ -680,6 +685,9 @@
      corridaAtualToken = corrida.token 
      mostrarCorridaAtiva(corrida) 
  
+     // BUG 4: Atualização da Navegação no Mapa 
+     atualizarNavegacaoMotorista(corrida) 
+ 
      // Gerenciamento de Timers (Espera e Parada) 
      const detalheDiv = document.getElementById('status-detalhe-motorista') 
      const txtStatus = document.getElementById('txt-status-detalhe') 
@@ -843,25 +851,64 @@
    carregarMsgMotorista() 
  } 
  
- function esconderCorridaAtiva() { 
-   document.getElementById('card-corrida-ativa').classList.add('hidden') 
-   document.getElementById('card-chat-motorista').classList.add('hidden') 
-   document.getElementById('card-sem-corrida').classList.remove('hidden') 
-   if (mapCorrida) { mapCorrida.remove(); mapCorrida = null } 
+ function iniciarMapaCorrida(corrida) { 
+   const container = document.getElementById('map-corrida') 
+   if (!container) return 
+    
+   if (!mapCorrida) { 
+     mapCorrida = new google.maps.Map(container, { 
+       zoom: 15, 
+       center: minhaPos || { lat: -20.3222, lng: -40.2917 }, 
+       disableDefaultUI: true, 
+       styles: [ 
+         { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] } 
+       ] 
+     }) 
+     directionsService = new google.maps.DirectionsService() 
+     directionsRenderer = new google.maps.DirectionsRenderer({ 
+       map: mapCorrida, 
+       suppressMarkers: false, 
+       polylineOptions: { strokeColor: '#059669', strokeWeight: 5 } 
+     }) 
+   } 
+ 
+   if (corrida) atualizarNavegacaoMotorista(corrida) 
  } 
  
- function iniciarMapaCorrida(corrida) { 
-   if (!corrida || !corrida.origem_lat) return 
-   setTimeout(() => { 
-     if (!mapCorrida) { 
-       mapCorrida = L.map('map-corrida').setView([-20.3222, -40.3381], 13) 
-       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(mapCorrida) 
-     } 
-     L.marker([corrida.origem_lat, corrida.origem_lng]).addTo(mapCorrida).bindPopup('📍 Origem') 
-     L.marker([corrida.destino_lat, corrida.destino_lng]).addTo(mapCorrida).bindPopup('🏁 Destino') 
-     mapCorrida.fitBounds([[corrida.origem_lat, corrida.origem_lng],[corrida.destino_lat, corrida.destino_lng]], { padding: [30,30] }) 
-   }, 300) 
+ function atualizarNavegacaoMotorista(corrida) { 
+   if (!mapCorrida || !minhaPos) return 
+ 
+   let destino = null 
+   if (corrida.status === 'aceita' && !corrida.motorista_chegou_at) { 
+     // A caminho do passageiro (Origem) 
+     destino = { lat: Number(corrida.origem_lat), lng: Number(corrida.origem_lng) } 
+   } else if (corrida.status_detalhe === 'em_andamento') { 
+     // Em viagem (Destino final) 
+     destino = { lat: Number(corrida.destino_lat), lng: Number(corrida.destino_lng) } 
+   } 
+ 
+   if (destino) { 
+     directionsService.route({ 
+       origin: minhaPos, 
+       destination: destino, 
+       travelMode: google.maps.TravelMode.DRIVING 
+     }, (result, status) => { 
+       if (status === 'OK') { 
+         directionsRenderer.setDirections(result) 
+       } 
+     }) 
+   } else { 
+     directionsRenderer.set('directions', null) 
+     mapCorrida.setCenter(minhaPos) 
+   } 
  } 
+ 
+ function esconderCorridaAtiva() { 
+    document.getElementById('card-corrida-ativa').classList.add('hidden') 
+    document.getElementById('card-chat-motorista').classList.add('hidden') 
+    document.getElementById('card-sem-corrida').classList.remove('hidden') 
+    if (directionsRenderer) directionsRenderer.set('directions', null) 
+  } 
  
  async function aceitarCorrida() { 
    const corrida = window._corridaDisponivel 
@@ -1258,7 +1305,13 @@
      async (pos) => { 
        const lat = pos.coords.latitude 
        const lng = pos.coords.longitude 
+       minhaPos = { lat, lng } 
        console.log('[GPS] Posição:', lat, lng, '| Corrida:', corridaAtualId) 
+ 
+       // BUG 4: Atualiza centro do mapa se estiver ativo 
+       if (mapCorrida && !directionsRenderer?.getDirections()) { 
+         mapCorrida.setCenter(minhaPos) 
+       } 
  
        if (!corridaAtualId) { 
          console.log('[GPS] Sem corrida ativa, não enviando') 
@@ -1266,10 +1319,10 @@
        } 
  
        try { 
-         const r = await fetch(`/api/motorista/${tokenMotorista}/location`, { 
+         const r = await fetch(`/api/motorista/localizacao`, { 
            method: 'POST', 
            headers: { 'Content-Type': 'application/json' }, 
-           body: JSON.stringify({ lat, lng, ride_id: corridaAtualId }) 
+           body: JSON.stringify({ lat, lng, driver_id: dadosAtuaisDriver?.id }) 
          }) 
          const d = await r.json() 
          console.log('[GPS] Resposta servidor:', d) 
@@ -1299,6 +1352,7 @@
      navigator.geolocation.clearWatch(watchId) 
      watchId = null 
    } 
+   minhaPos = null 
    const btn = document.getElementById('btn-compartilhar-loc') 
    const txt = document.getElementById('txt-loc-status') 
    if (btn) { 

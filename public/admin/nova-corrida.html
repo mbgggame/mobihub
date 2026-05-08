@@ -356,22 +356,36 @@ window.onload = () => {
   setupAutocomplete('busca-dest', 'destino') 
   carregarConfig() 
  
-  // Verifica se há uma corrida para repetir 
-  const repetir = localStorage.getItem('mobihub_repetir_corrida') 
-  if (repetir) { 
-    try { 
-      const d = JSON.parse(repetir) 
-      localStorage.removeItem('mobihub_repetir_corrida') 
-       
-      if (d.telefone) document.getElementById('telefone').value = d.telefone 
-      if (d.valor) document.getElementById('valor').value = Number(d.valor).toFixed(2) 
+  // BUG 1 FIX: Verifica se há uma corrida para repetir 
+  const rOrigem = localStorage.getItem('repetir_origem') 
+  const rDestino = localStorage.getItem('repetir_destino') 
+  const rValor = localStorage.getItem('repetir_valor') 
+  const rTelefone = localStorage.getItem('repetir_telefone') 
  
-      // Aguarda o Google Maps carregar e posicionar marcadores 
+  if (rOrigem || rDestino) { 
+    if (rTelefone) document.getElementById('telefone').value = rTelefone 
+    if (rValor) document.getElementById('valor').value = Number(rValor).toFixed(2) 
+    if (rOrigem) document.getElementById('busca-orig').value = rOrigem 
+    if (rDestino) document.getElementById('busca-dest').value = rDestino 
+ 
+    // Dispara geocodificação para preencher os pontos internos e marcadores 
+    if (rOrigem) { 
+      geocoder.geocode({ address: rOrigem }, (results, status) => { 
+        if (status === 'OK') marcarPonto(results[0].geometry.location.lat(), results[0].geometry.location.lng(), rOrigem, 'origem') 
+      }) 
+    } 
+    if (rDestino) { 
       setTimeout(() => { 
-        if (d.origem) marcarPonto(Number(d.origem.lat), Number(d.origem.lng), d.origem.endereco, 'origem') 
-        if (d.destino) marcarPonto(Number(d.destino.lat), Number(d.destino.lng), d.destino.endereco, 'destino') 
-      }, 1000) 
-    } catch(e) { console.error('Erro ao repetir corrida:', e) } 
+        geocoder.geocode({ address: rDestino }, (results, status) => { 
+          if (status === 'OK') marcarPonto(results[0].geometry.location.lat(), results[0].geometry.location.lng(), rDestino, 'destino') 
+        }) 
+      }, 500) 
+    } 
+ 
+    localStorage.removeItem('repetir_origem') 
+    localStorage.removeItem('repetir_destino') 
+    localStorage.removeItem('repetir_valor') 
+    localStorage.removeItem('repetir_telefone') 
   } 
 } 
  

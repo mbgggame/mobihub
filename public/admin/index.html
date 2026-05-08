@@ -249,13 +249,10 @@ async function verResumoFinanceiro(id) {
  
 function repetirViagem() { 
   if (!corridaAtual) return 
-  const dados = { 
-    origem: { endereco: corridaAtual.origem, lat: corridaAtual.origem_lat, lng: corridaAtual.origem_lng }, 
-    destino: { endereco: corridaAtual.destino, lat: corridaAtual.destino_lat, lng: corridaAtual.destino_lng }, 
-    valor: corridaAtual.valor, 
-    telefone: corridaAtual.client_telefone 
-  } 
-  localStorage.setItem('mobihub_repetir_corrida', JSON.stringify(dados)) 
+  localStorage.setItem('repetir_origem', corridaAtual.origem) 
+  localStorage.setItem('repetir_destino', corridaAtual.destino) 
+  localStorage.setItem('repetir_valor', corridaAtual.valor) 
+  localStorage.setItem('repetir_telefone', corridaAtual.client_telefone || '') 
   location.href = '/admin/nova-corrida' 
 } 
  

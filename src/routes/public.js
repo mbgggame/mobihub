@@ -17,6 +17,20 @@ export default async function publicRoutes(fastify) {
     return { mensagens } 
   }) 
  
+  // Atualizar localização do motorista 
+  fastify.post('/api/motorista/localizacao', async (request, reply) => { 
+    const { driver_id, lat, lng } = request.body 
+    if (!driver_id || !lat || !lng) return reply.code(400).send({ error: 'Dados incompletos' }) 
+ 
+    await query(` 
+      INSERT INTO driver_locations (driver_id, lat, lng, updated_at) 
+      VALUES ($1, $2, $3, NOW()) 
+      ON CONFLICT (driver_id) DO UPDATE SET lat = $2, lng = $3, updated_at = NOW() 
+    `, [driver_id, lat, lng]) 
+ 
+    return { success: true } 
+  })
+ 
   // Passageiro envia mensagem 
   fastify.post('/api/ride/:token/mensagem', async (request, reply) => { 
     const { mensagem } = request.body 
@@ -92,7 +106,7 @@ export default async function publicRoutes(fastify) {
     const { token } = request.params 
     const ride = (await query(` 
       SELECT 
-        r.id, r.driver_id, r.passageiro_embarcou_at, r.destino_lat, r.destino_lng, r.origem_lat, r.origem_lng, r.status 
+        r.id, r.driver_id, r.passageiro_embarcou_at, r.destino_lat, r.destino_lng, r.origem_lat, r.origem_lng, r.status, r.valor 
       FROM rides r 
       WHERE r.token = $1 
     `, [token])).rows[0] 
@@ -123,6 +137,7 @@ export default async function publicRoutes(fastify) {
     } 
  
     return { 
+      valor: ride.valor, 
       location: { 
         lat: location.lat, 
         lng: location.lng, 
@@ -443,7 +458,8 @@ export default async function publicRoutes(fastify) {
     const config = {} 
     configs.forEach(c => config[c.chave] = c.valor) 
     const duracao = calcularTempoMinutos(stop.iniciada_at) 
-    const custo = calculateStopCost(duracao, config) 
+    const waitInfo = calculateStopCost(duracao, config) 
+    const custo = waitInfo.cost 
     await query('UPDATE ride_stops SET finalizada_at = CURRENT_TIMESTAMP, duracao_min = $1, custo = $2 WHERE id = $3', [duracao, custo, stop.id]) 
     const totalParadas = (await query('SELECT COALESCE(SUM(custo),0) as total, COALESCE(SUM(duracao_min),0) as tempo FROM ride_stops WHERE ride_id = $1', [id])).rows[0] 
     await query("UPDATE rides SET status_detalhe = 'em_andamento', custo_paradas = $1, tempo_paradas_total_min = $2 WHERE id = $3", [totalParadas.total, totalParadas.tempo, id]) 
@@ -550,7 +566,7 @@ export default async function publicRoutes(fastify) {
       const stats = (await query(`SELECT AVG(estrelas_motorista) as media, COUNT(estrelas_motorista) as total FROM ratings WHERE ride_id IN (SELECT id FROM rides WHERE driver_id = $1) AND estrelas_motorista IS NOT NULL`, [ride.driver_id])).rows[0] 
       await query(`UPDATE drivers SET media_avaliacao = $1, total_avaliacoes = $2 WHERE id = $3`, [stats.media, stats.total, ride.driver_id]) 
     } 
-    return { mensagem: 'Obrigado!' } 
+    return { mensagem: 'Obrigado!', redirect: '/solicitar' } 
   }) 
 
   fastify.post('/api/internal/rate-client', async (request, reply) => { 

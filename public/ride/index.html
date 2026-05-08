@@ -102,6 +102,31 @@
      </div> 
    </div> 
  
+   <!-- CARD MOTORISTA E MAPA RASTREAMENTO --> 
+   <div id="card-rastreamento" class="hidden bg-white border border-gray-200 rounded-xl p-4 space-y-4"> 
+     <div class="flex items-center gap-3"> 
+       <img id="track-driver-foto" src="/img/driver-placeholder.png" class="w-12 h-12 rounded-full border border-gray-100 object-cover"> 
+       <div class="flex-1"> 
+         <p id="track-driver-nome" class="font-bold text-gray-900 text-sm">Motorista a caminho</p> 
+         <div class="flex items-center gap-1 text-xs text-gray-500"> 
+           <span id="track-driver-modelo">—</span> • <span id="track-driver-placa" class="uppercase font-medium">—</span> 
+         </div> 
+       </div> 
+       <div class="text-right"> 
+         <p id="track-ride-valor" class="font-bold text-green-700 text-sm">R$ 0,00</p> 
+         <p id="track-ride-distancia" class="text-xs text-gray-500">— km</p> 
+       </div> 
+     </div> 
+      
+     <!-- Mapa de Rastreamento Nativo --> 
+     <div id="map-tracking" class="w-full h-48 bg-gray-50 rounded-lg border border-gray-100"></div> 
+      
+     <div class="flex items-center justify-between bg-blue-50 p-2 rounded-lg"> 
+       <p class="text-xs font-medium text-blue-700">Chegada estimada:</p> 
+       <p id="track-ride-eta" class="text-xs font-bold text-blue-800">— min</p> 
+     </div> 
+   </div> 
+ 
    <!-- DETALHAMENTO DA COBRANÇA (Transparência) --> 
    <div id="card-detalhe-billing" class="hidden bg-white border border-gray-200 rounded-xl p-4"> 
      <p class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-3">Detalhamento da cobrança</p> 
@@ -269,7 +294,14 @@
  
  </div> 
  
+ <audio id="audio-corrida" preload="auto" src="/audio/alerta.mp3"></audio> 
+ 
 <script> 
+ let audioAtivo = false 
+ let mapTracking = null 
+ let driverMarker = null 
+ let passengerMarker = null 
+ 
  const token = location.pathname.split('/r/')[1] 
  console.log('[RIDE] Token:', token) 
  let estrelaSelecionada = 0 
@@ -341,10 +373,18 @@
      const { ride, rating, paradas, config } = await r.json() 
      console.log('[POLLING] Status atual:', ride.status, '| Motorista:', ride.driver_nome) 
  
-     // BUG FIX: Para o som se a corrida for aceita, concluída ou cancelada 
-     if (ride.status !== 'aberta') { 
-       console.log('[POLLING] Status não é aberto, parando som...') 
-       pararSom() 
+     // BUG 2 FIX DEFINITIVO: Gerenciamento do áudio por status 
+     if (ride.status === 'aberta') { 
+       if (!audioAtivo) tocarSom() 
+     } else { 
+       if (audioAtivo) pararSom() 
+     } 
+ 
+     // BUG 3: Rastreamento do Motorista 
+     if (ride.status === 'aceita' || (ride.status === 'em_andamento' && ride.status_detalhe === 'em_andamento')) { 
+       carregarLocalizacaoMotorista() 
+     } else { 
+       document.getElementById('card-rastreamento').classList.add('hidden') 
      } 
  
      dadosAtuais = { ride, rating, paradas, config } 
@@ -715,23 +755,34 @@
    btn.textContent = 'Enviando...' 
    btn.disabled = true 
  
-   const r = await fetch(`/api/ride/${token}/avaliar-motorista`, { 
-     method: 'POST', 
-     headers: { 'Content-Type': 'application/json' }, 
-     body: JSON.stringify({ 
-       estrelas: estrelaSelecionada, 
-       comentario: document.getElementById('comentario').value 
+   try { 
+     const r = await fetch(`/api/ride/${token}/avaliar-motorista`, { 
+       method: 'POST', 
+       headers: { 'Content-Type': 'application/json' }, 
+       body: JSON.stringify({ 
+         estrelas: estrelaSelecionada, 
+         comentario: document.getElementById('comentario').value 
+       }) 
      }) 
-   }) 
+     const d = await r.json() 
+     if (r.ok) { 
+       document.getElementById('card-avaliacao').classList.add('hidden') 
+       document.getElementById('card-obrigado').classList.remove('hidden') 
  
-   if (r.ok) { 
-     document.getElementById('card-avaliacao').classList.add('hidden') 
-     document.getElementById('card-obrigado').classList.remove('hidden') 
-   } else { 
+       // BUG 5 FIX: Redirecionar após avaliação 
+       alert('Obrigado pela sua avaliação!') 
+       localStorage.removeItem('mobihub_ride_token') // Limpa dados se houver 
+       window.location.href = d.redirect || '/solicitar' 
+     } else { 
+       btn.textContent = '⭐ Enviar avaliação' 
+       btn.disabled = false 
+       document.getElementById('txt-nota-selecionada').textContent = '❌ ' + (d.error || 'Erro ao enviar. Tente novamente.') 
+       document.getElementById('txt-nota-selecionada').style.color = '#ef4444' 
+     } 
+   } catch(e) { 
      btn.textContent = '⭐ Enviar avaliação' 
      btn.disabled = false 
-     document.getElementById('txt-nota-selecionada').textContent = '❌ Erro ao enviar. Tente novamente.' 
-     document.getElementById('txt-nota-selecionada').style.color = '#ef4444' 
+     alert('Erro ao enviar avaliação') 
    } 
  } 
  
@@ -780,16 +831,72 @@
    } 
  } 
  
+ async function carregarLocalizacaoMotorista() { 
+   try { 
+     const res = await fetch(`/api/ride/${token}/motorista-location`) 
+     const data = await res.json() 
+      
+     if (!data.location) return 
+ 
+     const ride = dadosAtuais.ride 
+     const loc = data.location 
+ 
+     document.getElementById('card-rastreamento').classList.remove('hidden') 
+     document.getElementById('track-driver-nome').textContent = ride.driver_nome || 'Motorista' 
+     document.getElementById('track-driver-modelo').textContent = `${ride.modelo_carro} ${ride.cor_carro}` 
+     document.getElementById('track-driver-placa').textContent = ride.placa 
+     document.getElementById('track-driver-foto').src = ride.driver_foto || '/img/driver-placeholder.png' 
+     document.getElementById('track-ride-valor').textContent = `R$ ${Number(data.valor || 0).toFixed(2)}` 
+     document.getElementById('track-ride-distancia').textContent = `${loc.distancia_km} km` 
+     document.getElementById('track-ride-eta').textContent = `${loc.eta_minutos} min` 
+ 
+     // Inicializa ou atualiza mapa 
+     const driverPos = { lat: loc.lat, lng: loc.lng } 
+     const passengerPos = ride.passageiro_embarcou_at  
+       ? { lat: Number(ride.destino_lat), lng: Number(ride.destino_lng) } 
+       : { lat: Number(ride.origem_lat), lng: Number(ride.origem_lng) } 
+ 
+     if (!mapTracking) { 
+       mapTracking = new google.maps.Map(document.getElementById('map-tracking'), { 
+         zoom: 15, 
+         center: driverPos, 
+         disableDefaultUI: true 
+       }) 
+        
+       driverMarker = new google.maps.Marker({ 
+         position: driverPos, 
+         map: mapTracking, 
+         icon: { url: '/img/car-icon.png', scaledSize: new google.maps.Size(32, 32) } 
+       }) 
+ 
+       passengerMarker = new google.maps.Marker({ 
+         position: passengerPos, 
+         map: mapTracking, 
+         icon: { url: ride.passageiro_embarcou_at ? '/img/dest-icon.png' : '/img/user-icon.png', scaledSize: new google.maps.Size(32, 32) } 
+       }) 
+     } else { 
+       driverMarker.setPosition(driverPos) 
+       passengerMarker.setPosition(passengerPos) 
+        
+       // Ajusta o zoom para mostrar ambos 
+       const bounds = new google.maps.LatLngBounds() 
+       bounds.extend(driverPos) 
+       bounds.extend(passengerPos) 
+       mapTracking.fitBounds(bounds) 
+     } 
+   } catch (e) { console.error('[TRACKING] Erro:', e) } 
+ } 
+ 
  function tocarSom() { 
    const audio = document.getElementById('audio-corrida') 
    if (!audio || !audio.src || audio.src === window.location.href) return 
    audio.volume = 1 
-   audio.loop = false // Controle manual, sem loop nativo 
+   audio.loop = true // Ativa loop apenas para status aberta 
    const promise = audio.play() 
    if (promise) { 
      promise.then(() => { 
        audioAtivo = true 
-       console.log('[AUDIO] Tocando') 
+       console.log('[AUDIO] Iniciado - aguardando motorista') 
      }).catch(e => { 
        console.warn('[AUDIO] Bloqueado pelo navegador:', e.message) 
      }) 
@@ -797,13 +904,13 @@
  } 
  
  function pararSom() { 
-   console.log('[AUDIO] Comando pararSom executado') 
+   console.log('[AUDIO] Parando som (mudança de status)...') 
    const audio = document.getElementById('audio-corrida') 
    if (!audio) return 
    audio.pause() 
    audio.currentTime = 0 
    audioAtivo = false 
-   console.log('[AUDIO] Áudio parado com sucesso') 
+   console.log('[AUDIO] Parado com sucesso') 
  } 
  
  // Inicia o polling 

@@ -20,7 +20,7 @@
   <!-- TELA 1: CADASTRO --> 
   <div id="tela-cadastro"> 
     <div class="bg-white border border-gray-200 rounded-xl p-5"> 
-      <h2 class="font-semibold text-gray-900 mb-1">Bem-vindo ao MobiHub!</h2> 
+      <h2 id="msg-boas-vindas" class="font-semibold text-gray-900 mb-1">Bem-vindo ao MobiHub!</h2> 
       <p class="text-sm text-gray-500 mb-4">Preencha seus dados uma única vez para continuar.</p> 
       <div class="space-y-3"> 
         <div> 
@@ -819,9 +819,22 @@
  } 
  
  window.onload = () => { 
+   const cliente = JSON.parse(localStorage.getItem(STORAGE_CLIENTE) || 'null') 
+   if (cliente) { 
+     document.getElementById('tela-cadastro').classList.add('hidden') 
+     document.getElementById('tela-solicitar').classList.remove('hidden') 
+     document.getElementById('txt-nome-cliente').textContent = cliente.nome 
+ 
+     // BUG 5: Saudação personalizada se vier de uma avaliação 
+     if (document.referrer.includes('/ride/')) { 
+       document.getElementById('txt-nome-cliente').parentElement.innerHTML =  
+         `Olá, <span class="font-semibold text-green-700">${cliente.nome}</span>! Pronto para sua próxima corrida?` 
+     } 
+   } 
    initMap() 
-   verificarCadastro() 
- } 
+   // Note: carregarMotoristasOnline is already called inside initMap in this version
+   // but we can ensure it runs or call a wrapper if needed.
+ }
  </script> 
 </body> 
 </html> 
