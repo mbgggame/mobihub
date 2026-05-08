@@ -316,27 +316,24 @@
        </div> 
      </div> 
  
-    <!-- Mapa da corrida ativa --> 
+     <!-- Mapa da corrida ativa (Único #map) --> 
     <div class="bg-white border border-gray-200 rounded-xl overflow-hidden"> 
-      <p class="text-xs text-gray-500 font-medium uppercase tracking-wide px-4 pt-3 pb-2">Rota</p> 
-      <div id="map-corrida"></div> 
+      <div class="flex items-center justify-between px-4 pt-3 pb-2">
+        <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Mapa</p> 
+        <div id="info-mapa-distancia" class="hidden text-right">
+          <p id="txt-distancia-km" class="text-[10px] font-bold text-green-700"></p>
+        </div>
+      </div>
+      <div id="map" style="height: 250px;"></div> 
       <div class="px-4 py-2 flex gap-2"> 
         <a id="link-navegar" href="#" target="_blank" 
           class="flex-1 text-center text-sm text-blue-600 border border-blue-200 rounded-lg py-2 hover:bg-blue-50"> 
-          🧭 Navegar até passageiro 
+          🧭 Navegar 
         </a> 
         <a id="link-rota-completa" href="#" target="_blank" 
           class="flex-1 text-center text-sm text-green-600 border border-green-200 rounded-lg py-2 hover:bg-green-50"> 
           🗺️ Rota completa 
         </a> 
-      </div> 
-      <!-- Compartilhar localização --> 
-      <div class="px-4 py-2 border-t border-gray-100"> 
-        <button id="btn-compartilhar-loc" onclick="toggleCompartilharLocalizacao()" 
-          class="w-full text-center text-sm text-blue-600 border border-blue-200 rounded-lg py-2 hover:bg-blue-50"> 
-          📍 Compartilhar localização ao vivo 
-        </button> 
-        <p id="txt-loc-status" class="text-xs text-center text-gray-400 mt-1 hidden">● Compartilhando localização</p> 
       </div> 
     </div> 
    </div> 
@@ -488,6 +485,8 @@
    document.getElementById(`aba-${aba}`).classList.add('aba-ativa') 
    if (aba === 'corridas') { 
      document.getElementById('badge-nova-corrida').classList.add('hidden') 
+     // O mapa agora é único e fica visível em todas as abas se necessário? 
+     // De acordo com CORREÇÃO 2b, mapa sempre visível no DOM.
      if (!map) iniciarMapaMotorista() 
    } 
    if (aba === 'historico') carregarHistorico() 
@@ -766,7 +765,7 @@
          txtStatus.textContent = '⏸️ Em parada' 
          fetch(`/api/ride/${corrida.token}`).then(r => r.json()).then(d => { 
            const ultimaParada = d.paradas.sort((a,b) => b.id - a.id).find(p => !p.finalizada_at) 
-           if (ultimaParada) iniciarTimerMotorista(ultimaParada.iniciada_at, 5, 'parada') 
+           if (ultimaParada) iniciarTimerMotorista(ultimaParada.iniciada_at, 2, 'parada') 
          }) 
        } else { 
          detalheDiv.classList.add('hidden') 
@@ -795,7 +794,19 @@
      const posOrigem = [Number(corrida.origem_lat), Number(corrida.origem_lng)] 
      if (markerPassageiro) map.removeLayer(markerPassageiro) 
      markerPassageiro = L.marker(posOrigem, { icon: iconePassageiro }).addTo(map) 
-     if (minhaPos) map.fitBounds(L.latLngBounds([minhaPos.lat, minhaPos.lng], posOrigem), { padding: [50, 50] }) 
+     
+     // CORREÇÃO 2b: linha reta na nova corrida
+     if (minhaPos) {
+       if (rotaLayer) map.removeLayer(rotaLayer)
+       rotaLayer = L.polyline([[minhaPos.lat, minhaPos.lng], posOrigem], { color: '#2563eb', weight: 4, dashArray: '5, 10' }).addTo(map)
+       map.fitBounds(L.latLngBounds([minhaPos.lat, minhaPos.lng], posOrigem), { padding: [50, 50] }) 
+       
+       // Distância e ETA simples para nova corrida
+       const dKm = calcularDistanciaHaversine(minhaPos.lat, minhaPos.lng, posOrigem[0], posOrigem[1])
+       const eta = Math.round((dKm / 30) * 60)
+       document.getElementById('info-mapa-distancia').classList.remove('hidden')
+       document.getElementById('txt-distancia-km').textContent = `${dKm.toFixed(1)} km • ~${eta} min`
+     }
    } 
  } 
  
@@ -824,6 +835,16 @@
    } 
    if (!map) iniciarMapaMotorista() 
    atualizarNavegacaoMotorista(corrida) 
+ } 
+
+ function calcularDistanciaHaversine(lat1, lng1, lat2, lng2) { 
+   const R = 6371 
+   const dLat = (lat2 - lat1) * Math.PI / 180 
+   const dLng = (lng2 - lng1) * Math.PI / 180 
+   const a = Math.sin(dLat/2) * Math.sin(dLat/2) + 
+     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+     Math.sin(dLng/2) * Math.sin(dLng/2) 
+   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) 
  } 
  
  function iniciarMapaMotorista() { 
@@ -907,9 +928,24 @@
  
  function iniciarTimerMotorista(inicioAt, minGratis, tipo) { 
    const t = document.getElementById('txt-timer-motorista') 
+   if (timerInterval) clearInterval(timerInterval)
+
    function up() { 
-     const s = Math.floor((new Date() - new Date(inicioAt)) / 1000) 
-     t.textContent = `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}` 
+     const diffMs = new Date() - new Date(inicioAt)
+     const diffSeg = Math.floor(diffMs / 1000)
+     const min = Math.floor(diffSeg / 60)
+     const seg = diffSeg % 60
+     
+     t.textContent = `${String(min).padStart(2,'0')}:${String(seg).padStart(2,'0')}` 
+     
+     // Verde até 5:00, Vermelho a partir de 5:01
+     if (min >= minGratis) {
+       t.classList.remove('text-yellow-800')
+       t.classList.add('text-red-600')
+     } else {
+       t.classList.remove('text-red-600')
+       t.classList.add('text-yellow-800')
+     }
    } 
    up(); timerInterval = setInterval(up, 1000) 
  } 
@@ -934,8 +970,24 @@
    if (r.ok) { 
      const { mensagens } = await r.json() 
      const l = document.getElementById('lista-msg-motorista') 
-     l.innerHTML = mensagens.map(m => `<div class="flex ${m.remetente==='motorista'?'justify-end':'justify-start'}"><div class="max-w-xs px-3 py-2 rounded-2xl text-sm ${m.remetente==='motorista'?'bg-green-600 text-white':'bg-white border border-gray-200'}"><p>${m.mensagem}</p></div></div>`).join('') 
+     l.innerHTML = mensagens.map(m => `
+       <div class="flex ${m.remetente==='motorista'?'justify-end':'justify-start'}">
+         <div class="max-w-xs px-3 py-2 rounded-2xl text-sm ${m.remetente==='motorista'?'bg-green-600 text-white rounded-br-none':'bg-white border border-gray-200 text-gray-800 rounded-bl-none'}">
+           <p>${m.mensagem}</p>
+           <div class="flex items-center justify-between gap-2 mt-0.5">
+             <p class="text-[10px] ${m.remetente==='motorista'?'text-green-200':'text-gray-400'}">
+               ${new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+             </p>
+             ${m.remetente === 'motorista' ? `<span class="text-[10px] ${m.lida ? 'text-blue-300' : 'text-green-200'}">${m.lida ? '✓✓' : '✓'}</span>` : ''}
+           </div>
+         </div>
+       </div>`).join('') 
      l.scrollTop = l.scrollHeight 
+
+     // Notifica que leu as mensagens do passageiro
+     if (mensagens.some(m => m.remetente === 'passageiro' && !m.lida)) {
+       fetch(`/api/motorista/${tokenMotorista}/chat/${corridaAtualId}/lida`, { method: 'POST' }).catch(() => {})
+     }
    } 
  } 
  

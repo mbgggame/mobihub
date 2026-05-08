@@ -360,38 +360,32 @@ window.onload = () => {
   setupAutocomplete('busca-orig', 'origem') 
   setupAutocomplete('busca-dest', 'destino') 
   carregarConfig() 
- 
-  // BUG 1 FIX: Verifica se há uma corrida para repetir 
-  const rOrigem = localStorage.getItem('repetir_origem') 
-  const rDestino = localStorage.getItem('repetir_destino') 
-  const rValor = localStorage.getItem('repetir_valor') 
-  const rTelefone = localStorage.getItem('repetir_telefone') 
- 
-  if (rOrigem || rDestino) { 
-    if (rTelefone) document.getElementById('telefone').value = rTelefone 
-    if (rValor) document.getElementById('valor').value = Number(rValor).toFixed(2) 
-    if (rOrigem) document.getElementById('busca-orig').value = rOrigem 
-    if (rDestino) document.getElementById('busca-dest').value = rDestino 
- 
-    // Dispara geocodificação para preencher os pontos internos e marcadores 
-    if (rOrigem) { 
-      geocoder.geocode({ address: rOrigem }, (results, status) => { 
-        if (status === 'OK') marcarPonto(results[0].geometry.location.lat(), results[0].geometry.location.lng(), rOrigem, 'origem') 
-      }) 
-    } 
-    if (rDestino) { 
-      setTimeout(() => { 
-        geocoder.geocode({ address: rDestino }, (results, status) => { 
-          if (status === 'OK') marcarPonto(results[0].geometry.location.lat(), results[0].geometry.location.lng(), rDestino, 'destino') 
-        }) 
-      }, 500) 
-    } 
- 
-    localStorage.removeItem('repetir_origem') 
-    localStorage.removeItem('repetir_destino') 
-    localStorage.removeItem('repetir_valor') 
-    localStorage.removeItem('repetir_telefone') 
-  } 
+   
+  // CORREÇÃO 5: Repetir Viagem
+  const rOrigem = localStorage.getItem('repetir_origem')
+  const rDestino = localStorage.getItem('repetir_destino')
+  const rValor = localStorage.getItem('repetir_valor')
+  const rTelefone = localStorage.getItem('repetir_telefone')
+
+  if (rOrigem && rDestino) {
+    document.getElementById('telefone').value = rTelefone || ''
+    document.getElementById('valor').value = rValor || ''
+    
+    // Busca as coordenadas para marcar no mapa Leaflet
+    Promise.all([
+      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(rOrigem)}&limit=1`).then(r => r.json()),
+      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(rDestino)}&limit=1`).then(r => r.json())
+    ]).then(([resOrig, resDest]) => {
+      if (resOrig.length > 0) marcarPonto(parseFloat(resOrig[0].lat), parseFloat(resOrig[0].lon), rOrigem, 'origem')
+      if (resDest.length > 0) marcarPonto(parseFloat(resDest[0].lat), parseFloat(resDest[0].lon), rDestino, 'destino')
+      
+      // Limpa o localStorage após preencher
+      localStorage.removeItem('repetir_origem')
+      localStorage.removeItem('repetir_destino')
+      localStorage.removeItem('repetir_valor')
+      localStorage.removeItem('repetir_telefone')
+    })
+  }
 } 
  
 let linkGerado = '' 
@@ -465,8 +459,8 @@ function novaCorrida() {
   document.getElementById('btn-criar').textContent = 'Criar e enviar para motoristas' 
   document.getElementById('btn-criar').disabled = false 
   document.getElementById('distancia-info').classList.add('hidden') 
-  if (marcadores.origem) marcadores.origem.setMap(null) 
-  if (marcadores.destino) marcadores.destino.setMap(null) 
+  if (marcadores.origem) map.removeLayer(marcadores.origem) 
+  if (marcadores.destino) map.removeLayer(marcadores.destino) 
   marcadores = { origem: null, destino: null } 
   pontos = { origem: null, destino: null } 
   proximoPonto = 'origem' 

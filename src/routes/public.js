@@ -10,11 +10,19 @@ export default async function publicRoutes(fastify) {
     const ride = (await query('SELECT id FROM rides WHERE token = $1', [request.params.token])).rows[0] 
     if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
     const mensagens = (await query( 
-      'SELECT id, remetente, mensagem, created_at FROM ride_messages WHERE ride_id = $1 ORDER BY created_at ASC', 
+      'SELECT id, remetente, mensagem, created_at, lida FROM ride_messages WHERE ride_id = $1 ORDER BY created_at ASC', 
       [ride.id] 
     )).rows 
     await query("UPDATE ride_messages SET lida = 1 WHERE ride_id = $1 AND remetente = 'motorista' AND lida = 0", [ride.id]) 
     return { mensagens } 
+  }) 
+ 
+  // Marcar mensagens como lidas (passageiro lendo as do motorista) 
+  fastify.post('/api/chat/:token/lida', async (request, reply) => { 
+    const ride = (await query('SELECT id FROM rides WHERE token = $1', [request.params.token])).rows[0] 
+    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
+    await query("UPDATE ride_messages SET lida = 1 WHERE ride_id = $1 AND remetente = 'motorista' AND lida = 0", [ride.id]) 
+    return { success: true } 
   }) 
  
   // Atualizar localização do motorista 
@@ -60,11 +68,20 @@ export default async function publicRoutes(fastify) {
     const driver = (await query('SELECT id FROM drivers WHERE token_perfil = $1', [token])).rows[0] 
     if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
     const mensagens = (await query( 
-      'SELECT id, remetente, mensagem, created_at FROM ride_messages WHERE ride_id = $1 ORDER BY created_at ASC', 
+      'SELECT id, remetente, mensagem, created_at, lida FROM ride_messages WHERE ride_id = $1 ORDER BY created_at ASC', 
       [rideId] 
     )).rows 
     await query("UPDATE ride_messages SET lida = 1 WHERE ride_id = $1 AND remetente = 'passageiro' AND lida = 0", [rideId]) 
     return { mensagens } 
+  }) 
+
+  // Marcar mensagens como lidas (motorista lendo as do passageiro) 
+  fastify.post('/api/motorista/:token/chat/:rideId/lida', async (request, reply) => { 
+    const { token, rideId } = request.params 
+    const driver = (await query('SELECT id FROM drivers WHERE token_perfil = $1', [token])).rows[0] 
+    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
+    await query("UPDATE ride_messages SET lida = 1 WHERE ride_id = $1 AND remetente = 'passageiro' AND lida = 0", [rideId]) 
+    return { success: true } 
   }) 
 
   // --- LOCALIZAÇÃO E ETA ---

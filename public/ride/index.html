@@ -118,8 +118,8 @@
        </div> 
      </div> 
       
-     <!-- Mapa de Rastreamento Nativo --> 
-     <div id="map-tracking" class="w-full h-48 bg-gray-50 rounded-lg border border-gray-100"></div> 
+     <!-- Mapa de Rastreamento (Único) --> 
+     <div id="map" class="w-full h-64 bg-gray-50 rounded-lg border border-gray-100"></div> 
       
      <div class="flex items-center justify-between bg-blue-50 p-2 rounded-lg"> 
        <p class="text-xs font-medium text-blue-700">Chegada estimada:</p> 
@@ -188,6 +188,39 @@
        </div> 
      </div> 
    </div> 
+   
+   <!-- TIMELINE DA CORRIDA (CORREÇÃO 6) -->
+   <div id="card-timeline" class="hidden bg-white border border-gray-200 rounded-xl p-4">
+     <p class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-3">Timeline da corrida</p>
+     <div class="space-y-4 relative">
+       <!-- Linha vertical -->
+       <div class="absolute left-2.5 top-2 bottom-2 w-0.5 bg-gray-100"></div>
+       
+       <div id="tm-solicitada" class="relative pl-8 hidden">
+         <div class="absolute left-0 top-1 w-5 h-5 rounded-full bg-green-500 border-4 border-white shadow-sm"></div>
+         <p class="text-sm font-semibold text-gray-800">Corrida solicitada</p>
+         <p id="tm-solicitada-at" class="text-xs text-gray-400"></p>
+       </div>
+       
+       <div id="tm-chegou" class="relative pl-8 hidden">
+         <div class="absolute left-0 top-1 w-5 h-5 rounded-full bg-blue-500 border-4 border-white shadow-sm"></div>
+         <p class="text-sm font-semibold text-gray-800">Motorista chegou</p>
+         <p id="tm-chegou-at" class="text-xs text-gray-400"></p>
+       </div>
+       
+       <div id="tm-embarcou" class="relative pl-8 hidden">
+         <div class="absolute left-0 top-1 w-5 h-5 rounded-full bg-yellow-500 border-4 border-white shadow-sm"></div>
+         <p class="text-sm font-semibold text-gray-800">Passageiro embarcou</p>
+         <p id="tm-embarcou-at" class="text-xs text-gray-400"></p>
+       </div>
+       
+       <div id="tm-concluida" class="relative pl-8 hidden">
+         <div class="absolute left-0 top-1 w-5 h-5 rounded-full bg-green-600 border-4 border-white shadow-sm"></div>
+         <p class="text-sm font-semibold text-gray-800">Corrida finalizada</p>
+         <p id="tm-concluida-at" class="text-xs text-gray-400"></p>
+       </div>
+     </div>
+   </div>
    
    <div id="card-sem-localizacao" class="hidden bg-blue-50 border border-blue-200 rounded-xl p-3"> 
      <p class="text-xs text-blue-700 text-center"> 
@@ -295,9 +328,10 @@
  </div> 
  
 <script> 
- let mapTracking = null 
+ let map = null 
  let driverMarker = null 
  let passengerMarker = null 
+ let routePolyline = null
  
  const token = location.pathname.split('/r/')[1] 
  console.log('[RIDE] Token:', token) 
@@ -392,6 +426,28 @@
  function renderizar(ride, rating, paradas, config) { 
    console.log('[RENDER] status:', ride.status, '| detalhe:', ride.status_detalhe) 
  
+   // CORREÇÃO 6: Renderizar Timeline
+   if (ride.created_at) {
+     document.getElementById('card-timeline').classList.remove('hidden')
+     document.getElementById('tm-solicitada').classList.remove('hidden')
+     document.getElementById('tm-solicitada-at').textContent = new Date(ride.created_at).toLocaleString('pt-BR')
+     
+     if (ride.motorista_chegou_at) {
+       document.getElementById('tm-chegou').classList.remove('hidden')
+       document.getElementById('tm-chegou-at').textContent = new Date(ride.motorista_chegou_at).toLocaleString('pt-BR')
+     }
+     
+     if (ride.passageiro_embarcou_at) {
+       document.getElementById('tm-embarcou').classList.remove('hidden')
+       document.getElementById('tm-embarcou-at').textContent = new Date(ride.passageiro_embarcou_at).toLocaleString('pt-BR')
+     }
+     
+     if (ride.concluida_at) {
+       document.getElementById('tm-concluida').classList.remove('hidden')
+       document.getElementById('tm-concluida-at').textContent = new Date(ride.concluida_at).toLocaleString('pt-BR')
+     }
+   }
+
    // Usa status_detalhe se disponível e relevante 
    let cfgStatus 
    if (ride.status_detalhe && statusDetalheConfig[ride.status_detalhe]) { 
@@ -406,12 +462,13 @@
      badge.className = `inline-block mt-1 px-3 py-1 rounded-full text-sm font-semibold ${cfgStatus.cls}` 
    } 
  
-   if (ride.status === 'cancelada') { 
+   if (ride.status === 'cancelada' || ride.status === 'concluida') { 
      pollingAtivo = false 
      document.getElementById('card-cancelar-passageiro')?.classList.add('hidden') 
      document.getElementById('card-motorista')?.classList.add('hidden') 
      document.getElementById('card-eta')?.classList.add('hidden') 
      document.getElementById('card-chat')?.classList.add('hidden') 
+     document.getElementById('card-rastreamento')?.classList.add('hidden')
    
      const canceladaPor = ride.status_detalhe === 'cancelada_motorista' 
        ? 'pelo motorista' : 'por você' 
@@ -523,9 +580,8 @@
      } 
    } 
  
-   // Mapa 
-   document.getElementById('mapa-section').classList.remove('hidden') 
- 
+   // Mapa (REMOVIDO DUPLICADO)
+   // O mapa agora está dentro de #card-rastreamento e é único.
    if (!map) initMap() 
  
    const bounds = [] 
@@ -547,12 +603,15 @@
    if (bounds.length > 1) map.fitBounds(bounds, { padding: [40, 40] }) 
    else if (bounds.length === 1) map.setView(bounds[0], 15) 
  
+   // Se a corrida foi aceita, o mapa deve estar visível no card de rastreamento
+   if (ride.status === 'aceita' || ride.status === 'em_andamento') {
+     document.getElementById('card-rastreamento').classList.remove('hidden')
+   }
+ 
    // Avaliação 
    if (ride.status === 'concluida') { 
      if (!rating?.estrelas_motorista) { 
        document.getElementById('card-avaliacao').classList.remove('hidden') 
-       // Esconde mapa para não obstruir avaliação 
-       document.getElementById('mapa-section').classList.add('hidden') 
        // Esconde card financeiro também 
        document.getElementById('card-financeiro')?.classList.add('hidden') 
        // Preenche dados do motorista no card 
@@ -569,8 +628,6 @@
        } 
      } else { 
        document.getElementById('card-obrigado').classList.remove('hidden') 
-       // Mostra mapa e financeiro após avaliar 
-       document.getElementById('mapa-section').classList.remove('hidden') 
      } 
    } 
  
@@ -681,15 +738,23 @@
              : 'bg-white border border-gray-200 text-gray-800 rounded-bl-none' 
          }"> 
            <p>${m.mensagem}</p> 
-           <p class="text-xs mt-0.5 ${m.remetente === 'passageiro' ? 'text-green-200' : 'text-gray-400'}"> 
-             ${new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} 
-           </p> 
+           <div class="flex items-center justify-between gap-2 mt-0.5">
+             <p class="text-[10px] ${m.remetente === 'passageiro' ? 'text-green-200' : 'text-gray-400'}"> 
+               ${new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} 
+             </p> 
+             ${m.remetente === 'passageiro' ? `<span class="text-[10px] ${m.lida ? 'text-blue-300' : 'text-green-200'}">${m.lida ? '✓✓' : '✓'}</span>` : ''}
+           </div>
          </div> 
        </div> 
      `).join('') 
  
      // Scroll para baixo 
      lista.scrollTop = lista.scrollHeight 
+
+     // Notifica que leu as mensagens do motorista
+     if (mensagens.some(m => m.remetente === 'motorista' && !m.lida)) {
+       fetch(`/api/chat/${token}/lida`, { method: 'POST' }).catch(() => {})
+     }
  
    } catch(e) { console.error('[CHAT]', e) } 
  } 
@@ -835,19 +900,19 @@
      document.getElementById('track-ride-distancia').textContent = `${loc.distancia_km} km` 
      document.getElementById('track-ride-eta').textContent = `${loc.eta_minutos} min` 
  
-     // Inicializa ou atualiza mapa de rastreamento (map-tracking) 
+     // Inicializa ou atualiza mapa de rastreamento (Único #map) 
      const driverPos = [loc.lat, loc.lng] 
      const passengerPos = ride.passageiro_embarcou_at  
        ? [Number(ride.destino_lat), Number(ride.destino_lng)] 
        : [Number(ride.origem_lat), Number(ride.origem_lng)] 
  
-     if (!mapTracking) { 
-       mapTracking = L.map('map-tracking', { 
+     if (!map) { 
+       map = L.map('map', { 
          zoomControl: false, 
          attributionControl: false 
        }).setView(driverPos, 15) 
         
-       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapTracking) 
+       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map) 
  
        driverMarker = L.marker(driverPos, { 
          icon: L.icon({ 
@@ -856,7 +921,7 @@
            iconSize: [25, 41], 
            iconAnchor: [12, 41] 
          }) 
-       }).addTo(mapTracking) 
+       }).addTo(map) 
  
        passengerMarker = L.marker(passengerPos, { 
          icon: L.icon({ 
@@ -865,13 +930,19 @@
            iconSize: [25, 41], 
            iconAnchor: [12, 41] 
          }) 
-       }).addTo(mapTracking) 
+       }).addTo(map) 
+
+       // Desenha linha de rota inicial
+       routePolyline = L.polyline([driverPos, passengerPos], { color: '#2563eb', weight: 4, dashArray: '5, 10' }).addTo(map)
      } else { 
        driverMarker.setLatLng(driverPos) 
        passengerMarker.setLatLng(passengerPos) 
+       
+       // Atualiza linha de rota
+       if (routePolyline) routePolyline.setLatLngs([driverPos, passengerPos])
         
        const bounds = L.latLngBounds([driverPos, passengerPos]) 
-       mapTracking.fitBounds(bounds, { padding: [30, 30] }) 
+       map.fitBounds(bounds, { padding: [30, 30] }) 
      } 
    } catch (e) { console.error('[TRACKING] Erro:', e) } 
  } 
