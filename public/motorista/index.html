@@ -365,15 +365,7 @@
     <p class="text-sm text-gray-400 mt-1" id="txt-aguardando-sub">Fique online para receber corridas</p> 
   </div> 
  
-  <!-- MAPA FIXO (Sempre visível) --> 
-  <div class="bg-white border border-gray-200 rounded-xl overflow-hidden mt-4"> 
-    <p class="text-xs text-gray-500 font-medium uppercase tracking-wide px-4 pt-3 pb-2">Mapa em tempo real</p> 
-    <div id="map" style="height: 350px;"></div> 
-    <div id="info-mapa-distancia" class="hidden px-4 py-2 bg-blue-50 border-t border-blue-100 flex justify-between items-center"> 
-      <span class="text-xs font-medium text-blue-700">Distância até passageiro:</span> 
-      <span id="txt-distancia-km" class="text-sm font-bold text-blue-800">— km</span> 
-    </div> 
-  </div> 
+  <!-- MAPA FIXO (REMOVIDO DUPLICADO) --> 
 
   <!-- AUDIO --> 
   <audio id="audio-corrida" preload="auto" src="/audio/alerta.mp3"></audio> 
@@ -914,7 +906,7 @@
    } else if (acao === 'finalizar') { 
      if (!confirm('Finalizar?')) return 
      const r = await fetch(`/api/rides/${corridaAtualId}/finalizar-motorista`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token_motorista: tokenMotorista }) }) 
-     if (r.ok) { esconderCorridaAtiva(); carregar() } 
+     if (r.ok) { esconderCorridaAtiva() } 
      return 
    } else if (acao === 'cancelar') { 
      if (!confirm('Cancelar?')) return 

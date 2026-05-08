@@ -336,7 +336,7 @@
  const token = location.pathname.split('/r/')[1] 
  console.log('[RIDE] Token:', token) 
  let estrelaSelecionada = 0 
- let map, markerOrigem, markerDestino, markerMotorista 
+ let markerOrigem, markerDestino, markerMotorista 
  let dadosAtuais = null 
  
  const statusConfig = { 
@@ -507,8 +507,17 @@
    } catch(e) { 
      origemTexto = ride.origem; 
    } 
+   
+   let destinoTexto = ride.destino;
+   try {
+     const destinoObj = JSON.parse(ride.destino);
+     destinoTexto = destinoObj.endereco || ride.destino;
+   } catch(e) {
+     destinoTexto = ride.destino;
+   }
+
    document.getElementById('txt-origem').textContent = origemTexto 
-   document.getElementById('txt-destino').textContent = ride.destino 
+   document.getElementById('txt-destino').textContent = destinoTexto 
  
    // Política de espera (só antes de aceitar) 
    if (ride.status === 'aberta') { 
@@ -596,7 +605,7 @@
    if (ride.destino_lat) { 
      if (markerDestino) markerDestino.remove() 
      markerDestino = L.marker([ride.destino_lat, ride.destino_lng], { icon: iconDestino }) 
-       .addTo(map).bindPopup('🏁 Destino: ' + ride.destino) 
+       .addTo(map).bindPopup('🏁 Destino: ' + (destinoTexto || ride.destino)) 
      bounds.push([ride.destino_lat, ride.destino_lng]) 
    } 
  
