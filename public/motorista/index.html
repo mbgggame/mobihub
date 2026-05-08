@@ -825,7 +825,14 @@
  } 
  
  function mostrarNovaCorrida(corrida) { 
-   document.getElementById('corrida-origem').textContent = corrida.origem 
+   let origemTexto = corrida.origem; 
+   try { 
+     const origemObj = JSON.parse(corrida.origem); 
+     origemTexto = origemObj.endereco || corrida.origem; 
+   } catch(e) { 
+     origemTexto = corrida.origem; 
+   }
+   document.getElementById('corrida-origem').textContent = origemTexto 
    document.getElementById('corrida-destino').textContent = corrida.destino 
    document.getElementById('corrida-passageiro').textContent = corrida.client_nome 
      ? `${corrida.client_nome} ⭐ ${Number(corrida.client_media || 0).toFixed(1)}` 
@@ -870,7 +877,14 @@
    corridaAtualId = corrida.id 
    corridaAtualToken = corrida.token 
  
-   document.getElementById('ativa-origem').textContent = corrida.origem 
+   let origemTexto = corrida.origem; 
+   try { 
+     const origemObj = JSON.parse(corrida.origem); 
+     origemTexto = origemObj.endereco || corrida.origem; 
+   } catch(e) { 
+     origemTexto = corrida.origem; 
+   }
+   document.getElementById('ativa-origem').textContent = origemTexto 
    document.getElementById('ativa-destino').textContent = corrida.destino 
    document.getElementById('ativa-valor').textContent = `💰 ${moeda(corrida.valor_motorista || corrida.valor * 0.70)}` 
    document.getElementById('card-corrida-ativa').classList.remove('hidden') 

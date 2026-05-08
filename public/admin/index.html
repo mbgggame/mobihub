@@ -71,49 +71,65 @@ async function carregar() {
 } 
  
 function renderizar(corridas) { 
-  const lista = document.getElementById('lista-corridas') 
-  if (!corridas.length) { 
-    lista.innerHTML = '<p class="text-center text-gray-400 py-8">Nenhuma corrida encontrada.</p>' 
-    return 
-  } 
-  lista.innerHTML = corridas.map(c => ` 
-    <div class="bg-white rounded-xl border border-gray-200 p-4 cursor-pointer hover:border-green-300 transition-colors" 
-      onclick="abrirModal(${c.id})"> 
-      <div class="flex items-start justify-between"> 
-        <div class="flex-1 min-w-0"> 
-          <p class="text-sm font-medium text-gray-900 truncate">${c.origem} → ${c.destino}</p> 
-          <p class="text-xs text-gray-500 mt-0.5">${new Date(c.created_at).toLocaleString('pt-BR')}</p> 
-        </div> 
-        <div class="flex items-center gap-2 ml-3"> 
-          <span class="text-sm font-semibold text-green-700">R$ ${Number(c.valor).toFixed(2)}</span> 
-          <span class="px-2 py-0.5 rounded-full text-xs font-medium status-${c.status}">${c.status}</span> 
-        </div> 
-      </div> 
-      ${c.agendada_para ? ` 
-        <p class="text-xs text-blue-600 mt-1 font-medium"> 
-          🗓️ Agendada para: ${new Date(c.agendada_para).toLocaleString('pt-BR')} 
-        </p>` : ''} 
-      ${c.driver_nome ? `<p class="text-xs text-gray-500 mt-2">Motorista: ${c.driver_nome} — ${c.placa}</p>` : ''} 
-    </div> 
-  `).join('') 
-} 
+   const lista = document.getElementById('lista-corridas') 
+   if (!corridas.length) { 
+     lista.innerHTML = '<p class="text-center text-gray-400 py-8">Nenhuma corrida encontrada.</p>' 
+     return 
+   } 
+   lista.innerHTML = corridas.map(c => {
+     let origemTexto = c.origem; 
+     try { 
+       const origemObj = JSON.parse(c.origem); 
+       origemTexto = origemObj.endereco || c.origem; 
+     } catch(e) { 
+       origemTexto = c.origem; 
+     }
+     return ` 
+     <div class="bg-white rounded-xl border border-gray-200 p-4 cursor-pointer hover:border-green-300 transition-colors" 
+       onclick="abrirModal(${c.id})"> 
+       <div class="flex items-start justify-between"> 
+         <div class="flex-1 min-w-0"> 
+           <p class="text-sm font-medium text-gray-900 truncate">${origemTexto} → ${c.destino}</p> 
+           <p class="text-xs text-gray-500 mt-0.5">${new Date(c.created_at).toLocaleString('pt-BR')}</p> 
+         </div> 
+         <div class="flex items-center gap-2 ml-3"> 
+           <span class="text-sm font-semibold text-green-700">R$ ${Number(c.valor).toFixed(2)}</span> 
+           <span class="px-2 py-0.5 rounded-full text-xs font-medium status-${c.status}">${c.status}</span> 
+         </div> 
+       </div> 
+       ${c.agendada_para ? ` 
+         <p class="text-xs text-blue-600 mt-1 font-medium"> 
+           🗓️ Agendada para: ${new Date(c.agendada_para).toLocaleString('pt-BR')} 
+         </p>` : ''} 
+       ${c.driver_nome ? `<p class="text-xs text-gray-500 mt-2">Motorista: ${c.driver_nome} — ${c.placa}</p>` : ''} 
+     </div> 
+   `}).join('') 
+ } 
  
-let corridaAtual = null 
+ let corridaAtual = null 
  
-async function abrirModal(id) { 
-  const r = await fetch(`/api/rides?status=`, { headers: headers() }) 
-  const todas = await r.json() 
-  const c = todas.find(x => x.id === id) 
-  if (!c) return 
-  corridaAtual = c 
+ async function abrirModal(id) { 
+   const r = await fetch(`/api/rides?status=`, { headers: headers() }) 
+   const todas = await r.json() 
+   const c = todas.find(x => x.id === id) 
+   if (!c) return 
+   corridaAtual = c 
  
-  const msgCliente = c.driver_nome ? `✅ Seu motorista está a caminho!\n\n👤 ${c.driver_nome}\n🚗 ${c.modelo_carro} ${c.cor_carro} ${c.ano_carro} — ${c.placa}\n📱 ${c.driver_telefone || '—'}\n⭐ ${Number(c.driver_media||0).toFixed(1)} • ${c.driver_viagens||0} viagens\n\n🗺️ Acompanhe sua corrida:\n${BASE_URL}/r/${c.token}` : '' 
+   let origemTexto = c.origem; 
+   try { 
+     const origemObj = JSON.parse(c.origem); 
+     origemTexto = origemObj.endereco || c.origem; 
+   } catch(e) { 
+     origemTexto = c.origem; 
+   }
+
+   const msgCliente = c.driver_nome ? `✅ Seu motorista está a caminho!\n\n👤 ${c.driver_nome}\n🚗 ${c.modelo_carro} ${c.cor_carro} ${c.ano_carro} — ${c.placa}\n📱 ${c.driver_telefone || '—'}\n⭐ ${Number(c.driver_media||0).toFixed(1)} • ${c.driver_viagens||0} viagens\n\n🗺️ Acompanhe sua corrida:\n${BASE_URL}/r/${c.token}` : '' 
  
-  document.getElementById('modal-conteudo').innerHTML = ` 
-    <div class="space-y-3 text-sm"> 
-      <div class="flex justify-between"><span class="text-gray-500">Status</span><span class="px-2 py-0.5 rounded-full text-xs font-medium status-${c.status}">${c.status}</span></div> 
-      <div class="flex justify-between"><span class="text-gray-500">Origem</span><span class="text-right font-medium max-w-[60%]">${c.origem}</span></div> 
-      <div class="flex justify-between"><span class="text-gray-500">Destino</span><span class="text-right font-medium max-w-[60%]">${c.destino}</span></div> 
+   document.getElementById('modal-conteudo').innerHTML = ` 
+     <div class="space-y-3 text-sm"> 
+       <div class="flex justify-between"><span class="text-gray-500">Status</span><span class="px-2 py-0.5 rounded-full text-xs font-medium status-${c.status}">${c.status}</span></div> 
+       <div class="flex justify-between"><span class="text-gray-500">Origem</span><span class="text-right font-medium max-w-[60%]">${origemTexto}</span></div> 
+       <div class="flex justify-between"><span class="text-gray-500">Destino</span><span class="text-right font-medium max-w-[60%]">${c.destino}</span></div> 
       <div class="flex justify-between"><span class="text-gray-500">Valor</span><span class="font-semibold text-green-700">R$ ${Number(c.valor).toFixed(2)}</span></div> 
       
       // Resumo financeiro detalhado 
@@ -248,13 +264,20 @@ async function verResumoFinanceiro(id) {
 } 
  
 function repetirViagem() { 
-  if (!corridaAtual) return 
-  localStorage.setItem('repetir_origem', corridaAtual.origem) 
-  localStorage.setItem('repetir_destino', corridaAtual.destino) 
-  localStorage.setItem('repetir_valor', corridaAtual.valor) 
-  localStorage.setItem('repetir_telefone', corridaAtual.client_telefone || '') 
-  location.href = '/admin/nova-corrida' 
-} 
+   if (!corridaAtual) return 
+   let origemTexto = corridaAtual.origem; 
+   try { 
+     const origemObj = JSON.parse(corridaAtual.origem); 
+     origemTexto = origemObj.endereco || corridaAtual.origem; 
+   } catch(e) { 
+     origemTexto = corridaAtual.origem; 
+   }
+   localStorage.setItem('repetir_origem', origemTexto) 
+   localStorage.setItem('repetir_destino', corridaAtual.destino) 
+   localStorage.setItem('repetir_valor', corridaAtual.valor) 
+   localStorage.setItem('repetir_telefone', corridaAtual.client_telefone || '') 
+   location.href = '/admin/nova-corrida' 
+ } 
  
 function copiarMensagem() { 
   navigator.clipboard.writeText(window._msgCliente || '') 

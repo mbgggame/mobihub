@@ -336,14 +336,22 @@
      div.innerHTML = '<p class="text-sm text-gray-400">Nenhuma corrida ativa no momento.</p>' 
      return 
    } 
-   div.innerHTML = corridas.map(c => ` 
+   div.innerHTML = corridas.map(c => {
+     let origemTexto = c.origem; 
+     try { 
+       const origemObj = JSON.parse(c.origem); 
+       origemTexto = origemObj.endereco || c.origem; 
+     } catch(e) { 
+       origemTexto = c.origem; 
+     }
+     return ` 
      <div class="bg-white border border-gray-200 rounded-xl px-4 py-3 flex items-center justify-between"> 
        <div> 
          <div class="flex items-center gap-2 mb-1"> 
            <span class="px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_CLS[c.status]}">${c.status}</span> 
            ${c.tipo === 'agendada' ? `<span class="text-xs text-purple-600">🗓️ ${new Date(c.agendada_para).toLocaleString('pt-BR')}</span>` : ''} 
          </div> 
-         <p class="text-sm text-gray-800">${c.origem} → ${c.destino}</p> 
+         <p class="text-sm text-gray-800">${origemTexto} → ${c.destino}</p> 
          <p class="text-xs text-gray-500 mt-0.5">${c.driver_nome ? `Motorista: ${c.driver_nome} • ${c.placa}` : 'Aguardando motorista'}</p> 
        </div> 
        <div class="text-right ml-4"> 
@@ -354,7 +362,7 @@
          </div> 
        </div> 
      </div> 
-   `).join('') 
+   `}).join('') 
  } 
  
  function renderGraficos(dados) { 

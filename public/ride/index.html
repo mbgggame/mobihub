@@ -7,6 +7,7 @@
    <script src="https://cdn.tailwindcss.com"></script> 
    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/> 
    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script> 
+   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBz0TOxlMbWgEQuDoMSqneGN0UFywnX-7s&libraries=places&language=pt-BR"></script> 
    <style> 
      #map { height: 300px; } 
      .pulse { animation: pulse 2s infinite; } 
@@ -294,10 +295,7 @@
  
  </div> 
  
- <audio id="audio-corrida" preload="auto" src="/audio/alerta.mp3"></audio> 
- 
 <script> 
- let audioAtivo = false 
  let mapTracking = null 
  let driverMarker = null 
  let passengerMarker = null 
@@ -367,18 +365,10 @@
      if (!r.ok) { 
        document.body.innerHTML = '<p class="text-center mt-20 text-gray-500">Corrida não encontrada.</p>' 
        pollingAtivo = false 
-       pararSom() 
        return 
      } 
      const { ride, rating, paradas, config } = await r.json() 
      console.log('[POLLING] Status atual:', ride.status, '| Motorista:', ride.driver_nome) 
- 
-     // BUG 2 FIX DEFINITIVO: Gerenciamento do áudio por status 
-     if (ride.status === 'aberta') { 
-       if (!audioAtivo) tocarSom() 
-     } else { 
-       if (audioAtivo) pararSom() 
-     } 
  
      // BUG 3: Rastreamento do Motorista 
      if (ride.status === 'aceita' || (ride.status === 'em_andamento' && ride.status_detalhe === 'em_andamento')) { 
@@ -454,7 +444,14 @@
      btnCancelar.classList.add('hidden') 
    } 
  
-   document.getElementById('txt-origem').textContent = ride.origem 
+   let origemTexto = ride.origem; 
+   try { 
+     const origemObj = JSON.parse(ride.origem); 
+     origemTexto = origemObj.endereco || ride.origem; 
+   } catch(e) { 
+     origemTexto = ride.origem; 
+   } 
+   document.getElementById('txt-origem').textContent = origemTexto 
    document.getElementById('txt-destino').textContent = ride.destino 
  
    // Política de espera (só antes de aceitar) 
@@ -537,7 +534,7 @@
    if (ride.origem_lat) { 
      if (markerOrigem) markerOrigem.remove() 
      markerOrigem = L.marker([ride.origem_lat, ride.origem_lng], { icon: iconOrigem }) 
-       .addTo(map).bindPopup('📍 Origem: ' + ride.origem) 
+       .addTo(map).bindPopup('📍 Origem: ' + origemTexto) 
      bounds.push([ride.origem_lat, ride.origem_lng]) 
    } 
  
@@ -813,17 +810,6 @@
    setTimeout(tick, 5000) 
  } 
  
- // Para polling quando corrida concluída ou cancelada 
- function pararSom() { 
-   console.log('[AUDIO] Comando pararSom executado') 
-   const audio = document.getElementById('audio-corrida') 
-   if (!audio) return 
-   audio.pause() 
-   audio.currentTime = 0 
-   audioAtivo = false 
-   console.log('[AUDIO] Áudio parado com sucesso') 
- } 
- 
  function verificarParaPolling(status) { 
    if (status === 'concluida' || status === 'cancelada') { 
      pollingAtivo = false 
@@ -887,31 +873,7 @@
    } catch (e) { console.error('[TRACKING] Erro:', e) } 
  } 
  
- function tocarSom() { 
-   const audio = document.getElementById('audio-corrida') 
-   if (!audio || !audio.src || audio.src === window.location.href) return 
-   audio.volume = 1 
-   audio.loop = true // Ativa loop apenas para status aberta 
-   const promise = audio.play() 
-   if (promise) { 
-     promise.then(() => { 
-       audioAtivo = true 
-       console.log('[AUDIO] Iniciado - aguardando motorista') 
-     }).catch(e => { 
-       console.warn('[AUDIO] Bloqueado pelo navegador:', e.message) 
-     }) 
-   } 
- } 
- 
- function pararSom() { 
-   console.log('[AUDIO] Parando som (mudança de status)...') 
-   const audio = document.getElementById('audio-corrida') 
-   if (!audio) return 
-   audio.pause() 
-   audio.currentTime = 0 
-   audioAtivo = false 
-   console.log('[AUDIO] Parado com sucesso') 
- } 
+
  
  // Inicia o polling 
  function iniciarPollingAutomatico() { 

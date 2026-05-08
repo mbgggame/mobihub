@@ -158,6 +158,14 @@
    const { ride, rating } = await r.json() 
    const div = document.getElementById('resultado-pesquisa') 
  
+   let origemTexto = ride.origem; 
+   try { 
+     const origemObj = JSON.parse(ride.origem); 
+     origemTexto = origemObj.endereco || ride.origem; 
+   } catch(e) { 
+     origemTexto = ride.origem; 
+   }
+
    div.innerHTML = ` 
      <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3"> 
        <div class="flex items-center justify-between"> 
@@ -165,7 +173,7 @@
          <span class="text-xs px-2 py-0.5 rounded-full ${ride.status === 'concluida' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}">${ride.status}</span> 
        </div> 
        <div class="text-sm text-gray-600 space-y-1"> 
-         <p><span class="font-medium">De:</span> ${ride.origem}</p> 
+         <p><span class="font-medium">De:</span> ${origemTexto}</p> 
          <p><span class="font-medium">Para:</span> ${ride.destino}</p> 
          <p><span class="font-medium">Valor:</span> R$ ${Number(ride.valor).toFixed(2)}</p> 
          <p><span class="font-medium">Data:</span> ${new Date(ride.created_at).toLocaleString('pt-BR')}</p> 
@@ -234,16 +242,24 @@
        <div class="space-y-3"> 
          <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Histórico de avaliações</p> 
          ${avaliacoes.length === 0 ? '<p class="text-sm text-gray-400">Nenhuma avaliação ainda</p>' : 
-           avaliacoes.map(a => ` 
+           avaliacoes.map(a => {
+             let origemTexto = a.origem; 
+             try { 
+               const origemObj = JSON.parse(a.origem); 
+               origemTexto = origemObj.endereco || a.origem; 
+             } catch(e) { 
+               origemTexto = a.origem; 
+             }
+             return ` 
              <div class="bg-white border border-gray-200 rounded-lg p-3"> 
                <div class="flex items-center justify-between mb-1"> 
                  <p class="text-xs text-gray-500">${new Date(a.corrida_data).toLocaleDateString('pt-BR')} • ${a.client_nome || 'Cliente'}</p> 
                  <p class="text-yellow-500">${estrelas(a.estrelas_motorista)} <span class="text-gray-700 text-xs">${a.estrelas_motorista}/5</span></p> 
                </div> 
-               <p class="text-xs text-gray-600">${a.origem?.split(',')[0]} → ${a.destino?.split(',')[0]}</p> 
+               <p class="text-xs text-gray-600">${origemTexto?.split(',')[0]} → ${a.destino?.split(',')[0]}</p> 
                ${a.comentario_cliente ? `<p class="text-xs text-gray-500 italic mt-1">"${a.comentario_cliente}"</p>` : ''} 
              </div> 
-           `).join('') 
+           `}).join('') 
          } 
        </div> 
      </div> 
@@ -277,16 +293,24 @@
        <div class="space-y-3"> 
          <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Avaliações recebidas dos motoristas</p> 
          ${avaliacoes.length === 0 ? '<p class="text-sm text-gray-400">Nenhuma avaliação ainda</p>' : 
-           avaliacoes.map(a => ` 
+           avaliacoes.map(a => {
+             let origemTexto = a.origem; 
+             try { 
+               const origemObj = JSON.parse(a.origem); 
+               origemTexto = origemObj.endereco || a.origem; 
+             } catch(e) { 
+               origemTexto = a.origem; 
+             }
+             return ` 
              <div class="bg-white border border-gray-200 rounded-lg p-3"> 
                <div class="flex items-center justify-between mb-1"> 
                  <p class="text-xs text-gray-500">${new Date(a.corrida_data).toLocaleDateString('pt-BR')} • ${a.driver_nome || 'Motorista'}</p> 
                  <p class="text-blue-500">${estrelas(a.estrelas_cliente)} <span class="text-gray-700 text-xs">${a.estrelas_cliente}/5</span></p> 
                </div> 
-               <p class="text-xs text-gray-600">${a.origem?.split(',')[0]} → ${a.destino?.split(',')[0]}</p> 
+               <p class="text-xs text-gray-600">${origemTexto?.split(',')[0]} → ${a.destino?.split(',')[0]}</p> 
                ${a.comentario_motorista ? `<p class="text-xs text-gray-500 italic mt-1">"${a.comentario_motorista}"</p>` : ''} 
              </div> 
-           `).join('') 
+           `}).join('') 
          } 
        </div> 
      </div> 
