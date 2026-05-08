@@ -289,9 +289,8 @@
    const btn = document.getElementById('btn-solicitar') 
    const temOrigem = origem && origemLat 
    const temDestino = destino && destinoLat 
-   const temCliente = !!localStorage.getItem('mobihub_cliente') 
  
-   console.log('[BTN] origem:', !!temOrigem, '| destino:', !!temDestino, '| cliente:', temCliente) 
+   console.log('[BTN] origem:', !!temOrigem, '| destino:', !!temDestino) 
  
    if (temOrigem && temDestino) { 
      btn.disabled = false 
@@ -464,27 +463,28 @@
    const input = document.getElementById(tipo === 'origem' ? 'busca-orig' : 'busca-dest')
    const list = document.getElementById(tipo === 'origem' ? 'lista-orig' : 'lista-dest')
    
-   input.value = endereco
+   // Nome curto da sugestão (display_name resumido — máximo 60 caracteres)
+   const enderecoCurto = endereco.length > 60 ? endereco.substring(0, 57) + '...' : endereco
+   input.value = enderecoCurto
    list.classList.add('hidden')
 
    if (tipo === 'origem') { 
      origemLat = lat 
      origemLng = lon 
-     origemEndereco = endereco 
-     origem = endereco 
-     mostrarOrigemNoMapa(lat, lon, endereco) 
-     verificarBotaoSolicitar() 
+     origemEndereco = enderecoCurto 
+     origem = enderecoCurto 
+     mostrarOrigemNoMapa(lat, lon, enderecoCurto) 
      if (destinoLat) calcularValor() 
    } else { 
      destinoLat = lat 
      destinoLng = lon 
-     destino = endereco 
-     verificarBotaoSolicitar() 
+     destino = enderecoCurto 
      if (origemLat) calcularValor() 
    } 
 
-   marcarPonto(lat, lon, endereco, tipo) 
+   marcarPonto(lat, lon, enderecoCurto, tipo) 
    map.setView([lat, lon], 15) 
+   verificarBotaoSolicitar()
  }
  
  function mostrarOrigemNoMapa(lat, lng, endereco) { 
@@ -539,7 +539,7 @@
      const lat = pos.coords.latitude 
      const lng = pos.coords.longitude 
  
-     fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`) 
+     fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`) 
        .then(r => r.json()) 
        .then(d => { 
          if (d && d.display_name) { 
@@ -548,13 +548,18 @@
            origemEndereco = d.display_name 
            document.getElementById('busca-orig').value = origemEndereco 
            mostrarOrigemNoMapa(lat, lng, origemEndereco) 
+           verificarBotaoSolicitar()
            if (destinoLat) calcularValor() 
          } 
        }) 
-       .catch(() => alert('Não foi possível obter sua localização')) 
-   }, () => { 
-     alert('Não foi possível obter sua localização') 
-   }) 
+       .catch(() => alert('Não foi possível obter sua localização. Digite o endereço manualmente.')) 
+   }, (err) => { 
+     if (err.code === 1) {
+       alert('Permissão de localização negada. Por favor, habilite nas configurações do navegador ou digite o endereço manualmente.')
+     } else {
+       alert('Não foi possível obter sua localização. Digite o endereço manualmente.')
+     }
+   }, { timeout: 10000 }) 
  } 
  
  function marcarPonto(lat, lng, endereco, tipo) { 

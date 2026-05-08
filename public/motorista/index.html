@@ -902,7 +902,10 @@
    if (!corridaAtualId) return 
    let url = '', method = 'PUT' 
    if (acao === 'chegou') url = `/api/rides/${corridaAtualId}/motorista-chegou` 
-   else if (acao === 'embarcou') url = `/api/rides/${corridaAtualId}/passageiro-embarcou` 
+   else if (acao === 'embarcou') {
+     url = `/api/motorista/${tokenMotorista}/embarcou/${corridaAtualId}`
+     method = 'POST'
+   }
    else if (acao === 'parada') { 
      const b = document.getElementById('btn-parada') 
      if (b.textContent.includes('Parar')) { url = `/api/rides/${corridaAtualId}/parada/iniciar`; method = 'POST'; b.textContent = '▶️ Retomar' } 

@@ -407,6 +407,27 @@ export default async function publicRoutes(fastify) {
     return { mensagem: 'Corrida aceita!', token: ride.token } 
   }) 
 
+  // Motorista informa que o passageiro embarcou 
+  fastify.post('/api/motorista/:token/embarcou/:rideId', async (request, reply) => { 
+    const { token, rideId } = request.params 
+    const driver = (await query('SELECT id FROM drivers WHERE token_perfil = $1', [token])).rows[0] 
+    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
+ 
+    const ride = (await query('SELECT * FROM rides WHERE id = $1 AND driver_id = $2', [rideId, driver.id])).rows[0] 
+    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
+ 
+    await query(` 
+      UPDATE rides SET 
+        status = 'em_viagem', 
+        status_detalhe = 'em_andamento', 
+        passageiro_embarcou_at = CURRENT_TIMESTAMP 
+      WHERE id = $1 
+    `, [rideId]) 
+ 
+    return { success: true, mensagem: 'Passageiro embarcou!' } 
+  }) 
+ 
+  // Motorista informa que a corrida foi finalizada 
   fastify.put('/api/rides/:id/finalizar-motorista', async (request, reply) => { 
     const { token_motorista } = request.body 
     const { id } = request.params 
