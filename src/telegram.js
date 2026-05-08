@@ -237,10 +237,14 @@ export function initBot() {
      } 
  
      // FINALIZAR CORRIDA 
-     if (data.startsWith('finalizar:')) { 
-       const rideId = parseInt(data.split(':')[1]) 
-       const ride = (await dbQuery('SELECT * FROM rides WHERE id = $1', [rideId])).rows[0] 
-       if (!ride) { bot.answerCallbackQuery(query.id, { text: 'Corrida não encontrada', show_alert: true }); return } 
+    if (data.startsWith('finalizar:')) { 
+      const rideId = parseInt(data.split(':')[1]) 
+      const ride = (await dbQuery(` 
+        SELECT id, valor, valor_motorista, custo_espera_inicial, custo_paradas, 
+          num_paradas, origem, destino, telegram_message_id, client_id, driver_id 
+        FROM rides WHERE id = $1 
+      `, [rideId])).rows[0] 
+      if (!ride) { bot.answerCallbackQuery(query.id, { text: 'Corrida não encontrada', show_alert: true }); return } 
        const { calculateTotalRideCost } = await import('./billing.js') 
        const configs = (await dbQuery('SELECT chave, valor FROM configuracoes')).rows 
        const config = {} 

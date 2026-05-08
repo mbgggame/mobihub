@@ -410,7 +410,13 @@ export default async function publicRoutes(fastify) {
     const { id } = request.params 
     const driver = (await query('SELECT * FROM drivers WHERE token_perfil = $1', [token_motorista])).rows[0] 
     if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
-    const ride = (await query("SELECT * FROM rides WHERE id = $1 AND driver_id = $2 AND status = 'aceita'", [id, driver.id])).rows[0] 
+    const ride = (await query(` 
+      SELECT id, valor, valor_motorista, custo_espera_inicial, custo_paradas, 
+        num_paradas, tempo_espera_inicial_min, tempo_paradas_total_min, 
+        origem, destino, telegram_message_id, client_id 
+      FROM rides 
+      WHERE id = $1 AND driver_id = $2 AND status = 'aceita' 
+    `, [id, driver.id])).rows[0] 
     if (!ride) return reply.code(400).send({ error: 'Corrida não encontrada' }) 
     const { calculateTotalRideCost } = await import('../billing.js') 
     const configs = (await query('SELECT chave, valor FROM configuracoes')).rows 
