@@ -366,11 +366,21 @@
     <p class="font-semibold text-gray-700" id="txt-aguardando">Aguardando corridas...</p> 
     <p class="text-sm text-gray-400 mt-1" id="txt-aguardando-sub">Fique online para receber corridas</p> 
   </div> 
+ 
+  <!-- MAPA FIXO (Sempre visível) --> 
+  <div class="bg-white border border-gray-200 rounded-xl overflow-hidden mt-4"> 
+    <p class="text-xs text-gray-500 font-medium uppercase tracking-wide px-4 pt-3 pb-2">Mapa em tempo real</p> 
+    <div id="map" style="height: 350px;"></div> 
+    <div id="info-mapa-distancia" class="hidden px-4 py-2 bg-blue-50 border-t border-blue-100 flex justify-between items-center"> 
+      <span class="text-xs font-medium text-blue-700">Distância até passageiro:</span> 
+      <span id="txt-distancia-km" class="text-sm font-bold text-blue-800">— km</span> 
+    </div> 
+  </div> 
 
   <!-- AUDIO --> 
-  <audio id="audio-corrida" loop preload="auto" src="/audio/alerta.mp3"></audio> 
-
-</div> 
+  <audio id="audio-corrida" preload="auto" src="/audio/alerta.mp3"></audio> 
+ 
+ </div> 
 
 <!-- ═══════════════ ABA HISTÓRICO ═══════════════ --> 
 <div id="tab-historico" class="hidden max-w-lg mx-auto px-4 py-4 space-y-4"> 
@@ -412,8 +422,32 @@
  let corridaAtualId = null 
  let corridaAtualToken = null 
  let corridasIgnoradas = [] 
+ 
+ // BUG FIX 1: Áudio Motorista 
+ const audio = new Audio('/audio/alerta.mp3') 
+ audio.loop = true 
  let audioAtivo = false 
- let mapCorrida = null 
+ 
+ function iniciarAudio() { 
+   if (!audioAtivo) { 
+     audio.play().then(() => { 
+       audioAtivo = true 
+       console.log('[AUDIO MOTORISTA] tocando - nova corrida') 
+     }).catch(e => console.warn('[AUDIO MOTORISTA] bloqueado:', e.message)) 
+   } 
+ } 
+ 
+ function pararAudio() { 
+   if (audioAtivo) { 
+     audio.pause() 
+     audio.currentTime = 0 
+     audioAtivo = false 
+     console.log('[AUDIO MOTORISTA] parado') 
+   } 
+ } 
+ 
+ let map = null 
+ let markerMotorista = null 
  let directionsService = null 
  let directionsRenderer = null 
  let minhaPos = null 
@@ -437,7 +471,7 @@
    document.getElementById(`aba-${aba}`).classList.add('aba-ativa') 
    if (aba === 'corridas') { 
      document.getElementById('badge-nova-corrida').classList.add('hidden') 
-     if (!mapCorrida && corridaAtualId) iniciarMapaCorrida() 
+     if (!map) iniciarMapaMotorista() 
    } 
    if (aba === 'historico') carregarHistorico() 
  } 
@@ -670,6 +704,7 @@
        mostrarNovaCorrida(corrida) 
      } else if (!corrida && !corridaAtualId) { 
        esconderNovaCorrida() 
+       pararAudio() // BUG FIX 1: Para áudio se a corrida sumiu 
      } 
    } catch(e) {} 
  } 
@@ -800,7 +835,7 @@
    document.getElementById('card-nova-corrida').classList.remove('hidden') 
    document.getElementById('card-sem-corrida').classList.add('hidden') 
    document.getElementById('badge-nova-corrida').classList.remove('hidden') 
-   tocarSom() 
+   iniciarAudio() // BUG FIX 1: Toca áudio quando chega nova corrida 
    let segundos = 0 
    if (timerInterval) clearInterval(timerInterval) 
    timerInterval = setInterval(() => { 
@@ -808,14 +843,26 @@
      document.getElementById('timer-corrida').textContent = `${segundos}s` 
    }, 1000) 
    window._corridaDisponivel = corrida 
+ 
+   // BUG 2: Mostra marcador de origem no mapa fixo 
+   if (map && corrida.origem_lat) { 
+     const posOrigem = { lat: Number(corrida.origem_lat), lng: Number(corrida.origem_lng) } 
+     const bounds = new google.maps.LatLngBounds() 
+     if (minhaPos) bounds.extend(minhaPos) 
+     bounds.extend(posOrigem) 
+     map.fitBounds(bounds) 
+     document.getElementById('info-mapa-distancia').classList.remove('hidden') 
+   } 
+ 
    mudarAba('corridas') 
  } 
  
  function esconderNovaCorrida() { 
    document.getElementById('card-nova-corrida').classList.add('hidden') 
    document.getElementById('card-sem-corrida').classList.remove('hidden') 
+   document.getElementById('info-mapa-distancia').classList.add('hidden') 
    if (timerInterval) clearInterval(timerInterval) 
-   pararSom() 
+   pararAudio() // BUG FIX 1: Para áudio 
  } 
  
  function mostrarCorridaAtiva(corrida) { 
@@ -847,16 +894,16 @@
        `https://www.google.com/maps/dir/?api=1&origin=${corrida.origem_lat},${corrida.origem_lng}&destination=${corrida.destino_lat},${corrida.destino_lng}&travelmode=driving` 
    } 
  
-   iniciarMapaCorrida(corrida) 
+   iniciarMapaMotorista(corrida) 
    carregarMsgMotorista() 
  } 
  
- function iniciarMapaCorrida(corrida) { 
-   const container = document.getElementById('map-corrida') 
+ function iniciarMapaMotorista(corrida) { 
+   const container = document.getElementById('map') 
    if (!container) return 
     
-   if (!mapCorrida) { 
-     mapCorrida = new google.maps.Map(container, { 
+   if (!map) { 
+     map = new google.maps.Map(container, { 
        zoom: 15, 
        center: minhaPos || { lat: -20.3222, lng: -40.2917 }, 
        disableDefaultUI: true, 
@@ -866,17 +913,18 @@
      }) 
      directionsService = new google.maps.DirectionsService() 
      directionsRenderer = new google.maps.DirectionsRenderer({ 
-       map: mapCorrida, 
+       map: map, 
        suppressMarkers: false, 
        polylineOptions: { strokeColor: '#059669', strokeWeight: 5 } 
      }) 
    } 
  
    if (corrida) atualizarNavegacaoMotorista(corrida) 
+   else if (minhaPos) map.setCenter(minhaPos) 
  } 
  
  function atualizarNavegacaoMotorista(corrida) { 
-   if (!mapCorrida || !minhaPos) return 
+   if (!map || !minhaPos) return 
  
    let destino = null 
    if (corrida.status === 'aceita' && !corrida.motorista_chegou_at) { 
@@ -895,11 +943,15 @@
      }, (result, status) => { 
        if (status === 'OK') { 
          directionsRenderer.setDirections(result) 
+         const dist = result.routes[0].legs[0].distance.text 
+         document.getElementById('info-mapa-distancia').classList.remove('hidden') 
+         document.getElementById('txt-distancia-km').textContent = dist 
        } 
      }) 
    } else { 
      directionsRenderer.set('directions', null) 
-     mapCorrida.setCenter(minhaPos) 
+     map.setCenter(minhaPos) 
+     document.getElementById('info-mapa-distancia').classList.add('hidden') 
    } 
  } 
  
@@ -908,12 +960,13 @@
     document.getElementById('card-chat-motorista').classList.add('hidden') 
     document.getElementById('card-sem-corrida').classList.remove('hidden') 
     if (directionsRenderer) directionsRenderer.set('directions', null) 
+    document.getElementById('info-mapa-distancia').classList.add('hidden') 
   } 
  
  async function aceitarCorrida() { 
    const corrida = window._corridaDisponivel 
    if (!corrida) return 
-   pararSom() 
+   pararAudio() // BUG FIX 1 
    if (timerInterval) clearInterval(timerInterval) 
    try { 
      const r = await fetch(`/api/rides/${corrida.id}/aceitar-motorista`, { 
@@ -933,13 +986,14 @@
  function recusarCorrida() { 
    const corrida = window._corridaDisponivel 
    if (!corrida) return 
+   pararAudio() // BUG FIX 1 
    corridasIgnoradas.push(corrida.id) 
    window._corridaDisponivel = null 
    esconderNovaCorrida() 
  } 
  
  function ignorarCorrida() { 
-   pararSom() 
+   pararAudio() // BUG FIX 1 
    if (timerInterval) clearInterval(timerInterval) 
    document.getElementById('card-nova-corrida').classList.add('hidden') 
  } 
@@ -1117,27 +1171,11 @@
  } 
  
  function tocarSom() { 
-   const audio = document.getElementById('audio-corrida') 
-   if (!audio.src || audio.src === window.location.href) return 
-   audio.volume = 1 
-   audio.loop = true 
-   const promise = audio.play() 
-   if (promise) { 
-     promise.then(() => { 
-       audioAtivo = true 
-       console.log('[AUDIO] Tocando') 
-     }).catch(e => { 
-       console.warn('[AUDIO] Bloqueado pelo navegador:', e.message) 
-       document.getElementById('card-audio-bloqueado')?.classList.remove('hidden') 
-     }) 
-   } 
+   iniciarAudio() 
  } 
  
  function pararSom() { 
-   const audio = document.getElementById('audio-corrida') 
-   audio.pause() 
-   audio.currentTime = 0 
-   audioAtivo = false 
+   pararAudio() 
  } 
  
  function iniciarTimerMotorista(inicioAt, minutosGratis, tipo) { 
@@ -1309,9 +1347,12 @@
        console.log('[GPS] Posição:', lat, lng, '| Corrida:', corridaAtualId) 
  
        // BUG 4: Atualiza centro do mapa se estiver ativo 
-       if (mapCorrida && !directionsRenderer?.getDirections()) { 
-         mapCorrida.setCenter(minhaPos) 
+       if (map && !directionsRenderer?.getDirections()) { 
+         map.setCenter(minhaPos) 
        } 
+ 
+       // Se o mapa ainda não foi inicializado (primeira vez que pega GPS) 
+       if (!map) iniciarMapaMotorista() 
  
        if (!corridaAtualId) { 
          console.log('[GPS] Sem corrida ativa, não enviando') 
