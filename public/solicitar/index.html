@@ -286,20 +286,16 @@
  } 
  
  function verificarBotaoSolicitar() { 
-   const btn = document.getElementById('btn-solicitar') 
-   const temOrigem = origem && origemLat 
-   const temDestino = destino && destinoLat 
+   const btn = document.getElementById('btn-solicitar'); 
+   const origemOk = document.getElementById('busca-orig').value.trim() !== '' && origemLat;
+   const destinoOk = document.getElementById('busca-dest').value.trim() !== '' && destinoLat;
  
-   console.log('[BTN] origem:', !!temOrigem, '| destino:', !!temDestino) 
- 
-   if (temOrigem && temDestino) { 
-     btn.disabled = false 
-     btn.classList.remove('opacity-40', 'cursor-not-allowed') 
-     btn.classList.add('bg-green-600') 
-     btn.classList.remove('bg-green-300') 
+   if (origemOk && destinoOk) { 
+     btn.disabled = false; 
+     btn.classList.remove('opacity-40', 'cursor-not-allowed'); 
    } else { 
-     btn.disabled = true 
-     btn.classList.add('opacity-40', 'cursor-not-allowed') 
+     btn.disabled = true; 
+     btn.classList.add('opacity-40', 'cursor-not-allowed'); 
    } 
  } 
  
@@ -463,8 +459,7 @@
    const input = document.getElementById(tipo === 'origem' ? 'busca-orig' : 'busca-dest')
    const list = document.getElementById(tipo === 'origem' ? 'lista-orig' : 'lista-dest')
    
-   // Nome curto da sugestão (display_name resumido — máximo 60 caracteres)
-   const enderecoCurto = endereco.length > 60 ? endereco.substring(0, 57) + '...' : endereco
+   const enderecoCurto = endereco.substring(0, 60);
    input.value = enderecoCurto
    list.classList.add('hidden')
 
@@ -531,35 +526,38 @@
  } 
  
  function usarLocalizacaoAtual() { 
+   const erroEl = document.getElementById('erro-solicitar');
    if (!navigator.geolocation) { 
-     alert('Geolocalização não suportada') 
+     erroEl.textContent = 'Geolocalização não suportada';
+     erroEl.classList.remove('hidden');
      return 
    } 
    navigator.geolocation.getCurrentPosition(pos => { 
      const lat = pos.coords.latitude 
      const lng = pos.coords.longitude 
  
-     fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`) 
+     fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=pt-BR`) 
        .then(r => r.json()) 
        .then(d => { 
          if (d && d.display_name) { 
            origemLat = lat 
            origemLng = lng 
-           origemEndereco = d.display_name 
+           origemEndereco = d.display_name.substring(0, 60); 
            document.getElementById('busca-orig').value = origemEndereco 
            mostrarOrigemNoMapa(lat, lng, origemEndereco) 
            verificarBotaoSolicitar()
            if (destinoLat) calcularValor() 
+           erroEl.classList.add('hidden');
          } 
        }) 
-       .catch(() => alert('Não foi possível obter sua localização. Digite o endereço manualmente.')) 
+       .catch(() => {
+         erroEl.textContent = 'Não foi possível obter sua localização. Digite o endereço manualmente.';
+         erroEl.classList.remove('hidden');
+       }) 
    }, (err) => { 
-     if (err.code === 1) {
-       alert('Permissão de localização negada. Por favor, habilite nas configurações do navegador ou digite o endereço manualmente.')
-     } else {
-       alert('Não foi possível obter sua localização. Digite o endereço manualmente.')
-     }
-   }, { timeout: 10000 }) 
+     erroEl.textContent = 'Não foi possível obter sua localização. Digite o endereço manualmente.';
+     erroEl.classList.remove('hidden');
+   }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }) 
  } 
  
  function marcarPonto(lat, lng, endereco, tipo) { 
