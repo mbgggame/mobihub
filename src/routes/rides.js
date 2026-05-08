@@ -93,28 +93,34 @@ export default async function ridesRoutes(fastify) {
     return result.rows
   }) 
  
-  fastify.post('/api/rides', { preHandler: requireAuth }, async (request, reply) => { 
+  fastify.post('/api/rides', async (request, reply) => { 
     const { 
       origem, origem_lat, origem_lng, 
       destino, destino_lat, destino_lng, 
-      valor, valor_motorista, valor_mobihub, client_telefone, 
-      tipo, agendada_para 
+      valor, client_id, tipo, agendada_para, 
+      nome_cliente, telefone_cliente 
     } = request.body 
  
-    if (!origem || !destino || !valor) { 
-      return reply.code(400).send({ error: 'Origem, destino e valor são obrigatórios' }) 
+    if (!origem || !destino) { 
+      return reply.code(400).send({ error: 'Origem e destino são obrigatórios' }) 
     } 
  
-    // Cria ou encontra o cliente pelo telefone 
-    let clientId = null 
-    if (client_telefone) { 
-      let clientResult = await dbQuery('SELECT * FROM clients WHERE telefone = $1', [client_telefone])
-      let client = clientResult.rows[0]
-      if (!client) { 
-        const r = await dbQuery('INSERT INTO clients (telefone) VALUES ($1) RETURNING id', [client_telefone]) 
-        clientId = r.rows[0].id 
-      } else { 
-        clientId = client.id 
+    let clientId = client_id 
+ 
+    // Se não tem client_id mas tem telefone, busca ou cria cliente 
+    if (!clientId && telefone_cliente) { 
+      const existing = (await query( 
+        'SELECT id FROM clients WHERE telefone = $1', [telefone_cliente] 
+      )).rows[0] 
+ 
+      if (existing) { 
+        clientId = existing.id 
+      } else if (nome_cliente) { 
+        const novo = (await query( 
+          'INSERT INTO clients (nome, telefone) VALUES ($1, $2) RETURNING id', 
+          [nome_cliente, telefone_cliente] 
+        )).rows[0] 
+        clientId = novo.id 
       } 
     } 
  
@@ -128,8 +134,8 @@ export default async function ridesRoutes(fastify) {
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) 
       RETURNING id
     `, [token, clientId, origem, origem_lat, origem_lng, destino, 
-           destino_lat, destino_lng, valor, valor_motorista || null, 
-           valor_mobihub || null, tipo || 'normal', agendada_para || null, statusInicial]) 
+           destino_lat, destino_lng, valor, (valor * 0.7) || null, 
+           (valor * 0.3) || null, tipo || 'normal', agendada_para || null, statusInicial]) 
  
     const rideId = result.rows[0].id
     const rideResult = await dbQuery('SELECT * FROM rides WHERE id = $1', [rideId]) 
