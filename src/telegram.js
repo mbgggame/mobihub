@@ -202,8 +202,8 @@ export function initBot() {
        if (paradaAberta) { bot.answerCallbackQuery(query.id, { text: 'Já existe parada em andamento!', show_alert: true }); return } 
        const result = await dbQuery('INSERT INTO ride_stops (ride_id) VALUES ($1) RETURNING id', [rideId]) 
        await dbQuery("UPDATE rides SET status_detalhe = 'em_parada', num_paradas = num_paradas + 1 WHERE id = $1", [rideId]) 
-       bot.answerCallbackQuery(query.id, { text: '⏸️ Parada iniciada! 2 min grátis.', show_alert: true }) 
-       bot.sendMessage(from.id, `⏸️ *Parada iniciada*\n\n⏱️ 2 minutos grátis\nApós isso: R$ 0,60/min`, { 
+       bot.answerCallbackQuery(query.id, { text: '⏸️ Parada iniciada! 5 min grátis.', show_alert: true }) 
+       bot.sendMessage(from.id, `⏸️ *Parada iniciada*\n\n⏱️ 5 minutos grátis\nApós isso: R$ 0,60/min`, { 
          parse_mode: 'Markdown', 
          reply_markup: { inline_keyboard: [[{ text: '▶️ Retomar corrida', callback_data: `parada_fim:${rideId}:${result.rows[0].id}` }]] } 
        }).catch(() => {}) 
@@ -241,18 +241,50 @@ export function initBot() {
       const rideId = parseInt(data.split(':')[1]) 
       const ride = (await dbQuery(` 
         SELECT id, valor, valor_motorista, custo_espera_inicial, custo_paradas, 
-          num_paradas, origem, destino, telegram_message_id, client_id, driver_id 
+          num_paradas, tempo_espera_inicial_min, tempo_paradas_total_min, 
+          origem, destino, telegram_message_id, client_id, driver_id 
         FROM rides WHERE id = $1 
       `, [rideId])).rows[0] 
       if (!ride) { bot.answerCallbackQuery(query.id, { text: 'Corrida não encontrada', show_alert: true }); return } 
-       const { calculateTotalRideCost } = await import('./billing.js') 
-       const configs = (await dbQuery('SELECT chave, valor FROM configuracoes')).rows 
-       const config = {} 
-       configs.forEach(c => config[c.chave] = c.valor) 
-       const valorFinal = calculateTotalRideCost(ride.valor || 0, ride.custo_espera_inicial || 0, ride.custo_paradas || 0, config) 
-       const valorMotorista = parseFloat((valorFinal * 0.70).toFixed(2)) 
-       await dbQuery("UPDATE rides SET status = 'concluida', concluida_at = CURRENT_TIMESTAMP, valor_final = $1 WHERE id = $2", [valorFinal, rideId]) 
-       if (ride.client_id) await dbQuery('UPDATE clients SET total_corridas = total_corridas + 1 WHERE id = $1', [ride.client_id]) 
+ 
+      const { calculateTotalRideCost, calculateInitialWaitCost } = await import('./billing.js') 
+      const configs = (await dbQuery('SELECT chave, valor FROM configuracoes')).rows 
+      const config = {} 
+      configs.forEach(c => config[c.chave] = c.valor) 
+ 
+      // Cálculo detalhado para memória de cálculo 
+      const waitInfo = calculateInitialWaitCost(ride.tempo_espera_inicial_min || 0, config) 
+      const valorFinal = calculateTotalRideCost(ride.valor || 0, waitInfo.cost, ride.custo_paradas || 0, config) 
+      const valorMotorista = parseFloat((valorFinal * 0.70).toFixed(2)) 
+ 
+      await dbQuery(` 
+        UPDATE rides SET 
+          status = 'concluida', 
+          concluida_at = CURRENT_TIMESTAMP, 
+          valor_final = $1, 
+          valor_motorista = $2, 
+          valor_mobihub = $3, 
+          base_value = $4, 
+          wait_extra_minutes = $5, 
+          wait_extra_charge = $6, 
+          stop_extra_minutes = $7, 
+          stop_extra_charge = $8, 
+          total_value = $9 
+        WHERE id = $10 
+      `, [ 
+        valorFinal, 
+        valorMotorista, 
+        parseFloat((valorFinal - valorMotorista).toFixed(2)), 
+        ride.valor || 0, 
+        waitInfo.extraMinutes, 
+        waitInfo.cost, 
+        ride.tempo_paradas_total_min || 0, 
+        ride.custo_paradas || 0, 
+        valorFinal, 
+        rideId 
+      ]) 
+ 
+      if (ride.client_id) await dbQuery('UPDATE clients SET total_corridas = total_corridas + 1 WHERE id = $1', [ride.client_id]) 
        try { 
          if (ride.telegram_message_id) await editGroupMessage(ride.telegram_message_id, 
            `✅ *Corrida concluída!*\n\n📍 ${ride.origem}\n🏁 ${ride.destino}\n💰 R$ ${valorFinal.toFixed(2)}`) 

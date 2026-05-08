@@ -267,6 +267,24 @@ export default async function ridesRoutes(fastify) {
     const resultado = await calcularTarifa(data_hora, parseFloat(distancia_km)) 
     return resultado 
   }) 
+
+  // Obter corrida pelo token (público) 
+  fastify.get('/api/rides/token/:token', async (request, reply) => { 
+    const { token } = request.params 
+    const ride = (await query(` 
+      SELECT 
+        r.*, 
+        d.nome as driver_nome, d.placa, d.modelo_carro, d.cor_carro, d.ano_carro, d.telefone as driver_telefone, d.foto_base64 as driver_foto, d.media_avaliacao as driver_media, d.total_viagens as driver_viagens, 
+        c.nome as client_nome, c.telefone as client_telefone, c.media_avaliacao as client_media 
+      FROM rides r 
+      LEFT JOIN drivers d ON r.driver_id = d.id 
+      LEFT JOIN clients c ON r.client_id = c.id 
+      WHERE r.token = $1 
+    `, [token])).rows[0] 
+
+    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
+    return ride 
+  }) 
  
   // Métricas para o Dashboard 
   fastify.get('/api/metricas', { preHandler: requireAuth }, async () => { 

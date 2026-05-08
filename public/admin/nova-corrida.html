@@ -355,6 +355,24 @@ window.onload = () => {
   setupAutocomplete('busca-orig', 'origem') 
   setupAutocomplete('busca-dest', 'destino') 
   carregarConfig() 
+ 
+  // Verifica se há uma corrida para repetir 
+  const repetir = localStorage.getItem('mobihub_repetir_corrida') 
+  if (repetir) { 
+    try { 
+      const d = JSON.parse(repetir) 
+      localStorage.removeItem('mobihub_repetir_corrida') 
+       
+      if (d.telefone) document.getElementById('telefone').value = d.telefone 
+      if (d.valor) document.getElementById('valor').value = Number(d.valor).toFixed(2) 
+ 
+      // Aguarda o Google Maps carregar e posicionar marcadores 
+      setTimeout(() => { 
+        if (d.origem) marcarPonto(Number(d.origem.lat), Number(d.origem.lng), d.origem.endereco, 'origem') 
+        if (d.destino) marcarPonto(Number(d.destino.lat), Number(d.destino.lng), d.destino.endereco, 'destino') 
+      }, 1000) 
+    } catch(e) { console.error('Erro ao repetir corrida:', e) } 
+  } 
 } 
  
 let linkGerado = '' 

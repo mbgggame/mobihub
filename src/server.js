@@ -26,7 +26,7 @@ await fastify.register(fastifyStatic, {
 }) 
  
 // Rotas HTML 
-fastify.get('/', (req, reply) => reply.redirect('/admin/dashboard')) 
+fastify.get('/', (req, reply) => reply.redirect('/admin')) 
 fastify.get('/login', (req, reply) => reply.redirect('/admin/login')) 
 fastify.get('/admin', (req, reply) => reply.sendFile('admin/index.html')) 
 fastify.get('/admin/dashboard', (req, reply) => reply.sendFile('admin/dashboard.html')) 

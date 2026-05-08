@@ -89,7 +89,13 @@ export default async function publicRoutes(fastify) {
   }) 
 
   fastify.get('/api/ride/:token/motorista-location', async (request, reply) => { 
-    const ride = (await query('SELECT * FROM rides WHERE token = $1', [request.params.token])).rows[0] 
+    const { token } = request.params 
+    const ride = (await query(` 
+      SELECT 
+        r.id, r.driver_id, r.passageiro_embarcou_at, r.destino_lat, r.destino_lng, r.origem_lat, r.origem_lng, r.status 
+      FROM rides r 
+      WHERE r.token = $1 
+    `, [token])).rows[0] 
     if (!ride || !ride.driver_id) return { location: null } 
  
     const location = (await query(` 
@@ -148,43 +154,7 @@ export default async function publicRoutes(fastify) {
 
   // --- PERFIS E CADASTRO ---
 
-  fastify.get('/api/ride/:token', async (request, reply) => { 
-    const { token } = request.params 
-    const ride = (await query(` 
-      SELECT r.*, 
-        d.nome as driver_nome, 
-        d.modelo_carro, d.ano_carro, d.cor_carro, d.placa, 
-        d.foto_base64 as driver_foto, 
-        d.media_avaliacao as driver_media, 
-        d.total_viagens as driver_viagens, 
-        c.nome as client_nome 
-      FROM rides r 
-      LEFT JOIN drivers d ON r.driver_id = d.id 
-      LEFT JOIN clients c ON r.client_id = c.id 
-      WHERE r.token = $1 
-    `, [token])).rows[0] 
-  
-    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
-  
-    const rating = (await query( 
-      'SELECT estrelas_motorista, comentario_cliente, avaliado_em_cliente FROM ratings WHERE ride_id = $1', 
-      [ride.id] 
-    )).rows[0] 
-  
-    const paradas = (await query( 
-      'SELECT duracao_min, custo, iniciada_at, finalizada_at FROM ride_stops WHERE ride_id = $1 ORDER BY iniciada_at', 
-      [ride.id] 
-    )).rows 
-  
-    const configs = (await query('SELECT chave, valor FROM configuracoes')).rows 
-    const config = {} 
-    configs.forEach(c => config[c.chave] = c.valor) 
-  
-    delete ride.client_id 
-    delete ride.driver_id 
-  
-    return { ride, rating, paradas, config } 
-  }) 
+
 
   fastify.get('/api/motorista/:token', async (request, reply) => { 
     const result = await query(` 
@@ -418,13 +388,42 @@ export default async function publicRoutes(fastify) {
       WHERE id = $1 AND driver_id = $2 AND status = 'aceita' 
     `, [id, driver.id])).rows[0] 
     if (!ride) return reply.code(400).send({ error: 'Corrida não encontrada' }) 
-    const { calculateTotalRideCost } = await import('../billing.js') 
+    const { calculateTotalRideCost, calculateInitialWaitCost } = await import('../billing.js') 
     const configs = (await query('SELECT chave, valor FROM configuracoes')).rows 
     const config = {} 
     configs.forEach(c => config[c.chave] = c.valor) 
-    const valorFinal = calculateTotalRideCost(ride.valor || 0, ride.custo_espera_inicial || 0, ride.custo_paradas || 0, config) 
+ 
+    // Cálculo detalhado para memória de cálculo 
+    const waitInfo = calculateInitialWaitCost(ride.tempo_espera_inicial_min || 0, config) 
+    const valorFinal = calculateTotalRideCost(ride.valor || 0, waitInfo.cost, ride.custo_paradas || 0, config) 
     const valorMotorista = parseFloat((valorFinal * 0.70).toFixed(2)) 
-    await query("UPDATE rides SET status = 'concluida', concluida_at = CURRENT_TIMESTAMP, valor_final = $1, valor_motorista = $2, valor_mobihub = $3 WHERE id = $4", [valorFinal, valorMotorista, parseFloat((valorFinal - valorMotorista).toFixed(2)), id]) 
+ 
+    await query(` 
+      UPDATE rides SET 
+        status = 'concluida', 
+        concluida_at = CURRENT_TIMESTAMP, 
+        valor_final = $1, 
+        valor_motorista = $2, 
+        valor_mobihub = $3, 
+        base_value = $4, 
+        wait_extra_minutes = $5, 
+        wait_extra_charge = $6, 
+        stop_extra_minutes = $7, 
+        stop_extra_charge = $8, 
+        total_value = $9 
+      WHERE id = $10 
+    `, [ 
+      valorFinal, 
+      valorMotorista, 
+      parseFloat((valorFinal - valorMotorista).toFixed(2)), 
+      ride.valor || 0, 
+      waitInfo.extraMinutes, 
+      waitInfo.cost, 
+      ride.tempo_paradas_total_min || 0, 
+      ride.custo_paradas || 0, 
+      valorFinal, 
+      id 
+    ]) 
     await query('UPDATE drivers SET total_viagens = total_viagens + 1 WHERE id = $1', [driver.id]) 
     if (ride.client_id) await query('UPDATE clients SET total_corridas = total_corridas + 1 WHERE id = $1', [ride.client_id]) 
     try { 
@@ -581,10 +580,46 @@ export default async function publicRoutes(fastify) {
     return { ride, rating } 
   }) 
 
-  fastify.get('/api/reputacao/geral', { preHandler: requireAuth }, async () => { 
-    const mediaMotoristas = (await query(`SELECT ROUND(AVG(estrelas_motorista), 2) as media, COUNT(estrelas_motorista) as total FROM ratings WHERE estrelas_motorista IS NOT NULL`)).rows[0] 
-    const mediaClientes = (await query(`SELECT ROUND(AVG(estrelas_cliente), 2) as media, COUNT(estrelas_cliente) as total FROM ratings WHERE estrelas_cliente IS NOT NULL`)).rows[0] 
-    const topMotoristas = (await query(`SELECT id, nome, media_avaliacao, total_avaliacoes FROM drivers WHERE total_avaliacoes > 0 ORDER BY media_avaliacao DESC LIMIT 10`)).rows[0] 
-    return { mediaMotoristas, mediaClientes, topMotoristas } 
+  // Detalhamento de faturamento (Billing) 
+  fastify.get('/api/rides/:id/billing', async (request, reply) => { 
+    const { id } = request.params 
+    const ride = (await query(` 
+      SELECT 
+        base_value, 
+        wait_extra_minutes, wait_extra_charge, 
+        stop_extra_minutes, stop_extra_charge, 
+        total_value, status 
+      FROM rides WHERE id = $1 
+    `, [id])).rows[0] 
+ 
+    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
+    return ride 
+  }) 
+ 
+  // Buscar corrida por token (melhorado para incluir campos de billing) 
+  fastify.get('/api/ride/:token', async (request, reply) => { 
+    const { token } = request.params 
+    const ride = (await query(` 
+      SELECT 
+        r.*, 
+        d.nome as driver_nome, d.placa, d.modelo_carro, d.cor_carro, d.ano_carro, d.telefone as driver_telefone, d.foto_base64 as driver_foto, d.media_avaliacao as driver_media, d.total_viagens as driver_viagens, d.total_avaliacoes as driver_avaliacoes, 
+        c.nome as client_nome, c.telefone as client_telefone, c.media_avaliacao as client_media, c.total_avaliacoes as client_avaliacoes 
+      FROM rides r 
+      LEFT JOIN drivers d ON r.driver_id = d.id 
+      LEFT JOIN clients c ON r.client_id = c.id 
+      WHERE r.token = $1 
+    `, [token])).rows[0]
+ 
+    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
+    const rating = (await query('SELECT estrelas_motorista, comentario_cliente, avaliado_em_cliente FROM ratings WHERE ride_id = $1', [ride.id])).rows[0] 
+    const paradas = (await query('SELECT duracao_min, custo, iniciada_at, finalizada_at FROM ride_stops WHERE ride_id = $1 ORDER BY iniciada_at', [ride.id])).rows 
+    const configs = (await query('SELECT chave, valor FROM configuracoes')).rows 
+    const config = {} 
+    configs.forEach(c => config[c.chave] = c.valor) 
+ 
+    delete ride.client_id 
+    delete ride.driver_id 
+ 
+    return { ride, rating, paradas, config } 
   }) 
 } 

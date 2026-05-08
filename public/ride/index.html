@@ -68,12 +68,11 @@
      </div> 
    </div> 
  
-   <!-- STATUS DETALHADO DA CORRIDA --> 
+   <!-- STATUS DETALHADO DA CORRIDA (Timer removido do passageiro) --> 
    <div id="card-status-detalhe" class="hidden bg-yellow-50 border border-yellow-200 rounded-xl p-4"> 
      <div class="flex items-center justify-between"> 
        <div> 
          <p class="text-xs font-medium text-yellow-700" id="txt-detalhe-label"></p> 
-         <p id="txt-timer" class="text-2xl font-bold text-yellow-800 mt-1 font-mono"></p> 
        </div> 
        <div id="icone-detalhe" class="text-3xl"></div> 
      </div> 
@@ -99,6 +98,29 @@
        <div class="border-t border-gray-100 pt-2 flex justify-between"> 
          <span class="font-semibold text-gray-800">Total</span> 
          <span id="fin-total" class="font-bold text-green-700 text-lg">—</span> 
+       </div> 
+     </div> 
+   </div> 
+ 
+   <!-- DETALHAMENTO DA COBRANÇA (Transparência) --> 
+   <div id="card-detalhe-billing" class="hidden bg-white border border-gray-200 rounded-xl p-4"> 
+     <p class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-3">Detalhamento da cobrança</p> 
+     <div class="space-y-2"> 
+       <div class="flex justify-between text-sm"> 
+         <span class="text-gray-600">Valor base</span> 
+         <span id="bill-base" class="font-medium text-gray-800">—</span> 
+       </div> 
+       <div id="bill-espera-row" class="hidden flex justify-between text-sm"> 
+         <span id="bill-espera-label" class="text-gray-600">Espera (0 min além da franquia)</span> 
+         <span id="bill-espera-valor" class="font-medium text-orange-600">—</span> 
+       </div> 
+       <div id="bill-parada-row" class="hidden flex justify-between text-sm"> 
+         <span id="bill-parada-label" class="text-gray-600">Paradas (0 min além da franquia)</span> 
+         <span id="bill-parada-valor" class="font-medium text-orange-600">—</span> 
+       </div> 
+       <div class="border-t border-gray-100 pt-2 flex justify-between"> 
+         <span class="font-bold text-gray-900">Total</span> 
+         <span id="bill-total" class="font-bold text-green-700 text-lg">—</span> 
        </div> 
      </div> 
    </div> 
@@ -313,10 +335,18 @@
      if (!r.ok) { 
        document.body.innerHTML = '<p class="text-center mt-20 text-gray-500">Corrida não encontrada.</p>' 
        pollingAtivo = false 
+       pararSom() 
        return 
      } 
      const { ride, rating, paradas, config } = await r.json() 
      console.log('[POLLING] Status atual:', ride.status, '| Motorista:', ride.driver_nome) 
+ 
+     // BUG FIX: Para o som se a corrida for aceita, concluída ou cancelada 
+     if (ride.status !== 'aberta') { 
+       console.log('[POLLING] Status não é aberto, parando som...') 
+       pararSom() 
+     } 
+ 
      dadosAtuais = { ride, rating, paradas, config } 
      renderizar(ride, rating, paradas, config) 
      verificarParaPolling(ride.status) 
@@ -388,30 +418,30 @@
    document.getElementById('txt-destino').textContent = ride.destino 
  
    // Política de espera (só antes de aceitar) 
-   if (ride.status === 'aberta' || ride.status === 'aceita') { 
+   if (ride.status === 'aberta') { 
      document.getElementById('card-politica').classList.remove('hidden') 
      if (config) { 
        document.getElementById('txt-politica-espera').textContent = 
          `${config.espera_minutos_gratis || 5} minutos de espera grátis. Após isso: R$ ${config.espera_valor_minuto || '0,60'}/min` 
        document.getElementById('txt-politica-parada').textContent = 
-         `Paradas: ${config.parada_minutos_gratis || 2} minutos grátis, depois R$ ${config.parada_valor_minuto || '0,60'}/min` 
+         `Paradas: ${config.parada_minutos_gratis || 5} minutos grátis, depois R$ ${config.parada_valor_minuto || '0,60'}/min` 
      } 
    } else { 
      document.getElementById('card-politica').classList.add('hidden') 
    } 
  
-   // Status detalhado 
+   // Status detalhado (Timer e detalhes financeiros removidos para o passageiro durante a corrida) 
    const detalhe = document.getElementById('card-status-detalhe') 
    if (ride.status_detalhe === 'aguardando_passageiro' && ride.motorista_chegou_at) { 
      detalhe.classList.remove('hidden') 
      document.getElementById('txt-detalhe-label').textContent = 'Motorista aguardando você' 
-     document.getElementById('icone-detalhe').textContent = '🚗' 
-     iniciarTimer(ride.motorista_chegou_at, config) 
+     document.getElementById('icone-detalhe').textContent = '📍' 
+     document.getElementById('txt-detalhe-info').textContent = '' 
    } else if (ride.status_detalhe === 'em_parada') { 
      detalhe.classList.remove('hidden') 
      document.getElementById('txt-detalhe-label').textContent = 'Corrida em parada' 
      document.getElementById('icone-detalhe').textContent = '⏸️' 
-     document.getElementById('txt-detalhe-info').textContent = '2 minutos grátis, depois R$ 0,60/min' 
+     document.getElementById('txt-detalhe-info').textContent = '' 
    } else { 
      detalhe.classList.add('hidden') 
    } 
@@ -435,23 +465,26 @@
    } 
  
    // Resumo financeiro 
-   if (ride.status === 'concluida' || ride.status_detalhe === 'em_andamento') { 
-     document.getElementById('card-financeiro').classList.remove('hidden') 
-     document.getElementById('fin-base').textContent = `R$ ${Number(ride.valor || 0).toFixed(2)}` 
- 
-     if (ride.custo_espera_inicial > 0) { 
-       document.getElementById('fin-espera-row').classList.remove('hidden') 
-       document.getElementById('fin-espera').textContent = `+ R$ ${Number(ride.custo_espera_inicial).toFixed(2)}` 
+   if (ride.status === 'concluida') { 
+     // Memória de cálculo transparente 
+     if (ride.total_value) { 
+       document.getElementById('card-detalhe-billing').classList.remove('hidden') 
+       document.getElementById('bill-base').textContent = `R$ ${Number(ride.base_value || 0).toFixed(2)}` 
+        
+       if (ride.wait_extra_charge > 0) { 
+         document.getElementById('bill-espera-row').classList.remove('hidden') 
+         document.getElementById('bill-espera-label').textContent = `Espera (${ride.wait_extra_minutes} min além da franquia)` 
+         document.getElementById('bill-espera-valor').textContent = `R$ ${Number(ride.wait_extra_charge).toFixed(2)}` 
+       } 
+        
+       if (ride.stop_extra_charge > 0) { 
+         document.getElementById('bill-parada-row').classList.remove('hidden') 
+         document.getElementById('bill-parada-label').textContent = `Paradas (${ride.stop_extra_minutes} min além da franquia)` 
+         document.getElementById('bill-parada-valor').textContent = `R$ ${Number(ride.stop_extra_charge).toFixed(2)}` 
+       } 
+        
+       document.getElementById('bill-total').textContent = `R$ ${Number(ride.total_value).toFixed(2)}` 
      } 
- 
-     if (ride.custo_paradas > 0) { 
-       document.getElementById('fin-paradas-row').classList.remove('hidden') 
-       document.getElementById('fin-num-paradas').textContent = ride.num_paradas || 0 
-       document.getElementById('fin-paradas').textContent = `+ R$ ${Number(ride.custo_paradas).toFixed(2)}` 
-     } 
- 
-     const total = ride.valor_final || (Number(ride.valor || 0) + Number(ride.custo_espera_inicial || 0) + Number(ride.custo_paradas || 0)) 
-     document.getElementById('fin-total').textContent = `R$ ${Number(total).toFixed(2)}` 
    } 
  
    // Mapa 
@@ -512,43 +545,8 @@
  let timerInterval = null 
  
  function iniciarTimer(chegouAt, config) { 
-   if (timerInterval) clearInterval(timerInterval) 
- 
-   function atualizar() { 
-     const agora = new Date() 
-     const inicio = new Date(chegouAt) 
-     const totalMs = agora - inicio 
-     const totalMin = totalMs / 1000 / 60 
-     const totalSec = Math.floor(totalMs / 1000) 
-     const min = Math.floor(totalSec / 60) 
-     const sec = totalSec % 60 
- 
-     document.getElementById('txt-timer').textContent = 
-       `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}` 
- 
-     const minutosGratis = parseFloat(config?.espera_minutos_gratis || 5) 
-     const maxEspera = parseFloat(config?.espera_max_cancelamento || 10) 
-     const valorMin = parseFloat(config?.espera_valor_minuto || 0.60) 
- 
-     if (totalMin <= minutosGratis) { 
-       document.getElementById('txt-detalhe-info').textContent = 
-         `⏱️ Dentro do período grátis (${minutosGratis} min)` 
-     } else { 
-       const custoAtual = ((totalMin - minutosGratis) * valorMin).toFixed(2) 
-       document.getElementById('txt-detalhe-info').textContent = 
-         `💰 Custo atual de espera: R$ ${custoAtual}` 
-     } 
- 
-     if (totalMin >= maxEspera) { 
-       document.getElementById('txt-detalhe-label').textContent = 
-         '⚠️ Tempo limite atingido — motorista pode cancelar' 
-       document.getElementById('card-status-detalhe').classList.remove('bg-yellow-50', 'border-yellow-200') 
-       document.getElementById('card-status-detalhe').classList.add('bg-red-50', 'border-red-200') 
-     } 
-   } 
- 
-   atualizar() 
-   timerInterval = setInterval(atualizar, 1000) 
+   // Função desativada para o passageiro 
+   return 
  } 
  
  async function atualizarLocalizacaoMotorista(ride) { 
@@ -765,6 +763,16 @@
  } 
  
  // Para polling quando corrida concluída ou cancelada 
+ function pararSom() { 
+   console.log('[AUDIO] Comando pararSom executado') 
+   const audio = document.getElementById('audio-corrida') 
+   if (!audio) return 
+   audio.pause() 
+   audio.currentTime = 0 
+   audioAtivo = false 
+   console.log('[AUDIO] Áudio parado com sucesso') 
+ } 
+ 
  function verificarParaPolling(status) { 
    if (status === 'concluida' || status === 'cancelada') { 
      pollingAtivo = false 
@@ -772,7 +780,39 @@
    } 
  } 
  
- iniciarPolling() 
+ function tocarSom() { 
+   const audio = document.getElementById('audio-corrida') 
+   if (!audio || !audio.src || audio.src === window.location.href) return 
+   audio.volume = 1 
+   audio.loop = false // Controle manual, sem loop nativo 
+   const promise = audio.play() 
+   if (promise) { 
+     promise.then(() => { 
+       audioAtivo = true 
+       console.log('[AUDIO] Tocando') 
+     }).catch(e => { 
+       console.warn('[AUDIO] Bloqueado pelo navegador:', e.message) 
+     }) 
+   } 
+ } 
+ 
+ function pararSom() { 
+   console.log('[AUDIO] Comando pararSom executado') 
+   const audio = document.getElementById('audio-corrida') 
+   if (!audio) return 
+   audio.pause() 
+   audio.currentTime = 0 
+   audioAtivo = false 
+   console.log('[AUDIO] Áudio parado com sucesso') 
+ } 
+ 
+ // Inicia o polling 
+ function iniciarPollingAutomatico() { 
+   console.log('[POLLING] Iniciando...'); 
+   iniciarPolling(); 
+ } 
+ 
+ iniciarPollingAutomatico(); 
  </script> 
  </body> 
  </html> 

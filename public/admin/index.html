@@ -166,6 +166,7 @@ async function abrirModal(id) {
       <p class="font-medium text-gray-700">Link da corrida</p> 
       <div class="bg-gray-50 rounded-lg px-3 py-2 font-mono text-xs break-all">${BASE_URL}/r/${c.token}</div> 
       <div class="flex gap-2 flex-wrap"> 
+        <button onclick="repetirViagem()" class="w-full bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg py-2 text-sm font-medium">🔁 Repetir Viagem</button> 
         ${c.status === 'aceita' ? ` 
         <button onclick="atualizarStatus('concluida')" class="flex-1 bg-green-600 text-white rounded-lg py-2 text-sm font-medium">✅ Concluir</button> 
         <hr class="w-full border-gray-100"/> 
@@ -244,6 +245,18 @@ async function verResumoFinanceiro(id) {
  Motorista (70%): R$ ${d.valor_motorista.toFixed(2)} 
  MobiHub (30%): R$ ${d.valor_mobihub.toFixed(2)} 
    `.trim()) 
+} 
+ 
+function repetirViagem() { 
+  if (!corridaAtual) return 
+  const dados = { 
+    origem: { endereco: corridaAtual.origem, lat: corridaAtual.origem_lat, lng: corridaAtual.origem_lng }, 
+    destino: { endereco: corridaAtual.destino, lat: corridaAtual.destino_lat, lng: corridaAtual.destino_lng }, 
+    valor: corridaAtual.valor, 
+    telefone: corridaAtual.client_telefone 
+  } 
+  localStorage.setItem('mobihub_repetir_corrida', JSON.stringify(dados)) 
+  location.href = '/admin/nova-corrida' 
 } 
  
 function copiarMensagem() { 

@@ -4,25 +4,31 @@ export function calculateInitialWaitCost(waitTimeInMinutes, config = {}) {
   const minutosGratis = parseFloat(config.espera_minutos_gratis || 5) 
   const valorMinuto = parseFloat(config.espera_valor_minuto || 0.60) 
  
-  if (waitTimeInMinutes <= minutosGratis) return 0 
+  if (waitTimeInMinutes <= minutosGratis) { 
+    return { cost: 0, extraMinutes: 0 } 
+  } 
  
   const minutosExtras = waitTimeInMinutes - minutosGratis 
-  return parseFloat((minutosExtras * valorMinuto).toFixed(2)) 
+  const cost = parseFloat((minutosExtras * valorMinuto).toFixed(2)) 
+  return { cost, extraMinutes: parseFloat(minutosExtras.toFixed(2)) } 
 } 
  
 export function calculateStopCost(stopTimeInMinutes, config = {}) { 
-  const minutosGratis = parseFloat(config.parada_minutos_gratis || 2) 
+  const minutosGratis = parseFloat(config.parada_minutos_gratis || 5) 
   const valorMinuto = parseFloat(config.parada_valor_minuto || 0.60) 
  
-  if (stopTimeInMinutes <= minutosGratis) return 0 
+  if (stopTimeInMinutes <= minutosGratis) { 
+    return { cost: 0, extraMinutes: 0 } 
+  } 
  
   const minutosExtras = stopTimeInMinutes - minutosGratis 
-  return parseFloat((minutosExtras * valorMinuto).toFixed(2)) 
+  const cost = parseFloat((minutosExtras * valorMinuto).toFixed(2)) 
+  return { cost, extraMinutes: parseFloat(minutosExtras.toFixed(2)) } 
 } 
  
 export function calculateTotalRideCost(baseFare, initialWaitCost = 0, stopsCost = 0, config = {}) { 
   const valorMinimo = parseFloat(config.valor_minimo_corrida || 7.00) 
-  const total = baseFare + initialWaitCost + stopsCost 
+  const total = parseFloat(baseFare) + parseFloat(initialWaitCost) + parseFloat(stopsCost) 
   return parseFloat(Math.max(total, valorMinimo).toFixed(2)) 
 } 
  
