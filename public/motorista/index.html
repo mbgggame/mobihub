@@ -315,27 +315,6 @@
          </div> 
        </div> 
      </div> 
- 
-     <!-- Mapa da corrida ativa (Único #map) --> 
-    <div class="bg-white border border-gray-200 rounded-xl overflow-hidden"> 
-      <div class="flex items-center justify-between px-4 pt-3 pb-2">
-        <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Mapa</p> 
-        <div id="info-mapa-distancia" class="hidden text-right">
-          <p id="txt-distancia-km" class="text-[10px] font-bold text-green-700"></p>
-        </div>
-      </div>
-      <div id="map" style="height: 250px;"></div> 
-      <div class="px-4 py-2 flex gap-2"> 
-        <a id="link-navegar" href="#" target="_blank" 
-          class="flex-1 text-center text-sm text-blue-600 border border-blue-200 rounded-lg py-2 hover:bg-blue-50"> 
-          🧭 Navegar 
-        </a> 
-        <a id="link-rota-completa" href="#" target="_blank" 
-          class="flex-1 text-center text-sm text-green-600 border border-green-200 rounded-lg py-2 hover:bg-green-50"> 
-          🗺️ Rota completa 
-        </a> 
-      </div> 
-    </div> 
    </div> 
  
    <!-- CHAT COM PASSAGEIRO --> 
@@ -365,7 +344,26 @@
     <p class="text-sm text-gray-400 mt-1" id="txt-aguardando-sub">Fique online para receber corridas</p> 
   </div> 
  
-  <!-- MAPA FIXO (REMOVIDO DUPLICADO) --> 
+  <!-- MAPA FIXO (Sempre visível quando online) --> 
+  <div id="container-mapa-motorista" class="bg-white border border-gray-200 rounded-xl overflow-hidden mt-4"> 
+    <div class="flex items-center justify-between px-4 pt-3 pb-2"> 
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Mapa em tempo real</p> 
+      <div id="info-mapa-distancia" class="hidden text-right"> 
+        <p id="txt-distancia-km" class="text-sm font-bold text-green-700"></p> 
+      </div> 
+    </div> 
+    <div id="map" style="height: 300px; width: 100%; border-radius: 8px;"></div> 
+    <div id="botoes-mapa" class="hidden px-4 py-2 flex gap-2"> 
+      <a id="link-navegar" href="#" target="_blank" 
+        class="flex-1 text-center text-sm text-blue-600 border border-blue-200 rounded-lg py-2 hover:bg-blue-50"> 
+        🧭 Navegar 
+      </a> 
+      <a id="link-rota-completa" href="#" target="_blank" 
+        class="flex-1 text-center text-sm text-green-600 border border-green-200 rounded-lg py-2 hover:bg-green-50"> 
+        🗺️ Rota completa 
+      </a> 
+    </div> 
+  </div> 
 
   <!-- AUDIO --> 
   <audio id="audio-corrida" preload="auto" src="/audio/alerta.mp3"></audio> 
@@ -547,6 +545,8 @@
    const btn = document.getElementById('btn-toggle-online') 
    const badgeOn = document.getElementById('badge-online') 
    const badgeOff = document.getElementById('badge-offline') 
+   const containerMapa = document.getElementById('container-mapa-motorista')
+
    if (motoristOnline) { 
      txt.textContent = '🟢 Você está ONLINE' 
      desc.textContent = 'Recebendo ofertas de corrida' 
@@ -554,6 +554,7 @@
      btn.className = 'px-4 py-2 rounded-xl text-sm font-semibold bg-red-50 text-red-600 border border-red-200' 
      badgeOn.classList.remove('hidden') 
      badgeOff.classList.add('hidden') 
+     if (containerMapa) containerMapa.classList.remove('hidden')
      iniciarLocalizacao() 
    } else { 
      txt.textContent = '🔴 Você está OFFLINE' 
@@ -562,6 +563,7 @@
      btn.className = 'px-4 py-2 rounded-xl text-sm font-semibold bg-green-600 text-white' 
      badgeOn.classList.add('hidden') 
      badgeOff.classList.remove('hidden') 
+     if (containerMapa) containerMapa.classList.add('hidden')
      pararLocalizacao() 
    } 
  } 
@@ -824,6 +826,7 @@
    if (corrida.origem_lat) { 
      document.getElementById('link-navegar').href = `https://www.google.com/maps/dir/?api=1&destination=${corrida.origem_lat},${corrida.origem_lng}&travelmode=driving` 
      document.getElementById('link-rota-completa').href = `https://www.google.com/maps/dir/?api=1&origin=${corrida.origem_lat},${corrida.origem_lng}&destination=${corrida.destino_lat},${corrida.destino_lng}&travelmode=driving` 
+     document.getElementById('botoes-mapa').classList.remove('hidden')
    } 
    if (!map) iniciarMapaMotorista() 
    atualizarNavegacaoMotorista(corrida) 
@@ -880,6 +883,7 @@
    if (rotaLayer) { map.removeLayer(rotaLayer); rotaLayer = null } 
    if (markerPassageiro) { map.removeLayer(markerPassageiro); markerPassageiro = null } 
    document.getElementById('info-mapa-distancia').classList.add('hidden') 
+   document.getElementById('botoes-mapa').classList.add('hidden')
  } 
  
  async function aceitarCorrida() { 
