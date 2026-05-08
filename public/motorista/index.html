@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
   <title>MobiHub — Motorista</title> 
   <script src="https://cdn.tailwindcss.com"></script> 
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBz0TOxlMbWgEQuDoMSqneGN0UFywnX-7s&libraries=places&language=pt-BR"></script> 
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" /> 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script> 
   <style> 
     #video-camera { width:100%; max-height:220px; object-fit:cover; background:#000; border-radius:12px; } 
     #canvas-hidden { display:none; } 
@@ -448,12 +449,28 @@
  
  let map = null 
  let markerMotorista = null 
- let directionsService = null 
- let directionsRenderer = null 
+ let markerPassageiro = null 
+ let rotaLayer = null 
  let minhaPos = null 
  let timerInterval = null 
  let pollingAtivo = true 
  let watchId = null 
+ let lastReportTime = 0 
+ 
+ // BUG FIX: Ícones do Leaflet 
+ const iconeMotorista = L.icon({ 
+   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png', 
+   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png', 
+   iconSize: [25, 41], 
+   iconAnchor: [12, 41] 
+ }); 
+ 
+ const iconePassageiro = L.icon({ 
+   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png', 
+   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png', 
+   iconSize: [25, 41], 
+   iconAnchor: [12, 41] 
+ }); 
  
  function estrelas(media) { 
    if (!media) return '☆☆☆☆☆' 
@@ -491,7 +508,21 @@
      renderizarFinanceiro(financeiro) 
      renderizarStatusOnline(driver) 
      carregarVeiculos() 
+ 
+     // Inicia rastreamento de posição se online 
+     if (driver.online) iniciarLocalizacao() 
    } catch(e) { console.error(e) } 
+ } 
+ 
+ async function reportarLocalizacao(lat, lng) { 
+   if (!motoristOnline) return 
+   try { 
+     await fetch('/api/motorista/localizacao', { 
+       method: 'POST', 
+       headers: { 'Content-Type': 'application/json' }, 
+       body: JSON.stringify({ token_motorista: tokenMotorista, lat, lng }) 
+     }) 
+   } catch(e) {} 
  } 
  
  function renderizarPerfil(driver) { 
@@ -532,6 +563,7 @@
      btn.className = 'px-4 py-2 rounded-xl text-sm font-semibold bg-red-50 text-red-600 border border-red-200' 
      badgeOn.classList.remove('hidden') 
      badgeOff.classList.add('hidden') 
+     iniciarLocalizacao() 
    } else { 
      txt.textContent = '🔴 Você está OFFLINE' 
      desc.textContent = 'Não está recebendo corridas' 
@@ -539,6 +571,7 @@
      btn.className = 'px-4 py-2 rounded-xl text-sm font-semibold bg-green-600 text-white' 
      badgeOn.classList.add('hidden') 
      badgeOff.classList.remove('hidden') 
+     pararLocalizacao() 
    } 
  } 
  
@@ -693,7 +726,6 @@
    } catch(e) { alert('Erro de conexão') } 
  } 
  
- // ── POLLING DE CORRIDAS ──────────────────────────── 
  async function verificarNovasCorridas() { 
    if (!motoristOnline) return 
    try { 
@@ -704,7 +736,7 @@
        mostrarNovaCorrida(corrida) 
      } else if (!corrida && !corridaAtualId) { 
        esconderNovaCorrida() 
-       pararAudio() // BUG FIX 1: Para áudio se a corrida sumiu 
+       pararAudio() 
      } 
    } catch(e) {} 
  } 
@@ -716,174 +748,69 @@
      const { corrida } = await r.json() 
  
      if (corrida) { 
-     corridaAtualId = corrida.id 
-     corridaAtualToken = corrida.token 
-     mostrarCorridaAtiva(corrida) 
+       corridaAtualId = corrida.id 
+       corridaAtualToken = corrida.token 
+       mostrarCorridaAtiva(corrida) 
  
-     // BUG 4: Atualização da Navegação no Mapa 
-     atualizarNavegacaoMotorista(corrida) 
+       // Gerenciamento de Timers 
+       const detalheDiv = document.getElementById('status-detalhe-motorista') 
+       const txtStatus = document.getElementById('txt-status-detalhe') 
+       if (timerInterval) clearInterval(timerInterval) 
  
-     // Gerenciamento de Timers (Espera e Parada) 
-     const detalheDiv = document.getElementById('status-detalhe-motorista') 
-     const txtStatus = document.getElementById('txt-status-detalhe') 
-     const txtTimer = document.getElementById('txt-timer-motorista') 
-      
-     if (timerInterval) clearInterval(timerInterval) 
- 
-     if (corrida.status_detalhe === 'aguardando_passageiro' && corrida.motorista_chegou_at) { 
-       detalheDiv.classList.remove('hidden') 
-       txtStatus.textContent = '⏱️ Aguardando passageiro' 
-       iniciarTimerMotorista(corrida.motorista_chegou_at, 5, 'espera') 
-     } else if (corrida.status_detalhe === 'em_parada') { 
-       detalheDiv.classList.remove('hidden') 
-       txtStatus.textContent = '⏸️ Em parada' 
-       // Busca o timestamp da última parada iniciada 
-       fetch(`/api/ride/${corrida.token}`) 
-         .then(r => r.json()) 
-         .then(d => { 
+       if (corrida.status_detalhe === 'aguardando_passageiro' && corrida.motorista_chegou_at) { 
+         detalheDiv.classList.remove('hidden') 
+         txtStatus.textContent = '⏱️ Aguardando passageiro' 
+         iniciarTimerMotorista(corrida.motorista_chegou_at, 5, 'espera') 
+       } else if (corrida.status_detalhe === 'em_parada') { 
+         detalheDiv.classList.remove('hidden') 
+         txtStatus.textContent = '⏸️ Em parada' 
+         fetch(`/api/ride/${corrida.token}`).then(r => r.json()).then(d => { 
            const ultimaParada = d.paradas.sort((a,b) => b.id - a.id).find(p => !p.finalizada_at) 
-           if (ultimaParada) { 
-             iniciarTimerMotorista(ultimaParada.iniciada_at, 5, 'parada') 
-           } 
+           if (ultimaParada) iniciarTimerMotorista(ultimaParada.iniciada_at, 5, 'parada') 
          }) 
-     } else { 
-       detalheDiv.classList.add('hidden') 
-     } 
- 
-     // Memória de cálculo transparente 
-     if (corrida.status === 'concluida' && corrida.total_value) { 
-       document.getElementById('card-detalhe-billing').classList.remove('hidden') 
-       document.getElementById('bill-base').textContent = `R$ ${Number(corrida.base_value || 0).toFixed(2)}` 
-       
-       if (corrida.wait_extra_charge > 0) { 
-         document.getElementById('bill-espera-row').classList.remove('hidden') 
-         document.getElementById('bill-espera-label').textContent = `Espera (${corrida.wait_extra_minutes} min além da franquia)` 
-         document.getElementById('bill-espera-valor').textContent = `R$ ${Number(corrida.wait_extra_charge).toFixed(2)}` 
+       } else { 
+         detalheDiv.classList.add('hidden') 
        } 
-       
-       if (corrida.stop_extra_charge > 0) { 
-         document.getElementById('bill-parada-row').classList.remove('hidden') 
-         document.getElementById('bill-parada-label').textContent = `Paradas (${corrida.stop_extra_minutes} min além da franquia)` 
-         document.getElementById('bill-parada-valor').textContent = `R$ ${Number(corrida.stop_extra_charge).toFixed(2)}` 
-       } 
-       
-       document.getElementById('bill-total').textContent = `R$ ${Number(corrida.total_value).toFixed(2)}` 
-     } 
-   } else if (corridaAtualId) { 
-       const idAnterior = corridaAtualId 
-       corridaAtualId = null 
-       corridaAtualToken = null 
+     } else if (corridaAtualId) { 
+       corridaAtualId = null; corridaAtualToken = null 
        esconderCorridaAtiva() 
-       pararLocalizacao() 
- 
-       // Verifica o motivo pelo qual a corrida sumiu 
-       try { 
-         const rc = await fetch(`/api/motorista/${tokenMotorista}/ultima-corrida`) 
-         if (rc.ok) { 
-           const { corrida: ultima } = await rc.json() 
-           const resumoDiv = document.getElementById('card-sem-corrida') 
- 
-           if (ultima?.status === 'cancelada' && ultima?.status_detalhe === 'cancelada_passageiro') { 
-             resumoDiv.innerHTML = ` 
-               <div class="text-center py-6"> 
-                 <p class="text-4xl mb-3">❌</p> 
-                 <p class="font-bold text-red-600 text-lg">Corrida cancelada pelo passageiro</p> 
-                 <p class="text-sm text-gray-400 mt-2">Aguardando próxima corrida...</p> 
-               </div> 
-             ` 
-             resumoDiv.classList.remove('hidden') 
-             setTimeout(() => { 
-               resumoDiv.innerHTML = ` 
-                 <div class="text-center py-8"> 
-                   <p class="text-4xl mb-3">🚗</p> 
-                   <p class="font-semibold text-gray-700">Aguardando corridas...</p> 
-                   <p class="text-sm text-gray-400 mt-1">Fique online para receber corridas</p> 
-                 </div> 
-               ` 
-             }, 4000) 
-           } else if (ultima?.status === 'concluida') { 
-             // Só mostra resumo financeiro se foi concluída 
-             resumoDiv.innerHTML = ` 
-               <div class="text-center py-4"> 
-                 <p class="text-3xl mb-2">✅</p> 
-                 <p class="font-bold text-gray-800 text-lg">Corrida finalizada!</p> 
-                 <div class="bg-green-50 border border-green-200 rounded-xl p-4 mt-3 text-left space-y-1"> 
-                   <p class="text-sm text-gray-600">💰 Valor total: <span class="font-bold text-green-700">R$ ${Number(ultima.valor_final || ultima.valor || 0).toFixed(2)}</span></p> 
-                   <p class="text-sm text-gray-600">👨‍✈️ Seu ganho: <span class="font-bold text-blue-700">R$ ${Number(ultima.valor_motorista || (ultima.valor * 0.70) || 0).toFixed(2)}</span></p> 
-                 </div> 
-                 <p class="text-xs text-gray-400 mt-3">Aguardando próxima corrida...</p> 
-               </div> 
-             ` 
-             resumoDiv.classList.remove('hidden') 
-           } 
-         } 
-       } catch(e) { 
-         console.error('[CORRIDA] Erro ao buscar última corrida:', e) 
-       } 
      } 
    } catch(e) {} 
  } 
  
  function mostrarNovaCorrida(corrida) { 
    let origemTexto = corrida.origem; 
-   try { 
-     const origemObj = JSON.parse(corrida.origem); 
-     origemTexto = origemObj.endereco || corrida.origem; 
-   } catch(e) { 
-     origemTexto = corrida.origem; 
-   }
+   try { const o = JSON.parse(corrida.origem); origemTexto = o.endereco || corrida.origem } catch(e) {} 
    document.getElementById('corrida-origem').textContent = origemTexto 
    document.getElementById('corrida-destino').textContent = corrida.destino 
-   document.getElementById('corrida-passageiro').textContent = corrida.client_nome 
-     ? `${corrida.client_nome} ⭐ ${Number(corrida.client_media || 0).toFixed(1)}` 
-     : 'Novo passageiro' 
+   document.getElementById('corrida-passageiro').textContent = corrida.client_nome || 'Novo passageiro' 
    document.getElementById('corrida-valor').textContent = moeda(corrida.valor) 
    document.getElementById('corrida-ganho').textContent = moeda(corrida.valor_motorista || corrida.valor * 0.70) 
    document.getElementById('card-nova-corrida').classList.remove('hidden') 
    document.getElementById('card-sem-corrida').classList.add('hidden') 
    document.getElementById('badge-nova-corrida').classList.remove('hidden') 
-   iniciarAudio() // BUG FIX 1: Toca áudio quando chega nova corrida 
-   let segundos = 0 
-   if (timerInterval) clearInterval(timerInterval) 
-   timerInterval = setInterval(() => { 
-     segundos++ 
-     document.getElementById('timer-corrida').textContent = `${segundos}s` 
-   }, 1000) 
+   iniciarAudio() 
    window._corridaDisponivel = corrida 
- 
-   // BUG 2: Mostra marcador de origem no mapa fixo 
    if (map && corrida.origem_lat) { 
-     const posOrigem = { lat: Number(corrida.origem_lat), lng: Number(corrida.origem_lng) } 
-     const bounds = new google.maps.LatLngBounds() 
-     if (minhaPos) bounds.extend(minhaPos) 
-     bounds.extend(posOrigem) 
-     map.fitBounds(bounds) 
-     document.getElementById('info-mapa-distancia').classList.remove('hidden') 
+     const posOrigem = [Number(corrida.origem_lat), Number(corrida.origem_lng)] 
+     if (markerPassageiro) map.removeLayer(markerPassageiro) 
+     markerPassageiro = L.marker(posOrigem, { icon: iconePassageiro }).addTo(map) 
+     if (minhaPos) map.fitBounds(L.latLngBounds([minhaPos.lat, minhaPos.lng], posOrigem), { padding: [50, 50] }) 
    } 
- 
-   mudarAba('corridas') 
  } 
  
  function esconderNovaCorrida() { 
    document.getElementById('card-nova-corrida').classList.add('hidden') 
    document.getElementById('card-sem-corrida').classList.remove('hidden') 
    document.getElementById('info-mapa-distancia').classList.add('hidden') 
-   if (timerInterval) clearInterval(timerInterval) 
-   pararAudio() // BUG FIX 1: Para áudio 
+   if (markerPassageiro) { map.removeLayer(markerPassageiro); markerPassageiro = null } 
+   if (rotaLayer) { map.removeLayer(rotaLayer); rotaLayer = null } 
+   pararAudio() 
  } 
  
  function mostrarCorridaAtiva(corrida) { 
-   console.log('[CORRIDA ATIVA] ID:', corrida.id, '| Token:', corrida.token) 
-   corridaAtualId = corrida.id 
-   corridaAtualToken = corrida.token 
- 
    let origemTexto = corrida.origem; 
-   try { 
-     const origemObj = JSON.parse(corrida.origem); 
-     origemTexto = origemObj.endereco || corrida.origem; 
-   } catch(e) { 
-     origemTexto = corrida.origem; 
-   }
+   try { const o = JSON.parse(corrida.origem); origemTexto = o.endereco || corrida.origem } catch(e) {} 
    document.getElementById('ativa-origem').textContent = origemTexto 
    document.getElementById('ativa-destino').textContent = corrida.destino 
    document.getElementById('ativa-valor').textContent = `💰 ${moeda(corrida.valor_motorista || corrida.valor * 0.70)}` 
@@ -891,538 +818,147 @@
    document.getElementById('card-chat-motorista').classList.remove('hidden') 
    document.getElementById('card-sem-corrida').classList.add('hidden') 
    document.getElementById('card-nova-corrida').classList.add('hidden') 
- 
-   const btnCancelar = document.getElementById('btn-cancelar-corrida') 
-   if (btnCancelar) { 
-     if (corrida.passageiro_embarcou_at) { 
-       btnCancelar.classList.add('hidden') 
-     } else { 
-       btnCancelar.classList.remove('hidden') 
-     } 
-   } 
- 
    if (corrida.origem_lat) { 
-     document.getElementById('link-navegar').href = 
-       `https://www.google.com/maps/dir/?api=1&destination=${corrida.origem_lat},${corrida.origem_lng}&travelmode=driving` 
-     document.getElementById('link-rota-completa').href = 
-       `https://www.google.com/maps/dir/?api=1&origin=${corrida.origem_lat},${corrida.origem_lng}&destination=${corrida.destino_lat},${corrida.destino_lng}&travelmode=driving` 
+     document.getElementById('link-navegar').href = `https://www.google.com/maps/dir/?api=1&destination=${corrida.origem_lat},${corrida.origem_lng}&travelmode=driving` 
+     document.getElementById('link-rota-completa').href = `https://www.google.com/maps/dir/?api=1&origin=${corrida.origem_lat},${corrida.origem_lng}&destination=${corrida.destino_lat},${corrida.destino_lng}&travelmode=driving` 
    } 
- 
-   iniciarMapaMotorista(corrida) 
-   carregarMsgMotorista() 
+   if (!map) iniciarMapaMotorista() 
+   atualizarNavegacaoMotorista(corrida) 
  } 
  
- function iniciarMapaMotorista(corrida) { 
-   const container = document.getElementById('map') 
-   if (!container) return 
-    
-   if (!map) { 
-     map = new google.maps.Map(container, { 
-       zoom: 15, 
-       center: minhaPos || { lat: -20.3222, lng: -40.2917 }, 
-       disableDefaultUI: true, 
-       styles: [ 
-         { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] } 
-       ] 
-     }) 
-     directionsService = new google.maps.DirectionsService() 
-     directionsRenderer = new google.maps.DirectionsRenderer({ 
-       map: map, 
-       suppressMarkers: false, 
-       polylineOptions: { strokeColor: '#059669', strokeWeight: 5 } 
-     }) 
-   } 
- 
-   if (corrida) atualizarNavegacaoMotorista(corrida) 
-   else if (minhaPos) map.setCenter(minhaPos) 
+ function iniciarMapaMotorista() { 
+   if (map) return 
+   map = L.map('map').setView(minhaPos ? [minhaPos.lat, minhaPos.lng] : [-20.3155, -40.3128], 15) 
+   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map) 
+   if (minhaPos) markerMotorista = L.marker([minhaPos.lat, minhaPos.lng], { icon: iconeMotorista }).addTo(map) 
  } 
  
- function atualizarNavegacaoMotorista(corrida) { 
+ async function atualizarNavegacaoMotorista(corrida) { 
    if (!map || !minhaPos) return 
- 
-   let destino = null 
-   if (corrida.status === 'aceita' && !corrida.motorista_chegou_at) { 
-     // A caminho do passageiro (Origem) 
-     destino = { lat: Number(corrida.origem_lat), lng: Number(corrida.origem_lng) } 
-   } else if (corrida.status_detalhe === 'em_andamento') { 
-     // Em viagem (Destino final) 
-     destino = { lat: Number(corrida.destino_lat), lng: Number(corrida.destino_lng) } 
-   } 
- 
-   if (destino) { 
-     directionsService.route({ 
-       origin: minhaPos, 
-       destination: destino, 
-       travelMode: google.maps.TravelMode.DRIVING 
-     }, (result, status) => { 
-       if (status === 'OK') { 
-         directionsRenderer.setDirections(result) 
-         const dist = result.routes[0].legs[0].distance.text 
+   let destLat, destLng 
+   if (corrida.status === 'aceita' && !corrida.motorista_chegou_at) { destLat = Number(corrida.origem_lat); destLng = Number(corrida.origem_lng) } 
+   else if (corrida.status_detalhe === 'em_andamento') { destLat = Number(corrida.destino_lat); destLng = Number(corrida.destino_lng) } 
+   if (destLat) { 
+     try { 
+       const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${minhaPos.lng},${minhaPos.lat};${destLng},${destLat}?overview=full&geometries=geojson`) 
+       const d = await r.json() 
+       if (d.routes && d.routes[0]) { 
+         if (rotaLayer) map.removeLayer(rotaLayer) 
+         rotaLayer = L.geoJSON(d.routes[0].geometry, { style: { color: '#059669', weight: 5 } }).addTo(map) 
+         if (markerPassageiro) map.removeLayer(markerPassageiro) 
+         markerPassageiro = L.marker([destLat, destLng], { icon: iconePassageiro }).addTo(map) 
+         map.fitBounds(L.latLngBounds([minhaPos.lat, minhaPos.lng], [destLat, destLng]), { padding: [50, 50] }) 
          document.getElementById('info-mapa-distancia').classList.remove('hidden') 
-         document.getElementById('txt-distancia-km').textContent = dist 
+         document.getElementById('txt-distancia-km').textContent = `${(d.routes[0].distance / 1000).toFixed(1)} km` 
        } 
-     }) 
+     } catch(e) {} 
    } else { 
-     directionsRenderer.set('directions', null) 
-     map.setCenter(minhaPos) 
+     if (rotaLayer) { map.removeLayer(rotaLayer); rotaLayer = null } 
+     if (markerPassageiro) { map.removeLayer(markerPassageiro); markerPassageiro = null } 
+     map.setView([minhaPos.lat, minhaPos.lng], 15) 
      document.getElementById('info-mapa-distancia').classList.add('hidden') 
    } 
  } 
  
  function esconderCorridaAtiva() { 
-    document.getElementById('card-corrida-ativa').classList.add('hidden') 
-    document.getElementById('card-chat-motorista').classList.add('hidden') 
-    document.getElementById('card-sem-corrida').classList.remove('hidden') 
-    if (directionsRenderer) directionsRenderer.set('directions', null) 
-    document.getElementById('info-mapa-distancia').classList.add('hidden') 
-  } 
+   document.getElementById('card-corrida-ativa').classList.add('hidden') 
+   document.getElementById('card-chat-motorista').classList.add('hidden') 
+   document.getElementById('card-sem-corrida').classList.remove('hidden') 
+   if (rotaLayer) { map.removeLayer(rotaLayer); rotaLayer = null } 
+   if (markerPassageiro) { map.removeLayer(markerPassageiro); markerPassageiro = null } 
+   document.getElementById('info-mapa-distancia').classList.add('hidden') 
+ } 
  
  async function aceitarCorrida() { 
-   const corrida = window._corridaDisponivel 
-   if (!corrida) return 
-   pararAudio() // BUG FIX 1 
-   if (timerInterval) clearInterval(timerInterval) 
+   const c = window._corridaDisponivel; if (!c) return 
+   pararAudio() 
    try { 
-     const r = await fetch(`/api/rides/${corrida.id}/aceitar-motorista`, { 
-       method: 'PUT', 
-       headers: { 'Content-Type': 'application/json' }, 
-       body: JSON.stringify({ token_motorista: tokenMotorista }) 
-     }) 
-     const d = await r.json() 
-     if (!r.ok) { alert('Erro: ' + d.error); return } 
-     corridaAtualId = corrida.id 
-     corridaAtualToken = corrida.token 
-     window._corridaDisponivel = null 
-     mostrarCorridaAtiva(corrida) 
-   } catch(e) { alert('Erro de conexão') } 
- } 
- 
- function recusarCorrida() { 
-   const corrida = window._corridaDisponivel 
-   if (!corrida) return 
-   pararAudio() // BUG FIX 1 
-   corridasIgnoradas.push(corrida.id) 
-   window._corridaDisponivel = null 
-   esconderNovaCorrida() 
- } 
- 
- function ignorarCorrida() { 
-   pararAudio() // BUG FIX 1 
-   if (timerInterval) clearInterval(timerInterval) 
-   document.getElementById('card-nova-corrida').classList.add('hidden') 
- } 
- 
- async function acaoCorridaAtiva(acao) { 
-   if (!corridaAtualId) return 
-   try { 
-     let url = '', method = 'PUT' 
-     if (acao === 'chegou') url = `/api/rides/${corridaAtualId}/motorista-chegou` 
-     else if (acao === 'embarcou') url = `/api/rides/${corridaAtualId}/passageiro-embarcou` 
-     else if (acao === 'parada') { 
-       const btn = document.getElementById('btn-parada') 
-       if (btn.textContent.includes('Parar')) { 
-         url = `/api/rides/${corridaAtualId}/parada/iniciar` 
-         method = 'POST' 
-         btn.textContent = '▶️ Retomar' 
-         btn.className = 'bg-green-50 text-green-700 border border-green-200 rounded-lg py-2.5 text-sm font-medium' 
-       } else { 
-         url = `/api/rides/${corridaAtualId}/parada/ultima/finalizar` 
-         btn.textContent = '⏸️ Parar' 
-         btn.className = 'bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-lg py-2.5 text-sm font-medium' 
-       } 
-     } 
- 
-     if (acao === 'finalizar') { 
-       if (!confirm('Finalizar a corrida?')) return 
-       
-       const r = await fetch(`/api/rides/${corridaAtualId}/finalizar-motorista`, { 
-         method: 'PUT', 
-         headers: { 'Content-Type': 'application/json' }, 
-         body: JSON.stringify({ token_motorista: tokenMotorista }) 
-       }) 
-       const d = await r.json() 
-       
-       if (r.ok) { 
-         // Salva status online atual ANTES de qualquer atualização 
-         const eraOnline = motoristOnline 
-         
-         // Limpa corrida atual 
-         corridaAtualId = null 
-         corridaAtualToken = null 
-         esconderCorridaAtiva() 
- 
-         // Mostra resumo sem usar alert() que pode interferir 
-         const resumoDiv = document.getElementById('card-sem-corrida') 
-         resumoDiv.innerHTML = ` 
-           <div class="text-center py-4"> 
-             <p class="text-3xl mb-2">✅</p> 
-             <p class="font-bold text-gray-800 text-lg">Corrida finalizada!</p> 
-             <div class="bg-green-50 border border-green-200 rounded-xl p-4 mt-3 text-left space-y-1"> 
-               <p class="text-sm text-gray-600">💰 Valor total: <span class="font-bold text-green-700">R$ ${Number(d.valor_final || 0).toFixed(2)}</span></p> 
-               <p class="text-sm text-gray-600">👨‍✈️ Seu ganho: <span class="font-bold text-blue-700">R$ ${Number(d.valor_motorista || 0).toFixed(2)}</span></p> 
-             </div> 
-             <p class="text-xs text-gray-400 mt-3">Aguardando próxima corrida...</p> 
-           </div> 
-         ` 
-         resumoDiv.classList.remove('hidden') 
- 
-         // Restaura status online sem chamar carregar() 
-         // que pode resetar o status 
-         setTimeout(() => { 
-           motoristOnline = eraOnline 
-           renderizarStatusOnline({ online: eraOnline ? 1 : 0 }) 
-           // Atualiza apenas ganhos sem afetar o online 
-           atualizarGanhos() 
-         }, 500) 
-       } else { 
-         alert('Erro: ' + (d.error || 'Tente novamente')) 
-       } 
-       return 
-     } else if (acao === 'cancelar') { 
-       console.log('[CANCELAR] corridaAtualId:', corridaAtualId) 
-       if (!corridaAtualId) { 
-         alert('Nenhuma corrida ativa encontrada') 
-         return 
-       } 
-       if (!confirm('Cancelar a corrida? Esta ação não pode ser desfeita.')) return 
-     
-       try { 
-         const url = `/api/motorista/${tokenMotorista}/cancelar-corrida/${corridaAtualId}` 
-         console.log('[CANCELAR] URL:', url) 
-     
-         const r = await fetch(url, { 
-           method: 'PUT', 
-           headers: { 'Content-Type': 'application/json' }, 
-           body: JSON.stringify({}) 
-         }) 
-     
-         const d = await r.json() 
-         console.log('[CANCELAR] Resposta:', r.status, d) 
-     
-         if (r.ok) { 
-           const idCancelado = corridaAtualId 
-           corridaAtualId = null 
-           corridaAtualToken = null 
-           esconderCorridaAtiva() 
-           pararLocalizacao() 
-     
-           const resumoDiv = document.getElementById('card-sem-corrida') 
-           resumoDiv.innerHTML = ` 
-             <div class="text-center py-4"> 
-               <p class="text-3xl mb-2">❌</p> 
-               <p class="font-bold text-gray-800 text-lg">Corrida cancelada</p> 
-               <p class="text-sm text-gray-400 mt-2">Aguardando próxima corrida...</p> 
-             </div> 
-           ` 
-           resumoDiv.classList.remove('hidden') 
-     
-           setTimeout(() => { 
-             resumoDiv.innerHTML = ` 
-               <div class="text-center py-8"> 
-                 <p class="text-4xl mb-3">🚗</p> 
-                 <p class="font-semibold text-gray-700">Aguardando corridas...</p> 
-                 <p class="text-sm text-gray-400 mt-1">Fique online para receber corridas</p> 
-               </div> 
-             ` 
-           }, 3000) 
-         } else { 
-           console.error('[CANCELAR] Erro:', d.error) 
-           alert('Erro ao cancelar: ' + (d.error || 'Tente novamente')) 
-         } 
-       } catch(e) { 
-         console.error('[CANCELAR] Exceção:', e) 
-         alert('Erro de conexão ao cancelar') 
-       } 
-       return 
-     } 
- 
-     const r = await fetch(url, { 
-       method, 
-       headers: { 'Content-Type': 'application/json' }, 
-       body: JSON.stringify({ token_motorista: tokenMotorista }) 
-     }) 
-     const d = await r.json() 
-     if (r.ok) { 
-       alert(d.mensagem || '✅ Ação registrada!') 
-     } else { 
-       alert('Erro: ' + (d.error || 'Tente novamente')) 
-     } 
-   } catch(e) { alert('Erro de conexão') } 
- } 
- 
- async function atualizarGanhos() { 
-   try { 
-     const r = await fetch(`/api/motorista/${tokenMotorista}`) 
-     if (!r.ok) return 
-     const { financeiro } = await r.json() 
-     renderizarFinanceiro(financeiro) 
+     const r = await fetch(`/api/rides/${c.id}/aceitar-motorista`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token_motorista: tokenMotorista }) }) 
+     if (r.ok) { const d = await r.json(); corridaAtualId = c.id; corridaAtualToken = c.token; mostrarCorridaAtiva(c) } 
    } catch(e) {} 
  } 
  
- async function desbloquearAudio() { 
-   const audio = document.getElementById('audio-corrida') 
-   try { 
-     audio.volume = 0 
-     await audio.play() 
-     audio.pause() 
-     audio.currentTime = 0 
-     audio.volume = 1 
-     document.getElementById('card-audio-bloqueado').innerHTML = ` 
-       <div class="flex items-center gap-2"> 
-         <span class="text-green-600 text-lg">🔔</span> 
-         <p class="text-sm font-semibold text-green-700">Alertas sonoros ativados!</p> 
-       </div> 
-     ` 
-     document.getElementById('card-audio-bloqueado').className = 'bg-green-50 border border-green-200 rounded-xl p-3' 
-     setTimeout(() => { 
-       document.getElementById('card-audio-bloqueado').classList.add('hidden') 
-     }, 2000) 
-     console.log('[AUDIO] Desbloqueado com sucesso') 
-   } catch(e) { 
-     console.error('[AUDIO] Erro ao desbloquear:', e) 
-     alert('Não foi possível ativar o áudio. Verifique se o celular não está no modo silencioso.') 
+ function recusarCorrida() { pararAudio(); if (window._corridaDisponivel) corridasIgnoradas.push(window._corridaDisponivel.id); esconderNovaCorrida() } 
+ function ignorarCorrida() { pararAudio(); document.getElementById('card-nova-corrida').classList.add('hidden') } 
+ 
+ async function acaoCorridaAtiva(acao) { 
+   if (!corridaAtualId) return 
+   let url = '', method = 'PUT' 
+   if (acao === 'chegou') url = `/api/rides/${corridaAtualId}/motorista-chegou` 
+   else if (acao === 'embarcou') url = `/api/rides/${corridaAtualId}/passageiro-embarcou` 
+   else if (acao === 'parada') { 
+     const b = document.getElementById('btn-parada') 
+     if (b.textContent.includes('Parar')) { url = `/api/rides/${corridaAtualId}/parada/iniciar`; method = 'POST'; b.textContent = '▶️ Retomar' } 
+     else { url = `/api/rides/${corridaAtualId}/parada/ultima/finalizar`; b.textContent = '⏸️ Parar' } 
+   } else if (acao === 'finalizar') { 
+     if (!confirm('Finalizar?')) return 
+     const r = await fetch(`/api/rides/${corridaAtualId}/finalizar-motorista`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token_motorista: tokenMotorista }) }) 
+     if (r.ok) { esconderCorridaAtiva(); carregar() } 
+     return 
+   } else if (acao === 'cancelar') { 
+     if (!confirm('Cancelar?')) return 
+     const r = await fetch(`/api/motorista/${tokenMotorista}/cancelar-corrida/${corridaAtualId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' } }) 
+     if (r.ok) { esconderCorridaAtiva() } 
+     return 
    } 
+   await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token_motorista: tokenMotorista }) }) 
+   verificarCorridaAtiva() 
  } 
  
- function tocarSom() { 
-   iniciarAudio() 
- } 
- 
- function pararSom() { 
-   pararAudio() 
- } 
- 
- function iniciarTimerMotorista(inicioAt, minutosGratis, tipo) { 
-   const txtTimer = document.getElementById('txt-timer-motorista') 
-   const detalheDiv = document.getElementById('status-detalhe-motorista') 
- 
-   function atualizar() { 
-     const agora = new Date() 
-     const inicio = new Date(inicioAt) 
-     const totalMs = agora - inicio 
-     const totalSec = Math.floor(totalMs / 1000) 
-     const min = Math.floor(totalSec / 60) 
-     const sec = totalSec % 60 
- 
-     txtTimer.textContent = `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}` 
- 
-     if (min < minutosGratis) { 
-       detalheDiv.classList.remove('bg-red-50', 'border-red-200') 
-       detalheDiv.classList.add('bg-yellow-50', 'border-yellow-200') 
-       txtTimer.className = 'text-lg font-mono font-bold text-green-600 mt-0.5' 
-     } else { 
-       detalheDiv.classList.remove('bg-yellow-50', 'border-yellow-200') 
-       detalheDiv.classList.add('bg-red-50', 'border-red-200') 
-       txtTimer.className = 'text-lg font-mono font-bold text-red-600 mt-0.5' 
-     } 
+ function iniciarTimerMotorista(inicioAt, minGratis, tipo) { 
+   const t = document.getElementById('txt-timer-motorista') 
+   function up() { 
+     const s = Math.floor((new Date() - new Date(inicioAt)) / 1000) 
+     t.textContent = `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}` 
    } 
- 
-   atualizar() 
-   timerInterval = setInterval(atualizar, 1000) 
+   up(); timerInterval = setInterval(up, 1000) 
  } 
  
  async function carregarHistorico() { 
-   try { 
-     const r = await fetch(`/api/motorista/${tokenMotorista}`) 
-     if (!r.ok) return 
+   const r = await fetch(`/api/motorista/${tokenMotorista}`) 
+   if (r.ok) { 
      const { driver, corridas, financeiro } = await r.json() 
      document.getElementById('hist-stars').textContent = estrelas(driver.media_avaliacao) 
-     document.getElementById('hist-media').textContent = 
-       driver.media_avaliacao ? `${Number(driver.media_avaliacao).toFixed(1)} / 5.0` : '—' 
-     document.getElementById('hist-total-aval').textContent = `${driver.total_avaliacoes || 0} avaliações recebidas` 
+     document.getElementById('hist-media').textContent = driver.media_avaliacao ? `${driver.media_avaliacao.toFixed(1)} / 5.0` : '—' 
      document.getElementById('hist-viagens').textContent = driver.total_viagens || 0 
      document.getElementById('hist-ganhos-total').textContent = moeda(financeiro?.ganhos_total) 
- 
-     const lista = document.getElementById('hist-lista-corridas') 
-     if (!corridas.length) { 
-       lista.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">Nenhuma corrida ainda</p>' 
-       return 
-     } 
-     const statusCls = { 
-       concluida: 'bg-green-100 text-green-700', 
-       cancelada: 'bg-red-100 text-red-700', 
-       aceita: 'bg-yellow-100 text-yellow-700' 
-     } 
-     lista.innerHTML = corridas.map(c => ` 
-       <div class="border border-gray-100 rounded-xl px-3 py-2.5"> 
-         <div class="flex items-start justify-between"> 
-           <div class="flex-1 min-w-0 mr-2"> 
-             <p class="text-sm text-gray-800 font-medium truncate">${c.origem.split(',')[0]} → ${c.destino.split(',')[0]}</p> 
-             <p class="text-xs text-gray-400 mt-0.5">${new Date(c.created_at).toLocaleDateString('pt-BR')}</p> 
-           </div> 
-           <div class="text-right flex-shrink-0"> 
-             <span class="text-xs px-2 py-0.5 rounded-full ${statusCls[c.status] || 'bg-gray-100 text-gray-600'}">${c.status}</span> 
-             ${c.status === 'concluida' ? `<p class="text-sm font-bold text-green-700 mt-1">${moeda(c.valor_motorista || c.valor * 0.70)}</p>` : ''} 
-           </div> 
-         </div> 
-       </div> 
-     `).join('') 
-   } catch(e) { console.error(e) } 
- } 
- 
- async function polling() { 
-   if (!pollingAtivo) return 
-   await verificarCorridaAtiva() 
-   if (!corridaAtualId) { 
-     await verificarNovasCorridas() 
-   } else { 
-     await carregarMsgMotorista() 
+     document.getElementById('hist-lista-corridas').innerHTML = corridas.map(c => `<div class="border border-gray-100 rounded-xl px-3 py-2.5 flex justify-between"><div><p class="text-sm truncate">${c.destino}</p><p class="text-xs text-gray-400">${new Date(c.created_at).toLocaleDateString()}</p></div><span class="text-xs">${c.status}</span></div>`).join('') 
    } 
-   setTimeout(polling, 8000) 
  } 
  
- // ── CHAT MOTORISTA ──────────────────────────────── 
+ async function polling() { if (pollingAtivo) { await verificarCorridaAtiva(); if (!corridaAtualId) await verificarNovasCorridas(); await carregarMsgMotorista(); setTimeout(polling, 8000) } } 
+ 
  async function carregarMsgMotorista() { 
    if (!corridaAtualId) return 
-   try { 
-     const r = await fetch(`/api/motorista/${tokenMotorista}/mensagens/${corridaAtualId}`) 
-     if (!r.ok) return 
+   const r = await fetch(`/api/motorista/${tokenMotorista}/mensagens/${corridaAtualId}`) 
+   if (r.ok) { 
      const { mensagens } = await r.json() 
- 
-     const lista = document.getElementById('lista-msg-motorista') 
-     if (!mensagens.length) { 
-       lista.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">Nenhuma mensagem ainda</p>' 
-       return 
-     } 
- 
-     lista.innerHTML = mensagens.map(m => ` 
-       <div class="flex ${m.remetente === 'motorista' ? 'justify-end' : 'justify-start'}"> 
-         <div class="max-w-xs px-3 py-2 rounded-2xl text-sm ${ 
-           m.remetente === 'motorista' 
-             ? 'bg-green-600 text-white rounded-br-none' 
-             : 'bg-white border border-gray-200 text-gray-800 rounded-bl-none' 
-         }"> 
-           <p>${m.mensagem}</p> 
-           <p class="text-xs mt-0.5 ${m.remetente === 'motorista' ? 'text-green-200' : 'text-gray-400'}"> 
-             ${new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} 
-           </p> 
-         </div> 
-       </div> 
-     `).join('') 
- 
-     lista.scrollTop = lista.scrollHeight 
- 
-     // Verifica mensagens novas do passageiro 
-     const novas = mensagens.filter(m => m.remetente === 'passageiro') 
-     if (novas.length) { 
-       document.getElementById('badge-msg-motorista').classList.remove('hidden') 
-       setTimeout(() => { 
-         document.getElementById('badge-msg-motorista').classList.add('hidden') 
-       }, 5000) 
-     } 
- 
-   } catch(e) { console.error('[CHAT-MOTORISTA]', e) } 
+     const l = document.getElementById('lista-msg-motorista') 
+     l.innerHTML = mensagens.map(m => `<div class="flex ${m.remetente==='motorista'?'justify-end':'justify-start'}"><div class="max-w-xs px-3 py-2 rounded-2xl text-sm ${m.remetente==='motorista'?'bg-green-600 text-white':'bg-white border border-gray-200'}"><p>${m.mensagem}</p></div></div>`).join('') 
+     l.scrollTop = l.scrollHeight 
+   } 
  } 
  
  async function enviarMsgMotorista() { 
-   if (!corridaAtualId) return 
-   const input = document.getElementById('input-msg-motorista') 
-   const texto = input.value.trim() 
-   if (!texto) return 
- 
-   input.value = '' 
-   input.disabled = true 
- 
-   try { 
-     await fetch(`/api/motorista/${tokenMotorista}/mensagem/${corridaAtualId}`, { 
-       method: 'POST', 
-       headers: { 'Content-Type': 'application/json' }, 
-       body: JSON.stringify({ mensagem: texto }) 
-     }) 
+   const i = document.getElementById('input-msg-motorista'), t = i.value.trim() 
+   if (t && corridaAtualId) { 
+     i.value = ''; await fetch(`/api/motorista/${tokenMotorista}/mensagem/${corridaAtualId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mensagem: t }) }) 
      await carregarMsgMotorista() 
-   } catch(e) { 
-     input.value = texto 
-     alert('Erro ao enviar mensagem') 
-   } 
- 
-   input.disabled = false 
-   input.focus() 
- } 
- 
- function toggleCompartilharLocalizacao() { 
-   if (watchId) { 
-     pararLocalizacao() 
-   } else { 
-     iniciarLocalizacao() 
    } 
  } 
  
  function iniciarLocalizacao() { 
-   if (!navigator.geolocation) { 
-     alert('Geolocalização não suportada') 
-     return 
-   } 
- 
-   watchId = navigator.geolocation.watchPosition( 
-     async (pos) => { 
-       const lat = pos.coords.latitude 
-       const lng = pos.coords.longitude 
-       minhaPos = { lat, lng } 
-       console.log('[GPS] Posição:', lat, lng, '| Corrida:', corridaAtualId) 
- 
-       // BUG 4: Atualiza centro do mapa se estiver ativo 
-       if (map && !directionsRenderer?.getDirections()) { 
-         map.setCenter(minhaPos) 
-       } 
- 
-       // Se o mapa ainda não foi inicializado (primeira vez que pega GPS) 
-       if (!map) iniciarMapaMotorista() 
- 
-       if (!corridaAtualId) { 
-         console.log('[GPS] Sem corrida ativa, não enviando') 
-         return 
-       } 
- 
-       try { 
-         const r = await fetch(`/api/motorista/localizacao`, { 
-           method: 'POST', 
-           headers: { 'Content-Type': 'application/json' }, 
-           body: JSON.stringify({ lat, lng, driver_id: dadosAtuaisDriver?.id }) 
-         }) 
-         const d = await r.json() 
-         console.log('[GPS] Resposta servidor:', d) 
-       } catch(e) { 
-         console.error('[GPS] Erro ao enviar:', e) 
-       } 
-     }, 
-     (err) => { 
-       console.error('[GPS] Erro geolocalização:', err.code, err.message) 
-       alert('Erro ao obter localização: ' + err.message) 
-     }, 
-     { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 } 
-   ) 
- 
-   const btn = document.getElementById('btn-compartilhar-loc') 
-   const txt = document.getElementById('txt-loc-status') 
-   if (btn) { 
-     btn.textContent = '⏹️ Parar compartilhamento' 
-     btn.className = 'w-full text-center text-sm text-red-600 border border-red-200 rounded-lg py-2 hover:bg-red-50' 
-   } 
-   if (txt) txt.classList.remove('hidden') 
-   console.log('[GPS] Iniciado watchPosition id:', watchId) 
+   if (!navigator.geolocation || watchId) return 
+   watchId = navigator.geolocation.watchPosition(async (p) => { 
+     const { latitude: lat, longitude: lng } = p.coords; minhaPos = { lat, lng } 
+     if (!map) iniciarMapaMotorista() 
+     if (markerMotorista) markerMotorista.setLatLng([lat, lng]) 
+     if (corridaAtualId && Date.now() - lastReportTime > 10000) { lastReportTime = Date.now(); reportarLocalizacao(lat, lng) } 
+   }, null, { enableHighAccuracy: true }) 
  } 
  
- function pararLocalizacao() { 
-   if (watchId) { 
-     navigator.geolocation.clearWatch(watchId) 
-     watchId = null 
-   } 
-   minhaPos = null 
-   const btn = document.getElementById('btn-compartilhar-loc') 
-   const txt = document.getElementById('txt-loc-status') 
-   if (btn) { 
-     btn.textContent = '📍 Compartilhar localização ao vivo' 
-     btn.className = 'w-full text-center text-sm text-blue-600 border border-blue-200 rounded-lg py-2 hover:bg-blue-50' 
-   } 
-   if (txt) txt.classList.add('hidden') 
- } 
- 
- // Enter para enviar 
- document.addEventListener('DOMContentLoaded', () => { 
-   document.getElementById('input-msg-motorista')?.addEventListener('keypress', (e) => { 
-     if (e.key === 'Enter') enviarMsgMotorista() 
-   }) 
- }) 
+ function pararLocalizacao() { if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null } } 
+ function desbloquearAudio() { const a = document.getElementById('audio-corrida'); a.volume = 0; a.play().then(() => { a.pause(); a.currentTime = 0; a.volume = 1; document.getElementById('card-audio-bloqueado').classList.add('hidden') }) } 
  
  carregar() 
  setTimeout(polling, 3000) 

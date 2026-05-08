@@ -7,7 +7,6 @@
    <script src="https://cdn.tailwindcss.com"></script> 
    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/> 
    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script> 
-   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBz0TOxlMbWgEQuDoMSqneGN0UFywnX-7s&libraries=places&language=pt-BR"></script> 
    <style> 
      #map { height: 300px; } 
      .pulse { animation: pulse 2s infinite; } 
@@ -836,39 +835,43 @@
      document.getElementById('track-ride-distancia').textContent = `${loc.distancia_km} km` 
      document.getElementById('track-ride-eta').textContent = `${loc.eta_minutos} min` 
  
-     // Inicializa ou atualiza mapa 
-     const driverPos = { lat: loc.lat, lng: loc.lng } 
+     // Inicializa ou atualiza mapa de rastreamento (map-tracking) 
+     const driverPos = [loc.lat, loc.lng] 
      const passengerPos = ride.passageiro_embarcou_at  
-       ? { lat: Number(ride.destino_lat), lng: Number(ride.destino_lng) } 
-       : { lat: Number(ride.origem_lat), lng: Number(ride.origem_lng) } 
+       ? [Number(ride.destino_lat), Number(ride.destino_lng)] 
+       : [Number(ride.origem_lat), Number(ride.origem_lng)] 
  
      if (!mapTracking) { 
-       mapTracking = new google.maps.Map(document.getElementById('map-tracking'), { 
-         zoom: 15, 
-         center: driverPos, 
-         disableDefaultUI: true 
-       }) 
+       mapTracking = L.map('map-tracking', { 
+         zoomControl: false, 
+         attributionControl: false 
+       }).setView(driverPos, 15) 
         
-       driverMarker = new google.maps.Marker({ 
-         position: driverPos, 
-         map: mapTracking, 
-         icon: { url: '/img/car-icon.png', scaledSize: new google.maps.Size(32, 32) } 
-       }) 
+       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapTracking) 
  
-       passengerMarker = new google.maps.Marker({ 
-         position: passengerPos, 
-         map: mapTracking, 
-         icon: { url: ride.passageiro_embarcou_at ? '/img/dest-icon.png' : '/img/user-icon.png', scaledSize: new google.maps.Size(32, 32) } 
-       }) 
+       driverMarker = L.marker(driverPos, { 
+         icon: L.icon({ 
+           iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png', 
+           shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png', 
+           iconSize: [25, 41], 
+           iconAnchor: [12, 41] 
+         }) 
+       }).addTo(mapTracking) 
+ 
+       passengerMarker = L.marker(passengerPos, { 
+         icon: L.icon({ 
+           iconUrl: ride.passageiro_embarcou_at ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png' : 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png', 
+           shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png', 
+           iconSize: [25, 41], 
+           iconAnchor: [12, 41] 
+         }) 
+       }).addTo(mapTracking) 
      } else { 
-       driverMarker.setPosition(driverPos) 
-       passengerMarker.setPosition(passengerPos) 
+       driverMarker.setLatLng(driverPos) 
+       passengerMarker.setLatLng(passengerPos) 
         
-       // Ajusta o zoom para mostrar ambos 
-       const bounds = new google.maps.LatLngBounds() 
-       bounds.extend(driverPos) 
-       bounds.extend(passengerPos) 
-       mapTracking.fitBounds(bounds) 
+       const bounds = L.latLngBounds([driverPos, passengerPos]) 
+       mapTracking.fitBounds(bounds, { padding: [30, 30] }) 
      } 
    } catch (e) { console.error('[TRACKING] Erro:', e) } 
  } 

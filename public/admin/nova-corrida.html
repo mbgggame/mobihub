@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
   <title>MobiHub — Nova corrida</title> 
   <script src="https://cdn.tailwindcss.com"></script> 
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBz0TOxlMbWgEQuDoMSqneGN0UFywnX-7s&libraries=places&language=pt-BR"></script> 
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" /> 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script> 
 </head> 
 <body class="bg-gray-50 min-h-screen"> 
 <div class="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between"> 
@@ -141,152 +142,156 @@ const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': `B
 if (!token()) location.href = '/admin/login' 
  
 let map, geocoder 
-let marcadores = { origem: null, destino: null } 
-let pontos = { origem: null, destino: null } 
-let proximoPonto = 'origem' 
+ let marcadores = { origem: null, destino: null } 
+ let pontos = { origem: null, destino: null } 
+ let proximoPonto = 'origem' 
  
-function initMap() { 
-  map = new google.maps.Map(document.getElementById('map'), { 
-    center: { lat: -20.3222, lng: -40.3381 }, 
-    zoom: 13, 
-    mapTypeControl: false, 
-    streetViewControl: false, 
-    fullscreenControl: false 
-  }) 
-  geocoder = new google.maps.Geocoder() 
+ // BUG FIX: Ícones do Leaflet 
+ const iconeOrigem = L.icon({ 
+   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png', 
+   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png', 
+   iconSize: [25, 41], 
+   iconAnchor: [12, 41] 
+ }); 
  
-  map.addListener('click', (e) => { 
-    const lat = e.latLng.lat() 
-    const lng = e.latLng.lng() 
-    const tipo = pontos.origem ? 'destino' : 'origem' 
-    geocoder.geocode({ location: { lat, lng } }, (results, status) => { 
-      if (status === 'OK' && results[0]) { 
-        marcarPonto(lat, lng, results[0].formatted_address, tipo) 
-      } 
-    }) 
-  }) 
-} 
+ const iconeDestino = L.icon({ 
+   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png', 
+   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png', 
+   iconSize: [25, 41], 
+   iconAnchor: [12, 41] 
+ }); 
  
-function setTipoAdmin(tipo) { 
-  const btnNormal = document.getElementById('btn-tipo-normal') 
-  const btnAgendada = document.getElementById('btn-tipo-agendada') 
-  const campoAg = document.getElementById('campo-agendamento-admin') 
+ function initMap() { 
+   map = L.map('map').setView([-20.3155, -40.3128], 13) 
+   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+     attribution: '&copy; OpenStreetMap contributors' 
+   }).addTo(map) 
  
-  if (tipo === 'agendada') { 
-    btnNormal.className = 'flex-1 bg-white border border-green-600 text-green-600 rounded-xl py-2.5 font-semibold text-sm transition-all' 
-    btnAgendada.className = 'flex-1 bg-green-600 text-white rounded-xl py-2.5 font-semibold text-sm transition-all' 
-    campoAg.classList.remove('hidden') 
-     
-    // Set default min date/time (2 hours from now) 
-    const input = document.getElementById('data-agendamento-admin') 
-    const agora = new Date() 
-    const min = new Date(agora.getTime() + 2 * 60 * 60 * 1000) 
-    input.min = min.toISOString().slice(0, 16) 
-    if (!input.value) input.value = min.toISOString().slice(0, 16) 
-    input.addEventListener('change', recalcular) 
-  } else { 
-    btnNormal.className = 'flex-1 bg-green-600 text-white rounded-xl py-2.5 font-semibold text-sm transition-all' 
-    btnAgendada.className = 'flex-1 bg-white border border-green-600 text-green-600 rounded-xl py-2.5 font-semibold text-sm transition-all' 
-    campoAg.classList.add('hidden') 
-  } 
-  recalcular() 
-} 
+   map.on('click', async (e) => { 
+     const { lat, lng } = e.latlng 
+     const tipo = pontos.origem ? 'destino' : 'origem' 
+     try { 
+       const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`) 
+       const d = await r.json() 
+       if (d && d.display_name) marcarPonto(lat, lng, d.display_name, tipo) 
+     } catch(err) { console.error(err) } 
+   }) 
+ } 
  
-function setupAutocomplete(inputId, tipo) { 
-  const input = document.getElementById(inputId) 
-  const autocomplete = new google.maps.places.Autocomplete(input, { 
-    componentRestrictions: { country: 'br' }, 
-    fields: ['geometry', 'formatted_address', 'name'], 
-    bounds: new google.maps.LatLngBounds( 
-      new google.maps.LatLng(-21.5, -41.5), 
-      new google.maps.LatLng(-19.5, -39.5) 
-    ), 
-    strictBounds: false 
-  }) 
+ function setTipoAdmin(tipo) { 
+   const btnNormal = document.getElementById('btn-tipo-normal') 
+   const btnAgendada = document.getElementById('btn-tipo-agendada') 
+   const campoAg = document.getElementById('campo-agendamento-admin') 
  
-  autocomplete.addListener('place_changed', () => { 
-    const place = autocomplete.getPlace() 
-    if (!place.geometry) return 
-    const lat = place.geometry.location.lat() 
-    const lng = place.geometry.location.lng() 
-    const endereco = place.formatted_address || place.name 
-    marcarPonto(lat, lng, endereco, tipo) 
-    map.setCenter({ lat, lng }) 
-    map.setZoom(15) 
-  }) 
-} 
+   if (tipo === 'agendada') { 
+     btnNormal.className = 'flex-1 bg-white border border-green-600 text-green-600 rounded-xl py-2.5 font-semibold text-sm transition-all' 
+     btnAgendada.className = 'flex-1 bg-green-600 text-white rounded-xl py-2.5 font-semibold text-sm transition-all' 
+     campoAg.classList.remove('hidden') 
+      
+     // Set default min date/time (2 hours from now) 
+     const input = document.getElementById('data-agendamento-admin') 
+     const agora = new Date() 
+     const min = new Date(agora.getTime() + 2 * 60 * 60 * 1000) 
+     input.min = min.toISOString().slice(0, 16) 
+     if (!input.value) input.value = min.toISOString().slice(0, 16) 
+     input.addEventListener('change', recalcular) 
+   } else { 
+     btnNormal.className = 'flex-1 bg-green-600 text-white rounded-xl py-2.5 font-semibold text-sm transition-all' 
+     btnAgendada.className = 'flex-1 bg-white border border-green-600 text-green-600 rounded-xl py-2.5 font-semibold text-sm transition-all' 
+     campoAg.classList.add('hidden') 
+   } 
+   recalcular() 
+ } 
  
-function marcarPonto(lat, lng, endereco, tipo) { 
-  if (marcadores[tipo]) marcadores[tipo].setMap(null) 
+ function setupAutocomplete(inputId, tipo) { 
+   const input = document.getElementById(inputId) 
+   let timeout = null 
+   input.addEventListener('input', () => { 
+     if (timeout) clearTimeout(timeout) 
+     timeout = setTimeout(async () => { 
+       const query = input.value.trim() 
+       if (query.length < 3) return 
+       try { 
+         const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=br`) 
+         const d = await r.json() 
+         if (d && d.length > 0) { 
+           const res = d[0] 
+           const lat = parseFloat(res.lat) 
+           const lon = parseFloat(res.lon) 
+           const endereco = res.display_name 
+           marcarPonto(lat, lon, endereco, tipo) 
+           map.setView([lat, lon], 15) 
+         } 
+       } catch(err) { console.error(err) } 
+     }, 1000) 
+   }) 
+ } 
  
-  marcadores[tipo] = new google.maps.Marker({ 
-    position: { lat, lng }, 
-    map, 
-    label: tipo === 'origem' ? 'A' : 'B', 
-    title: tipo === 'origem' ? 'Origem' : 'Destino' 
-  }) 
+ function marcarPonto(lat, lng, endereco, tipo) { 
+   if (marcadores[tipo]) map.removeLayer(marcadores[tipo]) 
  
-  pontos[tipo] = { lat, lng, endereco } 
+   marcadores[tipo] = L.marker([lat, lng], { 
+     icon: tipo === 'origem' ? iconeOrigem : iconeDestino, 
+     title: tipo === 'origem' ? 'Origem' : 'Destino' 
+   }).addTo(map) 
  
-  if (tipo === 'origem') { 
-    document.getElementById('busca-orig').value = endereco.split(',').slice(0,3).join(', ') 
-  } else { 
-    document.getElementById('busca-dest').value = endereco.split(',').slice(0,3).join(', ') 
-  } 
+   pontos[tipo] = { lat, lng, endereco } 
  
-  if (pontos.origem && pontos.destino) { 
-    const bounds = new google.maps.LatLngBounds() 
-    bounds.extend(new google.maps.LatLng(pontos.origem.lat, pontos.origem.lng)) 
-    bounds.extend(new google.maps.LatLng(pontos.destino.lat, pontos.destino.lng)) 
-    map.fitBounds(bounds, { padding: 60 }) 
-    calcularDistancia() 
-  } 
-} 
+   if (tipo === 'origem') { 
+     document.getElementById('busca-orig').value = endereco.split(',').slice(0,3).join(', ') 
+   } else { 
+     document.getElementById('busca-dest').value = endereco.split(',').slice(0,3).join(', ') 
+   } 
  
-async function calcularDistancia() { 
-  if (!pontos.origem || !pontos.destino) return 
-  const service = new google.maps.DistanceMatrixService() 
-   
-  // Captura data para cálculo de tarifa 
-  const tipoAdmin = document.getElementById('btn-tipo-agendada').classList.contains('bg-green-600') ? 'agendada' : 'normal' 
-  const dataHora = tipoAdmin === 'agendada' ? document.getElementById('data-agendamento-admin').value : new Date().toISOString() 
+   if (pontos.origem && pontos.destino) { 
+     const bounds = L.latLngBounds([pontos.origem.lat, pontos.origem.lng], [pontos.destino.lat, pontos.destino.lng]) 
+     map.fitBounds(bounds, { padding: [60, 60] }) 
+     calcularDistancia() 
+   } 
+ } 
  
-  service.getDistanceMatrix({ 
-    origins: [new google.maps.LatLng(pontos.origem.lat, pontos.origem.lng)], 
-    destinations: [new google.maps.LatLng(pontos.destino.lat, pontos.destino.lng)], 
-    travelMode: google.maps.TravelMode.DRIVING, 
-    unitSystem: google.maps.UnitSystem.METRIC, 
-    region: 'br' 
-  }, async (response, status) => { 
-    if (status === 'OK') { 
-      const element = response.rows[0].elements[0] 
-      if (element.status === 'OK') { 
-        const distanciaKm = element.distance.value / 1000 
-        const duracaoMin = Math.round(element.duration.value / 60) 
-        document.getElementById('txt-distancia').textContent = 
-          `Distância: ${distanciaKm.toFixed(1)} km • Tempo estimado: ${duracaoMin} min` 
-        document.getElementById('distancia-info').classList.remove('hidden') 
-         
-        // Busca tarifa dinâmica do servidor 
-        try { 
-          const r = await fetch(`/api/tarifas/calcular?data_hora=${encodeURIComponent(dataHora)}&distancia_km=${distanciaKm.toFixed(2)}`) 
-          const d = await r.json() 
-          if (r.ok) { 
-            document.getElementById('txt-tarifa-aplicada').textContent = `Tarifa aplicada: ${d.tarifa}` 
-            document.getElementById('txt-distancia-resumo').textContent = `Distância: ${distanciaKm.toFixed(2)} km` 
-            document.getElementById('valor').value = d.valor.toFixed(2) 
-            document.getElementById('txt-valor-motorista').textContent = `Motorista (70%): R$ ${d.valor_motorista.toFixed(2)}` 
-            document.getElementById('txt-valor-mobihub').textContent = `MobiHub (30%): R$ ${d.valor_mobihub.toFixed(2)}` 
-            document.getElementById('resumo-valor').classList.remove('hidden') 
-          } 
-        } catch (e) { 
-          // Fallback se a API falhar 
-          calcularValor(distanciaKm) 
-        } 
-      } 
-    } 
-  }) 
-} 
+ async function calcularDistancia() { 
+   if (!pontos.origem || !pontos.destino) return 
+    
+   // Captura data para cálculo de tarifa 
+   const tipoAdmin = document.getElementById('btn-tipo-agendada').classList.contains('bg-green-600') ? 'agendada' : 'normal' 
+   const dataHora = tipoAdmin === 'agendada' ? document.getElementById('data-agendamento-admin').value : new Date().toISOString() 
+ 
+   // Usando Haversine para cálculo de distância gratuito 
+   const lat1 = pontos.origem.lat, lon1 = pontos.origem.lng 
+   const lat2 = pontos.destino.lat, lon2 = pontos.destino.lng 
+   const R = 6371; // km 
+   const dLat = (lat2 - lat1) * Math.PI / 180 
+   const dLon = (lon2 - lon1) * Math.PI / 180 
+   const a = Math.sin(dLat/2) * Math.sin(dLat/2) + 
+             Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+             Math.sin(dLon/2) * Math.sin(dLon/2) 
+   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) 
+   const distanciaKm = R * c 
+   // Duração estimada simples (30km/h média urbana) 
+   const duracaoMin = Math.round((distanciaKm / 30) * 60) 
+ 
+   document.getElementById('txt-distancia').textContent = 
+     `Distância: ${distanciaKm.toFixed(1)} km • Tempo estimado: ${duracaoMin} min` 
+   document.getElementById('distancia-info').classList.remove('hidden') 
+    
+   // Busca tarifa dinâmica do servidor 
+   try { 
+     const r = await fetch(`/api/tarifas/calcular?data_hora=${encodeURIComponent(dataHora)}&distancia_km=${distanciaKm.toFixed(2)}`) 
+     const d = await r.json() 
+     if (r.ok) { 
+       document.getElementById('txt-tarifa-aplicada').textContent = `Tarifa aplicada: ${d.tarifa}` 
+       document.getElementById('txt-distancia-resumo').textContent = `Distância: ${distanciaKm.toFixed(2)} km` 
+       document.getElementById('valor').value = d.valor.toFixed(2) 
+       document.getElementById('txt-valor-motorista').textContent = `Motorista (70%): R$ ${d.valor_motorista.toFixed(2)}` 
+       document.getElementById('txt-valor-mobihub').textContent = `MobiHub (30%): R$ ${d.valor_mobihub.toFixed(2)}` 
+       document.getElementById('resumo-valor').classList.remove('hidden') 
+     } 
+   } catch (e) { 
+     // Fallback se a API falhar 
+     calcularValor(distanciaKm) 
+   } 
+ } 
  
 function calcularValor(distanciaKm) { 
   const config = getConfig() 

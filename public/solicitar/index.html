@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
   <title>MobiHub — Solicitar corrida</title> 
   <script src="https://cdn.tailwindcss.com"></script> 
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBz0TOxlMbWgEQuDoMSqneGN0UFywnX-7s&libraries=places&language=pt-BR"></script> 
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" /> 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script> 
   <style>#map { height: 280px; } .pac-container { z-index: 9999 !important; }</style> 
 </head> 
 <body class="bg-gray-50 min-h-screen pb-10"> 
@@ -225,6 +226,28 @@
  let intervalRedirect = null 
  let linkAcompanhamento = '' 
  
+ // BUG FIX: Ícones do Leaflet 
+ const iconeOrigem = L.icon({ 
+   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png', 
+   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png', 
+   iconSize: [25, 41], 
+   iconAnchor: [12, 41] 
+ }); 
+ 
+ const iconeDestino = L.icon({ 
+   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png', 
+   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png', 
+   iconSize: [25, 41], 
+   iconAnchor: [12, 41] 
+ }); 
+ 
+ const iconeMotorista = L.icon({ 
+   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png', 
+   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png', 
+   iconSize: [25, 41], 
+   iconAnchor: [12, 41] 
+ }); 
+ 
  function verificarCadastro() { 
    const cliente = JSON.parse(localStorage.getItem(STORAGE_CLIENTE) || 'null') 
    if (cliente && cliente.celular && cliente.nome) { 
@@ -308,22 +331,21 @@
  } 
  
  function initMap() { 
-   map = new google.maps.Map(document.getElementById('map'), { 
-     center: { lat: -20.3222, lng: -40.3381 }, 
-     zoom: 13, 
-     mapTypeControl: false, 
-     streetViewControl: false, 
-     fullscreenControl: false 
-   }) 
-   geocoder = new google.maps.Geocoder() 
-   map.addListener('click', (e) => { 
-     const lat = e.latLng.lat() 
-     const lng = e.latLng.lng() 
+   map = L.map('map').setView([-20.3155, -40.3128], 13) 
+   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+     attribution: '&copy; OpenStreetMap contributors' 
+   }).addTo(map) 
+ 
+   map.on('click', async (e) => { 
+     const { lat, lng } = e.latlng 
      const tipo = !pontos.origem ? 'origem' : 'destino' 
-     geocoder.geocode({ location: { lat, lng } }, (results, status) => { 
-       if (status === 'OK' && results[0]) marcarPonto(lat, lng, results[0].formatted_address, tipo) 
-     }) 
+     try { 
+       const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`) 
+       const d = await r.json() 
+       if (d && d.display_name) marcarPonto(lat, lng, d.display_name, tipo) 
+     } catch(err) { console.error(err) } 
    }) 
+ 
    setupAutocomplete('busca-orig', 'origem') 
    setupAutocomplete('busca-dest', 'destino') 
  
@@ -341,8 +363,7 @@
  
      // Remove pins anteriores 
      marcadoresMotoristas.forEach(m => { 
-       if (m.marker) m.marker.setMap(null) 
-       if (m.infoWindow) m.infoWindow.close() 
+       if (m.marker) map.removeLayer(m.marker) 
      }) 
      marcadoresMotoristas = [] 
  
@@ -359,24 +380,12 @@
      const comLocalizacao = motoristas.filter(m => m.lat && m.lng) 
  
      comLocalizacao.forEach(m => { 
-       const marker = new google.maps.Marker({ 
-         position: { lat: parseFloat(m.lat), lng: parseFloat(m.lng) }, 
-         map, 
-         icon: { 
-           url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(` 
-             <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44"> 
-               <circle cx="22" cy="22" r="20" fill="#2563eb" stroke="white" stroke-width="2"/> 
-               <text x="22" y="30" text-anchor="middle" font-size="22" fill="white">🚗</text> 
-             </svg> 
-           `), 
-           scaledSize: new google.maps.Size(44, 44), 
-           anchor: new google.maps.Point(22, 22) 
-         }, 
+       const marker = L.marker([parseFloat(m.lat), parseFloat(m.lng)], { 
+         icon: iconeMotorista, 
          title: `${m.nome} — ${m.carro}` 
-       }) 
+       }).addTo(map) 
  
-       const infoWindow = new google.maps.InfoWindow({ 
-         content: ` 
+       const popupContent = ` 
            <div style="font-size:13px;padding:4px;min-width:120px"> 
              <p style="font-weight:bold;margin:0;color:#1f2937">${m.nome}</p> 
              <p style="color:#6b7280;margin:2px 0;font-size:12px">${m.carro}</p> 
@@ -384,15 +393,9 @@
              <p style="color:#16a34a;font-size:11px;margin:2px 0">${m.viagens || 0} viagens</p> 
              <p style="color:#16a34a;font-size:11px;font-weight:bold">✅ Disponível</p> 
            </div> 
-         ` 
-       }) 
- 
-       marker.addListener('click', () => { 
-         marcadoresMotoristas.forEach(item => item.infoWindow?.close()) 
-         infoWindow.open(map, marker) 
-       }) 
- 
-       marcadoresMotoristas.push({ marker, infoWindow }) 
+       ` 
+       marker.bindPopup(popupContent) 
+       marcadoresMotoristas.push({ marker }) 
      }) 
  
      if (txt) { 
@@ -411,65 +414,57 @@
  
  function setupAutocomplete(inputId, tipo) { 
    const input = document.getElementById(inputId) 
-   const ac = new google.maps.places.Autocomplete(input, { 
-     componentRestrictions: { country: 'br' }, 
-     fields: ['geometry', 'formatted_address', 'name'], 
-     bounds: new google.maps.LatLngBounds( 
-       new google.maps.LatLng(-21.5, -41.5), 
-       new google.maps.LatLng(-19.5, -39.5) 
-     ), 
-     strictBounds: false 
-   }) 
-   ac.addListener('place_changed', () => { 
-     const place = ac.getPlace() 
-     if (!place.geometry) return 
-     const lat = place.geometry.location.lat() 
-     const lng = place.geometry.location.lng() 
+   let timeout = null 
+   input.addEventListener('input', () => { 
+     if (timeout) clearTimeout(timeout) 
+     timeout = setTimeout(async () => { 
+       const query = input.value.trim() 
+       if (query.length < 3) return 
+       try { 
+         const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=br`) 
+         const d = await r.json() 
+         if (d && d.length > 0) { 
+           // Por simplicidade, pega o primeiro resultado 
+           const res = d[0] 
+           const lat = parseFloat(res.lat) 
+           const lon = parseFloat(res.lon) 
+           const endereco = res.display_name 
  
-     if (tipo === 'origem') { 
-       origemLat = lat 
-       origemLng = lng 
-       origemEndereco = place.formatted_address 
-       origem = place.formatted_address 
-       mostrarOrigemNoMapa(origemLat, origemLng, origemEndereco) 
-       verificarBotaoSolicitar() 
-       if (destinoLat) calcularValor() 
-     } else { 
-       destinoLat = lat 
-       destinoLng = lng 
-       destino = place.formatted_address 
-       verificarBotaoSolicitar() 
-       if (origemLat) calcularValor() 
-     } 
+           if (tipo === 'origem') { 
+             origemLat = lat 
+             origemLng = lon 
+             origemEndereco = endereco 
+             origem = endereco 
+             mostrarOrigemNoMapa(origemLat, origemLng, origemEndereco) 
+             verificarBotaoSolicitar() 
+             if (destinoLat) calcularValor() 
+           } else { 
+             destinoLat = lat 
+             destinoLng = lon 
+             destino = endereco 
+             verificarBotaoSolicitar() 
+             if (origemLat) calcularValor() 
+           } 
  
-     marcarPonto(lat, lng, place.formatted_address || place.name, tipo) 
-     map.setCenter({ lat, lng }) 
-     map.setZoom(15) 
+           marcarPonto(lat, lon, endereco, tipo) 
+           map.setView([lat, lon], 15) 
+         } 
+       } catch(err) { console.error(err) } 
+     }, 1000) 
    }) 
  } 
  
  function mostrarOrigemNoMapa(lat, lng, endereco) { 
    if (window.markerOrigem) { 
-     window.markerOrigem.setMap(null) 
+     map.removeLayer(window.markerOrigem) 
    } 
  
-   window.markerOrigem = new google.maps.Marker({ 
-     position: { lat, lng }, 
-     map, 
-     icon: { 
-       url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(` 
-         <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"> 
-           <circle cx="20" cy="20" r="18" fill="#16a34a" stroke="white" stroke-width="2"/> 
-           <text x="20" y="26" text-anchor="middle" font-size="16" font-weight="bold" fill="white">A</text> 
-         </svg> 
-       `), 
-       scaledSize: new google.maps.Size(40, 40), 
-       anchor: new google.maps.Point(20, 20) 
-     }, 
+   window.markerOrigem = L.marker([lat, lng], { 
+     icon: iconeOrigem, 
      title: 'Sua localização: ' + endereco 
-   }) 
+   }).addTo(map) 
  
-   map.panTo({ lat, lng }) 
+   map.panTo([lat, lng]) 
    map.setZoom(14) 
  
    // Desenha linhas tracejadas dos motoristas até a origem 
@@ -480,34 +475,23 @@
  
  function desenharLinhasMotoristas(origemLat, origemLng) { 
    // Remove linhas anteriores 
-   linhasMotoristas.forEach(l => l.setMap(null)) 
+   linhasMotoristas.forEach(l => map.removeLayer(l)) 
    linhasMotoristas = [] 
  
    marcadoresMotoristas.forEach(item => { 
      if (!item.marker) return 
-     const pos = item.marker.getPosition() 
+     const pos = item.marker.getLatLng() 
      if (!pos) return 
  
-     const linha = new google.maps.Polyline({ 
-       path: [ 
-         { lat: pos.lat(), lng: pos.lng() }, 
-         { lat: origemLat, lng: origemLng } 
-       ], 
-       geodesic: true, 
-       strokeColor: '#2563eb', 
-       strokeOpacity: 0, 
-       icons: [{ 
-         icon: { 
-           path: 'M 0,-1 0,1', 
-           strokeOpacity: 0.6, 
-           scale: 3, 
-           strokeColor: '#2563eb' 
-         }, 
-         offset: '0', 
-         repeat: '15px' 
-       }], 
-       map 
-     }) 
+     const linha = L.polyline([ 
+       [pos.lat, pos.lng], 
+       [origemLat, origemLng] 
+     ], { 
+       color: '#2563eb', 
+       dashArray: '5, 10', 
+       weight: 2, 
+       opacity: 0.6 
+     }).addTo(map) 
  
      linhasMotoristas.push(linha) 
    }) 
@@ -522,30 +506,31 @@
      const lat = pos.coords.latitude 
      const lng = pos.coords.longitude 
  
-     // Geocodifica para obter o endereço 
-     const geocoder = new google.maps.Geocoder() 
-     geocoder.geocode({ location: { lat, lng } }, (results, status) => { 
-       if (status === 'OK' && results[0]) { 
-         origemLat = lat 
-         origemLng = lng 
-         origemEndereco = results[0].formatted_address 
-         document.getElementById('busca-orig').value = origemEndereco 
-         mostrarOrigemNoMapa(lat, lng, origemEndereco) 
-         if (destinoLat) calcularValor() 
-       } 
-     }) 
+     fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`) 
+       .then(r => r.json()) 
+       .then(d => { 
+         if (d && d.display_name) { 
+           origemLat = lat 
+           origemLng = lng 
+           origemEndereco = d.display_name 
+           document.getElementById('busca-orig').value = origemEndereco 
+           mostrarOrigemNoMapa(lat, lng, origemEndereco) 
+           if (destinoLat) calcularValor() 
+         } 
+       }) 
+       .catch(() => alert('Não foi possível obter sua localização')) 
    }, () => { 
      alert('Não foi possível obter sua localização') 
    }) 
  } 
  
  function marcarPonto(lat, lng, endereco, tipo) { 
-   if (marcadores[tipo]) marcadores[tipo].setMap(null) 
-   marcadores[tipo] = new google.maps.Marker({ 
-     position: { lat, lng }, map, 
-     label: tipo === 'origem' ? 'A' : 'B', 
+   if (marcadores[tipo]) map.removeLayer(marcadores[tipo]) 
+   marcadores[tipo] = L.marker([lat, lng], { 
+     icon: tipo === 'origem' ? iconeOrigem : iconeDestino, 
      title: tipo === 'origem' ? 'Origem' : 'Destino' 
-   }) 
+   }).addTo(map) 
+    
    pontos[tipo] = { lat, lng, endereco } 
    origem = pontos.origem 
    destino = pontos.destino 
@@ -557,17 +542,15 @@
      document.getElementById('ponto-destino').classList.remove('hidden') 
    } 
    if (pontos.origem && pontos.destino) { 
-     const bounds = new google.maps.LatLngBounds() 
-     bounds.extend(new google.maps.LatLng(pontos.origem.lat, pontos.origem.lng)) 
-     bounds.extend(new google.maps.LatLng(pontos.destino.lat, pontos.destino.lng)) 
-     map.fitBounds(bounds, { padding: 60 }) 
+     const bounds = L.latLngBounds([pontos.origem.lat, pontos.origem.lng], [pontos.destino.lat, pontos.destino.lng]) 
+     map.fitBounds(bounds, { padding: [60, 60] }) 
      calcularDistancia() 
    } 
  } 
  
  function limparPontos() { 
-   if (marcadores.origem) marcadores.origem.setMap(null) 
-   if (marcadores.destino) marcadores.destino.setMap(null) 
+   if (marcadores.origem) map.removeLayer(marcadores.origem) 
+   if (marcadores.destino) map.removeLayer(marcadores.destino) 
    marcadores = { origem: null, destino: null } 
    pontos = { origem: null, destino: null } 
    origem = null; destino = null 
@@ -583,23 +566,20 @@
  
  function calcularDistancia() { 
    if (!pontos.origem || !pontos.destino) return 
-   const service = new google.maps.DistanceMatrixService() 
-   service.getDistanceMatrix({ 
-     origins: [new google.maps.LatLng(pontos.origem.lat, pontos.origem.lng)], 
-     destinations: [new google.maps.LatLng(pontos.destino.lat, pontos.destino.lng)], 
-     travelMode: google.maps.TravelMode.DRIVING, 
-     unitSystem: google.maps.UnitSystem.METRIC, 
-     region: 'br' 
-   }, (response, status) => { 
-     if (status === 'OK') { 
-       const el = response.rows[0].elements[0] 
-       if (el.status === 'OK') { 
-         const distanciaKm = el.distance.value / 1000 
-         const duracaoMin = Math.round(el.duration.value / 60) 
-         exibirValor(distanciaKm, duracaoMin) 
-       } 
-     } 
-   }) 
+   // Usando Haversine para cálculo de distância gratuito 
+   const lat1 = pontos.origem.lat, lon1 = pontos.origem.lng 
+   const lat2 = pontos.destino.lat, lon2 = pontos.destino.lng 
+   const R = 6371; // km 
+   const dLat = (lat2 - lat1) * Math.PI / 180 
+   const dLon = (lon2 - lon1) * Math.PI / 180 
+   const a = Math.sin(dLat/2) * Math.sin(dLat/2) + 
+             Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+             Math.sin(dLon/2) * Math.sin(dLon/2) 
+   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) 
+   const distanciaKm = R * c 
+   // Duração estimada simples (30km/h média urbana) 
+   const duracaoMin = Math.round((distanciaKm / 30) * 60) 
+   exibirValor(distanciaKm, duracaoMin) 
  } 
  
  async function exibirValor(distanciaKm, duracaoMin) { 
@@ -812,10 +792,8 @@
    if (!h) return 
    marcarPonto(h.origem.lat, h.origem.lng, h.origem.endereco, 'origem') 
    marcarPonto(h.destino.lat, h.destino.lng, h.destino.endereco, 'destino') 
-   const bounds = new google.maps.LatLngBounds() 
-   bounds.extend(new google.maps.LatLng(h.origem.lat, h.origem.lng)) 
-   bounds.extend(new google.maps.LatLng(h.destino.lat, h.destino.lng)) 
-   map.fitBounds(bounds, { padding: 60 }) 
+   const bounds = L.latLngBounds([h.origem.lat, h.origem.lng], [h.destino.lat, h.destino.lng]) 
+   map.fitBounds(bounds, { padding: [40, 40] }) 
  } 
  
  window.onload = () => { 
