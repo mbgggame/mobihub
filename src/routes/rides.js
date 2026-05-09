@@ -595,6 +595,34 @@ export default async function ridesRoutes(fastify) {
     } 
   }) 
  
+  // Cancelar corrida pelo admin
+  fastify.put('/api/rides/:id/cancelar', { preHandler: requireAuth }, async (request, reply) => {
+    const { id } = request.params
+    const ride = (await dbQuery('SELECT * FROM rides WHERE id = $1', [id])).rows[0]
+    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' })
+
+    await dbQuery(`
+      UPDATE rides SET 
+        status = 'cancelada', 
+        cancelada_at = CURRENT_TIMESTAMP, 
+        cancelado_por = 'admin' 
+      WHERE id = $1
+    `, [id])
+
+    if (ride.telegram_message_id) {
+      try {
+        await editGroupMessage(
+          ride.telegram_message_id,
+          `❌ *Corrida cancelada pelo admin.*\n\n📍 ${ride.origem}\n🏁 ${ride.destino}`
+        )
+      } catch (e) {
+        console.error('[RIDES] Erro ao editar mensagem Telegram:', e.message)
+      }
+    }
+
+    return { mensagem: 'Corrida cancelada com sucesso' }
+  })
+
   // Obter resumo financeiro da corrida 
   fastify.get('/api/rides/:id/resumo-financeiro', { preHandler: requireAuth }, async (request, reply) => { 
     const { id } = request.params 

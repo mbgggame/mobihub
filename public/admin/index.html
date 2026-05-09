@@ -102,6 +102,13 @@ function renderizar(corridas) {
            🗓️ Agendada para: ${new Date(c.agendada_para).toLocaleString('pt-BR')} 
          </p>` : ''} 
        ${c.driver_nome ? `<p class="text-xs text-gray-500 mt-2">Motorista: ${c.driver_nome} — ${c.placa}</p>` : ''} 
+       ${['aberta','aceita','em_viagem'].includes(c.status) ? `
+         <div class="mt-3 pt-3 border-t border-gray-100">
+           <button onclick="event.stopPropagation(); confirmarCancelamento(${c.id})" 
+             class="text-xs text-red-600 font-medium hover:text-red-700">
+             ❌ Cancelar corrida
+           </button>
+         </div>` : ''}
      </div> 
    `}).join('') 
  } 
@@ -260,17 +267,17 @@ async function atualizarStatus(status) {
 
 async function confirmarCancelamento(id) {
   if (confirm("Tem certeza que deseja cancelar esta corrida?")) {
-    const r = await fetch(`/api/rides/${id}/status`, {
+    const r = await fetch(`/api/rides/${id}/cancelar`, {
       method: 'PUT',
-      headers: headers(),
-      body: JSON.stringify({ status: 'cancelada' })
+      headers: headers()
     })
     if (r.ok) {
       fecharModal()
       carregar()
       alert("Corrida cancelada com sucesso!")
     } else {
-      alert("Erro ao cancelar corrida")
+      const d = await r.json()
+      alert("Erro ao cancelar corrida: " + (d.error || 'Tente novamente'))
     }
   }
 }
