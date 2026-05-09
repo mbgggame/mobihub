@@ -569,19 +569,24 @@
    btn.disabled = true
    
    try {
+     console.log('[ACEITAR TERMOS] URL:', `/api/motorista/${tokenMotorista}/aceitar-termos`)
      const r = await fetch(`/api/motorista/${tokenMotorista}/aceitar-termos`, {
        method: 'POST',
        headers: { 'Content-Type': 'application/json' }
      })
      
+     console.log('[ACEITAR TERMOS] Status:', r.status)
      if (r.ok) {
        document.getElementById('modal-termos').classList.add('hidden')
        dadosAtuaisDriver.aceitou_termos = true
        renderizarStatusOnline(dadosAtuaisDriver)
      } else {
-       alert('Erro ao aceitar termos. Tente novamente.')
+       const d = await r.json()
+       console.error('[ACEITAR TERMOS] Error response:', d)
+       alert('Erro ao aceitar termos: ' + (d.error || 'Tente novamente.'))
      }
    } catch(e) {
+     console.error('[ACEITAR TERMOS] Exception:', e)
      alert('Erro de conexão.')
    }
    
