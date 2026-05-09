@@ -441,11 +441,22 @@
          const d = await r.json() 
          
          if (d && d.length > 0) { 
-           list.innerHTML = d.map(res => `
-             <div class="autocomplete-item" onclick="selecionarSugestao('${tipo}', '${res.display_name.replace(/'/g, "\\'")}', ${res.lat}, ${res.lon})">
-               ${res.display_name}
-             </div>
-           `).join('')
+           list.innerHTML = '';
+           d.forEach(res => {
+             const item = document.createElement('div');
+             item.className = 'autocomplete-item';
+             item.textContent = res.display_name;
+             
+             const handler = (e) => {
+               e.preventDefault();
+               selecionarSugestao(tipo, res.display_name, res.lat, res.lon);
+             };
+             
+             item.addEventListener('mousedown', handler);
+             item.addEventListener('touchstart', handler);
+             
+             list.appendChild(item);
+           });
            list.classList.remove('hidden')
          } else {
            list.classList.add('hidden')
