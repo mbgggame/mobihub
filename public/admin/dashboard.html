@@ -261,8 +261,11 @@
    'Authorization': `Bearer ${localStorage.getItem('mobihub_token')}` 
  }) 
  
- if (!localStorage.getItem('mobihub_token')) { 
-   location.href = '/admin/login' 
+ const isLoginPage = window.location.pathname === '/admin/login';
+ const tokenVal = localStorage.getItem('mobihub_token');
+
+ if (!tokenVal && !isLoginPage) {
+   location.href = '/admin/login';
  } 
  
  const DIAS_NOMES = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'] 

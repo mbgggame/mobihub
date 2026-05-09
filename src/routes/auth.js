@@ -29,4 +29,13 @@ export default async function authRoutes(fastify) {
  
     return { token } 
   }) 
+  
+  fastify.post('/api/login/verify', async (request, reply) => {
+    try {
+      await request.jwtVerify()
+      return reply.code(200).send({ ok: true })
+    } catch(e) {
+      return reply.code(401).send({ error: 'Invalid token' })
+    }
+  })
 }

@@ -28,9 +28,14 @@
     </div> 
   </div> 
 <script> 
-if (localStorage.getItem('mobihub_token')) { 
-  location.href = '/admin' 
-} 
+const isLoginPage = window.location.pathname === '/admin/login';
+const token = localStorage.getItem('mobihub_token');
+
+if (token && isLoginPage) {
+  location.href = '/admin';
+} else if (!token && !isLoginPage) {
+  location.href = '/admin/login';
+}
  
 async function login() { 
   const email = document.getElementById('email').value 

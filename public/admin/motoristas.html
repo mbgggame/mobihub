@@ -157,7 +157,13 @@
 <script> 
  const token = () => localStorage.getItem('mobihub_token') 
  const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` }) 
- if (!token()) location.href = '/admin/login' 
+ 
+ const isLoginPage = window.location.pathname === '/admin/login';
+ const tokenVal = localStorage.getItem('mobihub_token');
+
+ if (!tokenVal && !isLoginPage) {
+   location.href = '/admin/login';
+ } 
  
  let fotoBase64 = null 
  let streamCamera = null 
