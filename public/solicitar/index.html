@@ -466,7 +466,7 @@
    const input = document.getElementById(tipo === 'origem' ? 'busca-orig' : 'busca-dest')
    const list = document.getElementById(tipo === 'origem' ? 'lista-orig' : 'lista-dest')
    
-   const enderecoCurto = endereco.substring(0, 60);
+   const enderecoCurto = encurtarEndereco(endereco);
    input.value = enderecoCurto
    list.classList.add('hidden')
 
@@ -476,12 +476,10 @@
      origemEndereco = enderecoCurto 
      origem = enderecoCurto 
      mostrarOrigemNoMapa(lat, lon, enderecoCurto) 
-     if (destinoLat) calcularValor() 
    } else { 
      destinoLat = lat 
      destinoLng = lon 
      destino = enderecoCurto 
-     if (origemLat) calcularValor() 
    } 
 
    marcarPonto(lat, lon, enderecoCurto, tipo) 
