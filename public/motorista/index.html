@@ -445,6 +445,7 @@
 
 <script> 
  const tokenMotorista = location.pathname.split('/motorista/')[1] 
+ localStorage.setItem('tokenMotorista', tokenMotorista)
  console.log('[INIT] Token motorista:', tokenMotorista)
  const socket = io()
  let novaFotoBase64 = null 
@@ -564,37 +565,25 @@
    } catch(e) { console.error(e) } 
  }
  
- async function aceitarTermos() {
-   const btn = document.getElementById('btn-aceitar-termos')
-   btn.textContent = 'Aguarde...'
-   btn.disabled = true
-   
-   try {
-     console.log('[ACEITAR TERMOS] Token:', tokenMotorista)
-     const dados = { token: tokenMotorista, aceitou: true }
+ async function aceitarTermos() { 
+     const btn = document.getElementById('btn-aceitar-termos')
+     btn.textContent = 'Aguarde...'
+     btn.disabled = true
+     const token = localStorage.getItem('tokenMotorista'); 
      const res = await fetch('/api/motorista/aceitar-termos', { 
-       method: 'POST', 
-       headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }, 
-       body: JSON.stringify(dados) 
-     })
-     
-     console.log('[ACEITAR TERMOS] Status:', res.status)
-     if (res.ok) {
-       document.getElementById('modal-termos').classList.add('hidden')
-       dadosAtuaisDriver.aceitou_termos = true
-       renderizarStatusOnline(dadosAtuaisDriver)
-     } else {
-       const d = await res.json()
-       console.error('[ACEITAR TERMOS] Error response:', d)
-       alert('Erro ao aceitar termos: ' + (d.error || 'Tente novamente.'))
-     }
-   } catch(e) {
-     console.error('[ACEITAR TERMOS] Exception:', e)
-     alert('Erro de conexão.')
-   }
-   
-   btn.textContent = '✅ Concordo e aceito os termos'
-   btn.disabled = false
+         method: 'POST', 
+         headers: { 'Content-Type': 'application/json' }, 
+         body: JSON.stringify({ token: token, versao: '1.2' }) 
+     }); 
+     if (res.ok) { 
+         document.getElementById('modal-termos').classList.add('hidden'); 
+         location.reload(); // Recarrega para validar o novo estado 
+     } else { 
+         const erro = await res.text(); 
+         alert('Erro no servidor: ' + erro); 
+     } 
+     btn.textContent = '✅ Concordo e aceito os termos'
+     btn.disabled = false
  } 
  
  async function reportarLocalizacao(lat, lng) { 
