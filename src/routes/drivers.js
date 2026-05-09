@@ -180,6 +180,7 @@ export default async function driversRoutes(fastify) {
 
   // Aceitar termos de uso e LGPD
   fastify.post('/api/motorista/aceitar-termos', async (request, reply) => { 
+    console.log('[DEBUG] Body recebido:', request.body)
     const { token } = request.body; 
     if (!token) return reply.code(400).send({ error: 'Token obrigatório' }); 
  
