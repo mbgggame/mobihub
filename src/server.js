@@ -5,6 +5,7 @@ import fastifyStatic from '@fastify/static'
 import fastifyCors from '@fastify/cors' 
 import { join, dirname } from 'path' 
 import { fileURLToPath } from 'url' 
+import { Server } from 'socket.io' 
  
 import { initDB } from './db.js' 
 import { initBot } from './telegram.js' 
@@ -75,3 +76,15 @@ initScheduler()
 const port = parseInt(process.env.PORT || '3000') 
 await fastify.listen({ port, host: '0.0.0.0' }) 
 console.log(`[SERVER] MobiHub rodando em http://localhost:${port}`)
+
+// Inicializa Socket.IO
+const io = new Server(fastify.server, { cors: { origin: '*' } }); 
+io.on('connection', (socket) => { 
+  socket.on('motorista:posicao', (data) => { 
+    // data = { rideId, lat, lng } 
+    socket.broadcast.to(`ride:${data.rideId}`).emit('motorista:posicao', data); 
+  }); 
+  socket.on('entrar:corrida', (rideId) => { 
+    socket.join(`ride:${rideId}`); 
+  }); 
+}); 

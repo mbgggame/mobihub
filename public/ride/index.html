@@ -7,6 +7,7 @@
    <script src="https://cdn.tailwindcss.com"></script> 
    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/> 
    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script> 
+   <script src="/socket.io/socket.io.js"></script> 
    <style> 
      #map { height: 300px; } 
      .pulse { animation: pulse 2s infinite; } 
@@ -334,6 +335,7 @@
  let routePolyline = null
  
  const token = location.pathname.split('/r/')[1] 
+ const socket = io()
  console.log('[RIDE] Token:', token) 
  let estrelaSelecionada = 0 
  let markerOrigem, markerDestino, markerMotorista 
@@ -417,6 +419,7 @@
        atualizarLocalizacaoMotorista(ride) 
        carregarMensagens() 
        document.getElementById('card-chat').classList.remove('hidden') 
+       socket.emit('entrar:corrida', ride.id); 
      } 
    } catch(e) { 
      console.error('[CARREGAR]', e) 
@@ -972,6 +975,15 @@
  function iniciarPollingAutomatico() { 
    console.log('[POLLING] Iniciando...'); 
    iniciarPolling(); 
+   
+   socket.on('motorista:posicao', (data) => { 
+     console.log('[SOCKET] Nova posição:', data);
+     if (markerMotorista) {
+       markerMotorista.setLatLng([data.lat, data.lng]);
+     } else if (map) {
+       markerMotorista = L.marker([data.lat, data.lng], { icon: iconMotorista }).addTo(map);
+     }
+   });
  } 
  
  iniciarPollingAutomatico(); 
