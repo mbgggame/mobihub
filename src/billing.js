@@ -27,7 +27,7 @@ export function calculateStopCost(stopTimeInMinutes, config = {}) {
 } 
  
 export function calculateTotalRideCost(baseFare, initialWaitCost = 0, stopsCost = 0, config = {}) { 
-  const valorMinimo = parseFloat(config.valor_minimo_corrida || 7.00) 
+  const valorMinimo = parseFloat(config.valor_minimo_corrida || 15.00) 
   const total = parseFloat(baseFare) + parseFloat(initialWaitCost) + parseFloat(stopsCost) 
   return parseFloat(Math.max(total, valorMinimo).toFixed(2)) 
 } 

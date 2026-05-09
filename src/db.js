@@ -206,14 +206,14 @@ export async function initDB() {
  
   await query(` 
     INSERT INTO configuracoes (chave, valor) VALUES 
-      ('espera_minutos_gratis', '5'), 
+      ('espera_minutos_gratis', '3'), 
       ('espera_valor_minuto', '0.60'), 
       ('espera_max_cancelamento', '10'), 
-      ('espera_taxa_cancelamento', '7.00'), 
-      ('parada_minutos_gratis', '2'), 
+      ('espera_taxa_cancelamento', '10.00'), 
+      ('parada_minutos_gratis', '5'), 
       ('parada_valor_minuto', '0.60'), 
-      ('valor_minimo_corrida', '7.00') 
-    ON CONFLICT (chave) DO NOTHING 
+      ('valor_minimo_corrida', '15.00') 
+    ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor
   `) 
  
   await seedAdmin() 
@@ -254,21 +254,29 @@ async function seedConfigs() {
  
 async function seedTarifas() { 
   const existing = await pool.query('SELECT COUNT(*) as total FROM tarifas') 
-  if (parseInt(existing.rows[0].total) > 0) return 
+  if (parseInt(existing.rows[0].total) > 0) {
+    // Atualiza a categoria principal (Padrão) com os valores do MVP
+    await pool.query(`
+      UPDATE tarifas 
+      SET valor_minimo = 15.00, valor_km = 2.50, km_minimo = 1.0 
+      WHERE nome = 'Padrão'
+    `);
+    return;
+  }
   
   const tarifas = [ 
-    ['Padrão', '1,2,3,4,5', '09:00', '17:00', 15.00], 
-    ['Pico manhã', '1,2,3,4,5', '06:00', '09:00', 20.00], 
-    ['Pico tarde', '1,2,3,4,5', '17:00', '20:00', 20.00], 
-    ['Noturno', '0,1,2,3,4,5,6', '20:00', '06:00', 22.00], 
-    ['Fim de semana', '0,6', '06:00', '20:00', 22.00], 
-    ['Fim de semana noturno', '0,6', '20:00', '06:00', 25.00] 
+    ['Padrão', '1,2,3,4,5', '09:00', '17:00', 15.00, 2.50, 1.0], 
+    ['Pico manhã', '1,2,3,4,5', '06:00', '09:00', 20.00, 3.00, 1.0], 
+    ['Pico tarde', '1,2,3,4,5', '17:00', '20:00', 20.00, 3.00, 1.0], 
+    ['Noturno', '0,1,2,3,4,5,6', '20:00', '06:00', 22.00, 3.50, 1.0], 
+    ['Fim de semana', '0,6', '06:00', '20:00', 22.00, 3.50, 1.0], 
+    ['Fim de semana noturno', '0,6', '20:00', '06:00', 25.00, 4.00, 1.0] 
   ] 
   
   for (const t of tarifas) { 
     await pool.query( 
-      'INSERT INTO tarifas (nome, dias, hora_inicio, hora_fim, valor_minimo) VALUES ($1, $2, $3, $4, $5)', 
-      [t[0], t[1], t[2], t[3], t[4]] 
+      'INSERT INTO tarifas (nome, dias, hora_inicio, hora_fim, valor_minimo, valor_km, km_minimo) VALUES ($1, $2, $3, $4, $5, $6, $7)', 
+      [t[0], t[1], t[2], t[3], t[4], t[5], t[6]] 
     ) 
   } 
 } 

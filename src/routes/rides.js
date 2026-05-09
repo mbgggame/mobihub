@@ -53,8 +53,8 @@ async function calcularTarifa(dataHoraStr, distanciaKm) {
 
   const excedente = Math.max(0, distanciaKm - tarifaAplicada.km_minimo) 
   const valor = tarifaAplicada.valor_minimo + (excedente * tarifaAplicada.valor_km) 
-  const valorMotorista = parseFloat((valor * 0.70).toFixed(2)) 
-  const valorMobihub = parseFloat((valor * 0.30).toFixed(2)) 
+  const valorMotorista = parseFloat((valor * 0.75).toFixed(2)) 
+  const valorMobihub = parseFloat((valor * 0.25).toFixed(2)) 
 
   return { 
     tarifa: tarifaAplicada.nome, 
@@ -134,8 +134,8 @@ export default async function ridesRoutes(fastify) {
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) 
       RETURNING id
     `, [token, clientId, origem, origem_lat, origem_lng, destino, 
-           destino_lat, destino_lng, valor, (valor * 0.7) || null, 
-           (valor * 0.3) || null, tipo || 'normal', agendada_para || null, statusInicial]) 
+           destino_lat, destino_lng, valor, (valor * 0.75) || null, 
+           (valor * 0.25) || null, tipo || 'normal', agendada_para || null, statusInicial]) 
  
     const rideId = result.rows[0].id
     const rideResult = await dbQuery('SELECT * FROM rides WHERE id = $1', [rideId]) 
@@ -645,8 +645,8 @@ export default async function ridesRoutes(fastify) {
       tempo_paradas_min: ride.tempo_paradas_total_min || 0, 
       num_paradas: ride.num_paradas || 0, 
       valor_final: valorFinal, 
-      valor_motorista: parseFloat((valorFinal * 0.70).toFixed(2)), 
-      valor_mobihub: parseFloat((valorFinal * 0.30).toFixed(2)), 
+      valor_motorista: parseFloat((valorFinal * 0.75).toFixed(2)), 
+      valor_mobihub: parseFloat((valorFinal * 0.25).toFixed(2)), 
       paradas_detalhe: paradas, 
       cancelado_por_espera: ride.cancelado_por_espera === 1, 
       taxa_cancelamento: ride.taxa_cancelamento || 0 
