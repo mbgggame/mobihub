@@ -359,8 +359,11 @@
  
  function initMap() { 
    map = L.map('map', { zoomControl: true }) 
-   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
-     attribution: '© OpenStreetMap' 
+   L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoiZmFiaW9tbGFwIiwiYSI6ImNtb3lmODJwdDBzenEyd29ra2NjcWkwbWUifQ.2dgLxxG62IL7BpUOiOyVMQ', { 
+     attribution: '© <a href="https://www.mapbox.com/">Mapbox</a> © <a href="https://www.openstreetmap.org/">OpenStreetMap</a>', 
+     tileSize: 512, 
+     zoomOffset: -1, 
+     maxZoom: 19 
    }).addTo(map) 
    map.setView([-20.3222, -40.3381], 13) 
  } 
@@ -934,7 +937,12 @@
          attributionControl: false 
        }).setView(driverPos, 15) 
         
-       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map) 
+       L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoiZmFiaW9tbGFwIiwiYSI6ImNtb3lmODJwdDBzenEyd29ra2NjcWkwbWUifQ.2dgLxxG62IL7BpUOiOyVMQ', { 
+         attribution: '© <a href="https://www.mapbox.com/">Mapbox</a> © <a href="https://www.openstreetmap.org/">OpenStreetMap</a>', 
+         tileSize: 512, 
+         zoomOffset: -1, 
+         maxZoom: 19 
+       }).addTo(map) 
  
        driverMarker = L.marker(driverPos, { 
          icon: L.icon({ 
