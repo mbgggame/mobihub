@@ -570,19 +570,19 @@
    
    try {
      console.log('[ACEITAR TERMOS] Token:', tokenMotorista)
-     const response = await fetch('/api/motorista/aceitar-termos', { 
+     const res = await fetch('/api/motorista/aceitar-termos', { 
        method: 'POST', 
        headers: { 'Content-Type': 'application/json' }, 
-       body: JSON.stringify({ token: tokenMotorista }) 
+       body: JSON.stringify({ token: tokenMotorista, versao: '1.1' }) 
      })
      
-     console.log('[ACEITAR TERMOS] Status:', response.status)
-     if (response.ok) {
+     console.log('[ACEITAR TERMOS] Status:', res.status)
+     if (res.ok) {
        document.getElementById('modal-termos').classList.add('hidden')
        dadosAtuaisDriver.aceitou_termos = true
        renderizarStatusOnline(dadosAtuaisDriver)
      } else {
-       const d = await response.json()
+       const d = await res.json()
        console.error('[ACEITAR TERMOS] Error response:', d)
        alert('Erro ao aceitar termos: ' + (d.error || 'Tente novamente.'))
      }
