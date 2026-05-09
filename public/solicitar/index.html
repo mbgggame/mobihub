@@ -863,8 +863,32 @@
      } 
    } 
    initMap() 
-   // Note: carregarMotoristasOnline is already called inside initMap in this version
-   // but we can ensure it runs or call a wrapper if needed.
+   // Recupera dados de repetir viagem se vier do painel do passageiro 
+   const repOrigem = localStorage.getItem('repetir_origem'); 
+   const repDestino = localStorage.getItem('repetir_destino'); 
+   const repOrigemLat = localStorage.getItem('repetir_origem_lat'); 
+   const repOrigemLng = localStorage.getItem('repetir_origem_lng'); 
+   const repDestinoLat = localStorage.getItem('repetir_destino_lat'); 
+   const repDestinoLng = localStorage.getItem('repetir_destino_lng'); 
+   if (repOrigem && repDestino) { 
+     setTimeout(() => { 
+       marcarPonto(parseFloat(repOrigemLat), parseFloat(repOrigemLng), repOrigem, 'origem'); 
+       marcarPonto(parseFloat(repDestinoLat), parseFloat(repDestinoLng), repDestino, 'destino'); 
+       document.getElementById('busca-orig').value = encurtarEndereco(repOrigem); 
+       document.getElementById('busca-dest').value = encurtarEndereco(repDestino); 
+       origemLat = parseFloat(repOrigemLat); 
+       origemLng = parseFloat(repOrigemLng); 
+       destinoLat = parseFloat(repDestinoLat); 
+       destinoLng = parseFloat(repDestinoLng); 
+       verificarBotaoSolicitar(); 
+       localStorage.removeItem('repetir_origem'); 
+       localStorage.removeItem('repetir_destino'); 
+       localStorage.removeItem('repetir_origem_lat'); 
+       localStorage.removeItem('repetir_origem_lng'); 
+       localStorage.removeItem('repetir_destino_lat'); 
+       localStorage.removeItem('repetir_destino_lng'); 
+     }, 800); 
+   }
  }
  </script> 
 </body> 

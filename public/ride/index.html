@@ -325,6 +325,18 @@
        🚗 Solicitar nova corrida 
      </a> 
    </div> 
+
+   <!-- HISTÓRICO DE VIAGENS DO PASSAGEIRO --> 
+   <div id="card-historico-passageiro" class="hidden bg-white border border-gray-200 rounded-xl p-4"> 
+     <div class="flex items-center justify-between mb-3"> 
+       <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Minhas viagens</p> 
+       <button onclick="toggleHistoricoPassageiro()" 
+         class="text-xs text-green-600 border border-green-300 rounded-lg px-3 py-1.5 hover:bg-green-50"> 
+         Ver histórico 
+       </button> 
+     </div> 
+     <div id="lista-historico-passageiro" class="hidden space-y-2"></div> 
+   </div> 
  
  </div> 
  
@@ -667,7 +679,17 @@
            `${ride.modelo_carro} ${ride.cor_carro} — ${ride.placa}` 
        } 
      } else { 
-       document.getElementById('card-obrigado').classList.remove('hidden') 
+       // Salva viagem no histórico
+       const STORAGE_HIST = 'mobihub_historico';
+       const hist = JSON.parse(localStorage.getItem(STORAGE_HIST) || '[]');
+       hist.unshift({
+         origem: { endereco: ride.origem, lat: ride.origem_lat, lng: ride.origem_lng },
+         destino: { endereco: ride.destino, lat: ride.destino_lat, lng: ride.destino_lng },
+         data: new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+       });
+       localStorage.setItem(STORAGE_HIST, JSON.stringify(hist.slice(0, 10))); // Mantém apenas as últimas 10
+       document.getElementById('card-obrigado').classList.remove('hidden');
+       document.getElementById('card-historico-passageiro').classList.remove('hidden');
      } 
    } 
  
@@ -868,12 +890,18 @@
      const d = await r.json() 
      if (r.ok) { 
        document.getElementById('card-avaliacao').classList.add('hidden') 
-       document.getElementById('card-obrigado').classList.remove('hidden') 
- 
-       // BUG 5 FIX: Redirecionar após avaliação 
-       alert('Obrigado pela sua avaliação!') 
-       localStorage.removeItem('mobihub_ride_token') // Limpa dados se houver 
-       window.location.href = d.redirect || '/solicitar' 
+       // Salva viagem no histórico
+       const STORAGE_HIST = 'mobihub_historico';
+       const ride = dadosAtuais.ride;
+       const hist = JSON.parse(localStorage.getItem(STORAGE_HIST) || '[]');
+       hist.unshift({
+         origem: { endereco: ride.origem, lat: ride.origem_lat, lng: ride.origem_lng },
+         destino: { endereco: ride.destino, lat: ride.destino_lat, lng: ride.destino_lng },
+         data: new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+       });
+       localStorage.setItem(STORAGE_HIST, JSON.stringify(hist.slice(0, 10))); // Mantém apenas as últimas 10
+       document.getElementById('card-obrigado').classList.remove('hidden');
+       document.getElementById('card-historico-passageiro').classList.remove('hidden');
      } else { 
        btn.textContent = '⭐ Enviar avaliação' 
        btn.disabled = false 
@@ -998,8 +1026,60 @@
  
 
  
- // Inicia o polling 
- function iniciarPollingAutomatico() { 
+ function toggleHistoricoPassageiro() { 
+  const lista = document.getElementById('lista-historico-passageiro'); 
+  const btn = document.querySelector('[onclick="toggleHistoricoPassageiro()"]'); 
+  if (lista.classList.contains('hidden')) { 
+    lista.classList.remove('hidden'); 
+    btn.textContent = 'Fechar'; 
+    renderizarHistoricoPassageiro(); 
+  } else { 
+    lista.classList.add('hidden'); 
+    btn.textContent = 'Ver histórico'; 
+  } 
+} 
+
+function renderizarHistoricoPassageiro() { 
+  const STORAGE_HIST = 'mobihub_historico'; 
+  const hist = JSON.parse(localStorage.getItem(STORAGE_HIST) || '[]'); 
+  const lista = document.getElementById('lista-historico-passageiro'); 
+  if (!hist.length) { 
+    lista.innerHTML = '<p class="text-xs text-gray-400 text-center py-3">Nenhuma viagem encontrada</p>'; 
+    return; 
+  } 
+  lista.innerHTML = hist.map((h, i) => ` 
+    <div class="border border-gray-100 rounded-xl px-3 py-2.5 flex items-center justify-between"> 
+      <div class="flex-1 min-w-0 mr-3"> 
+        <p class="text-sm text-gray-800 font-medium truncate"> 
+          ${h.origem.endereco.split(',')[0]} → ${h.destino.endereco.split(',')[0]} 
+        </p> 
+        <p class="text-xs text-gray-400 mt-0.5">${h.data}</p> 
+      </div> 
+      <button onclick="repetirViagemPassageiro(${i})" 
+        class="text-xs text-green-600 border border-green-300 rounded-lg px-3 py-1.5 hover:bg-green-50 whitespace-nowrap flex-shrink-0"> 
+        🔁 Repetir 
+      </button> 
+    </div> 
+  `).join(''); 
+} 
+
+function repetirViagemPassageiro(i) { 
+  const STORAGE_HIST = 'mobihub_historico'; 
+  const hist = JSON.parse(localStorage.getItem(STORAGE_HIST) || '[]'); 
+  const h = hist[i]; 
+  if (!h) return; 
+  // Salva dados para preencher automaticamente na tela de solicitar 
+  localStorage.setItem('repetir_origem', h.origem.endereco); 
+  localStorage.setItem('repetir_destino', h.destino.endereco); 
+  localStorage.setItem('repetir_origem_lat', h.origem.lat); 
+  localStorage.setItem('repetir_origem_lng', h.origem.lng); 
+  localStorage.setItem('repetir_destino_lat', h.destino.lat); 
+  localStorage.setItem('repetir_destino_lng', h.destino.lng); 
+  window.location.href = '/solicitar'; 
+} 
+
+// Inicia o polling 
+function iniciarPollingAutomatico() { 
    console.log('[POLLING] Iniciando...'); 
    iniciarPolling(); 
    
