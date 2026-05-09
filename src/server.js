@@ -3,10 +3,11 @@ import Fastify from 'fastify'
 import fastifyJwt from '@fastify/jwt' 
 import fastifyStatic from '@fastify/static' 
 import fastifyCors from '@fastify/cors' 
+import fastifyFormbody from '@fastify/formbody' 
 import { join, dirname } from 'path' 
 import { fileURLToPath } from 'url' 
 import { Server } from 'socket.io' 
- 
+
 import { initDB } from './db.js' 
 import { initBot } from './telegram.js' 
 import { initScheduler } from './scheduler.js' 
@@ -14,22 +15,35 @@ import authRoutes from './routes/auth.js'
 import driversRoutes from './routes/drivers.js' 
 import ridesRoutes from './routes/rides.js' 
 import publicRoutes from './routes/public.js' 
- 
+
 const __dirname = dirname(fileURLToPath(import.meta.url)) 
- 
+
 const fastify = Fastify({ logger: true }) 
- 
+
 await fastify.register(fastifyCors, { 
    origin: true, 
    methods: ['GET', 'POST', 'OPTIONS'], 
    allowedHeaders: ['Content-Type', 'Authorization'] 
  }) 
+await fastify.register(fastifyFormbody) 
 await fastify.register(fastifyJwt, { secret: process.env.JWT_SECRET }) 
+
+fastify.setErrorHandler((error, request, reply) => {
+  console.log('[ERRO GLOBAL FASTIFY]:', error)
+  reply.code(error.statusCode || 500).send({ error: error.message })
+})
+
+// Rotas API 
+await fastify.register(authRoutes) 
+await fastify.register(driversRoutes) 
+await fastify.register(ridesRoutes) 
+await fastify.register(publicRoutes)
+
 await fastify.register(fastifyStatic, { 
   root: join(__dirname, '..', 'public'), 
   prefix: '/' 
 }) 
- 
+
 // Rotas HTML 
 fastify.get('/', (req, reply) => reply.redirect('/admin')) 
 fastify.get('/login', (req, reply) => reply.redirect('/admin/login')) 
@@ -45,7 +59,7 @@ fastify.get('/r/:token', (req, reply) => reply.sendFile('ride/index.html'))
 fastify.get('/motorista/:token', (req, reply) => reply.sendFile('motorista/index.html')) 
 fastify.get('/cadastro-motorista/:token', (req, reply) => reply.sendFile('cadastro-motorista/index.html')) 
 fastify.get('/favicon.ico', (req, reply) => reply.code(204).send()) 
- 
+
 // Webhook do Telegram 
 fastify.post('/webhook/telegram', async (request, reply) => { 
   const { getBot } = await import('./telegram.js') 
@@ -53,7 +67,7 @@ fastify.post('/webhook/telegram', async (request, reply) => {
   if (bot) bot.processUpdate(request.body) 
   return { ok: true } 
 }) 
- 
+
 // Configura webhook após iniciar 
 fastify.addHook('onReady', async () => { 
   const isProduction = process.env.BASE_URL && !process.env.BASE_URL.includes('localhost') 
@@ -65,12 +79,6 @@ fastify.addHook('onReady', async () => {
     console.log('[BOT] Webhook configurado:', webhookUrl) 
   } 
 }) 
- 
-// Rotas API 
-await fastify.register(authRoutes) 
-await fastify.register(driversRoutes) 
-await fastify.register(ridesRoutes) 
-await fastify.register(publicRoutes) 
  
 // Inicializa 
 await initDB() 
