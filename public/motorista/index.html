@@ -38,6 +38,42 @@
     <span id="badge-online" class="hidden text-xs px-2 py-0.5 rounded-full bg-green-500 text-white border border-green-300">● Online</span> 
     <span id="badge-offline" class="text-xs px-2 py-0.5 rounded-full bg-red-500 text-white">○ Offline</span> 
   </div> 
+</div>
+
+<!-- MODAL DE ACEITE DOS TERMOS -->
+<div id="modal-termos" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4 py-6">
+  <div class="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+    <div class="p-6 space-y-4">
+      <div class="text-center">
+        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+          <svg class="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <h2 class="text-xl font-bold text-gray-900">Termos de Uso e LGPD</h2>
+        <p class="text-sm text-gray-500 mt-1">ELVIVA GROUP LTDA • CNPJ: 62.444.354/0001-82</p>
+      </div>
+      
+      <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 text-xs text-gray-700 space-y-3 max-h-60 overflow-y-auto">
+        <p><strong>1. Natureza da Relação</strong></p>
+        <p>A presente relação é de natureza CÍVEL e COMERCIAL, sendo regida pelo Código Civil e pelo Código de Defesa do Consumidor, e NÃO CONFIGURA VÍNCULO EMPREGATÍCIO, vínculo de trabalho ou qualquer outra forma de subordinação jurídica.</p>
+        
+        <p><strong>2. Autonomia do Motorista</strong></p>
+        <p>O motorista exerce sua atividade de forma TOTALMENTE AUTÔNOMA, independente, sem horário fixo, sem subordinação hierárquica, podendo aceitar ou recusar corridas a seu exclusivo critério, sem qualquer sanção ou consequência negativa.</p>
+        
+        <p><strong>3. Consentimento de Geolocalização (LGPD)</strong></p>
+        <p>Ao aceitar estes termos, você consente expressamente com a coleta, tratamento e compartilhamento de sua localização geográfica em tempo real, exclusivamente para o funcionamento da plataforma, conforme a Lei Geral de Proteção de Dados (Lei nº 13.709/2018).</p>
+        
+        <p><strong>4. Conformidade</strong></p>
+        <p>Declaro que li, entendi e concordo com todos os termos acima, ciente de meus direitos e obrigações.</p>
+      </div>
+      
+      <button id="btn-aceitar-termos" onclick="aceitarTermos()"
+        class="w-full bg-green-600 text-white rounded-xl py-3 font-bold text-base hover:bg-green-700">
+        ✅ Concordo e aceito os termos
+      </button>
+    </div>
+  </div>
 </div> 
 
 <!-- ABAS --> 
@@ -508,6 +544,15 @@
      } 
      const { driver, financeiro } = await r.json() 
      dadosAtuaisDriver = driver 
+     
+     // Verifica se precisa aceitar termos
+     const modal = document.getElementById('modal-termos')
+     if (!driver.aceitou_termos) {
+       modal.classList.remove('hidden')
+     } else {
+       modal.classList.add('hidden')
+     }
+     
      renderizarPerfil(driver) 
      renderizarFinanceiro(financeiro) 
      renderizarStatusOnline(driver) 
@@ -516,6 +561,32 @@
      // Inicia rastreamento de posição se online 
      if (driver.online) iniciarLocalizacao() 
    } catch(e) { console.error(e) } 
+ }
+ 
+ async function aceitarTermos() {
+   const btn = document.getElementById('btn-aceitar-termos')
+   btn.textContent = 'Aguarde...'
+   btn.disabled = true
+   
+   try {
+     const r = await fetch(`/api/motorista/${tokenMotorista}/aceitar-termos`, {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json' }
+     })
+     
+     if (r.ok) {
+       document.getElementById('modal-termos').classList.add('hidden')
+       dadosAtuaisDriver.aceitou_termos = true
+       renderizarStatusOnline(dadosAtuaisDriver)
+     } else {
+       alert('Erro ao aceitar termos. Tente novamente.')
+     }
+   } catch(e) {
+     alert('Erro de conexão.')
+   }
+   
+   btn.textContent = '✅ Concordo e aceito os termos'
+   btn.disabled = false
  } 
  
  async function reportarLocalizacao(lat, lng) { 
@@ -567,15 +638,22 @@
      desc.textContent = 'Recebendo ofertas de corrida' 
      btn.textContent = 'Ficar offline' 
      btn.className = 'px-4 py-2 rounded-xl text-sm font-semibold bg-red-50 text-red-600 border border-red-200' 
+     btn.disabled = false
      badgeOn.classList.remove('hidden') 
      badgeOff.classList.add('hidden') 
      if (containerMapa) containerMapa.classList.remove('hidden')
      iniciarLocalizacao() 
    } else { 
      txt.textContent = '🔴 Você está OFFLINE' 
-     desc.textContent = 'Não está recebendo corridas' 
+     desc.textContent = driver.aceitou_termos ? 'Não está recebendo corridas' : 'Aceite os termos para ficar online'
      btn.textContent = 'Ficar online' 
-     btn.className = 'w-full px-4 py-3 rounded-xl text-sm font-semibold bg-green-600 text-white' 
+     if (!driver.aceitou_termos) {
+       btn.className = 'w-full px-4 py-3 rounded-xl text-sm font-semibold bg-gray-400 text-white cursor-not-allowed opacity-60'
+       btn.disabled = true
+     } else {
+       btn.className = 'w-full px-4 py-3 rounded-xl text-sm font-semibold bg-green-600 text-white'
+       btn.disabled = false
+     }
      badgeOn.classList.add('hidden') 
      badgeOff.classList.remove('hidden') 
      if (containerMapa) containerMapa.classList.add('hidden')

@@ -123,6 +123,10 @@ export async function initDB() {
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS motivo_reprovacao TEXT; 
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS online INTEGER DEFAULT 0; 
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS online_desde TIMESTAMP; 
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS aceitou_termos BOOLEAN DEFAULT false;
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS data_aceite_termos TIMESTAMP;
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS ip_aceite_termos TEXT;
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS versao_termos TEXT DEFAULT '1.0';
   `) 
  
   await query(` 

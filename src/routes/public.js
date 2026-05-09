@@ -197,7 +197,7 @@ export default async function publicRoutes(fastify) {
     const result = await query(` 
       SELECT id, nome, modelo_carro, ano_carro, cor_carro, placa, 
         total_viagens, media_avaliacao, total_avaliacoes, 
-        foto_base64, ativo, created_at 
+        foto_base64, ativo, created_at, aceitou_termos 
       FROM drivers WHERE token_perfil = $1 
     `, [request.params.token]) 
     const driver = result.rows[0] 
