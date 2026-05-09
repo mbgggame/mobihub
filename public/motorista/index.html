@@ -569,16 +569,10 @@
      const btn = document.getElementById('btn-aceitar-termos')
      btn.textContent = 'Aguarde...'
      btn.disabled = true
-     const token = localStorage.getItem('tokenMotorista'); 
-     if (!token) return alert('Sessão expirada. Faça login novamente.'); 
- 
      const res = await fetch('/api/motorista/aceitar-termos', { 
-         method: 'POST', 
-         headers: { 
-             'Content-Type': 'application/json', 
-             'Cache-Control': 'no-cache' 
-         }, 
-         body: JSON.stringify({ token: token, aceitou: true, versao: '1.2' }) 
+       method: 'POST', 
+       headers: { 'Content-Type': 'application/json' }, 
+       body: JSON.stringify({ token: tokenMotorista }) 
      }); 
  
      if (res.ok) { 

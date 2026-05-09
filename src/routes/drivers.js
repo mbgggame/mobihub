@@ -178,6 +178,23 @@ export default async function driversRoutes(fastify) {
  
 
 
+  // Aceitar termos de uso e LGPD
+  fastify.post('/api/motorista/aceitar-termos', async (request, reply) => { 
+    const { token } = request.body; 
+    if (!token) return reply.code(400).send({ error: 'Token obrigatório' }); 
+ 
+    await query(` 
+      UPDATE drivers 
+      SET aceitou_termos = true, 
+          data_aceite_termos = CURRENT_TIMESTAMP, 
+          ip_aceite_termos = $1, 
+          versao_termos = '1.2' 
+      WHERE telegram_id = $2 OR token_perfil = $2 
+    `, [request.ip, token]); 
+ 
+    return { success: true }; 
+  });
+
   // Atualizar status online/offline 
   fastify.put('/api/motorista/:token/online', async (request, reply) => { 
     const { online } = request.body 
@@ -188,7 +205,7 @@ export default async function driversRoutes(fastify) {
     if (online && !driver.aceitou_termos) {
       return reply.code(400).send({ error: 'Aceite os termos primeiro' })
     }
- 
+
     await query(` 
        UPDATE drivers SET 
          online = $1, 
