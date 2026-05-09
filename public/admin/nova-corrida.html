@@ -161,6 +161,15 @@ let map, geocoder
    iconAnchor: [12, 41] 
  }); 
  
+ function encurtarEndereco(endereco) { 
+   try { 
+     const obj = JSON.parse(endereco); 
+     endereco = obj.endereco || obj.display_name || endereco; 
+   } catch(e) {} 
+   const partes = endereco.split(','); 
+   return partes.slice(0, 2).join(',').trim(); 
+ }
+
  function initMap() { 
    map = L.map('map').setView([-20.3155, -40.3128], 13) 
    fetch('/api/config/mapbox') 
@@ -368,31 +377,45 @@ window.onload = () => {
   setupAutocomplete('busca-dest', 'destino') 
   carregarConfig() 
    
-  // CORREÇÃO 5: Repetir Viagem
-  const rOrigem = localStorage.getItem('repetir_origem')
-  const rDestino = localStorage.getItem('repetir_destino')
-  const rValor = localStorage.getItem('repetir_valor')
-  const rTelefone = localStorage.getItem('repetir_telefone')
+   // CORREÇÃO 5: Repetir Viagem
+   const rOrigem = localStorage.getItem('repetir_origem')
+   const rDestino = localStorage.getItem('repetir_destino')
+   const rValor = localStorage.getItem('repetir_valor')
+   const rTelefone = localStorage.getItem('repetir_telefone')
+   const rOrigLat = localStorage.getItem('repetir_origem_lat')
+   const rOrigLng = localStorage.getItem('repetir_origem_lng')
+   const rDestLat = localStorage.getItem('repetir_destino_lat')
+   const rDestLng = localStorage.getItem('repetir_destino_lng')
 
-  if (rOrigem && rDestino) {
-    document.getElementById('telefone').value = rTelefone || ''
-    document.getElementById('valor').value = rValor || ''
-    
-    // Busca as coordenadas para marcar no mapa Leaflet
-    Promise.all([
-      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(rOrigem)}&limit=1`).then(r => r.json()),
-      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(rDestino)}&limit=1`).then(r => r.json())
-    ]).then(([resOrig, resDest]) => {
-      if (resOrig.length > 0) marcarPonto(parseFloat(resOrig[0].lat), parseFloat(resOrig[0].lon), rOrigem, 'origem')
-      if (resDest.length > 0) marcarPonto(parseFloat(resDest[0].lat), parseFloat(resDest[0].lon), rDestino, 'destino')
-      
-      // Limpa o localStorage após preencher
-      localStorage.removeItem('repetir_origem')
-      localStorage.removeItem('repetir_destino')
-      localStorage.removeItem('repetir_valor')
-      localStorage.removeItem('repetir_telefone')
-    })
-  }
+   if (rOrigem && rDestino) {
+     document.getElementById('telefone').value = rTelefone || ''
+     document.getElementById('valor').value = rValor || ''
+     
+     if (rOrigLat && rOrigLng) {
+       origemLat = parseFloat(rOrigLat)
+       origemLng = parseFloat(rOrigLng)
+       origemEndereco = rOrigem
+       document.getElementById('busca-orig').value = encurtarEndereco(rOrigem)
+       marcarPonto(origemLat, origemLng, rOrigem, 'origem')
+     }
+     if (rDestLat && rDestLng) {
+       destinoLat = parseFloat(rDestLat)
+       destinoLng = parseFloat(rDestLng)
+       destinoEndereco = rDestino
+       document.getElementById('busca-dest').value = encurtarEndereco(rDestino)
+       marcarPonto(destinoLat, destinoLng, rDestino, 'destino')
+     }
+     
+     // Limpa o localStorage após preencher
+     localStorage.removeItem('repetir_origem')
+     localStorage.removeItem('repetir_destino')
+     localStorage.removeItem('repetir_valor')
+     localStorage.removeItem('repetir_telefone')
+     localStorage.removeItem('repetir_origem_lat')
+     localStorage.removeItem('repetir_origem_lng')
+     localStorage.removeItem('repetir_destino_lat')
+     localStorage.removeItem('repetir_destino_lng')
+   }
 } 
  
 let linkGerado = '' 

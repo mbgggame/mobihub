@@ -62,7 +62,16 @@ if (!token()) location.href = '/admin/login'
  
 let filtroAtual = '' 
  
-async function carregar() { 
+function encurtarEndereco(endereco) { 
+   try { 
+     const obj = JSON.parse(endereco); 
+     endereco = obj.endereco || obj.display_name || endereco; 
+   } catch(e) {} 
+   const partes = endereco.split(','); 
+   return partes.slice(0, 2).join(',').trim(); 
+ }
+
+ async function carregar() { 
   const url = filtroAtual ? `/api/rides?status=${filtroAtual}` : '/api/rides' 
   const r = await fetch(url, { headers: headers() }) 
   if (r.status === 401) { location.href = '/admin/login'; return } 
@@ -89,7 +98,7 @@ function renderizar(corridas) {
        onclick="abrirModal(${c.id})"> 
        <div class="flex items-start justify-between"> 
          <div class="flex-1 min-w-0"> 
-           <p class="text-sm font-medium text-gray-900 truncate">${origemTexto} → ${c.destino}</p> 
+           <p class="text-sm font-medium text-gray-900 truncate">${encurtarEndereco(c.origem)} → ${encurtarEndereco(c.destino)}</p> 
            <p class="text-xs text-gray-500 mt-0.5">${new Date(c.created_at).toLocaleString('pt-BR')}</p> 
          </div> 
          <div class="flex items-center gap-2 ml-3"> 
@@ -102,13 +111,17 @@ function renderizar(corridas) {
            🗓️ Agendada para: ${new Date(c.agendada_para).toLocaleString('pt-BR')} 
          </p>` : ''} 
        ${c.driver_nome ? `<p class="text-xs text-gray-500 mt-2">Motorista: ${c.driver_nome} — ${c.placa}</p>` : ''} 
-       ${['aberta','aceita','em_viagem'].includes(c.status) ? `
-         <div class="mt-3 pt-3 border-t border-gray-100">
+       <div class="mt-3 pt-3 border-t border-gray-100 flex gap-2">
+         ${['aberta','aceita','em_viagem'].includes(c.status) ? `
            <button onclick="event.stopPropagation(); confirmarCancelamento(${c.id})" 
              class="text-xs text-red-600 font-medium hover:text-red-700">
              ❌ Cancelar corrida
-           </button>
-         </div>` : ''}
+           </button>` : ''}
+         <button onclick="event.stopPropagation(); repetirViagemCard(${c.id})" 
+           class="text-xs text-blue-600 font-medium hover:text-blue-700">
+           🔁 Repetir
+         </button>
+       </div>
      </div> 
    `}).join('') 
  } 
@@ -162,8 +175,8 @@ function renderizar(corridas) {
    document.getElementById('modal-conteudo').innerHTML = ` 
      <div class="space-y-3 text-sm"> 
        <div class="flex justify-between"><span class="text-gray-500">Status</span><span class="px-2 py-0.5 rounded-full text-xs font-medium status-${c.status}">${c.status}</span></div> 
-       <div class="flex justify-between"><span class="text-gray-500">Origem</span><span class="text-right font-medium max-w-[60%]">${origemTexto}</span></div> 
-       <div class="flex justify-between"><span class="text-gray-500">Destino</span><span class="text-right font-medium max-w-[60%]">${c.destino}</span></div> 
+       <div class="flex justify-between"><span class="text-gray-500">Origem</span><span class="text-right font-medium max-w-[60%]">${encurtarEndereco(c.origem)}</span></div> 
+       <div class="flex justify-between"><span class="text-gray-500">Destino</span><span class="text-right font-medium max-w-[60%]">${encurtarEndereco(c.destino)}</span></div> 
       <div class="flex justify-between"><span class="text-gray-500">Valor</span><span class="font-semibold text-green-700">R$ ${Number(c.valor).toFixed(2)}</span></div> 
       
       // Resumo financeiro detalhado 
@@ -317,19 +330,25 @@ async function verResumoFinanceiro(id) {
  
 function repetirViagem() { 
    if (!corridaAtual) return 
-   let origemTexto = corridaAtual.origem; 
-   try { 
-     const origemObj = JSON.parse(corridaAtual.origem); 
-     origemTexto = origemObj.endereco || corridaAtual.origem; 
-   } catch(e) { 
-     origemTexto = corridaAtual.origem; 
-   }
-   localStorage.setItem('repetir_origem', origemTexto) 
-   localStorage.setItem('repetir_destino', corridaAtual.destino) 
-   localStorage.setItem('repetir_valor', corridaAtual.valor) 
-   localStorage.setItem('repetir_telefone', corridaAtual.client_telefone || '') 
-   location.href = '/admin/nova-corrida' 
+   salvarRepetir(corridaAtual)
  } 
+
+ function repetirViagemCard(id) {
+   const c = todasCorridas.find(x => x.id === id)
+   if (c) salvarRepetir(c)
+ }
+
+ function salvarRepetir(c) {
+   localStorage.setItem('repetir_origem', c.origem) 
+   localStorage.setItem('repetir_destino', c.destino) 
+   localStorage.setItem('repetir_valor', c.valor) 
+   localStorage.setItem('repetir_telefone', c.client_telefone || '') 
+   localStorage.setItem('repetir_origem_lat', c.origem_lat)
+   localStorage.setItem('repetir_origem_lng', c.origem_lng)
+   localStorage.setItem('repetir_destino_lat', c.destino_lat)
+   localStorage.setItem('repetir_destino_lng', c.destino_lng)
+   location.href = '/admin/nova-corrida' 
+ }
  
 function copiarMensagem() { 
   navigator.clipboard.writeText(window._msgCliente || '') 

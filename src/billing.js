@@ -47,7 +47,7 @@ export function podeMotoristaCancel(motoristChegouAt, config = {}) {
 // 
 // Corrida base R$ 15,00 
 // Espera inicial: 8 min → 3 min extras × R$ 0,60 = R$ 1,80 
-// 1 parada de 5 min → 3 min extras × R$ 0,60 = R$ 1,80 
+// 1 parada de 8 min → 3 min extras × R$ 0,60 = R$ 1,80 
 // Total: R$ 15,00 + R$ 1,80 + R$ 1,80 = R$ 18,60 
 // 
 // Cancelamento por espera: 

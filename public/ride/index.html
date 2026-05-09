@@ -64,7 +64,7 @@
        </div> 
        <div class="flex items-center gap-2 text-sm text-blue-800"> 
          <span>⏸️</span> 
-         <span id="txt-politica-parada">Paradas: 2 minutos grátis, depois R$ 0,60/min</span> 
+         <span id="txt-politica-parada">Paradas: 5 minutos grátis, depois R$ 0,60/min</span> 
        </div> 
      </div> 
    </div> 
@@ -357,6 +357,15 @@
    cancelada_motorista:   { label: '❌ Cancelada pelo motorista',               cls: 'bg-red-100 text-red-700' } 
  } 
  
+ function encurtarEndereco(endereco) { 
+   try { 
+     const obj = JSON.parse(endereco); 
+     endereco = obj.endereco || obj.display_name || endereco; 
+   } catch(e) {} 
+   const partes = endereco.split(','); 
+   return partes.slice(0, 2).join(',').trim(); 
+ }
+
  function initMap() { 
    map = L.map('map', { zoomControl: true }) 
    fetch('/api/config/mapbox') 
@@ -536,8 +545,8 @@
      destinoTexto = ride.destino;
    }
 
-   document.getElementById('txt-origem').textContent = origemTexto 
-   document.getElementById('txt-destino').textContent = destinoTexto 
+   document.getElementById('txt-origem').textContent = encurtarEndereco(ride.origem) 
+   document.getElementById('txt-destino').textContent = encurtarEndereco(ride.destino) 
  
    // Política de espera (só antes de aceitar) 
    if (ride.status === 'aberta') { 
@@ -771,7 +780,7 @@
              <p class="text-[10px] ${m.remetente === 'passageiro' ? 'text-green-200' : 'text-gray-400'}"> 
                ${new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} 
              </p> 
-             ${m.remetente === 'passageiro' ? `<span class="text-[10px] ${m.lida ? 'text-blue-300' : 'text-green-200'}">${m.lida ? '✓✓' : '✓'}</span>` : ''}
+             ${m.remetente === 'passageiro' ? `<span class="text-[10px] ${m.lida === 1 || m.lida === true ? 'text-blue-300' : 'text-green-200'}">${(m.lida === 1 || m.lida === true) ? '✓✓' : '✓'}</span>` : ''}
            </div>
          </div> 
        </div> 
