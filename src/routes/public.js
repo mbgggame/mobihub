@@ -593,8 +593,8 @@ export default async function publicRoutes(fastify) {
 
   // Aceitar termos de uso e LGPD
   fastify.post('/api/motorista/aceitar-termos', async (request, reply) => {
-    console.log('[ACEITAR-TERMOS] Request body:', request.body)
-    const { token, versao } = request.body
+    console.log('Dados recebidos:', request.body)
+    const { token } = request.body
     if (!token) {
       console.log('[ACEITAR-TERMOS] Token missing in body')
       return reply.code(400).send({ error: 'Token é obrigatório' })
@@ -609,16 +609,16 @@ export default async function publicRoutes(fastify) {
       }
       
       const ip = request.ip || request.headers['x-forwarded-for'] || request.socket.remoteAddress
-      console.log('[ACEITAR-TERMOS] Driver found, ID:', driver.id, 'IP:', ip, 'Versão:', versao || '1.0')
+      console.log('[ACEITAR-TERMOS] Driver found, ID:', driver.id, 'IP:', ip)
       
       await query(`
         UPDATE drivers SET
           aceitou_termos = true,
           data_aceite_termos = CURRENT_TIMESTAMP,
           ip_aceite_termos = $1,
-          versao_termos = $2
-        WHERE id = $3
-      `, [ip, versao || '1.0', driver.id])
+          versao_termos = '1.1'
+        WHERE id = $2
+      `, [ip, driver.id])
       
       console.log('[ACEITAR-TERMOS] Terms accepted successfully')
       return { mensagem: 'Termos aceitos com sucesso' }
