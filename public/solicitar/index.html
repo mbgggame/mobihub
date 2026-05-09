@@ -456,12 +456,14 @@
      }, 400) 
    }) 
 
-   // Fecha lista ao clicar fora
-   document.addEventListener('click', (e) => {
-     if (!input.contains(e.target) && !list.contains(e.target)) {
-       list.classList.add('hidden')
-     }
-   })
+   // Fecha lista ao clicar fora — com delay para não interferir no toque mobile 
+   document.addEventListener('click', (e) => { 
+     setTimeout(() => { 
+       if (!input.contains(e.target) && !list.contains(e.target)) { 
+         list.classList.add('hidden') 
+       } 
+     }, 300) 
+   }) 
  } 
 
  function selecionarSugestao(tipo, endereco, lat, lon) {
