@@ -61,8 +61,8 @@
         <p><strong>2. Autonomia do Motorista</strong></p>
         <p>O motorista exerce sua atividade de forma TOTALMENTE AUTÔNOMA, independente, sem horário fixo, sem subordinação hierárquica, podendo aceitar ou recusar corridas a seu exclusivo critério, sem qualquer sanção ou consequência negativa.</p>
         
-        <p><strong>3. Consentimento de Geolocalização (LGPD)</strong></p>
-        <p>Ao aceitar estes termos, você consente expressamente com a coleta, tratamento e compartilhamento de sua localização geográfica em tempo real, exclusivamente para o funcionamento da plataforma, conforme a Lei Geral de Proteção de Dados (Lei nº 13.709/2018).</p>
+        <p><strong>3. Consentimento de Geolocalização e Tratamento de Dados (LGPD)</strong></p>
+        <p>Ao aceitar estes termos, você consente expressamente com a coleta, tratamento, armazenamento e, se necessário, transferência de seus dados pessoais e de geolocalização para a ELVIVA GROUP LTDA (CNPJ: 62.444.354/0001-82), inclusive para fins de sucessão, venda ou transferência do negócio, sempre em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018).</p>
         
         <p><strong>4. Conformidade</strong></p>
         <p>Declaro que li, entendi e concordo com todos os termos acima, ciente de meus direitos e obrigações.</p>
@@ -573,7 +573,7 @@
      const r = await fetch('/api/motorista/aceitar-termos', {
        method: 'POST',
        headers: { 'Content-Type': 'application/json' },
-       body: JSON.stringify({ token: tokenMotorista })
+       body: JSON.stringify({ token: tokenMotorista, versao: '1.1' })
      })
      
      console.log('[ACEITAR TERMOS] Status:', r.status)
