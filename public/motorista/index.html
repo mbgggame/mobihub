@@ -570,17 +570,23 @@
      btn.textContent = 'Aguarde...'
      btn.disabled = true
      const token = localStorage.getItem('tokenMotorista'); 
+     if (!token) return alert('Sessão expirada. Faça login novamente.'); 
+ 
      const res = await fetch('/api/motorista/aceitar-termos', { 
          method: 'POST', 
-         headers: { 'Content-Type': 'application/json' }, 
-         body: JSON.stringify({ token: token, versao: '1.2' }) 
+         headers: { 
+             'Content-Type': 'application/json', 
+             'Cache-Control': 'no-cache' 
+         }, 
+         body: JSON.stringify({ token: token, aceitou: true, versao: '1.2' }) 
      }); 
+ 
      if (res.ok) { 
-         document.getElementById('modal-termos').classList.add('hidden'); 
-         location.reload(); // Recarrega para validar o novo estado 
+         location.reload(); 
      } else { 
-         const erro = await res.text(); 
-         alert('Erro no servidor: ' + erro); 
+         const textoErro = await res.text(); 
+         console.error('Erro MobiHub:', textoErro); 
+         alert('Não foi possível gravar o aceite. Verifique sua conexão e tente novamente.'); 
      } 
      btn.textContent = '✅ Concordo e aceito os termos'
      btn.disabled = false
