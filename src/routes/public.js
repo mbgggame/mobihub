@@ -592,12 +592,18 @@ export default async function publicRoutes(fastify) {
   }) 
 
   // Aceitar termos de uso e LGPD
-  fastify.post('/api/motorista/:token/aceitar-termos', async (request, reply) => {
-    console.log('[ACEITAR-TERMOS] Request params:', request.params)
-    const driverResult = await query('SELECT id FROM drivers WHERE token_perfil = $1', [request.params.token])
+  fastify.post('/api/motorista/aceitar-termos', async (request, reply) => {
+    console.log('[ACEITAR-TERMOS] Request body:', request.body)
+    const { token } = request.body
+    if (!token) {
+      console.log('[ACEITAR-TERMOS] Token missing in body')
+      return reply.code(400).send({ error: 'Token é obrigatório' })
+    }
+    
+    const driverResult = await query('SELECT id FROM drivers WHERE token_perfil = $1', [token])
     const driver = driverResult.rows[0]
     if (!driver) {
-      console.log('[ACEITAR-TERMOS] Driver not found for token:', request.params.token)
+      console.log('[ACEITAR-TERMOS] Driver not found for token:', token)
       return reply.code(404).send({ error: 'Motorista não encontrado' })
     }
     

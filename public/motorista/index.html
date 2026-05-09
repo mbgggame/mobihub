@@ -569,10 +569,11 @@
    btn.disabled = true
    
    try {
-     console.log('[ACEITAR TERMOS] URL:', `/api/motorista/${tokenMotorista}/aceitar-termos`)
-     const r = await fetch(`/api/motorista/${tokenMotorista}/aceitar-termos`, {
+     console.log('[ACEITAR TERMOS] Token:', tokenMotorista)
+     const r = await fetch('/api/motorista/aceitar-termos', {
        method: 'POST',
-       headers: { 'Content-Type': 'application/json' }
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({ token: tokenMotorista })
      })
      
      console.log('[ACEITAR TERMOS] Status:', r.status)
