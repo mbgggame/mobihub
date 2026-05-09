@@ -176,25 +176,7 @@ export default async function driversRoutes(fastify) {
     return { mensagem: 'Motorista reprovado' } 
   }) 
  
-  // Aceitar termos de uso e LGPD
-  fastify.post('/api/motorista/:token/aceitar-termos', async (request, reply) => {
-    const driverResult = await query('SELECT id FROM drivers WHERE token_perfil = $1', [request.params.token])
-    const driver = driverResult.rows[0]
-    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' })
-    
-    const ip = request.ip || request.headers['x-forwarded-for'] || request.socket.remoteAddress
-    
-    await query(`
-      UPDATE drivers SET
-        aceitou_termos = true,
-        data_aceite_termos = CURRENT_TIMESTAMP,
-        ip_aceite_termos = $1,
-        versao_termos = '1.0'
-      WHERE id = $2
-    `, [ip, driver.id])
-    
-    return { mensagem: 'Termos aceitos com sucesso' }
-  })
+
 
   // Atualizar status online/offline 
   fastify.put('/api/motorista/:token/online', async (request, reply) => { 
