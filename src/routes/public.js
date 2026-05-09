@@ -593,7 +593,7 @@ export default async function publicRoutes(fastify) {
 
   // Aceitar termos de uso e LGPD
   fastify.post('/api/motorista/aceitar-termos', async (request, reply) => {
-    console.log('Dados recebidos:', request.body)
+    console.log("BODY RECEBIDO:", request.body)
     const { token } = request.body
     if (!token) {
       console.log('[ACEITAR-TERMOS] Token missing in body')
