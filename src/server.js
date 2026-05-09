@@ -19,7 +19,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
  
 const fastify = Fastify({ logger: true }) 
  
-await fastify.register(fastifyCors, { origin: true }) 
+await fastify.register(fastifyCors, { 
+   origin: true, 
+   methods: ['GET', 'POST', 'OPTIONS'], 
+   allowedHeaders: ['Content-Type', 'Authorization'] 
+ }) 
 await fastify.register(fastifyJwt, { secret: process.env.JWT_SECRET }) 
 await fastify.register(fastifyStatic, { 
   root: join(__dirname, '..', 'public'), 

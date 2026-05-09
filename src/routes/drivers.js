@@ -180,20 +180,25 @@ export default async function driversRoutes(fastify) {
 
   // Aceitar termos de uso e LGPD
   fastify.post('/api/motorista/aceitar-termos', async (request, reply) => { 
-    console.log('[DEBUG] Body recebido:', request.body)
-    const { token } = request.body; 
-    if (!token) return reply.code(400).send({ error: 'Token obrigatório' }); 
+    try { 
+      const { token } = request.body; 
+      console.log('[DEBUG] Token recebido:', token); 
+      if (!token) return reply.code(400).send({ error: 'Token ausente no body' }); 
  
-    await query(` 
-      UPDATE drivers 
-      SET aceitou_termos = true, 
-          data_aceite_termos = CURRENT_TIMESTAMP, 
-          ip_aceite_termos = $1, 
-          versao_termos = '1.2' 
-      WHERE telegram_id = $2 OR token_perfil = $2 
-    `, [request.ip, token]); 
+      await query(` 
+        UPDATE drivers 
+        SET aceitou_termos = true, 
+            data_aceite_termos = CURRENT_TIMESTAMP, 
+            ip_aceite_termos = $1, 
+            versao_termos = '1.2' 
+        WHERE token_perfil = $2 OR telegram_id = $2 
+      `, [request.ip, token]); 
  
-    return { success: true }; 
+      return { success: true }; 
+    } catch (err) { 
+      console.error('[ERRO ACEITE]:', err); 
+      return reply.code(500).send({ error: err.message }); 
+    } 
   });
 
   // Atualizar status online/offline 

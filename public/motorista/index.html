@@ -572,7 +572,7 @@
      const res = await fetch('/api/motorista/aceitar-termos', { 
        method: 'POST', 
        headers: { 'Content-Type': 'application/json' }, 
-       body: JSON.stringify({ token: tokenMotorista }) 
+       body: JSON.stringify({ token: String(tokenMotorista) }) 
      }); 
  
      if (res.ok) { 
