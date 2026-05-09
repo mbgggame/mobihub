@@ -951,7 +951,14 @@
    } else if (acao === 'finalizar') { 
      if (!confirm('Finalizar?')) return 
      const r = await fetch(`/api/rides/${corridaAtualId}/finalizar-motorista`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token_motorista: tokenMotorista }) }) 
-     if (r.ok) { esconderCorridaAtiva() } 
+     if (r.ok) { 
+       corridaAtualId = null 
+       corridaAtualToken = null 
+       esconderCorridaAtiva() 
+       // Garante que o motorista continua online sem chamar carregar() 
+       motoristOnline = true 
+       renderizarStatusOnline({ online: 1 }) 
+     } 
      return 
    } else if (acao === 'cancelar') { 
      if (!confirm('Cancelar?')) return 

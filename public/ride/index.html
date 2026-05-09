@@ -431,11 +431,13 @@
      dadosAtuais = { ride, rating, paradas, config } 
      renderizar(ride, rating, paradas, config) 
      verificarParaPolling(ride.status) 
-     if (ride.status === 'aceita') { 
-       atualizarLocalizacaoMotorista(ride) 
-       carregarMensagens() 
+     
+     // Mostrar chat quando corrida estiver ativa 
+     if (['aceita', 'em_andamento', 'em_viagem'].includes(ride.status) || 
+         ['aguardando_passageiro', 'em_andamento', 'em_parada'].includes(ride.status_detalhe)) { 
        document.getElementById('card-chat').classList.remove('hidden') 
-       socket.emit('entrar:corrida', ride.id); 
+       carregarMensagens() 
+       socket.emit('entrar:corrida', ride.id) 
      } 
    } catch(e) { 
      console.error('[CARREGAR]', e) 
