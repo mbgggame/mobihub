@@ -426,12 +426,18 @@
    try { 
      const r = await fetch(`/api/ride/${token}`) 
      if (!r.ok) { 
-       document.body.innerHTML = '<p class="text-center mt-20 text-gray-500">Corrida não encontrada.</p>' 
        pollingAtivo = false 
+       location.href = '/solicitar' 
        return 
      } 
      const { ride, rating, paradas, config } = await r.json() 
      console.log('[POLLING] Status atual:', ride.status, '| Motorista:', ride.driver_nome) 
+ 
+     if (ride.status === 'concluida' || ride.status === 'cancelada') { 
+       pollingAtivo = false 
+       location.href = '/solicitar' 
+       return 
+     } 
  
      // BUG 3: Rastreamento do Motorista 
      if (ride.status === 'aceita' || (ride.status === 'em_andamento' && ride.status_detalhe === 'em_andamento')) { 

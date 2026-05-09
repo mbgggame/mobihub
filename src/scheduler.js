@@ -11,9 +11,26 @@ export function initScheduler() {
   setInterval(async () => { 
     await verificarAgendamentos() 
     await verificarChegada() 
+    await limparCorridasPresas() 
   }, 30 * 1000) // verifica a cada 30 segundos 
  
   console.log('[SCHEDULER] Iniciado — verifica a cada 30 segundos') 
+}
+
+async function limparCorridasPresas() {
+  try {
+    const result = await query(`
+      UPDATE rides
+      SET status = 'concluida', concluida_at = CURRENT_TIMESTAMP
+      WHERE status IN ('aberta', 'aceita', 'em_andamento')
+        AND created_at < NOW() - INTERVAL '4 hours'
+    `);
+    if (result.rowCount > 0) {
+      console.log(`[SCHEDULER] Limpadas ${result.rowCount} corridas presas`);
+    }
+  } catch(err) {
+    console.error('[SCHEDULER] Erro limparCorridasPresas:', err.message);
+  }
 } 
  
 async function verificarAgendamentos() { 
