@@ -3,6 +3,11 @@ import { requireAuth } from '../middleware/auth.js'
  
 export default async function publicRoutes(fastify) { 
  
+  // Configurações públicas
+  fastify.get('/api/config/mapbox', async (request, reply) => {
+    return { token: process.env.MAPBOX_TOKEN };
+  });
+
   // --- ROTAS DE CHAT ---
   
   // Buscar mensagens da corrida (passageiro) 

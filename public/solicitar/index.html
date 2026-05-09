@@ -335,12 +335,16 @@
  
  function initMap() { 
    map = L.map('map').setView([-20.3155, -40.3128], 13) 
-   L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoiZmFiaW9tbGFwIiwiYSI6ImNtb3lmODJwdDBzenEyd29ra2NjcWkwbWUifQ.2dgLxxG62IL7BpUOiOyVMQ', { 
-     attribution: '© <a href="https://www.mapbox.com/">Mapbox</a> © <a href="https://www.openstreetmap.org/">OpenStreetMap</a>', 
-     tileSize: 512, 
-     zoomOffset: -1, 
-     maxZoom: 19 
-   }).addTo(map) 
+   fetch('/api/config/mapbox') 
+     .then(r => r.json()) 
+     .then(({ token }) => { 
+       L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${token}`, { 
+         attribution: '© <a href="https://www.mapbox.com/">Mapbox</a> © <a href="https://www.openstreetmap.org/">OpenStreetMap</a>', 
+         tileSize: 512, 
+         zoomOffset: -1, 
+         maxZoom: 19 
+       }).addTo(map) 
+     });
  
    map.on('click', async (e) => { 
      const { lat, lng } = e.latlng 
