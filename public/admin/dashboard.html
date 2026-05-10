@@ -623,8 +623,10 @@
 
  async function aprovarMotorista(id) {
    console.log('[DASHBOARD] aprovarMotorista()', id)
-   const r = await fetch(`/api/drivers/${id}/aprovar`, {
-     method: 'PUT', headers: headers()
+   const r = await fetch(`/api/drivers/${id}`, {
+     method: 'PUT', 
+     headers: headers(),
+     body: JSON.stringify({ status_cadastro: 'aprovado' })
    })
    console.log('[DASHBOARD] aprovarMotorista response:', r.status)
    if (r.ok) {
@@ -636,9 +638,9 @@
  async function rejeitarMotorista(id) {
    if (!confirm('Tem certeza que quer rejeitar esse motorista?')) return
    console.log('[DASHBOARD] rejeitarMotorista()', id)
-   const r = await fetch(`/api/drivers/${id}/reprovar`, {
+   const r = await fetch(`/api/drivers/${id}`, {
      method: 'PUT', headers: headers(),
-     body: JSON.stringify({ motivo: 'Reprovado pelo admin' })
+     body: JSON.stringify({ status_cadastro: 'reprovado', motivo_reprovacao: 'Reprovado pelo admin' })
    })
    console.log('[DASHBOARD] rejeitarMotorista response:', r.status)
    if (r.ok) {
