@@ -684,11 +684,4 @@ export default async function ridesRoutes(fastify) {
     } 
   }) 
  
-  fastify.get('/api/clients', { preHandler: requireAuth }, async () => { 
-    const result = await dbQuery(` 
-      SELECT id, nome, telefone, total_corridas, media_avaliacao, total_avaliacoes 
-      FROM clients ORDER BY nome 
-    `) 
-    return result.rows
-  }) 
 }
