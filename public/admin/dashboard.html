@@ -574,10 +574,12 @@
    if (m.status_cadastro === 'pendente') {
      document.getElementById('modal-dossie-acoes').innerHTML = `
        <div class="flex gap-2">
-         <button onclick='aprovarMotorista(${m.id})' class="flex-1 bg-green-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-green-700">✓ Aprovar</button>
-         <button onclick='rejeitarMotorista(${m.id})' class="flex-1 bg-red-500 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-red-600">✗ Rejeitar</button>
+         <button id="btn-aprovar-dossie" class="flex-1 bg-green-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-green-700">✓ Aprovar</button>
+         <button id="btn-rejeitar-dossie" class="flex-1 bg-red-500 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-red-600">✗ Rejeitar</button>
        </div>
      `
+     document.getElementById('btn-aprovar-dossie').addEventListener('click', () => aprovarMotorista(m.id))
+     document.getElementById('btn-rejeitar-dossie').addEventListener('click', () => rejeitarMotorista(m.id))
    } else {
      document.getElementById('modal-dossie-acoes').innerHTML = ''
    }
