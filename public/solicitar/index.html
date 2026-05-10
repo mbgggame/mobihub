@@ -966,6 +966,9 @@
    marcarPonto(h.destino.lat, h.destino.lng, h.destino.endereco, 'destino') 
    const bounds = L.latLngBounds([h.origem.lat, h.origem.lng], [h.destino.lat, h.destino.lng]) 
    map.fitBounds(bounds, { padding: [40, 40] }) 
+   document.getElementById('busca-orig').dispatchEvent(new Event('input'))
+   document.getElementById('busca-dest').dispatchEvent(new Event('input'))
+   setTimeout(() => { calcularDistancia(); }, 500)
  } 
 
  // Funções do Histórico Modal
@@ -1042,8 +1045,9 @@
    const bounds = L.latLngBounds([origLat, origLng], [destLat, destLng])
    map.fitBounds(bounds, { padding: [40, 40] })
    
-   // Calcula o valor
-   calcularDistancia()
+   document.getElementById('busca-orig').dispatchEvent(new Event('input'))
+   document.getElementById('busca-dest').dispatchEvent(new Event('input'))
+   setTimeout(() => { calcularDistancia(); }, 500)
    verificarBotaoSolicitar()
  }
 
