@@ -738,6 +738,7 @@ export default async function publicRoutes(fastify) {
     return { driver, avaliacoes }
   })
 
+  // Fix: restaurar rotas de reputação
   fastify.get('/api/reputacao/cliente/:id', { preHandler: requireAuth }, async (request) => {
     const client = (await query(`
       SELECT id, nome, telefone, total_corridas, media_avaliacao, total_avaliacoes
