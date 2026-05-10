@@ -255,7 +255,37 @@
   </div> 
  
 </div> 
+
+<!-- MODAL DOSSIÊ --> 
+<div id="modal-dossie" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-start justify-center p-4 z-50 overflow-y-auto"> 
+  <div class="bg-white rounded-2xl max-w-2xl w-full my-8"> 
+    <div class="flex items-center justify-between p-5 border-b border-gray-200"> 
+      <h3 id="modal-dossie-titulo" class="font-semibold text-gray-900 text-lg">Dossiê do Motorista</h3> 
+      <button onclick="fecharModalDossie()" class="text-gray-500 hover:text-gray-700 text-xl font-bold">✕</button> 
+    </div> 
+
+    <div id="modal-dossie-conteudo" class="p-5 space-y-5"> 
+    </div> 
+
+    <div id="modal-dossie-acoes" class="p-5 border-t border-gray-200"> 
+    </div> 
+  </div> 
+</div> 
+
+<!-- MODAL DOCUMENTO --> 
+<div id="modal-documento-dash" class="hidden fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-50"> 
+  <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"> 
+    <div class="flex items-center justify-between p-4 border-b border-gray-200"> 
+      <h3 id="modal-doc-titulo-dash" class="font-semibold text-gray-900">Visualizar documento</h3> 
+      <button onclick="fecharModalDocumentoDash()" class="text-gray-500 hover:text-gray-700 text-xl font-bold">✕</button> 
+    </div> 
+    <div id="modal-doc-conteudo-dash" class="flex-1 overflow-auto p-4 flex items-center justify-center"> 
+    </div> 
+  </div> 
+</div> 
+ 
 <script> 
+ let motoristaAtualDossie = null 
  const token = () => localStorage.getItem('mobihub_token') 
  const headers = () => ({ 
    'Content-Type': 'application/json', 
@@ -562,6 +592,151 @@
    carregar() 
  } 
  
+ // ── MODAL DOCUMENTO
+ function abrirModalDocumentoDash(titulo, base64) {
+   document.getElementById('modal-doc-titulo-dash').textContent = titulo
+   const conteudo = document.getElementById('modal-doc-conteudo-dash')
+   conteudo.innerHTML = ''
+   
+   if (base64.startsWith('data:application/pdf')) {
+     const iframe = document.createElement('iframe')
+     iframe.src = base64
+     iframe.className = 'w-full h-[70vh]'
+     conteudo.appendChild(iframe)
+   } else {
+     const img = document.createElement('img')
+     img.src = base64
+     img.className = 'max-w-full max-h-[80vh] rounded-lg'
+     conteudo.appendChild(img)
+   }
+   
+   document.getElementById('modal-documento-dash').classList.remove('hidden')
+ }
+
+ function fecharModalDocumentoDash() {
+   document.getElementById('modal-documento-dash').classList.add('hidden')
+   document.getElementById('modal-doc-conteudo-dash').innerHTML = ''
+ }
+
+ // ── MODAL DOSSIÊ
+ function abrirDossie(d) {
+   motoristaAtualDossie = d
+
+   document.getElementById('modal-dossie-titulo').textContent = d.nome
+
+   const conteudo = document.getElementById('modal-dossie-conteudo')
+   conteudo.innerHTML = `
+     <div>
+       <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Dados Pessoais</h4>
+       <div class="bg-gray-50 rounded-lg px-4 py-3 text-sm text-gray-600 space-y-1">
+         <p><span class="font-medium">CPF:</span> ${d.cpf || '—'}</p>
+         <p><span class="font-medium">Telefone:</span> ${d.telefone || '—'}</p>
+         <p><span class="font-medium">Telegram ID:</span> ${d.telegram_id}</p>
+         <p><span class="font-medium">Renavam:</span> ${d.renavam || '—'}</p>
+       </div>
+     </div>
+
+     <div>
+       <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Veículo</h4>
+       <div class="bg-gray-50 rounded-lg px-4 py-3 text-sm text-gray-600 space-y-1">
+         <p><span class="font-medium">Marca/Modelo:</span> ${d.modelo_carro || '—'}</p>
+         <p><span class="font-medium">Ano:</span> ${d.ano_carro || '—'}</p>
+         <p><span class="font-medium">Cor:</span> ${d.cor_carro || '—'}</p>
+         <p><span class="font-medium">Placa:</span> <span class="font-mono">${d.placa || '—'}</span></p>
+       </div>
+     </div>
+
+     <div>
+       <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Documentos</h4>
+       <div class="grid grid-cols-2 gap-2">
+         <button ${d.crlv_base64 ? `onclick='abrirModalDocumentoDash("CRLV", "${d.crlv_base64.replace(/'/g, "\\'")}")'` : `disabled`
+           class="text-xs ${d.crlv_base64 
+             ? 'text-gray-700 border border-gray-200 hover:bg-gray-50' 
+             : 'text-gray-400 border border-gray-100 cursor-not-allowed'} rounded-lg py-2">
+           ${d.crlv_base64 ? '👁️ Ver CRLV' : 'Documento ausente'}
+         </button>
+         ${d.cnh_digital_base64 
+           ? `<button onclick='abrirModalDocumentoDash("CNH Digital", "${d.cnh_digital_base64.replace(/'/g, "\\'")}")'
+               class="text-xs text-gray-700 border border-gray-200 hover:bg-gray-50 rounded-lg py-2 col-span-2">
+               📄 Ver CNH Digital
+             </button>` 
+           : `
+           <button ${d.cnh_frente_base64 ? `onclick='abrirModalDocumentoDash("CNH Frente", "${d.cnh_frente_base64.replace(/'/g, "\\'")}")'` : `disabled`
+             class="text-xs ${d.cnh_frente_base64 
+               ? 'text-gray-700 border border-gray-200 hover:bg-gray-50' 
+               : 'text-gray-400 border border-gray-100 cursor-not-allowed'} rounded-lg py-2">
+             ${d.cnh_frente_base64 ? '🖼️ Ver CNH Frente' : 'Documento ausente'}
+           </button>
+           <button ${d.cnh_verso_base64 ? `onclick='abrirModalDocumentoDash("CNH Verso", "${d.cnh_verso_base64.replace(/'/g, "\\'")}")'` : `disabled`
+             class="text-xs ${d.cnh_verso_base64 
+               ? 'text-gray-700 border border-gray-200 hover:bg-gray-50' 
+               : 'text-gray-400 border border-gray-100 cursor-not-allowed'} rounded-lg py-2">
+             ${d.cnh_verso_base64 ? '🖼️ Ver CNH Verso' : 'Documento ausente'}
+           </button>
+           `}
+       </div>
+     </div>
+   `
+
+   const acoes = document.getElementById('modal-dossie-acoes')
+   acoes.innerHTML = `
+     <div class="mb-3">
+       <label class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Motivo da reprovação (opcional)</label>
+       <input id="motivo-reprovacao-dash" type="text" placeholder="Ex: Documento ilegível"
+         class="mt-2 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
+     </div>
+     <div class="grid grid-cols-2 gap-3">
+       <button onclick="reprovarMotoristaDash()" 
+         class="text-sm text-red-600 border border-red-200 rounded-xl py-3 hover:bg-red-50 font-semibold">
+         ❌ Reprovar
+       </button>
+       <button onclick="aprovarMotoristaDash()" 
+         class="text-sm text-white bg-green-600 rounded-xl py-3 hover:bg-green-700 font-semibold">
+         ✅ Aprovar
+       </button>
+     </div>
+   `
+
+   document.getElementById('modal-dossie').classList.remove('hidden')
+ }
+
+ function fecharModalDossie() {
+   document.getElementById('modal-dossie').classList.add('hidden')
+   motoristaAtualDossie = null
+ }
+
+ async function aprovarMotoristaDash() {
+   if (!motoristaAtualDossie) return
+   const r = await fetch(`/api/drivers/${motoristaAtualDossie.id}/aprovar`, { 
+     method: 'PUT', 
+     headers: headers() 
+   }) 
+   if (r.ok) { 
+     alert('✅ Motorista aprovado! Ele receberá uma notificação no Telegram.') 
+     fecharModalDossie()
+     carregar() 
+   } else { 
+     alert('Erro ao aprovar motorista') 
+   } 
+ }
+
+ async function reprovarMotoristaDash() {
+   if (!motoristaAtualDossie) return
+   const motivo = document.getElementById('motivo-reprovacao-dash').value.trim()
+   const r = await fetch(`/api/drivers/${motoristaAtualDossie.id}/reprovar`, { 
+     method: 'PUT', 
+     headers: headers(), 
+     body: JSON.stringify({ motivo }) 
+   }) 
+   if (r.ok) { 
+     alert('Motorista reprovado.') 
+     fecharModalDossie()
+     carregar() 
+   } else { 
+     alert('Erro ao reprovar motorista') 
+   } 
+ }
+
  async function carregarPendentes() { 
    const r = await fetch('/api/drivers/pendentes', { headers: headers() }) 
    if (!r.ok) return 
@@ -576,74 +751,27 @@
  
    section.classList.remove('hidden') 
    lista.innerHTML = pendentes.map(d => ` 
-     <div class="bg-white border-2 border-yellow-300 rounded-xl p-4"> 
-       <div class="flex items-center gap-3 mb-3"> 
-         <div class="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 border-2 border-yellow-300 ${d.foto_base64 ? '' : 'bg-yellow-100 flex items-center justify-center'}"> 
+     <div class="bg-white border-2 border-yellow-300 rounded-xl p-4 flex items-center justify-between gap-4"> 
+       <div class="flex items-center gap-3"> 
+         <div class="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 border-2 border-yellow-300 ${d.foto_base64 ? '' : 'bg-yellow-100 flex items-center justify-center'}"> 
            ${d.foto_base64 
              ? `<img src="${d.foto_base64}" class="w-full h-full object-cover"/>` 
-             : `<span class="text-yellow-700 font-bold text-xl">${d.nome.charAt(0).toUpperCase()}</span>` 
+             : `<span class="text-yellow-700 font-bold text-lg">${d.nome.charAt(0).toUpperCase()}</span>` 
            } 
          </div> 
-         <div class="flex-1"> 
-           <div class="flex items-center gap-2"> 
-             <p class="font-semibold text-gray-900">${d.nome}</p> 
-             <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700"> 
-               Pendente 
-             </span> 
-           </div> 
-           <p class="text-xs text-gray-500 mt-0.5">${d.telefone || '—'}</p> 
-           <p class="text-xs text-gray-400">Telegram: ${d.telegram_id}</p> 
+         <div> 
+           <p class="font-semibold text-gray-900">${d.nome}</p> 
+           <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700"> 
+             Pendente 
+           </span> 
          </div> 
        </div> 
- 
-       <div class="bg-gray-50 rounded-lg px-3 py-2 mb-3 text-xs text-gray-600 space-y-0.5"> 
-         <p><span class="font-medium">Carro:</span> ${d.modelo_carro} ${d.cor_carro} ${d.ano_carro}</p> 
-         <p><span class="font-medium">Placa:</span> <span class="font-mono">${d.placa}</span></p> 
-         <p><span class="font-medium">Cadastrado:</span> ${new Date(d.created_at).toLocaleString('pt-BR')}</p> 
-       </div> 
- 
-       <div class="flex gap-2"> 
-         <button onclick="aprovarMotorista(${d.id})" 
-           class="flex-1 bg-green-600 text-white rounded-lg py-2.5 text-sm font-semibold hover:bg-green-700"> 
-           ✅ Aprovar 
-         </button> 
-         <button onclick="reprovarMotorista(${d.id}, '${d.nome.replace(/'/g, "\\'")}')" 
-           class="flex-1 bg-red-50 text-red-600 border border-red-200 rounded-lg py-2.5 text-sm font-semibold hover:bg-red-100"> 
-           ❌ Reprovar 
-         </button> 
-       </div> 
+       <button onclick='abrirDossie(${JSON.stringify(d).replace(/'/g, "\\'")})'
+         class="text-sm text-yellow-700 border border-yellow-200 rounded-lg px-4 py-2.5 hover:bg-yellow-50 font-semibold">
+         🔍 ABRIR DOSSIÊ COMPLETO
+       </button>
      </div> 
    `).join('') 
- } 
- 
- async function aprovarMotorista(id) { 
-   const r = await fetch(`/api/drivers/${id}/aprovar`, { 
-     method: 'PUT', 
-     headers: headers() 
-   }) 
-   if (r.ok) { 
-     alert('✅ Motorista aprovado! Ele receberá uma notificação no Telegram.') 
-     carregar() 
-   } else { 
-     alert('Erro ao aprovar motorista') 
-   } 
- } 
- 
- async function reprovarMotorista(id, nome) { 
-   const motivo = prompt(`Motivo da reprovação de "${nome}" (opcional):`) 
-   if (motivo === null) return 
- 
-   const r = await fetch(`/api/drivers/${id}/reprovar`, { 
-     method: 'PUT', 
-     headers: headers(), 
-     body: JSON.stringify({ motivo }) 
-   }) 
-   if (r.ok) { 
-     alert('Motorista reprovado.') 
-     carregar() 
-   } else { 
-     alert('Erro ao reprovar motorista') 
-   } 
  } 
  
  async function gerarConvite() { 
