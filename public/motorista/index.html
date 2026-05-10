@@ -551,11 +551,17 @@
      const { driver, financeiro } = await r.json() 
      dadosAtuaisDriver = driver 
      
-     // Verifica se precisa aceitar termos
+     console.log('[DIAGNÓSTICO] aceitou_termos:', driver.aceitou_termos)
+     
+     // Verifica se precisa aceitar termos (força exibição)
      const modal = document.getElementById('modal-termos')
+     const bodyContent = document.getElementById('body-content') || document.body
+     
      if (!driver.aceitou_termos) {
+       modal.style.display = 'flex'
        modal.classList.remove('hidden')
      } else {
+       modal.style.display = 'none'
        modal.classList.add('hidden')
      }
      
@@ -563,7 +569,7 @@
      renderizarFinanceiro(financeiro) 
      renderizarStatusOnline(driver) 
      carregarVeiculos() 
- 
+
      // Inicia rastreamento de posição se online 
      if (driver.online) iniciarLocalizacao() 
    } catch(e) { 
