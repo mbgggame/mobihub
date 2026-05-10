@@ -198,7 +198,7 @@ export default async function ridesRoutes(fastify) {
     if (status === 'concluida') { 
       const io = getIo()
       if (io) {
-        io.to(`ride:${id}`).emit('corrida:finalizada', { rideId: id, driver_id: ride.driver_id })
+        io.to(`ride:${id}`).emit('corrida:concluida', { rideId: id, driver_id: ride.driver_id })
       }
       if (ride.driver_id) { 
         const driverResult = await dbQuery('SELECT * FROM drivers WHERE id = $1', [ride.driver_id]) 

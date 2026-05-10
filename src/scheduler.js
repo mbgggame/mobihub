@@ -123,7 +123,7 @@ async function verificarChegada() {
 
         const io = getIo()
         if (io) {
-          io.to(`ride:${ride.id}`).emit('corrida:finalizada', { rideId: ride.id, driver_id: ride.driver_id })
+          io.to(`ride:${ride.id}`).emit('corrida:concluida', { rideId: ride.id, driver_id: ride.driver_id })
         }
 
         // Atualiza contadores 
