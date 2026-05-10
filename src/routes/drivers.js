@@ -195,9 +195,12 @@ export default async function driversRoutes(fastify) {
  
   // Listar motoristas pendentes 
   fastify.get('/api/drivers/pendentes', { preHandler: requireAuth }, async () => { 
+    console.log('[API] Buscando motoristas pendentes...') 
     const result = await query(` 
       SELECT * FROM drivers WHERE status_cadastro = 'pendente' ORDER BY created_at DESC 
     `) 
+    console.log('[API] Motoristas pendentes encontrados:', result.rows.length) 
+    console.log('[API] Dados dos motoristas:', result.rows) 
     return result.rows 
   }) 
  

@@ -738,9 +738,15 @@
  }
 
  async function carregarPendentes() { 
+   console.log('[DASHBOARD] Buscando motoristas pendentes...') 
    const r = await fetch('/api/drivers/pendentes', { headers: headers() }) 
-   if (!r.ok) return 
+   console.log('[DASHBOARD] Resposta da API /api/drivers/pendentes:', r.status) 
+   if (!r.ok) { 
+     console.error('[DASHBOARD] Erro ao buscar pendentes:', r.statusText) 
+     return 
+   } 
    const pendentes = await r.json() 
+   console.log('[DASHBOARD] Motoristas pendentes recebidos:', pendentes) 
    const section = document.getElementById('section-pendentes') 
    const lista = document.getElementById('lista-pendentes') 
  
@@ -750,7 +756,9 @@
    } 
  
    section.classList.remove('hidden') 
-   lista.innerHTML = pendentes.map(d => ` 
+   lista.innerHTML = pendentes.map(d => { 
+     console.log('[DASHBOARD] Renderizando motorista:', d) 
+     return ` 
      <div class="bg-white border-2 border-yellow-300 rounded-xl p-4 flex items-center justify-between gap-4"> 
        <div class="flex items-center gap-3"> 
          <div class="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 border-2 border-yellow-300 ${d.foto_base64 ? '' : 'bg-yellow-100 flex items-center justify-center'}"> 
@@ -771,7 +779,7 @@
          🔍 ABRIR DOSSIÊ COMPLETO
        </button>
      </div> 
-   `).join('') 
+   `}).join('') 
  } 
  
  async function gerarConvite() { 
