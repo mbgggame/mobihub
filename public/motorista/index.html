@@ -577,21 +577,43 @@
      const btn = document.getElementById('btn-aceitar-termos')
      btn.textContent = 'Aguarde...'
      btn.disabled = true
-     const res = await fetch('/api/motorista/aceitar-termos', { 
-       method: 'POST', 
-       headers: { 'Content-Type': 'application/json' }, 
-       body: JSON.stringify({ token: String(tokenMotorista) }) 
-     }); 
- 
-     if (res.ok) { 
+     
+     let timeoutId = setTimeout(() => {
+       console.error('[TIMEOUT] Requisição demorou mais de 10 segundos')
+       alert('Demorou muito para responder. Tente novamente.')
+       btn.textContent = '✅ Concordo e aceito os termos'
+       btn.disabled = false
+     }, 10000)
+     
+     try {
+       const tokenParaEnviar = String(tokenMotorista || localStorage.getItem('tokenMotorista'))
+       console.log('[ACEITAR TERMOS] Token:', tokenParaEnviar)
+       
+       const res = await fetch('/api/motorista/aceitar-termos', { 
+         method: 'POST', 
+         mode: 'cors',
+         headers: { 'Content-Type': 'application/json' }, 
+         body: JSON.stringify({ token: tokenParaEnviar }) 
+       }); 
+
+       clearTimeout(timeoutId)
+       
+       if (res.ok) { 
          location.reload(); 
-     } else { 
+       } else { 
          const textoErro = await res.text(); 
          console.error('Erro MobiHub:', textoErro); 
          alert('Não foi possível gravar o aceite. Verifique sua conexão e tente novamente.'); 
-     } 
-     btn.textContent = '✅ Concordo e aceito os termos'
-     btn.disabled = false
+         btn.textContent = '✅ Concordo e aceito os termos'
+         btn.disabled = false
+       } 
+     } catch(e) {
+       clearTimeout(timeoutId)
+       console.error('[ERRO REDE]:', e)
+       alert('Erro de conexão. Verifique a internet e tente novamente.')
+       btn.textContent = '✅ Concordo e aceito os termos'
+       btn.disabled = false
+     }
  } 
  
  async function reportarLocalizacao(lat, lng) { 
