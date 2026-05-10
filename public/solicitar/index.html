@@ -854,7 +854,13 @@
      } 
 
      // Salva ride ID para avaliação
-     localStorage.setItem(STORAGE_RIDE_ID, d.rideId || d.id)
+     const rideId = d.rideId || d.id
+     localStorage.setItem(STORAGE_RIDE_ID, rideId)
+
+     // Entra na sala do socket da corrida
+     if (socket) {
+       socket.emit('entrar:corrida', rideId)
+     }
 
      // Sucesso: Configura link e redirecionamento 
      linkAcompanhamento = `${window.location.origin}/r/${d.token}` 
@@ -1126,6 +1132,10 @@
      console.log('[SOCKET] corrida:concluida', data)
      rideIdAvaliacao = data.rideId
      abrirModalAvaliacao(data.rideId)
+   })
+   socket.on('corrida:aceita', (data) => {
+     console.log('[SOCKET] corrida:aceita', data)
+     location.href = '/r/' + data.token
    })
  }
 
