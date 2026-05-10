@@ -772,7 +772,7 @@
        } 
      } else { 
        // Salva viagem no histórico
-       const STORAGE_HIST = 'mobihub_historico';
+       const STORAGE_HIST = 'mobi_historico';
        const hist = JSON.parse(localStorage.getItem(STORAGE_HIST) || '[]');
        hist.unshift({
          origem: { endereco: ride.origem, lat: ride.origem_lat, lng: ride.origem_lng },
@@ -983,7 +983,7 @@
      if (r.ok) { 
        document.getElementById('card-avaliacao').classList.add('hidden') 
        // Salva viagem no histórico
-       const STORAGE_HIST = 'mobihub_historico';
+       const STORAGE_HIST = 'mobi_historico';
        const ride = dadosAtuais.ride;
        const hist = JSON.parse(localStorage.getItem(STORAGE_HIST) || '[]');
        hist.unshift({
@@ -1161,12 +1161,12 @@ function repetirViagemPassageiro(i) {
   const h = hist[i]; 
   if (!h) return; 
   // Salva dados para preencher automaticamente na tela de solicitar 
-  localStorage.setItem('repetir_origem', h.origem.endereco); 
-  localStorage.setItem('repetir_destino', h.destino.endereco); 
-  localStorage.setItem('repetir_origem_lat', h.origem.lat); 
-  localStorage.setItem('repetir_origem_lng', h.origem.lng); 
-  localStorage.setItem('repetir_destino_lat', h.destino.lat); 
-  localStorage.setItem('repetir_destino_lng', h.destino.lng); 
+  localStorage.setItem('mobi_repetir_origem', h.origem.endereco); 
+  localStorage.setItem('mobi_repetir_destino', h.destino.endereco); 
+  localStorage.setItem('mobi_repetir_origem_lat', h.origem.lat); 
+  localStorage.setItem('mobi_repetir_origem_lng', h.origem.lng); 
+  localStorage.setItem('mobi_repetir_destino_lat', h.destino.lat); 
+  localStorage.setItem('mobi_repetir_destino_lng', h.destino.lng); 
   window.location.href = '/solicitar'; 
 } 
 

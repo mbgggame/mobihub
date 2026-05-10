@@ -262,10 +262,10 @@
  window.destino = null 
  window.valorCalculado = null 
  
- const STORAGE_CLIENTE = 'mobihub_cliente' 
- const STORAGE_FAV = 'mobihub_favoritos' 
- const STORAGE_HIST = 'mobihub_historico' 
- const STORAGE_TERMOS_PASSAGEIRO = 'termosAceitosPassageiro' 
+ const STORAGE_CLIENTE = 'mobi_cliente' 
+ const STORAGE_FAV = 'mobi_favoritos' 
+ const STORAGE_HIST = 'mobi_historico' 
+ const STORAGE_TERMOS_PASSAGEIRO = 'mobi_termos_passageiro' 
 
  let map, geocoder 
  let marcadores = { origem: null, destino: null } 
@@ -931,12 +931,12 @@
    } 
    initMap() 
    // Recupera dados de repetir viagem se vier do painel do passageiro 
-   const repOrigem = localStorage.getItem('repetir_origem'); 
-   const repDestino = localStorage.getItem('repetir_destino'); 
-   const repOrigemLat = localStorage.getItem('repetir_origem_lat'); 
-   const repOrigemLng = localStorage.getItem('repetir_origem_lng'); 
-   const repDestinoLat = localStorage.getItem('repetir_destino_lat'); 
-   const repDestinoLng = localStorage.getItem('repetir_destino_lng'); 
+   const repOrigem = localStorage.getItem('mobi_repetir_origem'); 
+   const repDestino = localStorage.getItem('mobi_repetir_destino'); 
+   const repOrigemLat = localStorage.getItem('mobi_repetir_origem_lat'); 
+   const repOrigemLng = localStorage.getItem('mobi_repetir_origem_lng'); 
+   const repDestinoLat = localStorage.getItem('mobi_repetir_destino_lat'); 
+   const repDestinoLng = localStorage.getItem('mobi_repetir_destino_lng'); 
    if (repOrigem && repDestino) { 
      setTimeout(() => { 
        marcarPonto(parseFloat(repOrigemLat), parseFloat(repOrigemLng), repOrigem, 'origem'); 
@@ -948,12 +948,12 @@
        destinoLat = parseFloat(repDestinoLat); 
        destinoLng = parseFloat(repDestinoLng); 
        verificarBotaoSolicitar(); 
-       localStorage.removeItem('repetir_origem'); 
-       localStorage.removeItem('repetir_destino'); 
-       localStorage.removeItem('repetir_origem_lat'); 
-       localStorage.removeItem('repetir_origem_lng'); 
-       localStorage.removeItem('repetir_destino_lat'); 
-       localStorage.removeItem('repetir_destino_lng'); 
+       localStorage.removeItem('mobi_repetir_origem'); 
+       localStorage.removeItem('mobi_repetir_destino'); 
+       localStorage.removeItem('mobi_repetir_origem_lat'); 
+       localStorage.removeItem('mobi_repetir_origem_lng'); 
+       localStorage.removeItem('mobi_repetir_destino_lat'); 
+       localStorage.removeItem('mobi_repetir_destino_lng'); 
      }, 800); 
    }
  }

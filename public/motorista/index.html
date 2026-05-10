@@ -447,7 +447,7 @@
 
 <script> 
  const tokenMotorista = location.pathname.split('/motorista/')[1] 
- localStorage.setItem('tokenMotorista', tokenMotorista)
+ localStorage.setItem('mobi_token_motorista', tokenMotorista)
  console.log('[INIT] Token motorista:', tokenMotorista)
  const socket = io()
  let novaFotoBase64 = null 
@@ -596,7 +596,7 @@
      }, 10000)
      
      try {
-       const tokenParaEnviar = String(tokenMotorista || localStorage.getItem('tokenMotorista'))
+       const tokenParaEnviar = String(tokenMotorista || localStorage.getItem('mobi_token_motorista'))
        console.log('[ACEITAR TERMOS] Token:', tokenParaEnviar)
        
        const res = await fetch('/api/motorista/aceitar-termos', { 
