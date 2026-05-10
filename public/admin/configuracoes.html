@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MobiHub — Configurações Globais</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <!-- HEADER -->
+  <div class="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+    <div class="flex items-center gap-3">
+      <a href="/admin" class="text-gray-500 hover:text-gray-700">← Voltar</a>
+      <h1 class="font-bold text-gray-900">Configurações Globais</h1>
+    </div>
+    <div class="flex gap-2"> 
+      <a href="/admin/tarifas" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors">💸 Tarifas</a> 
+      <a href="/admin/dashboard" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors">📊 Dashboard</a> 
+    </div> 
+  </div>
+
+  <div class="max-w-4xl mx-auto p-4 space-y-4">
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+      <h2 class="text-lg font-bold text-gray-900 mb-4">⚙️ Configurações da ELVIVA GROUP LTDA</h2>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Comissão da Plataforma (%)</label>
+          <input id="comissao_plataforma" type="number" step="1" min="0" max="100" 
+            class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Taxa de Cancelamento (R$)</label>
+          <input id="espera_taxa_cancelamento" type="number" step="0.01" min="0" 
+            class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Minutos de Espera Grátis</label>
+          <input id="espera_minutos_gratis" type="number" step="1" min="0" 
+            class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Valor do Minuto de Espera Excedente (R$)</label>
+          <input id="espera_valor_minuto" type="number" step="0.01" min="0" 
+            class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+        </div>
+
+        <button id="btn-salvar-config" onclick="salvarConfiguracoes()"
+          class="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl py-3 font-bold text-base transition-colors">
+          ✅ Salvar Configurações
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const token = () => localStorage.getItem('mobihub_token')
+    const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` })
+    
+    const isLoginPage = window.location.pathname === '/admin/login';
+    const tokenVal = localStorage.getItem('mobihub_token');
+
+    if (!tokenVal && !isLoginPage) {
+      location.href = '/admin/login';
+    }
+
+    let configAtual = {}
+
+    async function carregarConfiguracoes() {
+      try {
+        const r = await fetch('/api/configuracoes', { headers: headers() })
+        configAtual = await r.json()
+        
+        document.getElementById('comissao_plataforma').value = configAtual.comissao_plataforma || 25
+        document.getElementById('espera_taxa_cancelamento').value = configAtual.espera_taxa_cancelamento || 10.00
+        document.getElementById('espera_minutos_gratis').value = configAtual.espera_minutos_gratis || 3
+        document.getElementById('espera_valor_minuto').value = configAtual.espera_valor_minuto || 0.60
+      } catch (err) {
+        alert('Erro ao carregar configurações')
+      }
+    }
+
+    async function salvarConfiguracoes() {
+      const btn = document.getElementById('btn-salvar-config')
+      btn.textContent = 'Aguarde...'
+      btn.disabled = true
+
+      try {
+        const body = {
+          comissao_plataforma: parseFloat(document.getElementById('comissao_plataforma').value),
+          espera_taxa_cancelamento: parseFloat(document.getElementById('espera_taxa_cancelamento').value),
+          espera_minutos_gratis: parseInt(document.getElementById('espera_minutos_gratis').value),
+          espera_valor_minuto: parseFloat(document.getElementById('espera_valor_minuto').value)
+        }
+
+        const r = await fetch('/api/configuracoes', {
+          method: 'PUT',
+          headers: headers(),
+          body: JSON.stringify(body)
+        })
+
+        if (r.ok) {
+          alert('Configurações salvas com sucesso!')
+        } else {
+          const d = await r.json()
+          alert('Erro ao salvar: ' + (d.error || 'Erro desconhecido'))
+        }
+      } catch (err) {
+        alert('Erro de conexão')
+      } finally {
+        btn.textContent = '✅ Salvar Configurações'
+        btn.disabled = false
+      }
+    }
+
+    window.onload = carregarConfiguracoes
+  </script>
+</body>
+</html>

@@ -10,8 +10,9 @@ async function getConfig() {
   configs.forEach(c => obj[c.chave] = c.valor) 
   return obj 
 } 
- 
+
 async function calcularTarifa(dataHoraStr, distanciaKm) { 
+  const config = await getConfig()
   const data = new Date(dataHoraStr) 
   const diaSemana = data.getDay() 
   const hora = data.getHours() 
@@ -53,8 +54,9 @@ async function calcularTarifa(dataHoraStr, distanciaKm) {
 
   const excedente = Math.max(0, distanciaKm - tarifaAplicada.km_minimo) 
   const valor = tarifaAplicada.valor_minimo + (excedente * tarifaAplicada.valor_km) 
-  const valorMotorista = parseFloat((valor * 0.75).toFixed(2)) 
-  const valorMobihub = parseFloat((valor * 0.25).toFixed(2)) 
+  const comissaoPlataforma = parseFloat(config.comissao_plataforma || 25) / 100
+  const valorMotorista = parseFloat((valor * (1 - comissaoPlataforma)).toFixed(2)) 
+  const valorMobihub = parseFloat((valor * comissaoPlataforma).toFixed(2)) 
 
   return { 
     tarifa: tarifaAplicada.nome, 

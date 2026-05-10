@@ -216,7 +216,8 @@ export async function initDB() {
       ('espera_taxa_cancelamento', '10.00'), 
       ('parada_minutos_gratis', '5'), 
       ('parada_valor_minuto', '0.60'), 
-      ('valor_minimo_corrida', '15.00') 
+      ('valor_minimo_corrida', '15.00'),
+      ('comissao_plataforma', '25')
     ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor
   `) 
  
