@@ -18,6 +18,12 @@ import publicRoutes from './routes/public.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url)) 
 
+let ioInstance = null
+
+export function getIo() {
+  return ioInstance
+}
+
 const fastify = Fastify({ logger: true }) 
 
 await fastify.register(fastifyCors, { 
@@ -88,8 +94,8 @@ initBot()
 initScheduler() 
 
 // Inicializa Socket.IO (antes de listen!)
-const io = new Server(fastify.server, { cors: { origin: '*' } }); 
-io.on('connection', (socket) => { 
+ioInstance = new Server(fastify.server, { cors: { origin: '*' } }); 
+ioInstance.on('connection', (socket) => { 
   socket.on('motorista:posicao', (data) => { 
     // data = { rideId, lat, lng } 
     socket.broadcast.to(`ride:${data.rideId}`).emit('motorista:posicao', data); 

@@ -1183,8 +1183,13 @@ function iniciarPollingAutomatico() {
        markerMotorista = L.marker([data.lat, data.lng], { icon: iconMotorista }).addTo(map);
      }
    });
+
+   socket.on('corrida:finalizada', (data) => {
+     console.log('[SOCKET] Corrida finalizada:', data);
+     carregar();
+   });
  } 
- 
+
  iniciarPollingAutomatico(); 
  </script> 
  </body> 

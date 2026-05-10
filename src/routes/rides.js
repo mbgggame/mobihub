@@ -2,7 +2,8 @@ import { query as dbQuery, pool, query } from '../db.js'
 import { requireAuth } from '../middleware/auth.js' 
 import { sendRideToGroup, notifyDriverRateClient, editGroupMessage } from '../telegram.js' 
 import { v4 as uuidv4 } from 'uuid' 
-import { calculateInitialWaitCost, calculateStopCost, calculateTotalRideCost, calcularTempoMinutos, podeMotoristaCancel } from '../billing.js' 
+import { calculateInitialWaitCost, calculateStopCost, calculateTotalRideCost, calcularTempoMinutos, podeMotoristaCancel } from '../billing.js'
+import { getIo } from '../server.js' 
  
 async function getConfig() { 
   const configs = (await query('SELECT chave, valor FROM configuracoes')).rows 
@@ -195,6 +196,10 @@ export default async function ridesRoutes(fastify) {
     }
 
     if (status === 'concluida') { 
+      const io = getIo()
+      if (io) {
+        io.to(`ride:${id}`).emit('corrida:finalizada', { rideId: id, driver_id: ride.driver_id })
+      }
       if (ride.driver_id) { 
         const driverResult = await dbQuery('SELECT * FROM drivers WHERE id = $1', [ride.driver_id]) 
         const driver = driverResult.rows[0]

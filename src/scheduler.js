@@ -1,5 +1,6 @@
 import { query, pool } from './db.js' 
- 
+import { getIo } from './server.js'
+
 async function getConfig(chave) { 
   try { 
     const r = await query('SELECT valor FROM configuracoes WHERE chave = $1', [chave]) 
@@ -110,7 +111,7 @@ async function verificarChegada() {
  
       if (distancia <= raioMetros) { 
         console.log(`[SCHEDULER] Motorista chegou ao destino da corrida #${ride.id} (${distancia.toFixed(0)}m)`) 
- 
+
         // Conclui a corrida automaticamente 
         await query(` 
           UPDATE rides SET 
@@ -119,7 +120,12 @@ async function verificarChegada() {
             concluida_auto = 1 
           WHERE id = $1 
         `, [ride.id]) 
- 
+
+        const io = getIo()
+        if (io) {
+          io.to(`ride:${ride.id}`).emit('corrida:finalizada', { rideId: ride.id, driver_id: ride.driver_id })
+        }
+
         // Atualiza contadores 
         if (ride.driver_id) { 
           await query('UPDATE drivers SET total_viagens = total_viagens + 1 WHERE id = $1', [ride.driver_id]) 
@@ -127,7 +133,7 @@ async function verificarChegada() {
         if (ride.client_id) { 
           await query('UPDATE clients SET total_corridas = total_corridas + 1 WHERE id = $1', [ride.client_id]) 
         } 
- 
+
         // Notifica motorista para avaliar 
         try { 
           const { notifyDriverRateClient, editGroupMessage } = await import('./telegram.js') 
