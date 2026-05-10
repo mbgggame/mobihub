@@ -26,20 +26,6 @@
 </head> 
 <body class="bg-gray-50 min-h-screen pb-20"> 
 
-<!-- HEADER --> 
-<div class="bg-green-600 text-white px-4 py-3 flex items-center justify-between shadow sticky top-0 z-20"> 
-  <div class="flex items-center gap-2"> 
-    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"> 
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/> 
-    </svg> 
-    <span class="font-bold text-lg">MobiHub</span> 
-  </div> 
-  <div class="flex items-center gap-2"> 
-    <span id="badge-online" class="hidden text-xs px-2 py-0.5 rounded-full bg-green-500 text-white border border-green-300">● Online</span> 
-    <span id="badge-offline" class="text-xs px-2 py-0.5 rounded-full bg-red-500 text-white">○ Offline</span> 
-  </div> 
-</div>
-
 <!-- MODAL DE ACEITE DOS TERMOS -->
 <div id="modal-termos" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4 py-6">
   <div class="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
@@ -76,27 +62,43 @@
   </div>
 </div> 
 
-<!-- ABAS --> 
-<div class="bg-white border-b border-gray-200 sticky top-12 z-10"> 
-  <div class="flex"> 
-    <button onclick="mudarAba('painel')" id="aba-painel" 
-      class="aba-btn aba-ativa flex-1 py-3 text-sm text-center text-gray-600"> 
-      👤 Painel 
-    </button> 
-    <button onclick="mudarAba('corridas')" id="aba-corridas" 
-      class="aba-btn flex-1 py-3 text-sm text-center text-gray-600 relative"> 
-      🚗 Corridas 
-      <span id="badge-nova-corrida" class="hidden absolute top-1 right-4 w-2 h-2 bg-red-500 rounded-full"></span> 
-    </button> 
-    <button onclick="mudarAba('historico')" id="aba-historico" 
-      class="aba-btn flex-1 py-3 text-sm text-center text-gray-600"> 
-      📊 Histórico 
-    </button> 
-  </div> 
-</div> 
+<!-- CONTEÚDO PRINCIPAL (HIDDEN ATÉ ACEITE DOS TERMOS) -->
+<div id="conteudo-principal" class="hidden">
+  <!-- HEADER --> 
+  <div class="bg-green-600 text-white px-4 py-3 flex items-center justify-between shadow sticky top-0 z-20"> 
+    <div class="flex items-center gap-2"> 
+      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"> 
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/> 
+      </svg> 
+      <span class="font-bold text-lg">MobiHub</span> 
+    </div> 
+    <div class="flex items-center gap-2"> 
+      <span id="badge-online" class="hidden text-xs px-2 py-0.5 rounded-full bg-green-500 text-white border border-green-300">● Online</span> 
+      <span id="badge-offline" class="text-xs px-2 py-0.5 rounded-full bg-red-500 text-white">○ Offline</span> 
+    </div> 
+  </div>
 
-<!-- ═══════════════ ABA PAINEL ═══════════════ --> 
-<div id="tab-painel" class="max-w-lg mx-auto px-4 py-4 space-y-4"> 
+  <!-- ABAS --> 
+  <div class="bg-white border-b border-gray-200 sticky top-12 z-10"> 
+    <div class="flex"> 
+      <button onclick="mudarAba('painel')" id="aba-painel" 
+        class="aba-btn aba-ativa flex-1 py-3 text-sm text-center text-gray-600"> 
+        👤 Painel 
+      </button> 
+      <button onclick="mudarAba('corridas')" id="aba-corridas" 
+        class="aba-btn flex-1 py-3 text-sm text-center text-gray-600 relative"> 
+        🚗 Corridas 
+        <span id="badge-nova-corrida" class="hidden absolute top-1 right-4 w-2 h-2 bg-red-500 rounded-full"></span> 
+      </button> 
+      <button onclick="mudarAba('historico')" id="aba-historico" 
+        class="aba-btn flex-1 py-3 text-sm text-center text-gray-600"> 
+        📊 Histórico 
+      </button> 
+    </div> 
+  </div> 
+
+  <!-- ═══════════════ ABA PAINEL ═══════════════ --> 
+  <div id="tab-painel" class="max-w-lg mx-auto px-4 py-4 space-y-4"> 
 
   <!-- PERFIL --> 
   <div class="bg-white border border-gray-200 rounded-xl p-5"> 
@@ -553,16 +555,18 @@
      
      console.log('[DIAGNÓSTICO] aceitou_termos:', driver.aceitou_termos)
      
-     // Verifica se precisa aceitar termos (força exibição)
+     // Verifica se precisa aceitar termos (força exibição e bloqueia conteúdo)
      const modal = document.getElementById('modal-termos')
-     const bodyContent = document.getElementById('body-content') || document.body
+     const conteudoPrincipal = document.getElementById('conteudo-principal')
      
      if (!driver.aceitou_termos) {
        modal.style.display = 'flex'
        modal.classList.remove('hidden')
+       conteudoPrincipal.classList.add('hidden')
      } else {
        modal.style.display = 'none'
        modal.classList.add('hidden')
+       conteudoPrincipal.classList.remove('hidden')
      }
      
      renderizarPerfil(driver) 
@@ -1222,5 +1226,6 @@
  carregar() 
  setTimeout(polling, 3000) 
  </script> 
+</div>
 </body> 
 </html>
