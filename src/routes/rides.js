@@ -293,7 +293,17 @@ export default async function ridesRoutes(fastify) {
   }) 
  
   // Métricas para o Dashboard 
-  fastify.get('/api/metricas', { preHandler: requireAuth }, async () => { 
+  fastify.get('/api/metricas', { preHandler: requireAuth }, async (request) => { 
+    const { dataInicio, dataFim } = request.query
+
+    // Define o intervalo padrão (últimos 15 dias)
+    let dataInicioParam = dataInicio ? new Date(dataInicio) : new Date(Date.now() - 15 * 24 * 60 * 60 * 1000)
+    let dataFimParam = dataFim ? new Date(dataFim) : new Date()
+
+    // Ajusta para o início do dia e fim do dia
+    dataInicioParam.setHours(0, 0, 0, 0)
+    dataFimParam.setHours(23, 59, 59, 999)
+
     const resumoDiaResult = await dbQuery(` 
       SELECT 
         COUNT(*) as total_hoje, 
@@ -327,7 +337,7 @@ export default async function ridesRoutes(fastify) {
     `)
     const motoristasEmViagem = motoristasEmViagemResult.rows[0]
 
-    const ultimos15diasResult = await dbQuery(` 
+    const dadosPeriodoResult = await dbQuery(` 
       SELECT 
         created_at::date as dia, 
         COUNT(*) as corridas, 
@@ -335,13 +345,13 @@ export default async function ridesRoutes(fastify) {
         ROUND(SUM(CASE WHEN status='concluida' THEN valor * 0.25 ELSE 0 END)::numeric, 2) as lucro_liquido, 
         SUM(CASE WHEN status='concluida' THEN 1 ELSE 0 END) as concluidas 
       FROM rides 
-      WHERE created_at >= CURRENT_TIMESTAMP - INTERVAL '15 days' 
+      WHERE created_at >= $1 AND created_at <= $2
       GROUP BY created_at::date 
       ORDER BY dia ASC 
-    `) 
-    const ultimos15dias = ultimos15diasResult.rows
+    `, [dataInicioParam.toISOString(), dataFimParam.toISOString()]) 
+    const dadosPeriodo = dadosPeriodoResult.rows
 
-    // Demandas por hora
+    // Demandas por hora (últimos 7 dias, independente do filtro)
     const demandasPorHoraResult = await dbQuery(`
       SELECT 
         EXTRACT(HOUR FROM created_at) as hora,
@@ -358,17 +368,17 @@ export default async function ridesRoutes(fastify) {
 
     const tempoMedioAceiteResult = await dbQuery(` 
       SELECT ROUND(AVG(EXTRACT(EPOCH FROM (aceita_at - created_at)) / 60)::numeric, 1) as minutos 
-      FROM rides WHERE aceita_at IS NOT NULL AND created_at >= CURRENT_TIMESTAMP - INTERVAL '15 days' 
-    `) 
+      FROM rides WHERE aceita_at IS NOT NULL AND created_at >= $1 AND created_at <= $2
+    `, [dataInicioParam.toISOString(), dataFimParam.toISOString()]) 
     const tempoMedioAceite = tempoMedioAceiteResult.rows[0]
 
     const topMotoristasResult = await dbQuery(` 
       SELECT d.nome, d.total_viagens, ROUND(d.media_avaliacao::numeric, 1) as nota, 
         ROUND(SUM(r.valor)::numeric, 2) as receita 
       FROM drivers d JOIN rides r ON r.driver_id = d.id 
-      WHERE r.status = 'concluida' 
+      WHERE r.status = 'concluida' AND r.created_at >= $1 AND r.created_at <= $2
       GROUP BY d.id, d.nome, d.total_viagens, d.media_avaliacao ORDER BY receita DESC LIMIT 5 
-    `) 
+    `, [dataInicioParam.toISOString(), dataFimParam.toISOString()]) 
     const topMotoristas = topMotoristasResult.rows
 
     const avaliacaoMediaResult = await dbQuery(` 
@@ -398,7 +408,7 @@ export default async function ridesRoutes(fastify) {
         motoristas_disponiveis: parseInt(motoristasDisponiveis.total) || 0,
         motoristas_em_viagem: parseInt(motoristasEmViagem.total) || 0
       }, 
-      ultimos15dias,
+      dadosPeriodo,
       demandas_por_hora: demandasPorHora,
       tempoMedioAceite: parseFloat(tempoMedioAceite.minutos) || 0, 
       topMotoristas, 

@@ -30,6 +30,30 @@
 
 <div class="max-w-6xl mx-auto px-4 py-6 space-y-8"> 
 
+  <!-- FILTROS DE PERÍODO -->
+  <div class="bg-white border border-gray-200 rounded-xl p-4">
+    <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">Filtro de Período</h2>
+    <div class="flex flex-wrap items-center gap-4">
+      <div class="flex gap-2">
+        <button id="filtro-hoje" onclick="aplicarFiltro('hoje')" class="text-sm px-4 py-2 rounded-lg bg-green-600 text-white font-medium">Hoje</button>
+        <button id="filtro-15dias" onclick="aplicarFiltro('15dias')" class="text-sm px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Últimos 15 dias</button>
+        <button id="filtro-mes" onclick="aplicarFiltro('mes')" class="text-sm px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Último mês</button>
+        <button id="filtro-personalizado" onclick="aplicarFiltro('personalizado')" class="text-sm px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Personalizado</button>
+      </div>
+      <div id="personalizado-container" class="hidden flex items-center gap-3">
+        <div>
+          <label class="text-xs text-gray-500">Data Inicial</label>
+          <input type="date" id="data-inicio" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
+        </div>
+        <div>
+          <label class="text-xs text-gray-500">Data Final</label>
+          <input type="date" id="data-fim" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
+        </div>
+        <button onclick="carregarDadosPersonalizados()" class="text-sm bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">Aplicar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- CARDS RESUMO --> 
   <div> 
     <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">Resumo de hoje</h2> 
@@ -80,7 +104,7 @@
       </div> 
       <div class="bg-white border border-gray-200 rounded-xl p-4"> 
         <h3 class="text-sm font-medium text-gray-700 mb-3">👥 Passageiros Online</h3> 
-        <p class="text-3xl font-semibold text-gray-900 mt-1" id="card-passageiros-online">—</p> 
+        <p class="text-3xl font-semibold text-gray-900 mt-1" id="card-passageiros-online">0</p> 
         <p class="text-xs text-gray-400 mt-1">Últimos 5 minutos</p> 
       </div> 
     </div> 
@@ -103,11 +127,11 @@
   <!-- GRÁFICOS --> 
   <div class="grid grid-cols-1 md:grid-cols-3 gap-6"> 
     <div class="bg-white border border-gray-200 rounded-xl p-4 md:col-span-1"> 
-      <h3 class="text-sm font-medium text-gray-700 mb-4">Corridas — últimos 15 dias</h3> 
+      <h3 class="text-sm font-medium text-gray-700 mb-4">Corridas</h3> 
       <canvas id="grafico-corridas" height="200"></canvas> 
     </div> 
     <div class="bg-white border border-gray-200 rounded-xl p-4 md:col-span-2"> 
-      <h3 class="text-sm font-medium text-gray-700 mb-4">Receita vs Lucro — últimos 15 dias</h3> 
+      <h3 class="text-sm font-medium text-gray-700 mb-4">Receita vs Lucro</h3> 
       <canvas id="grafico-receita" height="200"></canvas> 
     </div> 
     <div class="bg-white border border-gray-200 rounded-xl p-4 md:col-span-3"> 
@@ -129,7 +153,7 @@
     <div class="bg-white border border-gray-200 rounded-xl p-4"> 
       <h3 class="text-sm font-medium text-gray-700 mb-3">Tempo médio de aceite</h3> 
       <p id="tempo-aceite" class="text-3xl font-semibold text-green-700 mt-2">—</p> 
-      <p class="text-xs text-gray-400 mt-1">minutos (últimos 15 dias)</p> 
+      <p class="text-xs text-gray-400 mt-1">minutos</p> 
     </div> 
   </div> 
 </div>
@@ -165,6 +189,9 @@
 <script> 
  let motoristaAtualDossie = null 
  let motoristasPendentesGlobais = [] 
+ let graficoCorridas, graficoReceita, graficoDemandas
+ let filtroAtual = 'hoje'
+ 
  const token = () => localStorage.getItem('mobihub_token') 
  const headers = () => ({ 
    'Content-Type': 'application/json', 
@@ -187,20 +214,89 @@
    cancelada: 'bg-red-100 text-red-700' 
  } 
 
- let graficoCorridas, graficoReceita, graficoDemandas
+ // Funções de filtro
+ function aplicarFiltro(tipo) {
+   filtroAtual = tipo
+   
+   // Atualiza o estilo dos botões
+   document.querySelectorAll('[id^="filtro-"]').forEach(btn => {
+     btn.className = 'text-sm px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200'
+   })
+   document.getElementById(`filtro-${tipo}`).className = 'text-sm px-4 py-2 rounded-lg bg-green-600 text-white font-medium'
+   
+   // Mostra/oculta container personalizado
+   if (tipo === 'personalizado') {
+     document.getElementById('personalizado-container').classList.remove('hidden')
+     // Preenche com datas padrão
+     const hoje = new Date()
+     const quinzeDiasAtras = new Date(hoje.getTime() - 15 * 24 * 60 * 60 * 1000)
+     document.getElementById('data-inicio').value = formatarDataInput(quinzeDiasAtras)
+     document.getElementById('data-fim').value = formatarDataInput(hoje)
+   } else {
+     document.getElementById('personalizado-container').classList.add('hidden')
+     carregar()
+   }
+ }
+ 
+ function formatarDataInput(data) {
+   const ano = data.getFullYear()
+   const mes = String(data.getMonth() + 1).padStart(2, '0')
+   const dia = String(data.getDate()).padStart(2, '0')
+   return `${ano}-${mes}-${dia}`
+ }
+ 
+ function carregarDadosPersonalizados() {
+   carregar()
+ }
+ 
+ function getParametrosData() {
+   let dataInicio, dataFim
+   const hoje = new Date()
+   hoje.setHours(0, 0, 0, 0)
+   
+   switch (filtroAtual) {
+     case 'hoje':
+       dataInicio = hoje
+       dataFim = new Date(hoje.getTime() + 24 * 60 * 60 * 1000 - 1)
+       break
+     case '15dias':
+       dataInicio = new Date(hoje.getTime() - 15 * 24 * 60 * 60 * 1000)
+       dataFim = new Date(hoje.getTime() + 24 * 60 * 60 * 1000 - 1)
+       break
+     case 'mes':
+       dataInicio = new Date(hoje.getTime() - 30 * 24 * 60 * 60 * 1000)
+       dataFim = new Date(hoje.getTime() + 24 * 60 * 60 * 1000 - 1)
+       break
+     case 'personalizado':
+       const di = document.getElementById('data-inicio').value
+       const df = document.getElementById('data-fim').value
+       if (!di || !df) {
+         alert('Selecione data inicial e final!')
+         return null
+       }
+       dataInicio = new Date(di)
+       dataInicio.setHours(0, 0, 0, 0)
+       dataFim = new Date(df)
+       dataFim.setHours(23, 59, 59, 999)
+       break
+   }
+   return { dataInicio: dataInicio.toISOString(), dataFim: dataFim.toISOString() }
+ }
 
  async function carregar() { 
    const tk = token() 
    if (!tk) { location.href = '/admin/login'; return } 
+   
+   const paramsData = getParametrosData()
+   if (!paramsData) return
 
    try { 
      const [metricasRes, configsRes, tarifasRes] = await Promise.all([ 
-       fetch('/api/metricas', { headers: headers() }), 
+       fetch(`/api/metricas?dataInicio=${encodeURIComponent(paramsData.dataInicio)}&dataFim=${encodeURIComponent(paramsData.dataFim)}`, { headers: headers() }), 
        fetch('/api/configuracoes', { headers: headers() }), 
        fetch('/api/tarifas', { headers: headers() }) 
      ]) 
 
-     // Se qualquer rota retornar 401, redireciona para login 
      if (metricasRes.status === 401 || configsRes.status === 401 || tarifasRes.status === 401) { 
        localStorage.removeItem('mobihub_token') 
        location.href = '/admin/login' 
@@ -218,10 +314,9 @@
 
      renderCards(metricas.resumoDia) 
      renderCorridasAtivas(metricas.corridasAtivas || []) 
-     renderGraficos(metricas.ultimos15dias || [], metricas.demandas_por_hora || []) 
+     renderGraficos(metricas.dadosPeriodo || [], metricas.demandas_por_hora || []) 
      renderTopMotoristas(metricas.topMotoristas || []) 
      renderAvaliacoes(metricas.avaliacaoMedia || {}) 
-     renderConfigs(configs || {}) 
      document.getElementById('tempo-aceite').textContent = 
        metricas.tempoMedioAceite ? `${metricas.tempoMedioAceite} min` : '—' 
 
@@ -358,10 +453,6 @@
          <p class="text-sm font-medium text-gray-700">${av?.clientes||'—'} / 5.0</p> 
        </div> 
      </div>` 
- } 
-
- function renderConfigs(c) { 
-   // Configs já estão em /admin/configuracoes, não precisamos mais aqui!
  } 
 
  async function atualizarStatus(id, status) { 
