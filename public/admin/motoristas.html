@@ -19,113 +19,10 @@
 
 <div class="max-w-2xl mx-auto px-4 py-6 space-y-6"> 
 
-  <!-- FORMULÁRIO --> 
-  <div class="bg-white border border-gray-200 rounded-xl p-5"> 
-    <h2 id="form-titulo" class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">Cadastrar motorista</h2> 
-    <input type="hidden" id="edit-id"/> 
-    <div class="grid grid-cols-1 gap-3"> 
-      <div> 
-        <label class="text-xs text-gray-500 font-medium">Nome completo</label> 
-        <input id="f-nome" type="text" placeholder="Nome completo" 
-          class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-      </div> 
-      <div class="grid grid-cols-2 gap-3"> 
-        <div> 
-          <label class="text-xs text-gray-500 font-medium">Telefone</label> 
-          <input id="f-telefone" type="tel" placeholder="(27) 99999-9999" 
-            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-        </div> 
-        <div> 
-          <label class="text-xs text-gray-500 font-medium">Telegram ID</label> 
-          <input id="f-telegram" type="text" placeholder="Ex: 1479908250" 
-            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-        </div> 
-      </div> 
-      <div class="grid grid-cols-2 gap-3"> 
-        <div> 
-          <label class="text-xs text-gray-500 font-medium">Modelo do carro</label> 
-          <input id="f-modelo" type="text" placeholder="Ex: BYD King GS" 
-            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-        </div> 
-        <div> 
-          <label class="text-xs text-gray-500 font-medium">Ano</label> 
-          <input id="f-ano" type="text" placeholder="Ex: 2024" 
-            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-        </div> 
-      </div> 
-      <div class="grid grid-cols-2 gap-3"> 
-        <div> 
-          <label class="text-xs text-gray-500 font-medium">Cor do carro</label> 
-          <input id="f-cor" type="text" placeholder="Ex: Prata" 
-            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-        </div> 
-        <div> 
-          <label class="text-xs text-gray-500 font-medium">Placa</label> 
-          <input id="f-placa" type="text" placeholder="Ex: SGZ2D22" 
-            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-        </div> 
-      </div> 
-
-      <!-- FOTO --> 
-      <div> 
-        <label class="text-xs text-gray-500 font-medium">Foto do motorista</label> 
-        <div class="mt-2 flex gap-2"> 
-          <button type="button" onclick="abrirCamera()" 
-            class="flex-1 flex items-center justify-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:border-green-300"> 
-            📷 Tirar foto 
-          </button> 
-          <button type="button" onclick="document.getElementById('input-foto').click()" 
-            class="flex-1 flex items-center justify-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:border-green-300"> 
-            🖼️ Galeria 
-          </button> 
-        </div> 
-        <input id="input-foto" type="file" accept="image/*" class="hidden" onchange="processarFoto(event)"/> 
-        <canvas id="canvas-foto" class="hidden"></canvas> 
-
-        <div id="area-camera" class="hidden mt-2"> 
-          <video id="video-camera" autoplay playsinline 
-            class="w-full rounded-lg" style="max-height:220px;object-fit:cover;background:#000"></video> 
-          <div class="flex gap-2 mt-2"> 
-            <button type="button" onclick="capturarFoto()" 
-              class="flex-1 bg-green-600 text-white rounded-lg py-2 text-sm font-medium"> 
-              📸 Capturar 
-            </button> 
-            <button type="button" onclick="fecharCamera()" 
-              class="flex-1 bg-white border border-gray-200 text-gray-600 rounded-lg py-2 text-sm"> 
-              Cancelar 
-            </button> 
-          </div> 
-        </div> 
-
-        <div id="preview-foto" class="hidden mt-3 flex justify-center"> 
-          <div class="relative"> 
-            <img id="img-preview" src="" alt="Preview" 
-              class="w-24 h-24 rounded-full object-cover border-4 border-green-400"/> 
-            <button onclick="removerFoto()" 
-              class="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center">✕</button> 
-          </div> 
-        </div> 
-      </div> 
-
-      <div id="erro-form" class="hidden text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2"></div> 
-
-      <div class="flex gap-2"> 
-        <button id="btn-salvar" onclick="salvar()" 
-          class="flex-1 bg-green-600 text-white rounded-xl py-3 font-semibold text-sm hover:bg-green-700"> 
-          Cadastrar motorista 
-        </button> 
-        <button id="btn-cancelar" onclick="cancelarEdicao()" 
-          class="hidden border border-gray-200 text-gray-600 rounded-xl py-3 px-4 text-sm hover:bg-gray-50"> 
-          Cancelar 
-        </button> 
-      </div> 
-    </div> 
-  </div> 
-
-  <!-- LISTA --> 
+  <!-- LISTA RESUMIDA --> 
   <div> 
     <div class="flex items-center justify-between mb-3"> 
-      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Motoristas cadastrados</h2> 
+      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Motoristas</h2> 
       <button onclick="carregarMotoristas()" class="text-xs text-green-600 hover:text-green-800">↻ Atualizar</button> 
     </div> 
     <div id="lista-motoristas" class="space-y-3"></div> 
@@ -133,23 +30,19 @@
 
 </div> 
 
-<!-- MODAL TOKEN --> 
-<div id="modal-token" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-50"> 
-  <div class="bg-white rounded-2xl max-w-sm w-full p-6"> 
-    <h3 class="font-semibold text-gray-900 mb-2">Link do perfil</h3> 
-    <p class="text-xs text-gray-500 mb-3">Envie este link para o motorista ver seu perfil e avaliações</p> 
-    <div class="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 mb-4"> 
-      <p id="txt-link-perfil" class="text-xs text-green-700 font-mono break-all"></p> 
+<!-- MODAL DETALHES --> 
+<div id="modal-detalhes" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-start justify-center p-4 z-50 overflow-y-auto"> 
+  <div class="bg-white rounded-2xl max-w-2xl w-full my-8"> 
+    <div class="flex items-center justify-between p-5 border-b border-gray-200"> 
+      <h3 id="modal-titulo" class="font-semibold text-gray-900 text-lg">Detalhes do Motorista</h3> 
+      <button onclick="fecharModalDetalhes()" class="text-gray-500 hover:text-gray-700 text-xl font-bold">✕</button> 
     </div> 
-    <div class="flex gap-2"> 
-      <button onclick="copiarLinkPerfil()" 
-        class="flex-1 bg-green-600 text-white rounded-lg py-2.5 text-sm font-medium"> 
-        📋 Copiar link 
-      </button> 
-      <button onclick="fecharModalToken()" 
-        class="flex-1 border border-gray-200 text-gray-600 rounded-lg py-2.5 text-sm"> 
-        Fechar 
-      </button> 
+
+    <div id="modal-conteudo" class="p-5 space-y-5"> 
+    </div> 
+
+    <!-- AÇÕES FINAIS --> 
+    <div id="modal-acoes" class="p-5 border-t border-gray-200"> 
     </div> 
   </div> 
 </div> 
@@ -159,8 +52,7 @@
   <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"> 
     <div class="flex items-center justify-between p-4 border-b border-gray-200"> 
       <h3 id="modal-doc-titulo" class="font-semibold text-gray-900">Visualizar documento</h3> 
-      <button onclick="fecharModalDocumento()" 
-        class="text-gray-500 hover:text-gray-700 text-xl font-bold">✕</button> 
+      <button onclick="fecharModalDocumento()" class="text-gray-500 hover:text-gray-700 text-xl font-bold">✕</button> 
     </div> 
     <div id="modal-doc-conteudo" class="flex-1 overflow-auto p-4 flex items-center justify-center"> 
     </div> 
@@ -178,163 +70,9 @@ if (!tokenVal && !isLoginPage) {
   location.href = '/admin/login';
 } 
 
-let fotoBase64 = null 
-let streamCamera = null 
-let linkPerfilAtual = '' 
+let motoristaAtual = null
 
 function sair() { localStorage.removeItem('mobihub_token'); location.href = '/admin/login' } 
-
-// ── CÂMERA ────────────────────────────── 
-async function abrirCamera() { 
-  try { 
-    streamCamera = await navigator.mediaDevices.getUserMedia({ 
-      video: { facingMode: 'user', width: 400, height: 400 }, audio: false 
-    }) 
-    document.getElementById('video-camera').srcObject = streamCamera 
-    document.getElementById('area-camera').classList.remove('hidden') 
-  } catch(e) { 
-    alert('Não foi possível acessar a câmera. Verifique as permissões.') 
-  } 
-} 
-
-function fecharCamera() { 
-  if (streamCamera) { streamCamera.getTracks().forEach(t => t.stop()); streamCamera = null } 
-  document.getElementById('area-camera').classList.add('hidden') 
-  document.getElementById('video-camera').srcObject = null 
-} 
-
-function capturarFoto() { 
-  const video = document.getElementById('video-camera') 
-  const canvas = document.getElementById('canvas-foto') 
-  const size = 400 
-  canvas.width = size; canvas.height = size 
-  const ctx = canvas.getContext('2d') 
-  const vw = video.videoWidth, vh = video.videoHeight 
-  const lado = Math.min(vw, vh) 
-  ctx.drawImage(video, (vw-lado)/2, (vh-lado)/2, lado, lado, 0, 0, size, size) 
-  aplicarFoto(canvas.toDataURL('image/jpeg', 0.85)) 
-  fecharCamera() 
-} 
-
-function processarFoto(event) { 
-  const file = event.target.files[0] 
-  if (!file) return 
-  const reader = new FileReader() 
-  reader.onload = e => { 
-    const img = new Image() 
-    img.onload = () => { 
-      const canvas = document.getElementById('canvas-foto') 
-      const size = 400 
-      canvas.width = size; canvas.height = size 
-      const ctx = canvas.getContext('2d') 
-      const lado = Math.min(img.width, img.height) 
-      ctx.drawImage(img, (img.width-lado)/2, (img.height-lado)/2, lado, lado, 0, 0, size, size) 
-      aplicarFoto(canvas.toDataURL('image/jpeg', 0.85)) 
-    } 
-    img.src = e.target.result 
-  } 
-  reader.readAsDataURL(file) 
-  event.target.value = '' 
-} 
-
-function aplicarFoto(base64) { 
-  fotoBase64 = base64 
-  document.getElementById('img-preview').src = base64 
-  document.getElementById('preview-foto').classList.remove('hidden') 
-} 
-
-function removerFoto() { 
-  fotoBase64 = null 
-  document.getElementById('preview-foto').classList.add('hidden') 
-  document.getElementById('img-preview').src = '' 
-} 
-
-// ── FORMULÁRIO ────────────────────────── 
-function limparForm() { 
-  ['f-nome','f-telefone','f-telegram','f-modelo','f-ano','f-cor','f-placa'].forEach(id => { 
-    document.getElementById(id).value = '' 
-  }) 
-  document.getElementById('edit-id').value = '' 
-  removerFoto() 
-  document.getElementById('erro-form').classList.add('hidden') 
-  document.getElementById('btn-salvar').textContent = 'Cadastrar motorista' 
-  document.getElementById('btn-cancelar').classList.add('hidden') 
-  document.getElementById('form-titulo').textContent = 'Cadastrar motorista' 
-} 
-
-function cancelarEdicao() { limparForm() } 
-
-function editarMotorista(d) { 
-  document.getElementById('form-titulo').textContent = 'Editar motorista' 
-  document.getElementById('edit-id').value = d.id 
-  document.getElementById('f-nome').value = d.nome || '' 
-  document.getElementById('f-telefone').value = d.telefone || '' 
-  document.getElementById('f-telegram').value = d.telegram_id || '' 
-  document.getElementById('f-modelo').value = d.modelo_carro || '' 
-  document.getElementById('f-ano').value = d.ano_carro || '' 
-  document.getElementById('f-cor').value = d.cor_carro || '' 
-  document.getElementById('f-placa').value = d.placa || '' 
-  document.getElementById('btn-salvar').textContent = 'Salvar alterações' 
-  document.getElementById('btn-cancelar').classList.remove('hidden') 
-  if (d.foto_base64) { 
-    fotoBase64 = d.foto_base64 
-    document.getElementById('img-preview').src = d.foto_base64 
-    document.getElementById('preview-foto').classList.remove('hidden') 
-  } else { 
-    removerFoto() 
-  } 
-  window.scrollTo({ top: 0, behavior: 'smooth' }) 
-} 
-
-async function salvar() { 
-  const id = document.getElementById('edit-id').value 
-  const body = { 
-    nome: document.getElementById('f-nome').value.trim(), 
-    telefone: document.getElementById('f-telefone').value.trim(), 
-    telegram_id: document.getElementById('f-telegram').value.trim(), 
-    modelo_carro: document.getElementById('f-modelo').value.trim(), 
-    ano_carro: document.getElementById('f-ano').value.trim(), 
-    cor_carro: document.getElementById('f-cor').value.trim(), 
-    placa: document.getElementById('f-placa').value.trim(), 
-    foto_base64: fotoBase64 || null 
-  } 
-
-  const erro = document.getElementById('erro-form') 
-  if (!body.nome || !body.telegram_id || !body.modelo_carro || !body.placa) { 
-    erro.textContent = 'Preencha todos os campos obrigatórios' 
-    erro.classList.remove('hidden') 
-    return 
-  } 
-  erro.classList.add('hidden') 
-
-  const btn = document.getElementById('btn-salvar') 
-  btn.textContent = 'Salvando...' 
-  btn.disabled = true 
-
-  try { 
-    const url = id ? `/api/drivers/${id}` : '/api/drivers' 
-    const method = id ? 'PUT' : 'POST' 
-    const r = await fetch(url, { method, headers: headers(), body: JSON.stringify(body) }) 
-    const d = await r.json() 
-
-    if (!r.ok) { 
-      erro.textContent = d.error || 'Erro ao salvar' 
-      erro.classList.remove('hidden') 
-      btn.textContent = id ? 'Salvar alterações' : 'Cadastrar motorista' 
-      btn.disabled = false 
-      return 
-    } 
-
-    limparForm() 
-    btn.disabled = false 
-    carregarMotoristas() 
-  } catch(e) { 
-    erro.textContent = 'Erro de conexão' 
-    erro.classList.remove('hidden') 
-    btn.textContent = id ? 'Salvar alterações' : 'Cadastrar motorista' 
-    btn.disabled = false 
-  } 
-} 
 
 // ── MODAL DOCUMENTO
 function abrirModalDocumento(titulo, base64) {
@@ -362,6 +100,140 @@ function fecharModalDocumento() {
   document.getElementById('modal-doc-conteudo').innerHTML = ''
 }
 
+// ── MODAL DETALHES
+function abrirModalDetalhes(d) {
+  motoristaAtual = d
+
+  const statusCor = d.status_cadastro === 'aprovado' ? 'bg-green-100 text-green-700' 
+      : d.status_cadastro === 'pendente' ? 'bg-yellow-100 text-yellow-700' 
+      : 'bg-red-100 text-red-700'
+  const statusTexto = d.status_cadastro === 'aprovado' ? 'Aprovado' 
+      : d.status_cadastro === 'pendente' ? 'Em Análise' 
+      : 'Reprovado'
+
+  document.getElementById('modal-titulo').textContent = d.nome
+
+  // Conteúdo principal
+  const conteudo = document.getElementById('modal-conteudo')
+  conteudo.innerHTML = `
+    <div>
+      <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Status</h4>
+      <span class="px-2.5 py-1 rounded-full text-xs font-medium ${statusCor}">
+        ${statusTexto}
+      </span>
+    </div>
+
+    <div>
+      <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Dados Pessoais</h4>
+      <div class="bg-gray-50 rounded-lg px-4 py-3 text-sm text-gray-600 space-y-1">
+        <p><span class="font-medium">CPF:</span> ${d.cpf || '—'}</p>
+        <p><span class="font-medium">Telefone:</span> ${d.telefone || '—'}</p>
+        <p><span class="font-medium">Telegram ID:</span> ${d.telegram_id}</p>
+      </div>
+    </div>
+
+    <div>
+      <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Veículo</h4>
+      <div class="bg-gray-50 rounded-lg px-4 py-3 text-sm text-gray-600 space-y-1">
+        <p><span class="font-medium">Marca/Modelo:</span> ${d.modelo_carro || '—'}</p>
+        <p><span class="font-medium">Ano:</span> ${d.ano_carro || '—'}</p>
+        <p><span class="font-medium">Cor:</span> ${d.cor_carro || '—'}</p>
+        <p><span class="font-medium">Placa:</span> <span class="font-mono">${d.placa || '—'}</span></p>
+        <p><span class="font-medium">Renavam:</span> ${d.renavam || '—'}</p>
+      </div>
+    </div>
+
+    <div>
+      <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Documentos</h4>
+      <div class="grid grid-cols-2 gap-2">
+        <button ${d.crlv_base64 ? `onclick='abrirModalDocumento("CRLV", "${d.crlv_base64.replace(/'/g, "\\'")}")'` : `disabled`
+          class="text-xs ${d.crlv_base64 
+            ? 'text-gray-700 border border-gray-200 hover:bg-gray-50' 
+            : 'text-gray-400 border border-gray-100 cursor-not-allowed'} rounded-lg py-2">
+          ${d.crlv_base64 ? '👁️ Ver CRLV' : 'Documento ausente'}
+        </button>
+        ${d.cnh_digital_base64 
+          ? `<button onclick='abrirModalDocumento("CNH Digital", "${d.cnh_digital_base64.replace(/'/g, "\\'")}")'
+              class="text-xs text-gray-700 border border-gray-200 hover:bg-gray-50 rounded-lg py-2 col-span-2">
+              📄 Ver CNH Digital
+            </button>` 
+          : `
+          <button ${d.cnh_frente_base64 ? `onclick='abrirModalDocumento("CNH Frente", "${d.cnh_frente_base64.replace(/'/g, "\\'")}")'` : `disabled`
+            class="text-xs ${d.cnh_frente_base64 
+              ? 'text-gray-700 border border-gray-200 hover:bg-gray-50' 
+              : 'text-gray-400 border border-gray-100 cursor-not-allowed'} rounded-lg py-2">
+            ${d.cnh_frente_base64 ? '🖼️ Ver CNH Frente' : 'Documento ausente'}
+          </button>
+          <button ${d.cnh_verso_base64 ? `onclick='abrirModalDocumento("CNH Verso", "${d.cnh_verso_base64.replace(/'/g, "\\'")}")'` : `disabled`
+            class="text-xs ${d.cnh_verso_base64 
+              ? 'text-gray-700 border border-gray-200 hover:bg-gray-50' 
+              : 'text-gray-400 border border-gray-100 cursor-not-allowed'} rounded-lg py-2">
+            ${d.cnh_verso_base64 ? '🖼️ Ver CNH Verso' : 'Documento ausente'}
+          </button>
+          `}
+      </div>
+    </div>
+  `
+
+  // Ações
+  const acoes = document.getElementById('modal-acoes')
+  if (d.status_cadastro === 'pendente') {
+    acoes.innerHTML = `
+      <div class="mb-3">
+        <label class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Motivo da reprovação (opcional)</label>
+        <input id="motivo-reprovacao" type="text" placeholder="Ex: Documento ilegível"
+          class="mt-2 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <button onclick="reprovarMotorista()" 
+          class="text-sm text-red-600 border border-red-200 rounded-xl py-3 hover:bg-red-50 font-semibold">
+          ❌ Reprovar
+        </button>
+        <button onclick="aprovarMotorista()" 
+          class="text-sm text-white bg-green-600 rounded-xl py-3 hover:bg-green-700 font-semibold">
+          ✅ Aprovar
+        </button>
+      </div>
+    `
+  } else {
+    acoes.innerHTML = `
+      <div class="text-sm text-gray-500 text-center">
+        Este motorista já foi ${statusTexto}.
+      </div>
+    `
+  }
+
+  document.getElementById('modal-detalhes').classList.remove('hidden')
+}
+
+function fecharModalDetalhes() {
+  document.getElementById('modal-detalhes').classList.add('hidden')
+  motoristaAtual = null
+}
+
+async function aprovarMotorista() {
+  if (!motoristaAtual) return
+  await fetch(`/api/drivers/${motoristaAtual.id}`, { 
+    method: 'PUT', 
+    headers: headers(), 
+    body: JSON.stringify({ status_cadastro: 'aprovado', ativo: 1 }) 
+  }) 
+  fecharModalDetalhes()
+  carregarMotoristas()
+}
+
+async function reprovarMotorista() {
+  if (!motoristaAtual) return
+  const motivo = document.getElementById('motivo-reprovacao').value.trim()
+  await fetch(`/api/drivers/${motoristaAtual.id}`, { 
+    method: 'PUT', 
+    headers: headers(), 
+    body: JSON.stringify({ status_cadastro: 'reprovado', ativo: 0, motivo_reprovacao: motivo || null }) 
+  }) 
+  fecharModalDetalhes()
+  carregarMotoristas()
+}
+
 // ── LISTA ──────────────────────────────── 
 async function carregarMotoristas() { 
   const r = await fetch('/api/drivers', { headers: headers() }) 
@@ -377,166 +249,35 @@ function renderizarMotoristas(lista) {
     return 
   } 
   div.innerHTML = lista.map(d => { 
-    const statusCadastro = d.status_cadastro || 'aprovado'
-    const statusCor = statusCadastro === 'aprovado' ? 'bg-green-100 text-green-700' 
-      : statusCadastro === 'pendente' ? 'bg-yellow-100 text-yellow-700' 
+    const statusCor = d.status_cadastro === 'aprovado' ? 'bg-green-100 text-green-700' 
+      : d.status_cadastro === 'pendente' ? 'bg-yellow-100 text-yellow-700' 
       : 'bg-red-100 text-red-700'
-    const statusTexto = statusCadastro === 'aprovado' ? 'Aprovado' 
-      : statusCadastro === 'pendente' ? 'Pendente' 
+    const statusTexto = d.status_cadastro === 'aprovado' ? 'Aprovado' 
+      : d.status_cadastro === 'pendente' ? 'Em Análise' 
       : 'Reprovado'
     
-    const documentosCnh = d.cnh_digital_base64 
-      ? `<button onclick='abrirModalDocumento("CNH Digital", "${d.cnh_digital_base64.replace(/'/g, "\\'")}")' class="text-xs text-gray-700 border border-gray-200 hover:bg-gray-50 rounded-lg py-2 col-span-2">📄 Ver CNH Digital</button>` 
-      : `
-        <button ${d.cnh_frente_base64 ? `onclick='abrirModalDocumento("CNH Frente", "${d.cnh_frente_base64.replace(/'/g, "\\'")}")'` : `disabled` class="text-xs ${d.cnh_frente_base64 ? 'text-gray-700 border border-gray-200 hover:bg-gray-50' : 'text-gray-400 border border-gray-100 cursor-not-allowed'} rounded-lg py-2">${d.cnh_frente_base64 ? '🖼️ Ver CNH Frente' : 'Documento ausente'}</button>
-        <button ${d.cnh_verso_base64 ? `onclick='abrirModalDocumento("CNH Verso", "${d.cnh_verso_base64.replace(/'/g, "\\'")}")'` : `disabled` class="text-xs ${d.cnh_verso_base64 ? 'text-gray-700 border border-gray-200 hover:bg-gray-50' : 'text-gray-400 border border-gray-100 cursor-not-allowed'} rounded-lg py-2">${d.cnh_verso_base64 ? '🖼️ Ver CNH Verso' : 'Documento ausente'}</button>
-      `
-    
     return ` 
-    <div class="bg-white border border-gray-200 rounded-xl p-4"> 
-      <div class="flex items-center gap-3 mb-3"> 
-        <div class="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 border-2 border-gray-200 ${d.foto_base64 ? '' : 'bg-green-100 flex items-center justify-center'}"> 
+    <div class="bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between gap-4"> 
+      <div class="flex items-center gap-3"> 
+        <div class="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 border-2 border-gray-200 ${d.foto_base64 ? '' : 'bg-green-100 flex items-center justify-center'}"> 
           ${d.foto_base64 
             ? `<img src="${d.foto_base64}" class="w-full h-full object-cover"/>` 
-            : `<span class="text-green-700 font-bold text-xl">${d.nome.charAt(0).toUpperCase()}</span>` 
+            : `<span class="text-green-700 font-bold text-lg">${d.nome.charAt(0).toUpperCase()}</span>` 
           } 
         </div> 
-        <div class="flex-1 min-w-0"> 
-          <div class="flex items-center gap-2 flex-wrap"> 
-            <p class="font-semibold text-gray-900">${d.nome}</p> 
-            <span class="px-2 py-0.5 rounded-full text-xs font-medium ${statusCor}"> 
-              ${statusTexto} 
-            </span> 
-            <span class="px-2 py-0.5 rounded-full text-xs font-medium ${d.ativo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}"> 
-              ${d.ativo ? 'Ativo' : 'Inativo'} 
-            </span> 
-          </div> 
-          <p class="text-xs text-gray-500 mt-0.5">${d.telefone || '—'}</p> 
-          <p class="text-xs text-gray-400">⭐ ${Number(d.media_avaliacao || 0).toFixed(1)} • ${d.total_viagens || 0} viagens</p> 
+        <div> 
+          <p class="font-semibold text-gray-900">${d.nome}</p> 
+          <span class="px-2.5 py-0.5 rounded-full text-xs font-medium ${statusCor}"> 
+            ${statusTexto} 
+          </span> 
         </div> 
       </div> 
-
-      <div class="bg-gray-50 rounded-lg px-3 py-2 mb-3 text-xs text-gray-600 space-y-1"> 
-        <p><span class="font-medium">Carro:</span> ${d.modelo_carro} ${d.cor_carro || ''} ${d.ano_carro || ''}</p> 
-        <p><span class="font-medium">Placa:</span> <span class="font-mono">${d.placa}</span></p> 
-        <p><span class="font-medium">Telegram ID:</span> ${d.telegram_id}</p> 
-        <p><span class="font-medium">CPF:</span> ${d.cpf || '—'}</p> 
-        <p><span class="font-medium">Renavam:</span> ${d.renavam || '—'}</p> 
-      </div> 
-
-      <div class="mb-3">
-        <p class="text-xs font-semibold text-gray-700 mb-2">Documentos Enviados</p>
-        <div class="grid grid-cols-2 gap-2">
-          <button ${d.crlv_base64 ? `onclick='abrirModalDocumento("CRLV", "${d.crlv_base64.replace(/'/g, "\\'")}")'` : `disabled` class="text-xs ${d.crlv_base64 ? 'text-gray-700 border border-gray-200 hover:bg-gray-50' : 'text-gray-400 border border-gray-100 cursor-not-allowed'} rounded-lg py-2">${d.crlv_base64 ? '👁️ Ver CRLV' : 'Documento ausente'}</button>
-          ${documentosCnh}
-        </div>
-      </div>
-
-      <div class="grid grid-cols-2 gap-2"> 
-        <button onclick='editarMotorista(${JSON.stringify(d).replace(/'/g, "\\'")})' 
-          class="text-sm text-green-600 border border-green-200 rounded-lg py-2 hover:bg-green-50"> 
-          ✏️ Editar 
-        </button> 
-        <button onclick="${d.ativo ? `desativar(${d.id})` : `reativar(${d.id})`}" 
-          class="text-sm ${d.ativo 
-            ? 'text-orange-600 border border-orange-200 hover:bg-orange-50' 
-            : 'text-blue-600 border border-blue-200 hover:bg-blue-50'} rounded-lg py-2"> 
-          ${d.ativo ? '⏸️ Desativar' : '▶️ Reativar'} 
-        </button> 
-        ${statusCadastro === 'pendente' ? `
-        <button onclick="aprovar(${d.id})" 
-          class="text-sm text-green-600 border border-green-200 rounded-lg py-2 hover:bg-green-50"> 
-          ✅ Aprovar 
-        </button> 
-        <button onclick="reprovar(${d.id})" 
-          class="text-sm text-red-600 border border-red-200 rounded-lg py-2 hover:bg-red-50"> 
-          ❌ Reprovar 
-        </button> 
-        ` : `
-        <button onclick="gerarToken(${d.id}, '${d.nome.replace(/'/g, "\\'")}')" 
-          class="text-sm text-purple-600 border border-purple-200 rounded-lg py-2 hover:bg-purple-50"> 
-          🔗 ${d.token_perfil ? 'Atualizar link' : 'Gerar link perfil'} 
-        </button> 
-        <button onclick="excluir(${d.id}, '${d.nome.replace(/'/g, "\\'")}')" 
-          class="text-sm text-red-500 border border-red-200 rounded-lg py-2 hover:bg-red-50"> 
-          🗑️ Excluir 
-        </button> 
-        `} 
-        ${d.token_perfil ? ` 
-        <a href="/motorista/${d.token_perfil}" target="_blank" 
-          class="col-span-2 text-center text-sm text-blue-600 border border-blue-200 rounded-lg py-2 hover:bg-blue-50"> 
-          👤 Ver perfil do motorista 
-        </a>` : ''} 
-      </div> 
+      <button onclick='abrirModalDetalhes(${JSON.stringify(d).replace(/'/g, "\\'")})'
+        class="text-sm text-green-600 border border-green-200 rounded-lg px-4 py-2.5 hover:bg-green-50 font-semibold">
+        🔍 Analisar
+      </button>
     </div> 
   `}).join('') 
-} 
-
-async function aprovar(id) { 
-  await fetch(`/api/drivers/${id}`, { 
-    method: 'PUT', 
-    headers: headers(), 
-    body: JSON.stringify({ status_cadastro: 'aprovado' }) 
-  }) 
-  carregarMotoristas() 
-} 
-
-async function reprovar(id) { 
-  await fetch(`/api/drivers/${id}`, { 
-    method: 'PUT', 
-    headers: headers(), 
-    body: JSON.stringify({ status_cadastro: 'reprovado' }) 
-  }) 
-  carregarMotoristas() 
-} 
-
-// ── AÇÕES ──────────────────────────────── 
-async function desativar(id) { 
-  await fetch(`/api/drivers/${id}`, { method: 'DELETE', headers: headers() }) 
-  carregarMotoristas() 
-} 
-
-async function reativar(id) { 
-  await fetch(`/api/drivers/${id}`, { 
-    method: 'PUT', headers: headers(), body: JSON.stringify({ ativo: 1 }) 
-  }) 
-  carregarMotoristas() 
-} 
-
-async function excluir(id, nome) { 
-  if (!confirm(`⚠️ Excluir "${nome}" permanentemente?\n\nEsta ação não pode ser desfeita.`)) return 
-  if (!confirm(`Confirmar exclusão de "${nome}"?`)) return 
-  const r = await fetch(`/api/drivers/${id}/excluir`, { method: 'DELETE', headers: headers() }) 
-  const d = await r.json() 
-  if (r.ok) { alert('Motorista excluído!'); carregarMotoristas() } 
-  else alert('Erro: ' + d.error) 
-} 
-
-async function gerarToken(id, nome) { 
- const r = await fetch(`/api/drivers/${id}/gerar-token`, { 
-   method: 'POST', 
-   headers: { 
-     'Authorization': `Bearer ${token()}` 
-   } 
- }) 
- const d = await r.json() 
- if (r.ok) { 
-   linkPerfilAtual = `${window.location.origin}/motorista/${d.token_perfil}` 
-   document.getElementById('txt-link-perfil').textContent = linkPerfilAtual 
-   document.getElementById('modal-token').classList.remove('hidden') 
-   carregarMotoristas() 
- } else { 
-   alert('Erro ao gerar token: ' + (d.error || JSON.stringify(d))) 
- } 
-} 
-
-function copiarLinkPerfil() { 
-  navigator.clipboard.writeText(linkPerfilAtual) 
-  alert('Link copiado!') 
-} 
-
-function fecharModalToken() { 
-  document.getElementById('modal-token').classList.add('hidden') 
 } 
 
 carregarMotoristas() 
