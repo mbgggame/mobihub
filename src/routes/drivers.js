@@ -104,14 +104,16 @@ export default async function driversRoutes(fastify) {
     const { nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, ativo, foto_base64, status_cadastro } = request.body 
     const { id } = request.params 
 
-    const driverResult = await query('SELECT id FROM drivers WHERE id = $1', [id])
+    const driverResult = await query('SELECT id, status_cadastro FROM drivers WHERE id = $1', [id])
     const driver = driverResult.rows[0]
     if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
 
     let novoAtivo = ativo
-    if (status_cadastro === 'aprovado') {
+    const novoStatus = status_cadastro || driver.status_cadastro
+
+    if (novoStatus === 'aprovado') {
       novoAtivo = 1
-    } else if (status_cadastro === 'reprovado' || status_cadastro === 'pendente') {
+    } else if (novoStatus === 'reprovado' || novoStatus === 'pendente') {
       novoAtivo = 0
     }
 
@@ -124,11 +126,11 @@ export default async function driversRoutes(fastify) {
         ano_carro = COALESCE($5, ano_carro), 
         cor_carro = COALESCE($6, cor_carro), 
         placa = COALESCE($7, placa), 
-        ativo = COALESCE($8, ativo), 
+        ativo = $8, 
         foto_base64 = COALESCE($9, foto_base64),
         status_cadastro = COALESCE($10, status_cadastro)
       WHERE id = $11 
-    `, [nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, novoAtivo, foto_base64, status_cadastro, id]) 
+    `, [nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, novoAtivo, foto_base64, novoStatus, id]) 
 
     return { mensagem: 'Motorista atualizado' } 
   }) 
