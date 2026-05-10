@@ -44,7 +44,10 @@ export default async function driversRoutes(fastify) {
   }) 
 
   fastify.get('/api/drivers', { preHandler: requireAuth }, async () => { 
-    const result = await query('SELECT id, nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, total_viagens, media_avaliacao, total_avaliacoes, ativo, foto_base64, token_perfil, created_at, status_cadastro FROM drivers ORDER BY nome')
+    const result = await query(`SELECT id, nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, 
+      total_viagens, media_avaliacao, total_avaliacoes, ativo, foto_base64, token_perfil, created_at, status_cadastro,
+      cpf, renavam, crlv_base64, cnh_frente_base64, cnh_verso_base64, cnh_digital_base64
+    FROM drivers ORDER BY nome`)
     return result.rows
   }) 
  

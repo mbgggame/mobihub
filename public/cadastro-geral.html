@@ -367,6 +367,10 @@
           mostrarErro('Preencha todos os campos do veículo')
           return
         }
+        if (!dados.crlv_base64) {
+          mostrarErro('Anexe o CRLV do veículo')
+          return
+        }
         if (ano < 2014) {
           mostrarErro('Ano do veículo deve ser no mínimo 2014')
           return
@@ -378,6 +382,14 @@
         const ear = document.getElementById('f-ear').checked
         if (!ear) {
           mostrarErro('Confirme que possui CNH com EAR')
+          return
+        }
+        if (!dados.cnh_frente_base64) {
+          mostrarErro('Anexe a foto da frente da CNH')
+          return
+        }
+        if (!dados.cnh_verso_base64) {
+          mostrarErro('Anexe a foto do verso da CNH')
           return
         }
       }
