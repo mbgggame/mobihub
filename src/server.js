@@ -86,8 +86,13 @@ initBot()
 initScheduler() 
  
 const port = parseInt(process.env.PORT || '3000') 
-await fastify.listen({ port, host: '0.0.0.0' }) 
-console.log(`[SERVER] MobiHub rodando em http://localhost:${port}`)
+try {
+  await fastify.listen({ port, host: '0.0.0.0' }) 
+  console.log(`[SERVER] MobiHub rodando em http://localhost:${port}`)
+} catch (err) {
+  console.error('[ERRO DE INICIALIZAÇÃO RENDER]:', err)
+  process.exit(1)
+}
 
 // Inicializa Socket.IO
 const io = new Server(fastify.server, { cors: { origin: '*' } }); 
