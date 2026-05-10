@@ -368,7 +368,7 @@
           return
         }
         if (!dados.crlv_base64) {
-          mostrarErro('Anexe o CRLV do veículo')
+          mostrarErro('Anexe o CRLV do veículo (foto ou PDF)')
           return
         }
         if (ano < 2014) {
@@ -384,12 +384,10 @@
           mostrarErro('Confirme que possui CNH com EAR')
           return
         }
-        if (!dados.cnh_frente_base64) {
-          mostrarErro('Anexe a foto da frente da CNH')
-          return
-        }
-        if (!dados.cnh_verso_base64) {
-          mostrarErro('Anexe a foto do verso da CNH')
+        const temFotosCnh = dados.cnh_frente_base64 && dados.cnh_verso_base64
+        const temCnhDigital = dados.cnh_digital_base64
+        if (!temFotosCnh && !temCnhDigital) {
+          mostrarErro('Anexe a CNH (frente e verso OU arquivo digital)')
           return
         }
       }

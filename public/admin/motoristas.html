@@ -385,6 +385,13 @@ function renderizarMotoristas(lista) {
       : statusCadastro === 'pendente' ? 'Pendente' 
       : 'Reprovado'
     
+    const documentosCnh = d.cnh_digital_base64 
+      ? `<button onclick='abrirModalDocumento("CNH Digital", "${d.cnh_digital_base64.replace(/'/g, "\\'")}")' class="text-xs text-gray-700 border border-gray-200 hover:bg-gray-50 rounded-lg py-2 col-span-2">📄 Ver CNH Digital</button>` 
+      : `
+        <button ${d.cnh_frente_base64 ? `onclick='abrirModalDocumento("CNH Frente", "${d.cnh_frente_base64.replace(/'/g, "\\'")}")'` : `disabled` class="text-xs ${d.cnh_frente_base64 ? 'text-gray-700 border border-gray-200 hover:bg-gray-50' : 'text-gray-400 border border-gray-100 cursor-not-allowed'} rounded-lg py-2">${d.cnh_frente_base64 ? '🖼️ Ver CNH Frente' : 'Documento ausente'}</button>
+        <button ${d.cnh_verso_base64 ? `onclick='abrirModalDocumento("CNH Verso", "${d.cnh_verso_base64.replace(/'/g, "\\'")}")'` : `disabled` class="text-xs ${d.cnh_verso_base64 ? 'text-gray-700 border border-gray-200 hover:bg-gray-50' : 'text-gray-400 border border-gray-100 cursor-not-allowed'} rounded-lg py-2">${d.cnh_verso_base64 ? '🖼️ Ver CNH Verso' : 'Documento ausente'}</button>
+      `
+    
     return ` 
     <div class="bg-white border border-gray-200 rounded-xl p-4"> 
       <div class="flex items-center gap-3 mb-3"> 
@@ -413,37 +420,15 @@ function renderizarMotoristas(lista) {
         <p><span class="font-medium">Carro:</span> ${d.modelo_carro} ${d.cor_carro || ''} ${d.ano_carro || ''}</p> 
         <p><span class="font-medium">Placa:</span> <span class="font-mono">${d.placa}</span></p> 
         <p><span class="font-medium">Telegram ID:</span> ${d.telegram_id}</p> 
-        ${d.cpf ? `<p><span class="font-medium">CPF:</span> ${d.cpf}</p>` : ''} 
-        ${d.renavam ? `<p><span class="font-medium">Renavam:</span> ${d.renavam}</p>` : ''} 
+        <p><span class="font-medium">CPF:</span> ${d.cpf || '—'}</p> 
+        <p><span class="font-medium">Renavam:</span> ${d.renavam || '—'}</p> 
       </div> 
 
       <div class="mb-3">
         <p class="text-xs font-semibold text-gray-700 mb-2">Documentos Enviados</p>
         <div class="grid grid-cols-2 gap-2">
-          <button ${d.crlv_base64 ? `onclick='abrirModalDocumento("CRLV", "${d.crlv_base64.replace(/'/g, "\\'")}')` : `disabled`
-            class="text-xs ${d.crlv_base64 
-              ? 'text-gray-700 border border-gray-200 hover:bg-gray-50' 
-              : 'text-gray-400 border border-gray-100 cursor-not-allowed'} rounded-lg py-2">
-            👁️ ${d.crlv_base64 ? 'Ver CRLV' : 'Documento ausente'}
-          </button>
-          <button ${d.cnh_frente_base64 ? `onclick='abrirModalDocumento("CNH Frente", "${d.cnh_frente_base64.replace(/'/g, "\\'")}")` : `disabled`
-            class="text-xs ${d.cnh_frente_base64 
-              ? 'text-gray-700 border border-gray-200 hover:bg-gray-50' 
-              : 'text-gray-400 border border-gray-100 cursor-not-allowed'} rounded-lg py-2">
-            👁️ ${d.cnh_frente_base64 ? 'Ver CNH Frente' : 'Documento ausente'}
-          </button>
-          <button ${d.cnh_verso_base64 ? `onclick='abrirModalDocumento("CNH Verso", "${d.cnh_verso_base64.replace(/'/g, "\\'")}")` : `disabled`
-            class="text-xs ${d.cnh_verso_base64 
-              ? 'text-gray-700 border border-gray-200 hover:bg-gray-50' 
-              : 'text-gray-400 border border-gray-100 cursor-not-allowed'} rounded-lg py-2">
-            👁️ ${d.cnh_verso_base64 ? 'Ver CNH Verso' : 'Documento ausente'}
-          </button>
-          <button ${d.cnh_digital_base64 ? `onclick='abrirModalDocumento("CNH Digital", "${d.cnh_digital_base64.replace(/'/g, "\\'")}")` : `disabled`
-            class="text-xs ${d.cnh_digital_base64 
-              ? 'text-gray-700 border border-gray-200 hover:bg-gray-50' 
-              : 'text-gray-400 border border-gray-100 cursor-not-allowed'} rounded-lg py-2">
-            👁️ ${d.cnh_digital_base64 ? 'Ver CNH Digital' : 'Documento ausente'}
-          </button>
+          <button ${d.crlv_base64 ? `onclick='abrirModalDocumento("CRLV", "${d.crlv_base64.replace(/'/g, "\\'")}")'` : `disabled` class="text-xs ${d.crlv_base64 ? 'text-gray-700 border border-gray-200 hover:bg-gray-50' : 'text-gray-400 border border-gray-100 cursor-not-allowed'} rounded-lg py-2">${d.crlv_base64 ? '👁️ Ver CRLV' : 'Documento ausente'}</button>
+          ${documentosCnh}
         </div>
       </div>
 
