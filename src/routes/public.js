@@ -670,17 +670,90 @@ export default async function publicRoutes(fastify) {
       LEFT JOIN clients c ON r.client_id = c.id 
       WHERE r.token = $1 
     `, [token])).rows[0]
- 
+
     if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
     const rating = (await query('SELECT estrelas_motorista, comentario_cliente, avaliado_em_cliente FROM ratings WHERE ride_id = $1', [ride.id])).rows[0] 
     const paradas = (await query('SELECT duracao_min, custo, iniciada_at, finalizada_at FROM ride_stops WHERE ride_id = $1 ORDER BY iniciada_at', [ride.id])).rows 
     const configs = (await query('SELECT chave, valor FROM configuracoes')).rows 
     const config = {} 
     configs.forEach(c => config[c.chave] = c.valor) 
- 
+
     delete ride.client_id 
     delete ride.driver_id 
- 
+
     return { ride, rating, paradas, config } 
+  })
+
+  fastify.get('/api/reputacao/geral', { preHandler: requireAuth }, async () => {
+    const mediaMotoristasResult = await query(`
+      SELECT ROUND(AVG(estrelas_motorista)::numeric, 1) as media, COUNT(*) as total
+      FROM ratings WHERE estrelas_motorista IS NOT NULL
+    `)
+    const mediaMotoristas = mediaMotoristasResult.rows[0]
+
+    const mediaClientesResult = await query(`
+      SELECT ROUND(AVG(estrelas_cliente)::numeric, 1) as media, COUNT(*) as total
+      FROM ratings WHERE estrelas_cliente IS NOT NULL
+    `)
+    const mediaClientes = mediaClientesResult.rows[0]
+
+    const topMotoristasResult = await query(`
+      SELECT d.id, d.nome, d.total_viagens, d.media_avaliacao, d.total_avaliacoes
+      FROM drivers d WHERE d.status_cadastro = 'aprovado' AND d.total_avaliacoes > 0
+      ORDER BY d.media_avaliacao DESC, d.total_viagens DESC LIMIT 10
+    `)
+    const topMotoristas = topMotoristasResult.rows
+
+    const clientesProblematicosResult = await query(`
+      SELECT c.id, c.nome, c.telefone, c.total_corridas, c.media_avaliacao, c.total_avaliacoes
+      FROM clients c WHERE c.media_avaliacao < 3 AND c.total_avaliacoes >= 2
+      ORDER BY c.media_avaliacao ASC, c.total_avaliacoes DESC
+    `)
+    const clientesProblematicos = clientesProblematicosResult.rows
+
+    return {
+      mediaMotoristas: { media: parseFloat(mediaMotoristas.media || 0), total: parseInt(mediaMotoristas.total || 0) },
+      mediaClientes: { media: parseFloat(mediaClientes.media || 0), total: parseInt(mediaClientes.total || 0) },
+      topMotoristas,
+      clientesProblematicos
+    }
+  })
+
+  fastify.get('/api/reputacao/motorista/:id', { preHandler: requireAuth }, async (request) => {
+    const driver = (await query(`
+      SELECT id, nome, total_viagens, media_avaliacao, total_avaliacoes
+      FROM drivers WHERE id = $1
+    `, [request.params.id])).rows[0]
+
+    const avaliacoes = (await query(`
+      SELECT r.estrelas_motorista, r.comentario_cliente, r.avaliado_em_cliente, 
+        rd.origem, rd.destino, rd.created_at as corrida_data, c.nome as client_nome
+      FROM ratings r
+      JOIN rides rd ON r.ride_id = rd.id
+      LEFT JOIN clients c ON rd.client_id = c.id
+      WHERE rd.driver_id = $1 AND r.estrelas_motorista IS NOT NULL
+      ORDER BY r.avaliado_em_cliente DESC LIMIT 30
+    `, [request.params.id])).rows
+
+    return { driver, avaliacoes }
+  })
+
+  fastify.get('/api/reputacao/cliente/:id', { preHandler: requireAuth }, async (request) => {
+    const client = (await query(`
+      SELECT id, nome, telefone, total_corridas, media_avaliacao, total_avaliacoes
+      FROM clients WHERE id = $1
+    `, [request.params.id])).rows[0]
+
+    const avaliacoes = (await query(`
+      SELECT r.estrelas_cliente, r.comentario_motorista, r.avaliado_em_motorista, 
+        rd.origem, rd.destino, rd.created_at as corrida_data, d.nome as driver_nome
+      FROM ratings r
+      JOIN rides rd ON r.ride_id = rd.id
+      LEFT JOIN drivers d ON rd.driver_id = d.id
+      WHERE rd.client_id = $1 AND r.estrelas_cliente IS NOT NULL
+      ORDER BY r.avaliado_em_motorista DESC LIMIT 30
+    `, [request.params.id])).rows
+
+    return { client, avaliacoes }
   }) 
 } 
