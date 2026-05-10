@@ -498,7 +498,19 @@
      const { ride, rating, paradas, config } = await r.json() 
      console.log('[POLLING] Status atual:', ride.status, '| Motorista:', ride.driver_nome) 
  
-     if (ride.status === 'concluida' || ride.status === 'cancelada') { 
+     if (ride.status === 'concluida') {
+       pollingAtivo = false
+       // Abrir modal de avaliação
+       if (document.getElementById('modal-avaliacao-passageiro')) {
+         document.getElementById('modal-avaliacao-passageiro').classList.remove('hidden')
+         document.getElementById('modal-avaliacao-passageiro').style.display = 'flex'
+       } else {
+         // Se não houver modal, redirecionar para solicitar para que o modal apareça lá
+         location.href = '/solicitar'
+       }
+       return
+     }
+     if (ride.status === 'cancelada') { 
        pollingAtivo = false 
        location.href = '/solicitar' 
        return 

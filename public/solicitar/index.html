@@ -65,7 +65,7 @@
 </div>
 
 <!-- MODAL DE AVALIAÇÃO DO MOTORISTA -->
-<div id="modal-avaliacao" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4 py-6 hidden">
+<div id="modal-avaliacao" class="fixed inset-0 bg-black bg-opacity-50 z-[99999] flex items-center justify-center px-4 py-6 hidden">
   <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl">
     <div class="p-6 space-y-4">
       <div class="text-center">
@@ -280,7 +280,7 @@
       <div class="space-y-2"> 
         <a id="btn-acompanhar" href="#" 
           class="block w-full bg-green-600 text-white rounded-xl py-3 font-semibold text-sm"> 
-          🗺️ Acompanhar corrida (3s) 
+          🗺️ Acompanhar corrida 
         </a> 
         <button onclick="copiarLink()" 
           class="w-full border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm"> 
@@ -382,12 +382,14 @@
  }); 
 
  function verificarCadastro() { 
-   const cliente = JSON.parse(localStorage.getItem(STORAGE_CLIENTE) || 'null') 
-   if (cliente && cliente.celular && cliente.nome) { 
+   const cliente_nome = localStorage.getItem('cliente_nome')
+   const cliente_telefone = localStorage.getItem('cliente_telefone')
+   const cliente_email = localStorage.getItem('cliente_email')
+   if (cliente_telefone && cliente_nome) { 
      document.getElementById('tela-cadastro').classList.add('hidden') 
      document.getElementById('tela-solicitar').classList.remove('hidden') 
-     document.getElementById('txt-nome-cliente').textContent = cliente.nome 
-     carregarSuaNota(cliente.celular)
+     document.getElementById('txt-nome-cliente').textContent = cliente_nome 
+     carregarSuaNota(cliente_telefone)
      renderizarAtalhos() 
      renderizarHistorico() 
      initSocket()
@@ -402,12 +404,18 @@
    if (!nome) { erro.textContent = 'Nome é obrigatório'; erro.classList.remove('hidden'); return } 
    if (!celular) { erro.textContent = 'Celular é obrigatório'; erro.classList.remove('hidden'); return } 
    erro.classList.add('hidden') 
+   localStorage.setItem('cliente_nome', nome)
+   localStorage.setItem('cliente_telefone', celular)
+   if (email) localStorage.setItem('cliente_email', email)
    localStorage.setItem(STORAGE_CLIENTE, JSON.stringify({ nome, celular, email })) 
    verificarCadastro() 
  } 
 
  function trocarCadastro() { 
-   localStorage.removeItem(STORAGE_CLIENTE) 
+   localStorage.removeItem(STORAGE_CLIENTE)
+   localStorage.removeItem('cliente_nome')
+   localStorage.removeItem('cliente_telefone')
+   localStorage.removeItem('cliente_email')
    document.getElementById('tela-solicitar').classList.add('hidden') 
    document.getElementById('tela-cadastro').classList.remove('hidden') 
  } 
@@ -790,8 +798,10 @@
      return
    }
 
-   const clienteStr = localStorage.getItem(STORAGE_CLIENTE) 
-   const cliente = clienteStr ? JSON.parse(clienteStr) : null 
+   const cliente_nome = localStorage.getItem('cliente_nome')
+   const cliente_telefone = localStorage.getItem('cliente_telefone')
+   const cliente_email = localStorage.getItem('cliente_email')
+   const cliente = { nome: cliente_nome, celular: cliente_telefone, email: cliente_email } 
 
    if (!origem || !origemLat) { 
      alert('Por favor informe o endereço de origem') 
@@ -854,18 +864,6 @@
      salvarHistorico() 
      document.getElementById('tela-solicitar').classList.add('hidden') 
      document.getElementById('tela-confirmacao').classList.remove('hidden') 
-
-     // Redireciona automaticamente em 3 segundos 
-     let countdown = 3 
-     intervalRedirect = setInterval(() => { 
-       countdown-- 
-       const btnAcomp = document.getElementById('btn-acompanhar') 
-       if (btnAcomp) btnAcomp.textContent = `🗺️ Acompanhar corrida (${countdown}s)` 
-       if (countdown <= 0) { 
-         clearInterval(intervalRedirect) 
-         window.location.href = linkAcompanhamento 
-       } 
-     }, 1000) 
    } catch(e) { 
      alert('Erro de conexão') 
      btn.disabled = false 
@@ -1015,16 +1013,37 @@
 
  function repetirCorridaFromHistorico(origem, destino, origLat, origLng, destLat, destLng) {
    fecharModalHistorico()
-   marcarPonto(origLat, origLng, encurtarEndereco(origem), 'origem')
-   marcarPonto(destLat, destLng, encurtarEndereco(destino), 'destino')
-   const bounds = L.latLngBounds([origLat, origLng], [destLat, destLng])
-   map.fitBounds(bounds, { padding: [40, 40] })
-   document.getElementById('busca-orig').value = encurtarEndereco(origem)
-   document.getElementById('busca-dest').value = encurtarEndereco(destino)
+   const origEndereco = encurtarEndereco(origem)
+   const destEndereco = encurtarEndereco(destino)
+   
+   // Preenche os inputs
+   const inputOrig = document.getElementById('busca-orig')
+   const inputDest = document.getElementById('busca-dest')
+   inputOrig.value = origEndereco
+   inputDest.value = destEndereco
+   
+   // Dispara eventos input
+   inputOrig.dispatchEvent(new Event('input', { bubbles: true }))
+   inputDest.dispatchEvent(new Event('input', { bubbles: true }))
+   
+   // Atribui variáveis globais
    origemLat = origLat
    origemLng = origLng
    destinoLat = destLat
    destinoLng = destLng
+   origem = origEndereco
+   destino = destEndereco
+   
+   // Marca pontos no mapa
+   marcarPonto(origLat, origLng, origEndereco, 'origem')
+   marcarPonto(destLat, destLng, destEndereco, 'destino')
+   
+   // Ajusta o mapa
+   const bounds = L.latLngBounds([origLat, origLng], [destLat, destLng])
+   map.fitBounds(bounds, { padding: [40, 40] })
+   
+   // Calcula o valor
+   calcularDistancia()
    verificarBotaoSolicitar()
  }
 
@@ -1109,12 +1128,13 @@
  window.onload = () => { 
    verificarTermosPassageiro()
    
-   const cliente = JSON.parse(localStorage.getItem(STORAGE_CLIENTE) || 'null') 
-   if (cliente) { 
+   const cliente_nome = localStorage.getItem('cliente_nome')
+   const cliente_telefone = localStorage.getItem('cliente_telefone')
+   if (cliente_nome && cliente_telefone) { 
      document.getElementById('tela-cadastro').classList.add('hidden') 
      document.getElementById('tela-solicitar').classList.remove('hidden') 
-     document.getElementById('txt-nome-cliente').textContent = cliente.nome 
-     carregarSuaNota(cliente.celular)
+     document.getElementById('txt-nome-cliente').textContent = cliente_nome 
+     carregarSuaNota(cliente_telefone)
      renderizarAtalhos() 
      renderizarHistorico() 
      initSocket()
@@ -1122,9 +1142,11 @@
      // BUG 5: Saudação personalizada se vier de uma avaliação 
      if (document.referrer.includes('/ride/')) { 
        document.getElementById('txt-nome-cliente').parentElement.innerHTML =  
-         `Olá, <span class="font-semibold text-green-700">${cliente.nome}</span>! Pronto para sua próxima corrida?` 
+         `Olá, <span class="font-semibold text-green-700">${cliente_nome}</span>! Pronto para sua próxima corrida?` 
      } 
-   } 
+   } else {
+     verificarCadastro()
+   }
    initMap() 
    // Recupera dados de repetir viagem se vier do painel do passageiro 
    const repOrigem = localStorage.getItem('mobi_repetir_origem'); 

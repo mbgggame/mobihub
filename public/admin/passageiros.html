@@ -54,15 +54,15 @@ async function carregarPassageiros() {
   console.log('[Passageiros] Resposta da API:', r.status)
   if (r.status === 401) { location.href = '/admin/login'; return } 
   const lista = await r.json() 
-  console.log('Passageiros carregados:', lista)
+  console.log('Passageiros carregados (data):', lista)
   passageirosGlobais = lista
   renderizarPassageiros(lista) 
 } 
 
 function renderizarPassageiros(lista) { 
   const div = document.getElementById('lista-passageiros') 
-  if (!lista.length) { 
-    div.innerHTML = '<p class="text-sm text-gray-400 text-center py-8">Nenhum passageiro cadastrado ainda.</p>' 
+  if (!lista || !lista.length) { 
+    div.innerHTML = '<p class="text-sm text-gray-400 text-center py-8">Nenhum passageiro encontrado.</p>' 
     return 
   } 
   div.innerHTML = lista.map((c, i) => { 
