@@ -16,13 +16,46 @@
   </style> 
 </head> 
 <body class="bg-gray-50 min-h-screen pb-10"> 
- 
+
+<!-- MODAL DE ACEITE DOS TERMOS PARA PASSAGEIRO -->
+<div id="modal-termos-passageiro" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4 py-6">
+  <div class="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+    <div class="p-6 space-y-4">
+      <div class="text-center">
+        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+          <svg class="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <h2 class="text-xl font-bold text-gray-900">Termos de Uso e LGPD</h2>
+        <p class="text-sm text-gray-500 mt-1">ELVIVA GROUP LTDA • CNPJ: 62.444.354/0001-82</p>
+      </div>
+      
+      <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 text-xs text-gray-700 space-y-3 max-h-60 overflow-y-auto">
+        <p><strong>1. Natureza da Relação</strong></p>
+        <p>A presente relação é de natureza CÍVEL e COMERCIAL, sendo regida pelo Código Civil e pelo Código de Defesa do Consumidor.</p>
+        
+        <p><strong>2. Consentimento de Geolocalização e Tratamento de Dados (LGPD)</strong></p>
+        <p>Ao aceitar estes termos, você consente expressamente com a coleta, tratamento, armazenamento e, se necessário, transferência de seus dados pessoais e de geolocalização para a ELVIVA GROUP LTDA (CNPJ: 62.444.354/0001-82), inclusive para fins de sucessão, venda ou transferência do negócio, sempre em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018). O usuário autoriza que a ELVIVA GROUP LTDA transfira todos os dados coletados a empresas sucessoras em caso de venda ou fusão do MobiHub.</p>
+        
+        <p><strong>3. Conformidade</strong></p>
+        <p>Declaro que li, entendi e concordo com todos os termos acima, ciente de meus direitos e obrigações.</p>
+      </div>
+      
+      <button id="btn-aceitar-termos-passageiro" onclick="aceitarTermosPassageiro()"
+        class="w-full bg-green-600 text-white rounded-xl py-3 font-bold text-base hover:bg-green-700">
+        ✅ Concordo e aceito os termos
+      </button>
+    </div>
+  </div>
+</div> 
+
 <div class="bg-green-600 text-white px-4 py-3 flex items-center gap-2 shadow"> 
   <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg> 
   <span class="font-bold text-lg">MobiHub</span> 
 </div> 
- 
-<div class="max-w-lg mx-auto px-4 py-4 space-y-4"> 
+
+<div id="conteudo-solicitar" class="max-w-lg mx-auto px-4 py-4 space-y-4"> 
  
   <!-- TELA 1: CADASTRO --> 
   <div id="tela-cadastro"> 
@@ -232,7 +265,8 @@
  const STORAGE_CLIENTE = 'mobihub_cliente' 
  const STORAGE_FAV = 'mobihub_favoritos' 
  const STORAGE_HIST = 'mobihub_historico' 
- 
+ const STORAGE_TERMOS_PASSAGEIRO = 'termosAceitosPassageiro' 
+
  let map, geocoder 
  let marcadores = { origem: null, destino: null } 
  let pontos = { origem: null, destino: null } 
@@ -242,7 +276,30 @@
  let valorCalculado = 0 
  let intervalRedirect = null 
  let linkAcompanhamento = '' 
- 
+
+ function verificarTermosPassageiro() {
+   const termosAceitos = localStorage.getItem(STORAGE_TERMOS_PASSAGEIRO)
+   const modal = document.getElementById('modal-termos-passageiro')
+   const conteudo = document.getElementById('conteudo-solicitar')
+   
+   console.log('[DIAGNÓSTICO PASSAGEIRO] termosAceitos:', termosAceitos)
+   
+   if (termosAceitos === 'true') {
+     modal.style.display = 'none'
+     modal.classList.add('hidden')
+     conteudo.classList.remove('hidden')
+   } else {
+     modal.style.display = 'flex'
+     modal.classList.remove('hidden')
+     conteudo.classList.add('hidden')
+   }
+ }
+
+ function aceitarTermosPassageiro() {
+   localStorage.setItem(STORAGE_TERMOS_PASSAGEIRO, 'true')
+   verificarTermosPassageiro()
+ }
+
  // BUG FIX: Ícones do Leaflet 
  const iconeOrigem = L.icon({ 
    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png', 
@@ -675,9 +732,16 @@
  } 
  
  async function solicitar() { 
+   const termosAceitos = localStorage.getItem(STORAGE_TERMOS_PASSAGEIRO)
+   if (termosAceitos !== 'true') {
+     alert('Por favor aceite os termos de uso antes de solicitar uma corrida!')
+     verificarTermosPassageiro()
+     return
+   }
+
    const clienteStr = localStorage.getItem('mobihub_cliente') 
    const cliente = clienteStr ? JSON.parse(clienteStr) : null 
- 
+
    if (!origem || !origemLat) { 
      alert('Por favor informe o endereço de origem') 
      return 
@@ -851,12 +915,14 @@
  } 
  
  window.onload = () => { 
+   verificarTermosPassageiro()
+   
    const cliente = JSON.parse(localStorage.getItem(STORAGE_CLIENTE) || 'null') 
    if (cliente) { 
      document.getElementById('tela-cadastro').classList.add('hidden') 
      document.getElementById('tela-solicitar').classList.remove('hidden') 
      document.getElementById('txt-nome-cliente').textContent = cliente.nome 
- 
+
      // BUG 5: Saudação personalizada se vier de uma avaliação 
      if (document.referrer.includes('/ride/')) { 
        document.getElementById('txt-nome-cliente').parentElement.innerHTML =  
@@ -892,5 +958,6 @@
    }
  }
  </script> 
+</div>
 </body> 
 </html> 
