@@ -3,7 +3,34 @@ import { query, pool } from '../db.js'
 import { requireAuth } from '../middleware/auth.js' 
  
 export default async function driversRoutes(fastify) { 
- 
+
+  fastify.post('/api/cadastro-geral', async (request, reply) => { 
+    const { 
+      nome, telefone, telegram_id, 
+      modelo_carro, ano_carro, cor_carro, placa 
+    } = request.body 
+
+    if (!nome || !telefone || !telegram_id || !modelo_carro || !ano_carro || !cor_carro || !placa) { 
+      return reply.code(400).send({ error: 'Todos os campos são obrigatórios' }) 
+    } 
+
+    try { 
+      const result = await query(` 
+        INSERT INTO drivers 
+          (nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, status_cadastro, ativo) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7, 'pendente', 0) 
+        RETURNING id
+      `, [nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa]) 
+
+      return { id: result.rows[0].id, mensagem: 'Cadastro enviado para aprovação' } 
+    } catch (err) { 
+      if (err.message.includes('unique') || err.message.includes('UNIQUE')) { 
+        return reply.code(409).send({ error: 'Telegram ID já cadastrado' }) 
+      } 
+      throw err 
+    } 
+  }) 
+
   fastify.get('/api/drivers', { preHandler: requireAuth }, async () => { 
     const result = await query('SELECT id, nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, total_viagens, media_avaliacao, total_avaliacoes, ativo, foto_base64, token_perfil, created_at FROM drivers ORDER BY nome')
     return result.rows

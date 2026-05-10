@@ -1,0 +1,239 @@
+<!DOCTYPE html> 
+<html lang="pt-BR"> 
+<head> 
+  <meta charset="UTF-8"/> 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
+  <title>MobiHub — Quero Dirigir</title> 
+  <script src="https://cdn.tailwindcss.com"></script> 
+  <style> 
+    #video-camera { width:100%; max-height:220px; object-fit:cover; background:#000; border-radius:12px; } 
+    #canvas-hidden { display:none; } 
+  </style> 
+</head> 
+<body class="bg-gray-50 min-h-screen pb-10"> 
+
+<!-- MODAL DE ACEITE DOS TERMOS PARA MOTORISTA -->
+<div id="modal-termos" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4 py-6">
+  <div class="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+    <div class="p-6 space-y-4">
+      <div class="text-center">
+        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+          <svg class="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <h2 class="text-xl font-bold text-gray-900">Termos de Uso e LGPD</h2>
+        <p class="text-sm text-gray-500 mt-1">ELVIVA GROUP LTDA • CNPJ: 62.444.354/0001-82</p>
+      </div>
+      
+      <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 text-xs text-gray-700 space-y-3 max-h-60 overflow-y-auto">
+        <p><strong>1. Natureza da Relação</strong></p>
+        <p>A presente relação é de natureza CÍVEL e COMERCIAL, sendo regida pelo Código Civil e pelo Código de Defesa do Consumidor, e NÃO CONFIGURA VÍNCULO EMPREGATÍCIO, vínculo de trabalho ou qualquer outra forma de subordinação jurídica.</p>
+        
+        <p><strong>2. Autonomia do Motorista</strong></p>
+        <p>O motorista exerce sua atividade de forma TOTALMENTE AUTÔNOMA, independente, sem horário fixo, sem subordinação hierárquica, podendo aceitar ou recusar corridas a seu exclusivo critério, sem qualquer sanção ou consequência negativa.</p>
+        
+        <p><strong>3. Consentimento de Geolocalização e Tratamento de Dados (LGPD)</strong></p>
+        <p>Ao aceitar estes termos, você consente expressamente com a coleta, tratamento, armazenamento e, se necessário, transferência de seus dados pessoais e de geolocalização para a ELVIVA GROUP LTDA (CNPJ: 62.444.354/0001-82), inclusive para fins de sucessão, venda ou transferência do negócio, sempre em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018). O usuário autoriza que a ELVIVA GROUP LTDA transfira todos os dados coletados a empresas sucessoras em caso de venda ou fusão do MobiHub.</p>
+        
+        <p><strong>4. Conformidade</strong></p>
+        <p>Declaro que li, entendi e concordo com todos os termos acima, ciente de meus direitos e obrigações.</p>
+      </div>
+      
+      <button id="btn-aceitar-termos" onclick="aceitarTermos()"
+        class="w-full bg-green-600 text-white rounded-xl py-3 font-bold text-base hover:bg-green-700">
+        ✅ Concordo e aceito os termos
+      </button>
+    </div>
+  </div>
+</div> 
+
+<div id="conteudo-principal" class="hidden">
+  <div class="bg-green-600 text-white px-4 py-3 flex items-center gap-2 shadow"> 
+    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"> 
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/> 
+    </svg> 
+    <span class="font-bold text-lg">MobiHub</span> 
+    <span class="text-green-200 text-sm">— Quero Dirigir</span> 
+  </div> 
+
+  <div class="max-w-lg mx-auto px-4 py-6 space-y-4"> 
+
+    <div class="bg-green-50 border border-green-200 rounded-xl p-4"> 
+      <p class="text-sm font-medium text-green-800">🚗 Bem-vindo! Preencha seus dados para se candidatar como motorista.</p> 
+      <p class="text-xs text-green-600 mt-1">Seu cadastro será analisado e aprovado pela equipe MobiHub.</p> 
+    </div> 
+
+    <div class="bg-white border border-gray-200 rounded-xl p-5 space-y-4"> 
+
+      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Dados pessoais</h2> 
+
+      <div> 
+        <label class="text-xs text-gray-500 font-medium">Nome completo *</label> 
+        <input id="f-nome" type="text" placeholder="Seu nome completo" 
+          class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+      </div> 
+
+      <div class="grid grid-cols-2 gap-3"> 
+        <div> 
+          <label class="text-xs text-gray-500 font-medium">Telefone *</label> 
+          <input id="f-telefone" type="tel" placeholder="(27) 99999-9999" 
+            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+        </div> 
+        <div> 
+          <label class="text-xs text-gray-500 font-medium">Telegram ID *</label> 
+          <input id="f-telegram" type="text" placeholder="Ex: 1479908250" 
+            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+          <p class="text-xs text-gray-400 mt-0.5">Fale com @userinfobot no Telegram</p> 
+        </div> 
+      </div> 
+
+      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide pt-2">Dados do veículo</h2> 
+
+      <div class="grid grid-cols-2 gap-3"> 
+        <div> 
+          <label class="text-xs text-gray-500 font-medium">Modelo do carro *</label> 
+          <input id="f-modelo" type="text" placeholder="Ex: BYD King GS" 
+            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+        </div> 
+        <div> 
+          <label class="text-xs text-gray-500 font-medium">Ano *</label> 
+          <input id="f-ano" type="text" placeholder="Ex: 2024" 
+            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+        </div> 
+      </div> 
+
+      <div class="grid grid-cols-2 gap-3"> 
+        <div> 
+          <label class="text-xs text-gray-500 font-medium">Cor *</label> 
+          <input id="f-cor" type="text" placeholder="Ex: Prata" 
+            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+        </div> 
+        <div> 
+          <label class="text-xs text-gray-500 font-medium">Placa *</label> 
+          <input id="f-placa" type="text" placeholder="Ex: SGZ2D22" 
+            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+        </div> 
+      </div> 
+
+      <div id="erro-form" class="hidden text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2"></div> 
+
+      <button id="btn-cadastrar" onclick="cadastrar()" 
+        class="w-full bg-green-600 text-white rounded-xl py-3.5 font-bold text-base hover:bg-green-700"> 
+        Enviar cadastro para aprovação 
+      </button> 
+
+    </div> 
+
+    <!-- TELA: SUCESSO --> 
+    <div id="tela-sucesso" class="hidden"> 
+      <div class="bg-white border border-gray-200 rounded-xl p-6 text-center"> 
+        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"> 
+          <svg class="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"> 
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/> 
+          </svg> 
+        </div> 
+        <h2 class="text-xl font-bold text-gray-900 mb-2">Cadastro enviado!</h2> 
+        <p class="text-sm text-gray-500 mb-4">Seus dados foram recebidos e estão sendo analisados pela equipe MobiHub.</p> 
+        <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-left"> 
+          <p class="text-xs text-yellow-800 font-medium">⏳ Próximos passos:</p> 
+          <ul class="text-xs text-yellow-700 mt-1 space-y-1"> 
+            <li>• Nossa equipe vai analisar seu cadastro</li> 
+            <li>• Você receberá uma mensagem no Telegram quando aprovado</li> 
+            <li>• Após aprovação você já pode receber corridas</li> 
+          </ul> 
+        </div> 
+      </div> 
+    </div> 
+
+  </div> 
+</div>
+
+<script> 
+ const STORAGE_TERMOS = 'termosAceitosMotoristaGeral'
+ let termosAceitos = false
+
+ function verificarTermos() {
+   const termos = localStorage.getItem(STORAGE_TERMOS)
+   const modal = document.getElementById('modal-termos')
+   const conteudo = document.getElementById('conteudo-principal')
+   
+   if (termos === 'true') {
+     termosAceitos = true
+     modal.style.display = 'none'
+     modal.classList.add('hidden')
+     conteudo.classList.remove('hidden')
+   } else {
+     termosAceitos = false
+     modal.style.display = 'flex'
+     modal.classList.remove('hidden')
+     conteudo.classList.add('hidden')
+   }
+ }
+
+ function aceitarTermos() {
+   localStorage.setItem(STORAGE_TERMOS, 'true')
+   verificarTermos()
+ }
+
+ async function cadastrar() { 
+   if (!termosAceitos) {
+     alert('Por favor aceite os termos de uso primeiro!')
+     verificarTermos()
+     return
+   }
+
+   const nome = document.getElementById('f-nome').value.trim() 
+   const telefone = document.getElementById('f-telefone').value.trim() 
+   const telegram_id = document.getElementById('f-telegram').value.trim() 
+   const modelo_carro = document.getElementById('f-modelo').value.trim() 
+   const ano_carro = document.getElementById('f-ano').value.trim() 
+   const cor_carro = document.getElementById('f-cor').value.trim() 
+   const placa = document.getElementById('f-placa').value.trim() 
+   const erro = document.getElementById('erro-form') 
+
+   if (!nome || !telefone || !telegram_id || !modelo_carro || !ano_carro || !cor_carro || !placa) { 
+     erro.textContent = 'Preencha todos os campos obrigatórios' 
+     erro.classList.remove('hidden') 
+     return 
+   } 
+
+   erro.classList.add('hidden') 
+   const btn = document.getElementById('btn-cadastrar') 
+   btn.textContent = 'Enviando...' 
+   btn.disabled = true 
+
+   try { 
+     const r = await fetch('/api/cadastro-geral', { 
+       method: 'POST', 
+       headers: { 'Content-Type': 'application/json' }, 
+       body: JSON.stringify({ 
+         nome, telefone, telegram_id, 
+         modelo_carro, ano_carro, cor_carro, placa
+       }) 
+     }) 
+
+     const d = await r.json() 
+
+     if (!r.ok) { 
+       erro.textContent = d.error || 'Erro ao cadastrar' 
+       erro.classList.remove('hidden') 
+       btn.textContent = 'Enviar cadastro para aprovação' 
+       btn.disabled = false 
+       return 
+     } 
+
+     document.querySelector('.bg-white.rounded-xl.p-5.space-y-4').classList.add('hidden') 
+     document.getElementById('tela-sucesso').classList.remove('hidden') 
+   } catch(e) { 
+     erro.textContent = 'Erro de conexão. Tente novamente.' 
+     erro.classList.remove('hidden') 
+     btn.textContent = 'Enviar cadastro para aprovação' 
+     btn.disabled = false 
+   } 
+ } 
+
+ verificarTermos()
+</script> 
+</body> 
+</html>
