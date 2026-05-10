@@ -1,239 +1,416 @@
-<!DOCTYPE html> 
-<html lang="pt-BR"> 
-<head> 
-  <meta charset="UTF-8"/> 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
-  <title>MobiHub — Quero Dirigir</title> 
-  <script src="https://cdn.tailwindcss.com"></script> 
-  <style> 
-    #video-camera { width:100%; max-height:220px; object-fit:cover; background:#000; border-radius:12px; } 
-    #canvas-hidden { display:none; } 
-  </style> 
-</head> 
-<body class="bg-gray-50 min-h-screen pb-10"> 
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MobiHub — Quero Dirigir</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+  </style>
+</head>
+<body class="bg-zinc-950 min-h-screen text-white">
 
-<!-- MODAL DE ACEITE DOS TERMOS PARA MOTORISTA -->
-<div id="modal-termos" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4 py-6">
-  <div class="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
-    <div class="p-6 space-y-4">
-      <div class="text-center">
-        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-          <svg class="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-        </div>
-        <h2 class="text-xl font-bold text-gray-900">Termos de Uso e LGPD</h2>
-        <p class="text-sm text-gray-500 mt-1">ELVIVA GROUP LTDA • CNPJ: 62.444.354/0001-82</p>
-      </div>
-      
-      <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 text-xs text-gray-700 space-y-3 max-h-60 overflow-y-auto">
-        <p><strong>1. Natureza da Relação</strong></p>
-        <p>A presente relação é de natureza CÍVEL e COMERCIAL, sendo regida pelo Código Civil e pelo Código de Defesa do Consumidor, e NÃO CONFIGURA VÍNCULO EMPREGATÍCIO, vínculo de trabalho ou qualquer outra forma de subordinação jurídica.</p>
-        
-        <p><strong>2. Autonomia do Motorista</strong></p>
-        <p>O motorista exerce sua atividade de forma TOTALMENTE AUTÔNOMA, independente, sem horário fixo, sem subordinação hierárquica, podendo aceitar ou recusar corridas a seu exclusivo critério, sem qualquer sanção ou consequência negativa.</p>
-        
-        <p><strong>3. Consentimento de Geolocalização e Tratamento de Dados (LGPD)</strong></p>
-        <p>Ao aceitar estes termos, você consente expressamente com a coleta, tratamento, armazenamento e, se necessário, transferência de seus dados pessoais e de geolocalização para a ELVIVA GROUP LTDA (CNPJ: 62.444.354/0001-82), inclusive para fins de sucessão, venda ou transferência do negócio, sempre em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018). O usuário autoriza que a ELVIVA GROUP LTDA transfira todos os dados coletados a empresas sucessoras em caso de venda ou fusão do MobiHub.</p>
-        
-        <p><strong>4. Conformidade</strong></p>
-        <p>Declaro que li, entendi e concordo com todos os termos acima, ciente de meus direitos e obrigações.</p>
-      </div>
-      
-      <button id="btn-aceitar-termos" onclick="aceitarTermos()"
-        class="w-full bg-green-600 text-white rounded-xl py-3 font-bold text-base hover:bg-green-700">
-        ✅ Concordo e aceito os termos
-      </button>
+  <!-- Header -->
+  <header class="border-b border-zinc-900 sticky top-0 z-40 bg-zinc-950/95 backdrop-blur-sm">
+    <div class="max-w-2xl mx-auto px-4 py-5 flex items-center gap-2">
+      <svg class="w-7 h-7 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/>
+      </svg>
+      <span class="text-xl font-extrabold tracking-tight">MobiHub</span>
+      <span class="text-zinc-500 font-semibold">— Quero Dirigir</span>
     </div>
-  </div>
-</div> 
+  </header>
 
-<div id="conteudo-principal" class="hidden">
-  <div class="bg-green-600 text-white px-4 py-3 flex items-center gap-2 shadow"> 
-    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"> 
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/> 
-    </svg> 
-    <span class="font-bold text-lg">MobiHub</span> 
-    <span class="text-green-200 text-sm">— Quero Dirigir</span> 
-  </div> 
+  <!-- Content -->
+  <section class="max-w-2xl mx-auto px-4 py-8">
+    <!-- Progress Bar -->
+    <div class="mb-10">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-sm font-semibold text-zinc-400">Etapa <span id="etapa-atual">1</span> de 4</span>
+        <span class="text-sm font-semibold text-green-500" id="etapa-titulo">Informações Básicas</span>
+      </div>
+      <div class="w-full h-2 bg-zinc-900 rounded-full overflow-hidden">
+        <div id="progresso" class="h-full bg-green-500 rounded-full transition-all duration-500" style="width: 25%;"></div>
+      </div>
+    </div>
 
-  <div class="max-w-lg mx-auto px-4 py-6 space-y-4"> 
-
-    <div class="bg-green-50 border border-green-200 rounded-xl p-4"> 
-      <p class="text-sm font-medium text-green-800">🚗 Bem-vindo! Preencha seus dados para se candidatar como motorista.</p> 
-      <p class="text-xs text-green-600 mt-1">Seu cadastro será analisado e aprovado pela equipe MobiHub.</p> 
-    </div> 
-
-    <div class="bg-white border border-gray-200 rounded-xl p-5 space-y-4"> 
-
-      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Dados pessoais</h2> 
-
-      <div> 
-        <label class="text-xs text-gray-500 font-medium">Nome completo *</label> 
-        <input id="f-nome" type="text" placeholder="Seu nome completo" 
-          class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-      </div> 
-
-      <div class="grid grid-cols-2 gap-3"> 
-        <div> 
-          <label class="text-xs text-gray-500 font-medium">Telefone *</label> 
+    <!-- Step 1: Informações Básicas -->
+    <div id="etapa-1" class="space-y-6">
+      <h2 class="text-3xl font-extrabold mb-8">Vamos começar?</h2>
+      <div class="space-y-5">
+        <div>
+          <label class="text-sm font-semibold text-zinc-400">Nome Completo</label>
+          <input id="f-nome" type="text" placeholder="Seu nome completo" 
+            class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/>
+        </div>
+        <div>
+          <label class="text-sm font-semibold text-zinc-400">E-mail</label>
+          <input id="f-email" type="email" placeholder="seu@email.com" 
+            class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/>
+        </div>
+        <div>
+          <label class="text-sm font-semibold text-zinc-400">Telefone (WhatsApp)</label>
           <input id="f-telefone" type="tel" placeholder="(27) 99999-9999" 
-            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-        </div> 
-        <div> 
-          <label class="text-xs text-gray-500 font-medium">Telegram ID *</label> 
-          <input id="f-telegram" type="text" placeholder="Ex: 1479908250" 
-            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-          <p class="text-xs text-gray-400 mt-0.5">Fale com @userinfobot no Telegram</p> 
-        </div> 
-      </div> 
+            class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/>
+        </div>
+        <div>
+          <label class="text-sm font-semibold text-zinc-400">Cidade de atuação</label>
+          <select id="f-cidade" 
+            class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+            <option value="Grande Vitória">Grande Vitória</option>
+            <option value="Vitória">Vitória</option>
+            <option value="Vila Velha">Vila Velha</option>
+            <option value="Cariacica">Cariacica</option>
+            <option value="São Mateus">São Mateus</option>
+          </select>
+        </div>
+      </div>
+      <div class="pt-4">
+        <button onclick="proximaEtapa()" 
+          class="w-full bg-green-500 hover:bg-green-400 text-zinc-950 font-extrabold py-4 rounded-xl transition-all">
+          Próximo →
+        </button>
+      </div>
+    </div>
 
-      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide pt-2">Dados do veículo</h2> 
+    <!-- Step 2: Dados do Veículo -->
+    <div id="etapa-2" class="space-y-6 hidden">
+      <h2 class="text-3xl font-extrabold mb-8">Seu veículo</h2>
+      <div class="space-y-5">
+        <div>
+          <label class="text-sm font-semibold text-zinc-400">Marca</label>
+          <input id="f-marca" type="text" placeholder="Ex: Toyota" 
+            class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/>
+        </div>
+        <div>
+          <label class="text-sm font-semibold text-zinc-400">Modelo</label>
+          <input id="f-modelo" type="text" placeholder="Ex: Corolla" 
+            class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="text-sm font-semibold text-zinc-400">Ano (mínimo 2014)</label>
+            <input id="f-ano" type="number" min="2014" max="2030" placeholder="2020" 
+              class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/>
+          </div>
+          <div>
+            <label class="text-sm font-semibold text-zinc-400">Placa</label>
+            <input id="f-placa" type="text" placeholder="Ex: SGZ2D22" 
+              class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/>
+          </div>
+        </div>
+      </div>
+      <div class="pt-4 flex gap-3">
+        <button onclick="etapaAnterior()" 
+          class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-semibold py-4 rounded-xl transition-all">
+          ← Anterior
+        </button>
+        <button onclick="proximaEtapa()" 
+          class="flex-1 bg-green-500 hover:bg-green-400 text-zinc-950 font-extrabold py-4 rounded-xl transition-all">
+          Próximo →
+        </button>
+      </div>
+    </div>
 
-      <div class="grid grid-cols-2 gap-3"> 
-        <div> 
-          <label class="text-xs text-gray-500 font-medium">Modelo do carro *</label> 
-          <input id="f-modelo" type="text" placeholder="Ex: BYD King GS" 
-            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-        </div> 
-        <div> 
-          <label class="text-xs text-gray-500 font-medium">Ano *</label> 
-          <input id="f-ano" type="text" placeholder="Ex: 2024" 
-            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-        </div> 
-      </div> 
+    <!-- Step 3: Documentação e EAR -->
+    <div id="etapa-3" class="space-y-6 hidden">
+      <h2 class="text-3xl font-extrabold mb-8">Documentação</h2>
+      <div class="space-y-6">
+        <div class="flex items-start gap-3 p-5 bg-zinc-900 border border-zinc-800 rounded-2xl">
+          <input id="f-ear" type="checkbox" class="mt-1 w-5 h-5 accent-green-500">
+          <label for="f-ear" class="text-sm text-zinc-300 leading-relaxed">
+            Declaro que possuo CNH com observação <strong class="text-white">EAR (Exerce Atividade Remunerada)</strong>.
+          </label>
+        </div>
+        <div>
+          <label class="text-sm font-semibold text-zinc-400 mb-3 block">Foto da CNH</label>
+          <div class="flex gap-3 mb-3">
+            <button type="button" onclick="abrirCamera()" 
+              class="flex-1 flex items-center justify-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm hover:bg-zinc-800">
+              📷 Tirar foto
+            </button>
+            <button type="button" onclick="document.getElementById('input-foto').click()" 
+              class="flex-1 flex items-center justify-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm hover:bg-zinc-800">
+              🖼️ Galeria
+            </button>
+          </div>
+          <input id="input-foto" type="file" accept="image/*" class="hidden" onchange="processarFoto(event)"/>
+          <canvas id="canvas-foto" class="hidden"></canvas>
+          <div id="area-camera" class="hidden mb-3">
+            <video id="video-camera" autoplay playsinline class="w-full rounded-2xl" style="max-height:220px;object-fit:cover;background:#000"></video>
+            <div class="flex gap-3 mt-3">
+              <button type="button" onclick="capturarFoto()" 
+                class="flex-1 bg-green-500 text-zinc-950 rounded-xl py-3 text-sm font-extrabold">
+                📸 Capturar
+              </button>
+              <button type="button" onclick="fecharCamera()" 
+                class="flex-1 bg-zinc-800 text-white rounded-xl py-3 text-sm font-semibold">
+                Cancelar
+              </button>
+            </div>
+          </div>
+          <div id="preview-foto" class="hidden flex justify-center mb-3">
+            <div class="relative">
+              <img id="img-preview" src="" class="w-32 h-32 rounded-2xl object-cover border-4 border-green-500"/>
+              <button onclick="removerFoto()" 
+                class="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-full text-sm flex items-center justify-center font-bold">✕</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="pt-4 flex gap-3">
+        <button onclick="etapaAnterior()" 
+          class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-semibold py-4 rounded-xl transition-all">
+          ← Anterior
+        </button>
+        <button onclick="proximaEtapa()" 
+          class="flex-1 bg-green-500 hover:bg-green-400 text-zinc-950 font-extrabold py-4 rounded-xl transition-all">
+          Próximo →
+        </button>
+      </div>
+    </div>
 
-      <div class="grid grid-cols-2 gap-3"> 
-        <div> 
-          <label class="text-xs text-gray-500 font-medium">Cor *</label> 
-          <input id="f-cor" type="text" placeholder="Ex: Prata" 
-            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-        </div> 
-        <div> 
-          <label class="text-xs text-gray-500 font-medium">Placa *</label> 
-          <input id="f-placa" type="text" placeholder="Ex: SGZ2D22" 
-            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-        </div> 
-      </div> 
+    <!-- Step 4: Segurança Jurídica (ELVIVA GROUP) -->
+    <div id="etapa-4" class="space-y-6 hidden">
+      <h2 class="text-3xl font-extrabold mb-8">Termos de Uso</h2>
+      <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+        <h3 class="font-bold text-lg mb-4 text-green-500">ELVIVA GROUP LTDA</h3>
+        <div class="text-sm text-zinc-300 space-y-4 max-h-80 overflow-y-auto pr-2">
+          <p><strong>1. Natureza da Relação</strong></p>
+          <p>A presente relação é de natureza CÍVEL e COMERCIAL, sendo regida pelo Código Civil e pelo Código de Defesa do Consumidor, e NÃO CONFIGURA VÍNCULO EMPREGATÍCIO, vínculo de trabalho ou qualquer outra forma de subordinação jurídica.</p>
+          
+          <p><strong>2. Autonomia do Motorista</strong></p>
+          <p>O motorista exerce sua atividade de forma TOTALMENTE AUTÔNOMA, independente, sem horário fixo, sem subordinação hierárquica, podendo aceitar ou recusar corridas a seu exclusivo critério, sem qualquer sanção ou consequência negativa.</p>
+          
+          <p><strong>3. Consentimento de Geolocalização e Tratamento de Dados (LGPD)</strong></p>
+          <p>Ao aceitar estes termos, você consente expressamente com a coleta, tratamento, armazenamento e, se necessário, transferência de seus dados pessoais e de geolocalização para a ELVIVA GROUP LTDA (CNPJ: 62.444.354/0001-82), inclusive para fins de sucessão, venda ou transferência do negócio, sempre em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018). O usuário autoriza que a ELVIVA GROUP LTDA transfira todos os dados coletados a empresas sucessoras em caso de venda ou fusão do MobiHub.</p>
+          
+          <p><strong>4. Conformidade</strong></p>
+          <p>Declaro que li, entendi e concordo com todos os termos acima, ciente de meus direitos e obrigações.</p>
+        </div>
+      </div>
+      <div class="pt-4 flex gap-3">
+        <button onclick="etapaAnterior()" 
+          class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-semibold py-4 rounded-xl transition-all">
+          ← Anterior
+        </button>
+        <button onclick="enviarCadastro()" id="btn-enviar" 
+          class="flex-1 bg-green-500 hover:bg-green-400 text-zinc-950 font-extrabold py-4 rounded-xl transition-all">
+          Enviar Cadastro
+        </button>
+      </div>
+    </div>
 
-      <div id="erro-form" class="hidden text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2"></div> 
+    <!-- Success Screen -->
+    <div id="tela-sucesso" class="hidden text-center py-10">
+      <div class="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+        <svg class="w-10 h-10 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+      </div>
+      <h2 class="text-3xl font-extrabold mb-4">Cadastro recebido!</h2>
+      <p class="text-zinc-400 text-lg max-w-md mx-auto">
+        A ELVIVA GROUP analisará seus dados e você receberá uma resposta em breve via Telegram/WhatsApp.
+      </p>
+    </div>
 
-      <button id="btn-cadastrar" onclick="cadastrar()" 
-        class="w-full bg-green-600 text-white rounded-xl py-3.5 font-bold text-base hover:bg-green-700"> 
-        Enviar cadastro para aprovação 
-      </button> 
+    <!-- Error Div -->
+    <div id="erro-form" class="hidden mt-6 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3"></div>
+  </section>
 
-    </div> 
+  <script>
+    let etapaAtual = 1
+    let fotoBase64 = null
+    let streamCamera = null
 
-    <!-- TELA: SUCESSO --> 
-    <div id="tela-sucesso" class="hidden"> 
-      <div class="bg-white border border-gray-200 rounded-xl p-6 text-center"> 
-        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"> 
-          <svg class="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"> 
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/> 
-          </svg> 
-        </div> 
-        <h2 class="text-xl font-bold text-gray-900 mb-2">Cadastro enviado!</h2> 
-        <p class="text-sm text-gray-500 mb-4">Seus dados foram recebidos e estão sendo analisados pela equipe MobiHub.</p> 
-        <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-left"> 
-          <p class="text-xs text-yellow-800 font-medium">⏳ Próximos passos:</p> 
-          <ul class="text-xs text-yellow-700 mt-1 space-y-1"> 
-            <li>• Nossa equipe vai analisar seu cadastro</li> 
-            <li>• Você receberá uma mensagem no Telegram quando aprovado</li> 
-            <li>• Após aprovação você já pode receber corridas</li> 
-          </ul> 
-        </div> 
-      </div> 
-    </div> 
+    const etapasTitulos = {
+      1: 'Informações Básicas',
+      2: 'Dados do Veículo',
+      3: 'Documentação',
+      4: 'Termos de Uso'
+    }
 
-  </div> 
-</div>
+    function atualizarProgresso() {
+      document.getElementById('etapa-atual').textContent = etapaAtual
+      document.getElementById('etapa-titulo').textContent = etapasTitulos[etapaAtual]
+      document.getElementById('progresso').style.width = `${etapaAtual * 25}%`
+      
+      for (let i = 1; i <=4; i++) {
+        document.getElementById(`etapa-${i}`).classList.toggle('hidden', i !== etapaAtual)
+      }
+    }
 
-<script> 
- const STORAGE_TERMOS = 'termosAceitosMotoristaGeral'
- let termosAceitos = false
+    function proximaEtapa() {
+      document.getElementById('erro-form').classList.add('hidden')
+      
+      // Validação etapa 1
+      if (etapaAtual === 1) {
+        const nome = document.getElementById('f-nome').value.trim()
+        const email = document.getElementById('f-email').value.trim()
+        const telefone = document.getElementById('f-telefone').value.trim()
+        if (!nome || !email || !telefone) {
+          mostrarErro('Preencha todos os campos obrigatórios')
+          return
+        }
+      }
 
- function verificarTermos() {
-   const termos = localStorage.getItem(STORAGE_TERMOS)
-   const modal = document.getElementById('modal-termos')
-   const conteudo = document.getElementById('conteudo-principal')
-   
-   if (termos === 'true') {
-     termosAceitos = true
-     modal.style.display = 'none'
-     modal.classList.add('hidden')
-     conteudo.classList.remove('hidden')
-   } else {
-     termosAceitos = false
-     modal.style.display = 'flex'
-     modal.classList.remove('hidden')
-     conteudo.classList.add('hidden')
-   }
- }
+      // Validação etapa 2
+      if (etapaAtual === 2) {
+        const marca = document.getElementById('f-marca').value.trim()
+        const modelo = document.getElementById('f-modelo').value.trim()
+        const ano = parseInt(document.getElementById('f-ano').value)
+        const placa = document.getElementById('f-placa').value.trim()
+        if (!marca || !modelo || !ano || !placa) {
+          mostrarErro('Preencha todos os campos do veículo')
+          return
+        }
+        if (ano < 2014) {
+          mostrarErro('Ano do veículo deve ser no mínimo 2014')
+          return
+        }
+      }
 
- function aceitarTermos() {
-   localStorage.setItem(STORAGE_TERMOS, 'true')
-   verificarTermos()
- }
+      // Validação etapa 3
+      if (etapaAtual === 3) {
+        const ear = document.getElementById('f-ear').checked
+        if (!ear) {
+          mostrarErro('Confirme que possui CNH com EAR')
+          return
+        }
+      }
 
- async function cadastrar() { 
-   if (!termosAceitos) {
-     alert('Por favor aceite os termos de uso primeiro!')
-     verificarTermos()
-     return
-   }
+      if (etapaAtual < 4) {
+        etapaAtual++
+        atualizarProgresso()
+      }
+    }
 
-   const nome = document.getElementById('f-nome').value.trim() 
-   const telefone = document.getElementById('f-telefone').value.trim() 
-   const telegram_id = document.getElementById('f-telegram').value.trim() 
-   const modelo_carro = document.getElementById('f-modelo').value.trim() 
-   const ano_carro = document.getElementById('f-ano').value.trim() 
-   const cor_carro = document.getElementById('f-cor').value.trim() 
-   const placa = document.getElementById('f-placa').value.trim() 
-   const erro = document.getElementById('erro-form') 
+    function etapaAnterior() {
+      document.getElementById('erro-form').classList.add('hidden')
+      if (etapaAtual > 1) {
+        etapaAtual--
+        atualizarProgresso()
+      }
+    }
 
-   if (!nome || !telefone || !telegram_id || !modelo_carro || !ano_carro || !cor_carro || !placa) { 
-     erro.textContent = 'Preencha todos os campos obrigatórios' 
-     erro.classList.remove('hidden') 
-     return 
-   } 
+    function mostrarErro(msg) {
+      const erroEl = document.getElementById('erro-form')
+      erroEl.textContent = msg
+      erroEl.classList.remove('hidden')
+    }
 
-   erro.classList.add('hidden') 
-   const btn = document.getElementById('btn-cadastrar') 
-   btn.textContent = 'Enviando...' 
-   btn.disabled = true 
+    // Camera functions
+    async function abrirCamera() {
+      try {
+        streamCamera = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: 400, height: 400 }, audio: false
+        })
+        document.getElementById('video-camera').srcObject = streamCamera
+        document.getElementById('area-camera').classList.remove('hidden')
+      } catch(e) {
+        alert('Não foi possível acessar a câmera. Verifique as permissões.')
+      }
+    }
 
-   try { 
-     const r = await fetch('/api/cadastro-geral', { 
-       method: 'POST', 
-       headers: { 'Content-Type': 'application/json' }, 
-       body: JSON.stringify({ 
-         nome, telefone, telegram_id, 
-         modelo_carro, ano_carro, cor_carro, placa
-       }) 
-     }) 
+    function fecharCamera() {
+      if (streamCamera) {
+        streamCamera.getTracks().forEach(t => t.stop())
+        streamCamera = null
+      }
+      document.getElementById('area-camera').classList.add('hidden')
+      document.getElementById('video-camera').srcObject = null
+    }
 
-     const d = await r.json() 
+    function capturarFoto() {
+      const video = document.getElementById('video-camera')
+      const canvas = document.getElementById('canvas-foto')
+      const size = 400
+      canvas.width = size
+      canvas.height = size
+      const ctx = canvas.getContext('2d')
+      const vw = video.videoWidth, vh = video.videoHeight
+      const lado = Math.min(vw, vh)
+      ctx.drawImage(video, (vw-lado)/2, (vh-lado)/2, lado, lado, 0, 0, size, size)
+      aplicarFoto(canvas.toDataURL('image/jpeg', 0.85))
+      fecharCamera()
+    }
 
-     if (!r.ok) { 
-       erro.textContent = d.error || 'Erro ao cadastrar' 
-       erro.classList.remove('hidden') 
-       btn.textContent = 'Enviar cadastro para aprovação' 
-       btn.disabled = false 
-       return 
-     } 
+    function processarFoto(event) {
+      const file = event.target.files[0]
+      if (!file) return
+      const reader = new FileReader()
+      reader.onload = e => {
+        const img = new Image()
+        img.onload = () => {
+          const canvas = document.getElementById('canvas-foto')
+          const size = 400
+          canvas.width = size
+          canvas.height = size
+          const ctx = canvas.getContext('2d')
+          const lado = Math.min(img.width, img.height)
+          ctx.drawImage(img, (img.width-lado)/2, (img.height-lado)/2, lado, lado, 0, 0, size, size)
+          aplicarFoto(canvas.toDataURL('image/jpeg', 0.85))
+        }
+        img.src = e.target.result
+      }
+      reader.readAsDataURL(file)
+      event.target.value = ''
+    }
 
-     document.querySelector('.bg-white.rounded-xl.p-5.space-y-4').classList.add('hidden') 
-     document.getElementById('tela-sucesso').classList.remove('hidden') 
-   } catch(e) { 
-     erro.textContent = 'Erro de conexão. Tente novamente.' 
-     erro.classList.remove('hidden') 
-     btn.textContent = 'Enviar cadastro para aprovação' 
-     btn.disabled = false 
-   } 
- } 
+    function aplicarFoto(base64) {
+      fotoBase64 = base64
+      document.getElementById('img-preview').src = base64
+      document.getElementById('preview-foto').classList.remove('hidden')
+    }
 
- verificarTermos()
-</script> 
-</body> 
+    function removerFoto() {
+      fotoBase64 = null
+      document.getElementById('preview-foto').classList.add('hidden')
+      document.getElementById('img-preview').src = ''
+    }
+
+    async function enviarCadastro() {
+      const btn = document.getElementById('btn-enviar')
+      btn.textContent = 'Enviando...'
+      btn.disabled = true
+      document.getElementById('erro-form').classList.add('hidden')
+
+      try {
+        const body = {
+          nome: document.getElementById('f-nome').value.trim(),
+          telefone: document.getElementById('f-telefone').value.trim(),
+          telegram_id: '0', // Será solicitado depois
+          modelo_carro: `${document.getElementById('f-marca').value.trim()} ${document.getElementById('f-modelo').value.trim()}`,
+          ano_carro: document.getElementById('f-ano').value,
+          cor_carro: 'Não informado',
+          placa: document.getElementById('f-placa').value.trim(),
+          foto_base64: fotoBase64
+        }
+
+        const r = await fetch('/api/cadastro-geral', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        })
+
+        if (!r.ok) {
+          const d = await r.json()
+          throw new Error(d.error || 'Erro ao enviar')
+        }
+
+        // Success screen
+        for (let i=1; i<=4; i++) document.getElementById(`etapa-${i}`).classList.add('hidden')
+        document.getElementById('tela-sucesso').classList.remove('hidden')
+      } catch(e) {
+        mostrarErro(e.message || 'Erro de conexão. Tente novamente.')
+        btn.textContent = 'Enviar Cadastro'
+        btn.disabled = false
+      }
+    }
+  </script>
+</body>
 </html>
