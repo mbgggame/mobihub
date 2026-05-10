@@ -286,6 +286,7 @@
  
 <script> 
  let motoristaAtualDossie = null 
+ let motoristasPendentesGlobais = [] 
  const token = () => localStorage.getItem('mobihub_token') 
  const headers = () => ({ 
    'Content-Type': 'application/json', 
@@ -649,25 +650,25 @@
      <div>
        <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Documentos</h4>
        <div class="grid grid-cols-2 gap-2">
-         <button ${d.crlv_base64 ? `onclick='abrirModalDocumentoDash("CRLV", "${d.crlv_base64.replace(/'/g, "\\'")}")'` : `disabled`
+         <button id="btn-crlv" ${!d.crlv_base64 ? 'disabled' : ''}
            class="text-xs ${d.crlv_base64 
              ? 'text-gray-700 border border-gray-200 hover:bg-gray-50' 
              : 'text-gray-400 border border-gray-100 cursor-not-allowed'} rounded-lg py-2">
            ${d.crlv_base64 ? '👁️ Ver CRLV' : 'Documento ausente'}
          </button>
          ${d.cnh_digital_base64 
-           ? `<button onclick='abrirModalDocumentoDash("CNH Digital", "${d.cnh_digital_base64.replace(/'/g, "\\'")}")'
+           ? `<button id="btn-cnh-digital"
                class="text-xs text-gray-700 border border-gray-200 hover:bg-gray-50 rounded-lg py-2 col-span-2">
                📄 Ver CNH Digital
              </button>` 
            : `
-           <button ${d.cnh_frente_base64 ? `onclick='abrirModalDocumentoDash("CNH Frente", "${d.cnh_frente_base64.replace(/'/g, "\\'")}")'` : `disabled`
+           <button id="btn-cnh-frente" ${!d.cnh_frente_base64 ? 'disabled' : ''}
              class="text-xs ${d.cnh_frente_base64 
                ? 'text-gray-700 border border-gray-200 hover:bg-gray-50' 
                : 'text-gray-400 border border-gray-100 cursor-not-allowed'} rounded-lg py-2">
              ${d.cnh_frente_base64 ? '🖼️ Ver CNH Frente' : 'Documento ausente'}
            </button>
-           <button ${d.cnh_verso_base64 ? `onclick='abrirModalDocumentoDash("CNH Verso", "${d.cnh_verso_base64.replace(/'/g, "\\'")}")'` : `disabled`
+           <button id="btn-cnh-verso" ${!d.cnh_verso_base64 ? 'disabled' : ''}
              class="text-xs ${d.cnh_verso_base64 
                ? 'text-gray-700 border border-gray-200 hover:bg-gray-50' 
                : 'text-gray-400 border border-gray-100 cursor-not-allowed'} rounded-lg py-2">
@@ -696,6 +697,21 @@
        </button>
      </div>
    `
+
+   // Add event listeners for document buttons
+   if (d.crlv_base64) {
+     document.getElementById('btn-crlv').addEventListener('click', () => abrirModalDocumentoDash('CRLV', d.crlv_base64))
+   }
+   if (d.cnh_digital_base64) {
+     document.getElementById('btn-cnh-digital').addEventListener('click', () => abrirModalDocumentoDash('CNH Digital', d.cnh_digital_base64))
+   } else {
+     if (d.cnh_frente_base64) {
+       document.getElementById('btn-cnh-frente').addEventListener('click', () => abrirModalDocumentoDash('CNH Frente', d.cnh_frente_base64))
+     }
+     if (d.cnh_verso_base64) {
+       document.getElementById('btn-cnh-verso').addEventListener('click', () => abrirModalDocumentoDash('CNH Verso', d.cnh_verso_base64))
+     }
+   }
 
    document.getElementById('modal-dossie').classList.remove('hidden')
  }
@@ -746,17 +762,18 @@
      return 
    } 
    const pendentes = await r.json() 
+   motoristasPendentesGlobais = pendentes 
    console.log('[DASHBOARD] Motoristas pendentes recebidos:', pendentes) 
    const section = document.getElementById('section-pendentes') 
    const lista = document.getElementById('lista-pendentes') 
- 
+
    if (!pendentes.length) { 
      section.classList.add('hidden') 
      return 
    } 
- 
+
    section.classList.remove('hidden') 
-   lista.innerHTML = pendentes.map(d => { 
+   lista.innerHTML = pendentes.map((d, index) => { 
      console.log('[DASHBOARD] Renderizando motorista:', d) 
      return ` 
      <div class="bg-white border-2 border-yellow-300 rounded-xl p-4 flex items-center justify-between gap-4"> 
@@ -774,12 +791,16 @@
            </span> 
          </div> 
        </div> 
-       <button onclick='abrirDossie(${JSON.stringify(d).replace(/'/g, "\\'")})'
+       <button onclick='abrirDossiePorIndice(${index})'
          class="text-sm text-yellow-700 border border-yellow-200 rounded-lg px-4 py-2.5 hover:bg-yellow-50 font-semibold">
          🔍 ABRIR DOSSIÊ COMPLETO
        </button>
      </div> 
    `}).join('') 
+ } 
+ 
+ function abrirDossiePorIndice(index) { 
+   abrirDossie(motoristasPendentesGlobais[index]) 
  } 
  
  async function gerarConvite() { 
