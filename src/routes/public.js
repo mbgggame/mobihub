@@ -1,8 +1,8 @@
 import { query, pool } from '../db.js' 
 import { requireAuth } from '../middleware/auth.js' 
- 
+
 export default async function publicRoutes(fastify) { 
- 
+
   // Configurações públicas
   fastify.get('/api/config/mapbox', async (request, reply) => {
     return { token: process.env.MAPBOX_TOKEN };
@@ -21,7 +21,7 @@ export default async function publicRoutes(fastify) {
     await query("UPDATE ride_messages SET lida = 1 WHERE ride_id = $1 AND remetente = 'motorista' AND lida = 0", [ride.id]) 
     return { mensagens } 
   }) 
- 
+
   // Marcar mensagens como lidas (passageiro lendo as do motorista) 
   fastify.post('/api/chat/:token/lida', async (request, reply) => { 
     const ride = (await query('SELECT id FROM rides WHERE token = $1', [request.params.token])).rows[0] 
@@ -29,21 +29,21 @@ export default async function publicRoutes(fastify) {
     await query("UPDATE ride_messages SET lida = 1 WHERE ride_id = $1 AND remetente = 'motorista' AND lida = 0", [ride.id]) 
     return { success: true } 
   }) 
- 
+
   // Atualizar localização do motorista 
   fastify.post('/api/motorista/localizacao', async (request, reply) => { 
     const { driver_id, lat, lng } = request.body 
     if (!driver_id || !lat || !lng) return reply.code(400).send({ error: 'Dados incompletos' }) 
- 
+
     await query(` 
       INSERT INTO driver_locations (driver_id, lat, lng, updated_at) 
       VALUES ($1, $2, $3, NOW()) 
       ON CONFLICT (driver_id) DO UPDATE SET lat = $2, lng = $3, updated_at = NOW() 
     `, [driver_id, lat, lng]) 
- 
+
     return { success: true } 
   })
- 
+
   // Passageiro envia mensagem 
   fastify.post('/api/ride/:token/mensagem', async (request, reply) => { 
     const { mensagem } = request.body 
@@ -53,7 +53,7 @@ export default async function publicRoutes(fastify) {
     await query('INSERT INTO ride_messages (ride_id, remetente, mensagem) VALUES ($1, $2, $3)', [ride.id, 'passageiro', mensagem.trim()]) 
     return { mensagem: 'Enviado' } 
   }) 
- 
+
   // Motorista envia mensagem 
   fastify.post('/api/motorista/:token/mensagem/:rideId', async (request, reply) => { 
     const { mensagem } = request.body 
@@ -66,7 +66,7 @@ export default async function publicRoutes(fastify) {
     await query('INSERT INTO ride_messages (ride_id, remetente, mensagem) VALUES ($1, $2, $3)', [ride.id, 'motorista', mensagem.trim()]) 
     return { mensagem: 'Enviado' } 
   }) 
- 
+
   // Motorista busca mensagens 
   fastify.get('/api/motorista/:token/mensagens/:rideId', async (request, reply) => { 
     const { token, rideId } = request.params 
@@ -78,7 +78,7 @@ export default async function publicRoutes(fastify) {
     )).rows 
     await query("UPDATE ride_messages SET lida = 1 WHERE ride_id = $1 AND remetente = 'passageiro' AND lida = 0", [rideId]) 
     return { mensagens } 
-  }) 
+  })
 
   // Marcar mensagens como lidas (motorista lendo as do passageiro) 
   fastify.post('/api/motorista/:token/chat/:rideId/lida', async (request, reply) => { 
@@ -87,7 +87,7 @@ export default async function publicRoutes(fastify) {
     if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
     await query("UPDATE ride_messages SET lida = 1 WHERE ride_id = $1 AND remetente = 'passageiro' AND lida = 0", [rideId]) 
     return { success: true } 
-  }) 
+  })
 
   // --- LOCALIZAÇÃO E ETA ---
 
@@ -101,12 +101,12 @@ export default async function publicRoutes(fastify) {
     if (!driver) { 
       console.log('[LOCATION] Motorista não encontrado') 
       return reply.code(404).send({ error: 'Motorista não encontrado' }) 
-    } 
+    }
 
     const existing = (await query( 
       'SELECT id FROM driver_locations WHERE driver_id = $1', 
       [driver.id] 
-    )).rows[0] 
+    )).rows[0]
 
     if (existing) { 
       await query( 
@@ -118,11 +118,11 @@ export default async function publicRoutes(fastify) {
         'INSERT INTO driver_locations (driver_id, ride_id, lat, lng) VALUES ($1, $2, $3, $4)', 
         [driver.id, ride_id, lat, lng] 
       ) 
-    } 
+    }
 
     console.log('[LOCATION] Salvo com sucesso') 
     return { ok: true } 
-  }) 
+  })
 
   fastify.get('/api/ride/:token/motorista-location', async (request, reply) => { 
     const { token } = request.params 
@@ -133,20 +133,20 @@ export default async function publicRoutes(fastify) {
       WHERE r.token = $1 
     `, [token])).rows[0] 
     if (!ride || !ride.driver_id) return { location: null } 
- 
+
     const location = (await query(` 
       SELECT lat, lng, EXTRACT(EPOCH FROM (NOW() - updated_at)) as segundos_atras 
       FROM driver_locations WHERE driver_id = $1 ORDER BY updated_at DESC LIMIT 1 
     `, [ride.driver_id])).rows[0] 
- 
+
     if (!location) return { location: null } 
- 
+
     const destLat = ride.passageiro_embarcou_at ? ride.destino_lat : ride.origem_lat 
     const destLng = ride.passageiro_embarcou_at ? ride.destino_lng : ride.origem_lng 
- 
+
     let etaMinutos = null 
     let distanciaKm = null 
- 
+
     if (destLat && destLng) { 
       const R = 6371 
       const dLat = (destLat - location.lat) * Math.PI / 180 
@@ -157,7 +157,7 @@ export default async function publicRoutes(fastify) {
       distanciaKm = parseFloat((R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(1)) 
       etaMinutos = Math.max(1, Math.round(distanciaKm / 0.5)) 
     } 
- 
+
     return { 
       valor: ride.valor, 
       location: { 
@@ -170,7 +170,7 @@ export default async function publicRoutes(fastify) {
         fase: ride.passageiro_embarcou_at ? 'em_rota' : 'a_caminho' 
       } 
     } 
-  }) 
+  })
 
   fastify.get('/api/motorista/:token/ultima-corrida', async (request, reply) => { 
     const driver = (await query( 
@@ -187,7 +187,7 @@ export default async function publicRoutes(fastify) {
     `, [driver.id])).rows[0] 
   
     return { corrida: corrida || null } 
-  }) 
+  })
 
   // --- PERFIS E CADASTRO ---
 
@@ -201,9 +201,9 @@ export default async function publicRoutes(fastify) {
       FROM drivers WHERE token_perfil = $1 
     `, [request.params.token]) 
     const driver = result.rows[0] 
- 
+
     if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
- 
+
     const corridasResult = await query(` 
       SELECT r.id, r.origem, r.destino, r.valor, r.valor_motorista, 
         r.status, r.created_at, r.concluida_at, r.tipo, 
@@ -214,7 +214,7 @@ export default async function publicRoutes(fastify) {
       LIMIT 30 
     `, [driver.id]) 
     const corridas = corridasResult.rows 
- 
+
     const comentariosResult = await query(` 
       SELECT rt.estrelas_motorista, rt.comentario_cliente, rt.avaliado_em_cliente 
       FROM ratings rt 
@@ -224,7 +224,7 @@ export default async function publicRoutes(fastify) {
       LIMIT 20 
     `, [driver.id]) 
     const comentarios = comentariosResult.rows 
- 
+
     const financeiroResult = await query(` 
       SELECT 
         COUNT(*) as total_corridas, 
@@ -236,9 +236,9 @@ export default async function publicRoutes(fastify) {
       FROM rides WHERE driver_id = $1 
     `, [driver.id]) 
     const financeiro = financeiroResult.rows[0] 
- 
+
     return { driver, corridas, comentarios, financeiro } 
-  }) 
+  })
 
   fastify.put('/api/motorista/:token/foto', async (request, reply) => { 
     const { foto_base64 } = request.body 
@@ -248,7 +248,7 @@ export default async function publicRoutes(fastify) {
     if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
     await query('UPDATE drivers SET foto_base64 = $1 WHERE id = $2', [foto_base64, driver.id]) 
     return { mensagem: 'Foto atualizada com sucesso!' } 
-  }) 
+  })
 
   fastify.get('/api/motorista/:token/corrida-disponivel', async (request, reply) => { 
     const driver = (await query( 
@@ -256,7 +256,7 @@ export default async function publicRoutes(fastify) {
       [request.params.token] 
     )).rows[0] 
     if (!driver) return { corrida: null } 
- 
+
     const corrida = (await query(` 
       SELECT r.*, c.nome as client_nome, c.media_avaliacao as client_media 
       FROM rides r 
@@ -268,20 +268,20 @@ export default async function publicRoutes(fastify) {
     `)).rows[0] 
     return { corrida: corrida || null } 
   }) 
- 
+
   fastify.get('/api/motorista/:token/corrida-ativa', async (request, reply) => { 
     const driver = (await query( 
       'SELECT id FROM drivers WHERE token_perfil = $1', 
       [request.params.token] 
     )).rows[0] 
     if (!driver) return { corrida: null } 
- 
+
     const corrida = (await query( 
       "SELECT * FROM rides WHERE driver_id = $1 AND status IN ('aceita', 'em_viagem') ORDER BY aceita_at DESC LIMIT 1", 
       [driver.id] 
     )).rows[0] 
     return { corrida: corrida || null } 
-  }) 
+  })
 
   fastify.get('/api/motoristas-online', async (request, reply) => { 
     const motoristas = (await query(` 
@@ -317,7 +317,7 @@ export default async function publicRoutes(fastify) {
       lng: m.lng && m.segundos_atras < 300 ? m.lng : null, 
       tem_localizacao: !!(m.lat && m.segundos_atras < 300) 
     })) 
-  }) 
+  })
 
   fastify.get('/api/convite/:token', async (request, reply) => { 
     const result = await query( 
@@ -327,7 +327,7 @@ export default async function publicRoutes(fastify) {
     if (!result.rows.length) return reply.code(404).send({ error: 'Convite inválido ou expirado' }) 
     return { valido: true } 
   }) 
- 
+
   fastify.post('/api/cadastro-motorista/:token', async (request, reply) => { 
     const { token } = request.params 
     const { nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, foto_base64 } = request.body 
@@ -355,7 +355,7 @@ export default async function publicRoutes(fastify) {
       ).catch(() => {}) 
     } catch(e) {} 
     return { mensagem: 'Cadastro enviado com sucesso! Aguarde aprovação.' } 
-  }) 
+  })
 
   // --- AÇÕES DE CORRIDA ---
 
@@ -393,7 +393,7 @@ export default async function publicRoutes(fastify) {
       } catch(err) { console.error('[SOLICITAR] Erro Telegram:', err.message) } 
     } 
     return { token, link: `${process.env.BASE_URL}/r/${token}`, mensagem: 'Corrida solicitada!' } 
-  }) 
+  })
 
   fastify.put('/api/rides/:id/aceitar-motorista', async (request, reply) => { 
     const { token_motorista } = request.body 
@@ -410,17 +410,17 @@ export default async function publicRoutes(fastify) {
       } catch(e) {} 
     } 
     return { mensagem: 'Corrida aceita!', token: ride.token } 
-  }) 
+  })
 
   // Motorista informa que o passageiro embarcou 
   fastify.post('/api/motorista/:token/embarcou/:rideId', async (request, reply) => { 
     const { token, rideId } = request.params 
     const driver = (await query('SELECT id FROM drivers WHERE token_perfil = $1', [token])).rows[0] 
     if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
- 
+
     const ride = (await query('SELECT * FROM rides WHERE id = $1 AND driver_id = $2', [rideId, driver.id])).rows[0] 
     if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
- 
+
     await query(` 
       UPDATE rides SET 
         status = 'em_viagem', 
@@ -428,10 +428,10 @@ export default async function publicRoutes(fastify) {
         passageiro_embarcou_at = CURRENT_TIMESTAMP 
       WHERE id = $1 
     `, [rideId]) 
- 
+
     return { success: true, mensagem: 'Passageiro embarcou!' } 
   }) 
- 
+
   // Motorista informa que a corrida foi finalizada 
   fastify.put('/api/rides/:id/finalizar-motorista', async (request, reply) => { 
     const { token_motorista } = request.body 
@@ -450,12 +450,12 @@ export default async function publicRoutes(fastify) {
     const configs = (await query('SELECT chave, valor FROM configuracoes')).rows 
     const config = {} 
     configs.forEach(c => config[c.chave] = c.valor) 
- 
+
     // Cálculo detalhado para memória de cálculo 
     const waitInfo = calculateInitialWaitCost(ride.tempo_espera_inicial_min || 0, config) 
     const valorFinal = calculateTotalRideCost(ride.valor || 0, waitInfo.cost, ride.custo_paradas || 0, config) 
     const valorMotorista = parseFloat((valorFinal * 0.70).toFixed(2)) 
- 
+
     await query(` 
       UPDATE rides SET 
         status = 'concluida', 
@@ -490,7 +490,7 @@ export default async function publicRoutes(fastify) {
       if (ride.telegram_message_id) await editGroupMessage(ride.telegram_message_id, `✅ *Corrida concluída!*\n\n📍 ${ride.origem}\n🏁 ${ride.destino}\n💰 R$ ${valorFinal.toFixed(2)}`) 
     } catch(e) {} 
     return { mensagem: 'Corrida finalizada!', valor_final: valorFinal, valor_motorista: valorMotorista } 
-  }) 
+  })
 
   fastify.put('/api/rides/:id/parada/ultima/finalizar', async (request, reply) => { 
     const { id } = request.params 
@@ -507,7 +507,7 @@ export default async function publicRoutes(fastify) {
     const totalParadas = (await query('SELECT COALESCE(SUM(custo),0) as total, COALESCE(SUM(duracao_min),0) as tempo FROM ride_stops WHERE ride_id = $1', [id])).rows[0] 
     await query("UPDATE rides SET status_detalhe = 'em_andamento', custo_paradas = $1, tempo_paradas_total_min = $2 WHERE id = $3", [totalParadas.total, totalParadas.tempo, id]) 
     return { mensagem: 'Parada finalizada!', custo_parada: custo } 
-  }) 
+  })
 
   fastify.put('/api/ride/:token/cancelar', async (request, reply) => { 
     const ride = (await query( 
@@ -540,7 +540,7 @@ export default async function publicRoutes(fastify) {
     } catch(e) {} 
   
     return { mensagem: 'Corrida cancelada' } 
-  }) 
+  })
 
   fastify.put('/api/motorista/:token/cancelar-corrida/:rideId', async (request, reply) => { 
     const { token, rideId } = request.params 
@@ -589,7 +589,7 @@ export default async function publicRoutes(fastify) {
     } catch(e) {} 
   
     return { mensagem: 'Corrida cancelada com sucesso' } 
-  }) 
+  })
 
 
 
@@ -612,7 +612,7 @@ export default async function publicRoutes(fastify) {
       await query(`UPDATE drivers SET media_avaliacao = $1, total_avaliacoes = $2 WHERE id = $3`, [stats.media, stats.total, ride.driver_id]) 
     } 
     return { mensagem: 'Obrigado!', redirect: '/solicitar' } 
-  }) 
+  })
 
   fastify.post('/api/internal/rate-client', async (request, reply) => { 
     const { ride_id, driver_telegram_id, estrelas, comentario } = request.body 
@@ -632,14 +632,14 @@ export default async function publicRoutes(fastify) {
       await query(`UPDATE clients SET media_avaliacao = $1, total_avaliacoes = $2 WHERE id = $3`, [stats.media, stats.total, ride.client_id]) 
     } 
     return { mensagem: 'Avaliação registrada' } 
-  }) 
+  })
 
   fastify.get('/api/reputacao/corrida/:id', { preHandler: requireAuth }, async (request, reply) => { 
     const ride = (await query(`SELECT r.*, d.nome as driver_nome, d.media_avaliacao as driver_media, c.nome as client_nome FROM rides r LEFT JOIN drivers d ON r.driver_id = d.id LEFT JOIN clients c ON r.client_id = c.id WHERE r.id = $1`, [request.params.id])).rows[0] 
     if (!ride) return reply.code(404).send({ error: 'Não encontrada' }) 
     const rating = (await query('SELECT * FROM ratings WHERE ride_id = $1', [request.params.id])).rows[0] 
     return { ride, rating } 
-  }) 
+  })
 
   // Detalhamento de faturamento (Billing) 
   fastify.get('/api/rides/:id/billing', async (request, reply) => { 
@@ -652,12 +652,12 @@ export default async function publicRoutes(fastify) {
         total_value, status 
       FROM rides WHERE id = $1 
     `, [id])).rows[0] 
- 
+
     if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
     return ride 
   }) 
- 
-  // Buscar corrida por token (melhorado para incluir campos de billing) 
+
+  // Buscar corrida pelo token (melhorado para incluir campos de billing) 
   fastify.get('/api/ride/:token', async (request, reply) => { 
     const { token } = request.params 
     const ride = (await query(` 
@@ -676,10 +676,10 @@ export default async function publicRoutes(fastify) {
     const paradas = (await query('SELECT duracao_min, custo, iniciada_at, finalizada_at FROM ride_stops WHERE ride_id = $1 ORDER BY iniciada_at', [ride.id])).rows 
     const configs = (await query('SELECT chave, valor FROM configuracoes')).rows 
     const config = {} 
-    configs.forEach(c => config[c.chave] = c.valor) 
+    configs.forEach(c => config[c.chave] = c.valor)
 
     delete ride.client_id 
-    delete ride.driver_id 
+    delete ride.driver_id
 
     return { ride, rating, paradas, config } 
   })
@@ -707,7 +707,7 @@ export default async function publicRoutes(fastify) {
     const clientesProblematicosResult = await query(`
       SELECT c.id, c.nome, c.telefone, c.total_corridas, c.media_avaliacao, c.total_avaliacoes
       FROM clients c WHERE c.media_avaliacao < 3 AND c.total_avaliacoes >= 2
-      ORDER BY c.media_avaliacao ASC, c.total_avaliacoes DESC
+      ORDER BY c.media_avaliacao ASC, c.total_corridas DESC
     `)
     const clientesProblematicos = clientesProblematicosResult.rows
 
@@ -756,5 +756,96 @@ export default async function publicRoutes(fastify) {
     `, [request.params.id])).rows
 
     return { client, avaliacoes }
-  }) 
+  })
+
+  // Novas rotas
+  fastify.get('/api/my-rides', async (request, reply) => {
+    const { telefone } = request.query
+    if (!telefone) return reply.code(400).send({ error: 'Telefone obrigatório' })
+    const client = (await query('SELECT id FROM clients WHERE telefone = $1', [telefone])).rows[0]
+    if (!client) return { rides: [] }
+    const rides = (await query(`
+      SELECT id, origem, destino, origem_lat, origem_lng, destino_lat, destino_lng, created_at, status
+      FROM rides
+      WHERE client_id = $1
+      ORDER BY created_at DESC
+      LIMIT 5
+    `, [client.id])).rows
+    return { rides }
+  })
+
+  fastify.get('/api/clients', { preHandler: requireAuth }, async () => {
+    const result = await query(`
+      SELECT id, nome, telefone, total_corridas, media_avaliacao, total_avaliacoes
+      FROM clients ORDER BY nome
+    `)
+    return result.rows
+  })
+
+  fastify.get('/api/client/reputation', async (request, reply) => {
+    const { telefone } = request.query
+    if (!telefone) return reply.code(400).send({ error: 'Telefone obrigatório' })
+    const client = (await query('SELECT media_avaliacao, total_avaliacoes FROM clients WHERE telefone = $1', [telefone])).rows[0]
+    if (!client) return { media: 0, total: 0 }
+    return { media: parseFloat(client.media_avaliacao || 0), total: parseInt(client.total_avaliacoes || 0) }
+  })
+
+  fastify.post('/api/rate', async (request, reply) => {
+    const { ride_id, tipo, estrelas, comentario, token } = request.body
+    if (!ride_id || !tipo || !estrelas || estrelas < 1 || estrelas > 5) {
+      return reply.code(400).send({ error: 'Dados incompletos' })
+    }
+    const ride = (await query('SELECT * FROM rides WHERE id = $1', [ride_id])).rows[0]
+    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' })
+
+    const existing = (await query('SELECT * FROM ratings WHERE ride_id = $1', [ride_id])).rows[0]
+
+    if (tipo === 'motorista') {
+      if (existing?.estrelas_motorista) return reply.code(409).send({ error: 'Já avaliado' })
+      if (existing) {
+        await query(`
+          UPDATE ratings SET estrelas_motorista = $1, comentario_cliente = $2, avaliado_em_cliente = CURRENT_TIMESTAMP
+          WHERE ride_id = $3
+        `, [estrelas, comentario || null, ride_id])
+      } else {
+        await query(`
+          INSERT INTO ratings (ride_id, estrelas_motorista, comentario_cliente, avaliado_em_cliente)
+          VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+        `, [ride_id, estrelas, comentario || null])
+      }
+      if (ride.driver_id) {
+        const stats = (await query(`
+          SELECT AVG(estrelas_motorista) as media, COUNT(estrelas_motorista) as total
+          FROM ratings WHERE ride_id IN (SELECT id FROM rides WHERE driver_id = $1) AND estrelas_motorista IS NOT NULL
+        `, [ride.driver_id])).rows[0]
+        await query(`
+          UPDATE drivers SET media_avaliacao = $1, total_avaliacoes = $2 WHERE id = $3
+        `, [stats.media, stats.total, ride.driver_id])
+      }
+    } else if (tipo === 'cliente') {
+      if (existing?.estrelas_cliente) return reply.code(409).send({ error: 'Já avaliado' })
+      if (existing) {
+        await query(`
+          UPDATE ratings SET estrelas_cliente = $1, comentario_motorista = $2, avaliado_em_motorista = CURRENT_TIMESTAMP
+          WHERE ride_id = $3
+        `, [estrelas, comentario || null, ride_id])
+      } else {
+        await query(`
+          INSERT INTO ratings (ride_id, estrelas_cliente, comentario_motorista, avaliado_em_motorista)
+          VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+        `, [ride_id, estrelas, comentario || null])
+      }
+      if (ride.client_id) {
+        const stats = (await query(`
+          SELECT AVG(estrelas_cliente) as media, COUNT(estrelas_cliente) as total
+          FROM ratings WHERE ride_id IN (SELECT id FROM rides WHERE client_id = $1) AND estrelas_cliente IS NOT NULL
+        `, [ride.client_id])).rows[0]
+        await query(`
+          UPDATE clients SET media_avaliacao = $1, total_avaliacoes = $2 WHERE id = $3
+        `, [stats.media, stats.total, ride.client_id])
+      }
+    }
+    return { mensagem: 'Avaliação salva!' }
+  })
+
 } 

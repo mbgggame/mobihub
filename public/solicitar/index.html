@@ -7,6 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script> 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" /> 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script> 
+  <script src="/socket.io/socket.io.js"></script>
   <style>
     #map { height: 280px; } 
     .autocomplete-list { position: absolute; z-index: 1000; background: white; width: 100%; border: 1px solid #e5e7eb; border-radius: 0.5rem; margin-top: 0.25rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); max-height: 200px; overflow-y: auto; }
@@ -50,13 +51,60 @@
   </div>
 </div> 
 
-<div class="bg-green-600 text-white px-4 py-3 flex items-center gap-2 shadow"> 
-  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg> 
-  <span class="font-bold text-lg">MobiHub</span> 
+<!-- MODAL DE HISTÓRICO -->
+<div id="modal-historico" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4 py-6 hidden">
+  <div class="bg-white rounded-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto shadow-2xl">
+    <div class="p-6 space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xl font-bold text-gray-900">🕒 Meu Histórico</h2>
+        <button onclick="fecharModalHistorico()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+      </div>
+      <div id="lista-historico" class="space-y-3"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DE AVALIAÇÃO DO MOTORISTA -->
+<div id="modal-avaliacao" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4 py-6 hidden">
+  <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl">
+    <div class="p-6 space-y-4">
+      <div class="text-center">
+        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+          <span class="text-3xl">⭐</span>
+        </div>
+        <h2 class="text-xl font-bold text-gray-900">Avalie o motorista!</h2>
+        <p class="text-sm text-gray-500 mt-1">Como foi sua corrida?</p>
+      </div>
+      <div class="flex justify-center gap-2" id="estrelas-avaliacao">
+        <button onclick="selecionarEstrela(1)" class="text-4xl text-gray-300 hover:text-yellow-400" data-estrela="1">★</button>
+        <button onclick="selecionarEstrela(2)" class="text-4xl text-gray-300 hover:text-yellow-400" data-estrela="2">★</button>
+        <button onclick="selecionarEstrela(3)" class="text-4xl text-gray-300 hover:text-yellow-400" data-estrela="3">★</button>
+        <button onclick="selecionarEstrela(4)" class="text-4xl text-gray-300 hover:text-yellow-400" data-estrela="4">★</button>
+        <button onclick="selecionarEstrela(5)" class="text-4xl text-gray-300 hover:text-yellow-400" data-estrela="5">★</button>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 font-medium">Comentário (opcional)</label>
+        <textarea id="comentario-avaliacao" rows="3" placeholder="Como foi a corrida?"
+          class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></textarea>
+      </div>
+      <button id="btn-enviar-avaliacao" onclick="enviarAvaliacao()" disabled
+        class="w-full bg-green-600 text-white rounded-xl py-3 font-bold text-base opacity-40 cursor-not-allowed hover:bg-green-700">
+        Enviar avaliação
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="bg-green-600 text-white px-4 py-3 flex items-center justify-between shadow sticky top-0 z-20"> 
+  <div class="flex items-center gap-2">
+    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg> 
+    <span class="font-bold text-lg">MobiHub</span>
+  </div>
+  <button onclick="abrirModalHistorico()" class="text-sm bg-green-700 px-3 py-1.5 rounded-lg">🕒 Meu Histórico</button>
 </div> 
 
 <div id="conteudo-solicitar" class="max-w-lg mx-auto px-4 py-4 space-y-4"> 
- 
+
   <!-- TELA 1: CADASTRO --> 
   <div id="tela-cadastro"> 
     <div class="bg-white border border-gray-200 rounded-xl p-5"> 
@@ -86,15 +134,23 @@
       </div> 
     </div> 
   </div> 
- 
+
   <!-- TELA 2: SOLICITAR --> 
   <div id="tela-solicitar" class="hidden space-y-4"> 
- 
+
     <div class="flex items-center justify-between"> 
-      <p class="text-sm text-gray-600">Olá, <span id="txt-nome-cliente" class="font-semibold text-green-700"></span>!</p> 
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2">
+          <p class="text-sm text-gray-600">Olá, <span id="txt-nome-cliente" class="font-semibold text-green-700"></span>!</p> 
+        </div>
+        <div id="sua-nota" class="flex items-center gap-1 bg-yellow-50 border border-yellow-200 px-3 py-1 rounded-full">
+          <span id="sua-nota-estrelas" class="text-yellow-500"></span>
+          <span id="sua-nota-texto" class="text-xs font-medium text-yellow-700"></span>
+        </div>
+      </div>
       <button onclick="trocarCadastro()" class="text-xs text-gray-400 hover:text-gray-600 underline">Trocar dados</button> 
     </div> 
- 
+
     <div class="flex gap-2"> 
       <button id="btn-agora" onclick="setTipo('normal')" 
         class="flex-1 bg-green-600 text-white rounded-xl py-3 font-semibold text-sm"> 
@@ -105,14 +161,14 @@
         🗓️ Agendar 
       </button> 
     </div> 
- 
+
     <div id="campo-agendamento" class="hidden bg-white border border-gray-200 rounded-xl p-4"> 
       <label class="text-sm font-medium text-gray-700">Data e hora da corrida</label> 
       <input id="data-agendamento" type="datetime-local" 
         class="mt-2 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
       <p class="text-xs text-gray-400 mt-1">Mínimo 2 horas de antecedência • Máximo 10 dias</p> 
     </div> 
- 
+
     <div class="bg-white border border-gray-200 rounded-xl p-4 space-y-3"> 
       <div class="relative"> 
          <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">📍 Origem</label> 
@@ -133,12 +189,12 @@
         <div id="lista-dest" class="autocomplete-list hidden"></div>
       </div> 
     </div> 
- 
+
     <div class="rounded-xl overflow-hidden border border-gray-200"> 
       <div id="map"></div> 
     </div> 
-    <p id="txt-motoristas-online" class="text-xs text-center text-gray-400 py-1">Carregando motoristas...</p></p> 
- 
+    <p id="txt-motoristas-online" class="text-xs text-center text-gray-400 py-1">Carregando motoristas...</p>
+
     <div id="ponto-origem" class="hidden bg-green-50 border border-green-200 rounded-xl px-4 py-3"> 
       <div class="flex items-start justify-between"> 
         <div> 
@@ -153,7 +209,7 @@
         </div> 
       </div> 
     </div> 
- 
+
     <div id="ponto-destino" class="hidden bg-red-50 border border-red-200 rounded-xl px-4 py-3"> 
       <div class="flex items-start justify-between"> 
         <div> 
@@ -163,7 +219,7 @@
         <button onclick="limparPontos()" class="text-xs text-red-400 hover:text-red-600 mt-1">Limpar</button> 
       </div> 
     </div> 
- 
+
     <div id="card-valor" class="hidden bg-green-50 border border-green-200 rounded-xl px-4 py-4"> 
       <div class="flex items-center justify-between"> 
         <div> 
@@ -178,33 +234,33 @@
         </div> 
       </div> 
     </div> 
- 
+
     <div id="erro-solicitar" class="hidden bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3"></div> 
- 
+
     <div class="bg-blue-50 border border-blue-200 rounded-xl p-3"> 
       <p class="text-xs font-medium text-blue-700 mb-1">ℹ️ Política de espera e paradas</p> 
       <p class="text-xs text-blue-600">• Espera ao chegar: 3 min grátis. Após: R$ 0,60/min</p> 
        <p class="text-xs text-blue-600">• Paradas: 2 min grátis. Após: R$ 0,60/min</p> 
        <p class="text-xs text-blue-600">• Cancelamento: Taxa de R$ 10,00 após 2 min de aceite</p> 
     </div> 
- 
+
     <button id="btn-solicitar" onclick="solicitar()" disabled 
       class="w-full bg-green-600 text-white rounded-xl py-4 font-bold text-base opacity-40 cursor-not-allowed transition-all"> 
       Solicitar corrida 
     </button> 
- 
+
     <div id="atalhos" class="hidden"> 
       <p class="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">Atalhos rápidos</p> 
       <div id="atalhos-lista" class="flex gap-2 flex-wrap"></div> 
     </div> 
- 
+
     <div id="historico-section" class="hidden"> 
       <p class="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">Corridas recentes</p> 
       <div id="historico-lista" class="space-y-2"></div> 
     </div> 
- 
+
   </div> 
- 
+
   <!-- TELA 3: CONFIRMAÇÃO --> 
   <div id="tela-confirmacao" class="hidden"> 
     <div id="card-confirmacao" class="bg-white border border-gray-200 rounded-2xl p-6 text-center space-y-4"> 
@@ -241,7 +297,7 @@
       </div> 
     </div> 
   </div> 
- 
+
 </div> 
 <script> 
  console.log('[SOLICITAR] Página carregada') 
@@ -260,11 +316,12 @@
  window.origem = null 
  window.destino = null 
  window.valorCalculado = null 
- 
+
  const STORAGE_CLIENTE = 'mobi_cliente' 
  const STORAGE_FAV = 'mobi_favoritos' 
  const STORAGE_HIST = 'mobi_historico' 
- const STORAGE_TERMOS_PASSAGEIRO = 'mobi_termos_passageiro' 
+ const STORAGE_TERMOS_PASSAGEIRO = 'mobi_termos_passageiro'
+ const STORAGE_RIDE_ID = 'mobi_ride_id'
 
  let map, geocoder 
  let marcadores = { origem: null, destino: null } 
@@ -274,7 +331,10 @@
  let tipoCorreida = 'normal' 
  let valorCalculado = 0 
  let intervalRedirect = null 
- let linkAcompanhamento = '' 
+ let linkAcompanhamento = ''
+ let rideIdAvaliacao = null
+ let estrelasSelecionadas = 0
+ let socket = null
 
  function verificarTermosPassageiro() {
    const termosAceitos = localStorage.getItem(STORAGE_TERMOS_PASSAGEIRO)
@@ -306,32 +366,34 @@
    iconSize: [25, 41], 
    iconAnchor: [12, 41] 
  }); 
- 
+
  const iconeDestino = L.icon({ 
    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png', 
    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png', 
    iconSize: [25, 41], 
    iconAnchor: [12, 41] 
  }); 
- 
+
  const iconeMotorista = L.icon({ 
    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png', 
    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png', 
    iconSize: [25, 41], 
    iconAnchor: [12, 41] 
  }); 
- 
+
  function verificarCadastro() { 
    const cliente = JSON.parse(localStorage.getItem(STORAGE_CLIENTE) || 'null') 
    if (cliente && cliente.celular && cliente.nome) { 
      document.getElementById('tela-cadastro').classList.add('hidden') 
      document.getElementById('tela-solicitar').classList.remove('hidden') 
      document.getElementById('txt-nome-cliente').textContent = cliente.nome 
+     carregarSuaNota(cliente.celular)
      renderizarAtalhos() 
      renderizarHistorico() 
+     initSocket()
    } 
  } 
- 
+
  function salvarCadastro() { 
    const nome = document.getElementById('cad-nome').value.trim() 
    const celular = document.getElementById('cad-celular').value.trim() 
@@ -343,18 +405,18 @@
    localStorage.setItem(STORAGE_CLIENTE, JSON.stringify({ nome, celular, email })) 
    verificarCadastro() 
  } 
- 
+
  function trocarCadastro() { 
    localStorage.removeItem(STORAGE_CLIENTE) 
    document.getElementById('tela-solicitar').classList.add('hidden') 
    document.getElementById('tela-cadastro').classList.remove('hidden') 
  } 
- 
+
  function verificarBotaoSolicitar() { 
    const btn = document.getElementById('btn-solicitar'); 
    const origemOk = document.getElementById('busca-orig').value.trim() !== '' && origemLat;
    const destinoOk = document.getElementById('busca-dest').value.trim() !== '' && destinoLat;
- 
+
    if (origemOk && destinoOk) { 
      btn.disabled = false; 
      btn.classList.remove('opacity-40', 'cursor-not-allowed'); 
@@ -363,7 +425,7 @@
      btn.classList.add('opacity-40', 'cursor-not-allowed'); 
    } 
  } 
- 
+
  function setTipo(tipo) { 
    tipoCorreida = tipo 
    const campo = document.getElementById('campo-agendamento') 
@@ -376,15 +438,15 @@
    if (tipo === 'agendada') { 
      campo.classList.remove('hidden') 
      const agora = new Date() 
- 
+
      // Mínimo: 2 horas a partir de agora 
      const min = new Date(agora.getTime() + 2 * 60 * 60 * 1000) 
- 
+
      // Máximo: exatamente 10 dias corridos a partir de hoje 
      const max = new Date(agora) 
      max.setDate(max.getDate() + 10) 
      max.setHours(23, 59, 0, 0) 
- 
+
      const input = document.getElementById('data-agendamento') 
      input.min = min.toISOString().slice(0, 16) 
      input.max = max.toISOString().slice(0, 16) 
@@ -397,7 +459,7 @@
    } 
    recalcularValor() 
  } 
- 
+
  function initMap() { 
    map = L.map('map').setView([-20.3155, -40.3128], 13) 
    fetch('/api/config/mapbox') 
@@ -410,32 +472,30 @@
          maxZoom: 19 
        }).addTo(map) 
      });
- 
- 
- 
+
    setupAutocomplete('busca-orig', 'origem') 
    setupAutocomplete('busca-dest', 'destino') 
- 
+
    carregarMotoristasOnline() 
    setInterval(carregarMotoristasOnline, 30000) 
  } 
- 
+
  let marcadoresMotoristas = [] 
- 
+
  async function carregarMotoristasOnline() { 
    try { 
      const r = await fetch('/api/motoristas-online') 
      if (!r.ok) return 
      const motoristas = await r.json() 
- 
+
      // Remove pins anteriores 
      marcadoresMotoristas.forEach(m => { 
        if (m.marker) map.removeLayer(m.marker) 
      }) 
      marcadoresMotoristas = [] 
- 
+
      const txt = document.getElementById('txt-motoristas-online') 
- 
+
      if (!motoristas.length) { 
        if (txt) { 
          txt.textContent = '😔 Nenhum motorista disponível agora' 
@@ -443,15 +503,15 @@
        } 
        return 
      } 
- 
+
      const comLocalizacao = motoristas.filter(m => m.lat && m.lng) 
- 
+
      comLocalizacao.forEach(m => { 
        const marker = L.marker([parseFloat(m.lat), parseFloat(m.lng)], { 
          icon: iconeMotorista, 
          title: `${m.nome} — ${m.carro}` 
        }).addTo(map) 
- 
+
        const popupContent = ` 
            <div style="font-size:13px;padding:4px;min-width:120px"> 
              <p style="font-weight:bold;margin:0;color:#1f2937">${m.nome}</p> 
@@ -464,21 +524,21 @@
        marker.bindPopup(popupContent) 
        marcadoresMotoristas.push({ marker }) 
      }) 
- 
+
      if (txt) { 
        txt.textContent = `🟢 ${motoristas.length} motorista${motoristas.length > 1 ? 's' : ''} disponível${motoristas.length > 1 ? 'is' : ''} agora` 
        txt.className = 'text-xs text-center text-green-600 font-medium' 
      } 
- 
+
      if (typeof origemLat !== 'undefined' && origemLat) { 
        desenharLinhasMotoristas(origemLat, origemLng) 
      } 
- 
+
    } catch(e) { 
      console.error('[MOTORISTAS ONLINE]', e) 
    } 
  } 
- 
+
  function setupAutocomplete(inputId, tipo) { 
    const input = document.getElementById(inputId) 
    const list = document.getElementById(tipo === 'origem' ? 'lista-orig' : 'lista-dest')
@@ -541,42 +601,42 @@
      destinoLat = lat 
      destinoLng = lon 
      destino = enderecoCurto 
-   } 
+   }
 
    marcarPonto(lat, lon, enderecoCurto, tipo) 
    map.setView([lat, lon], 15) 
    verificarBotaoSolicitar()
- }
- 
+ } 
+
  function mostrarOrigemNoMapa(lat, lng, endereco) { 
    if (window.markerOrigem) { 
      map.removeLayer(window.markerOrigem) 
    } 
- 
+
    window.markerOrigem = L.marker([lat, lng], { 
      icon: iconeOrigem, 
      title: 'Sua localização: ' + endereco 
    }).addTo(map) 
- 
+
    map.panTo([lat, lng]) 
    map.setZoom(14) 
- 
+
    // Desenha linhas tracejadas dos motoristas até a origem 
    desenharLinhasMotoristas(lat, lng) 
  } 
- 
+
  let linhasMotoristas = [] 
- 
+
  function desenharLinhasMotoristas(origemLat, origemLng) { 
    // Remove linhas anteriores 
    linhasMotoristas.forEach(l => map.removeLayer(l)) 
    linhasMotoristas = [] 
- 
+
    marcadoresMotoristas.forEach(item => { 
      if (!item.marker) return 
      const pos = item.marker.getLatLng() 
      if (!pos) return 
- 
+
      const linha = L.polyline([ 
        [pos.lat, pos.lng], 
        [origemLat, origemLng] 
@@ -586,11 +646,11 @@
        weight: 2, 
        opacity: 0.6 
      }).addTo(map) 
- 
+
      linhasMotoristas.push(linha) 
    }) 
  } 
- 
+
  function usarLocalizacaoAtual() { 
    const erroEl = document.getElementById('erro-solicitar');
    if (!navigator.geolocation) { 
@@ -601,7 +661,7 @@
    navigator.geolocation.getCurrentPosition(pos => { 
      const lat = pos.coords.latitude 
      const lng = pos.coords.longitude 
- 
+
      fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=pt-BR`) 
        .then(r => r.json()) 
        .then(d => { 
@@ -625,7 +685,7 @@
      erroEl.classList.remove('hidden');
    }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }) 
  } 
- 
+
  function marcarPonto(lat, lng, endereco, tipo) { 
    if (marcadores[tipo]) map.removeLayer(marcadores[tipo]) 
    marcadores[tipo] = L.marker([lat, lng], { 
@@ -649,7 +709,7 @@
      calcularDistancia() 
    } 
  } 
- 
+
  function limparPontos() { 
    if (marcadores.origem) map.removeLayer(marcadores.origem) 
    if (marcadores.destino) map.removeLayer(marcadores.destino) 
@@ -665,7 +725,7 @@
    btn.disabled = true 
    btn.classList.add('opacity-40', 'cursor-not-allowed') 
  } 
- 
+
  function calcularDistancia() { 
    if (!pontos.origem || !pontos.destino) return 
    // Usando Haversine para cálculo de distância gratuito 
@@ -683,7 +743,7 @@
    const duracaoMin = Math.round((distanciaKm / 30) * 60) 
    exibirValor(distanciaKm, duracaoMin) 
  } 
- 
+
  async function exibirValor(distanciaKm, duracaoMin) { 
    let valor = 0 
    let tarifaNome = '' 
@@ -712,16 +772,16 @@
    btn.disabled = false 
    btn.classList.remove('opacity-40', 'cursor-not-allowed') 
  } 
- 
+
  function calcularValorLocal(distanciaKm, valorMin, kmMin, valorKm) { 
    if (distanciaKm <= kmMin) return valorMin 
    return valorMin + ((distanciaKm - kmMin) * valorKm) 
  } 
- 
+
  function recalcularValor() { 
    if (pontos.origem && pontos.destino) calcularDistancia() 
  } 
- 
+
  async function solicitar() { 
    const termosAceitos = localStorage.getItem(STORAGE_TERMOS_PASSAGEIRO)
    if (termosAceitos !== 'true') {
@@ -730,7 +790,7 @@
      return
    }
 
-   const clienteStr = localStorage.getItem('mobihub_cliente') 
+   const clienteStr = localStorage.getItem(STORAGE_CLIENTE) 
    const cliente = clienteStr ? JSON.parse(clienteStr) : null 
 
    if (!origem || !origemLat) { 
@@ -747,19 +807,22 @@
      document.getElementById('tela-solicitar')?.classList.add('hidden') 
      return 
    } 
- 
+
    const btn = document.getElementById('btn-solicitar') 
    btn.disabled = true 
    btn.textContent = 'Solicitando...' 
- 
+
    // Usa valor calculado ou valor mínimo 
    const valor = valorCalculado || 15.00 
- 
+
    try { 
-     const r = await fetch('/api/rides', { 
+     const r = await fetch('/api/solicitar', { 
        method: 'POST', 
        headers: { 'Content-Type': 'application/json' }, 
        body: JSON.stringify({ 
+         nome: cliente.nome,
+         celular: cliente.celular,
+         email: cliente.email,
          origem, 
          origem_lat: origemLat, 
          origem_lng: origemLng, 
@@ -767,12 +830,11 @@
          destino_lat: destinoLat, 
          destino_lng: destinoLng, 
          valor, 
-         client_id: cliente.id, 
          tipo: tipoCorreida || 'normal', 
          agendada_para: (tipoCorreida === 'agendada' ? document.getElementById('data-agendamento').value : null) 
        }) 
      }) 
- 
+
      const d = await r.json() 
      if (!r.ok) { 
        alert('Erro: ' + (d.error || 'Tente novamente')) 
@@ -780,16 +842,19 @@
        btn.textContent = 'Solicitar corrida' 
        return 
      } 
- 
+
+     // Salva ride ID para avaliação
+     localStorage.setItem(STORAGE_RIDE_ID, d.rideId || d.id)
+
      // Sucesso: Configura link e redirecionamento 
      linkAcompanhamento = `${window.location.origin}/r/${d.token}` 
      document.getElementById('txt-link-corrida').textContent = linkAcompanhamento 
      document.getElementById('btn-acompanhar').href = linkAcompanhamento 
- 
+
      salvarHistorico() 
      document.getElementById('tela-solicitar').classList.add('hidden') 
      document.getElementById('tela-confirmacao').classList.remove('hidden') 
- 
+
      // Redireciona automaticamente em 3 segundos 
      let countdown = 3 
      intervalRedirect = setInterval(() => { 
@@ -807,12 +872,12 @@
      btn.textContent = 'Solicitar corrida' 
    } 
  } 
- 
+
  function copiarLink() { 
    navigator.clipboard.writeText(linkAcompanhamento) 
    alert('Link copiado!') 
  } 
- 
+
  function compartilharCorrida() { 
    if (navigator.share) { 
      navigator.share({ 
@@ -824,7 +889,7 @@
      copiarLink() 
    } 
  } 
- 
+
  function novaCorrida() { 
    if (intervalRedirect) clearInterval(intervalRedirect) 
    linkAcompanhamento = '' 
@@ -834,7 +899,7 @@
    document.getElementById('tela-solicitar').classList.remove('hidden') 
    document.getElementById('btn-solicitar').textContent = 'Solicitar corrida' 
  } 
- 
+
  function salvarFavorito(tipo) { 
    if (!pontos.origem) return 
    const favs = JSON.parse(localStorage.getItem(STORAGE_FAV) || '{}') 
@@ -843,7 +908,7 @@
    renderizarAtalhos() 
    alert(`Salvo como ${tipo === 'casa' ? 'Casa 🏠' : 'Trabalho 💼'}!`) 
  } 
- 
+
  function salvarHistorico() { 
    if (!pontos.origem || !pontos.destino) return 
    const hist = JSON.parse(localStorage.getItem(STORAGE_HIST) || '[]') 
@@ -856,7 +921,7 @@
    localStorage.setItem(STORAGE_HIST, JSON.stringify(filtrado.slice(0, 5))) 
    renderizarHistorico() 
  } 
- 
+
  function renderizarAtalhos() { 
    const favs = JSON.parse(localStorage.getItem(STORAGE_FAV) || '{}') 
    const lista = document.getElementById('atalhos-lista') 
@@ -877,7 +942,7 @@
      lista.appendChild(btn) 
    }) 
  } 
- 
+
  function renderizarHistorico() { 
    const hist = JSON.parse(localStorage.getItem(STORAGE_HIST) || '[]') 
    const lista = document.getElementById('historico-lista') 
@@ -894,7 +959,7 @@
      </div> 
    `).join('') 
  } 
- 
+
  function repetirCorrida(i) { 
    const hist = JSON.parse(localStorage.getItem(STORAGE_HIST) || '[]') 
    const h = hist[i] 
@@ -904,7 +969,143 @@
    const bounds = L.latLngBounds([h.origem.lat, h.origem.lng], [h.destino.lat, h.destino.lng]) 
    map.fitBounds(bounds, { padding: [40, 40] }) 
  } 
- 
+
+ // Funções do Histórico Modal
+ async function carregarHistoricoCorridas() {
+   const cliente = JSON.parse(localStorage.getItem(STORAGE_CLIENTE) || 'null')
+   if (!cliente) return []
+   const r = await fetch(`/api/my-rides?telefone=${encodeURIComponent(cliente.celular)}`)
+   if (!r.ok) return []
+   const d = await r.json()
+   return d.rides || []
+ }
+
+ async function abrirModalHistorico() {
+   const modal = document.getElementById('modal-historico')
+   const lista = document.getElementById('lista-historico')
+   modal.classList.remove('hidden')
+   modal.style.display = 'flex'
+   
+   const rides = await carregarHistoricoCorridas()
+   if (!rides.length) {
+     lista.innerHTML = '<p class="text-sm text-gray-500 text-center py-8">Nenhuma corrida encontrada.</p>'
+     return
+   }
+   lista.innerHTML = rides.map((ride, i) => `
+     <div class="bg-gray-50 border border-gray-200 rounded-xl p-4">
+       <div class="flex items-center justify-between">
+         <div class="flex-1">
+           <p class="text-sm font-semibold text-gray-800">${encurtarEndereco(ride.origem)} → ${encurtarEndereco(ride.destino)}</p>
+           <p class="text-xs text-gray-500 mt-1">${new Date(ride.created_at).toLocaleDateString('pt-BR')} • ${ride.status}</p>
+         </div>
+         <button onclick="repetirCorridaFromHistorico('${ride.origem}', '${ride.destino}', ${ride.origem_lat}, ${ride.origem_lng}, ${ride.destino_lat}, ${ride.destino_lng})"
+           class="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700">
+           Repetir
+         </button>
+       </div>
+     </div>
+   `).join('')
+ }
+
+ function fecharModalHistorico() {
+   const modal = document.getElementById('modal-historico')
+   modal.classList.add('hidden')
+   modal.style.display = 'none'
+ }
+
+ function repetirCorridaFromHistorico(origem, destino, origLat, origLng, destLat, destLng) {
+   fecharModalHistorico()
+   marcarPonto(origLat, origLng, encurtarEndereco(origem), 'origem')
+   marcarPonto(destLat, destLng, encurtarEndereco(destino), 'destino')
+   const bounds = L.latLngBounds([origLat, origLng], [destLat, destLng])
+   map.fitBounds(bounds, { padding: [40, 40] })
+   document.getElementById('busca-orig').value = encurtarEndereco(origem)
+   document.getElementById('busca-dest').value = encurtarEndereco(destino)
+   origemLat = origLat
+   origemLng = origLng
+   destinoLat = destLat
+   destinoLng = destLng
+   verificarBotaoSolicitar()
+ }
+
+ // Funções da Avaliação
+ function selecionarEstrela(n) {
+   estrelasSelecionadas = n
+   const buttons = document.querySelectorAll('#estrelas-avaliacao button')
+   buttons.forEach((btn, i) => {
+     if (i < n) {
+       btn.className = 'text-4xl text-yellow-400'
+     } else {
+       btn.className = 'text-4xl text-gray-300 hover:text-yellow-400'
+     }
+   })
+   const btnEnviar = document.getElementById('btn-enviar-avaliacao')
+   btnEnviar.disabled = false
+   btnEnviar.className = 'w-full bg-green-600 text-white rounded-xl py-3 font-bold text-base hover:bg-green-700'
+ }
+
+ async function enviarAvaliacao() {
+   const rideId = localStorage.getItem(STORAGE_RIDE_ID) || rideIdAvaliacao
+   if (!rideId || !estrelasSelecionadas) return
+   const comentario = document.getElementById('comentario-avaliacao').value
+   const r = await fetch('/api/rate', {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/json' },
+     body: JSON.stringify({
+       ride_id: rideId,
+       tipo: 'motorista',
+       estrelas: estrelasSelecionadas,
+       comentario: comentario || null
+     })
+   })
+   fecharModalAvaliacao()
+   localStorage.removeItem(STORAGE_RIDE_ID)
+   alert('Obrigado por sua avaliação!')
+ }
+
+ function abrirModalAvaliacao(rideId) {
+   rideIdAvaliacao = rideId
+   const modal = document.getElementById('modal-avaliacao')
+   modal.classList.remove('hidden')
+   modal.style.display = 'flex'
+   selecionarEstrela(0)
+   document.getElementById('comentario-avaliacao').value = ''
+ }
+
+ function fecharModalAvaliacao() {
+   const modal = document.getElementById('modal-avaliacao')
+   modal.classList.add('hidden')
+   modal.style.display = 'none'
+ }
+
+ // Sua Nota
+ async function carregarSuaNota(telefone) {
+   try {
+     const r = await fetch(`/api/client/reputation?telefone=${encodeURIComponent(telefone)}`)
+     const d = await r.json()
+     const media = parseFloat(d.media || 0)
+     const total = parseInt(d.total || 0)
+     const estrelasEl = document.getElementById('sua-nota-estrelas')
+     const textoEl = document.getElementById('sua-nota-texto')
+     const estrelas = '★'.repeat(Math.round(media)) + '☆'.repeat(5 - Math.round(media))
+     estrelasEl.textContent = estrelas
+     textoEl.textContent = `${media.toFixed(1)} (${total} aval.)`
+     document.getElementById('sua-nota').classList.remove('hidden')
+   } catch(e) {
+     console.error('[SUA NOTA]', e)
+   }
+ }
+
+ // Socket.io
+ function initSocket() {
+   socket = io()
+   socket.on('corrida:concluida', async (data) => {
+     console.log('[SOCKET] corrida:concluida', data)
+     rideIdAvaliacao = data.rideId
+     abrirModalAvaliacao(data.rideId)
+   })
+ }
+
  window.onload = () => { 
    verificarTermosPassageiro()
    
@@ -913,6 +1114,10 @@
      document.getElementById('tela-cadastro').classList.add('hidden') 
      document.getElementById('tela-solicitar').classList.remove('hidden') 
      document.getElementById('txt-nome-cliente').textContent = cliente.nome 
+     carregarSuaNota(cliente.celular)
+     renderizarAtalhos() 
+     renderizarHistorico() 
+     initSocket()
 
      // BUG 5: Saudação personalizada se vier de uma avaliação 
      if (document.referrer.includes('/ride/')) { 
