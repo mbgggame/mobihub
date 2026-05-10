@@ -630,8 +630,11 @@
    })
    console.log('[DASHBOARD] aprovarMotorista response:', r.status)
    if (r.ok) {
+     alert('✅ Motorista aprovado com sucesso!')
      fecharModalDossie()
      carregar()
+   } else {
+     alert('❌ Erro ao aprovar motorista!')
    }
  }
 
@@ -644,8 +647,11 @@
    })
    console.log('[DASHBOARD] rejeitarMotorista response:', r.status)
    if (r.ok) {
+     alert('❌ Motorista rejeitado com sucesso!')
      fecharModalDossie()
      carregar()
+   } else {
+     alert('❌ Erro ao rejeitar motorista!')
    }
  }
 
