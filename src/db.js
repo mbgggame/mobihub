@@ -133,6 +133,9 @@ export async function initDB() {
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS cnh_frente_base64 TEXT;
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS cnh_verso_base64 TEXT;
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS cnh_digital_base64 TEXT;
+    
+    -- Remove unique constraint on telegram_id (allow same ID for client -> driver)
+    ALTER TABLE drivers DROP CONSTRAINT IF EXISTS drivers_telegram_id_key;
   `) 
  
   await query(` 

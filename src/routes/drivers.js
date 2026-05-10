@@ -15,7 +15,21 @@ export default async function driversRoutes(fastify) {
       return reply.code(400).send({ error: 'Todos os campos obrigatórios são necessários' }) 
     } 
 
+    const temFotosCnh = cnh_frente_base64 && cnh_verso_base64
+    const temCnhDigital = cnh_digital_base64
+    if (!temFotosCnh && !temCnhDigital) {
+      return reply.code(400).send({ error: 'Anexe a CNH (frente e verso OU arquivo digital)' }) 
+    }
+
     try { 
+      // Verifica se já existe motorista com esse telegram_id
+      if (telegram_id && telegram_id !== '0') {
+        const check = await query('SELECT id FROM drivers WHERE telegram_id = $1', [telegram_id])
+        if (check.rows.length > 0) {
+          return reply.code(409).send({ error: 'Telegram ID já cadastrado como motorista' }) 
+        }
+      }
+
       const result = await query(` 
         INSERT INTO drivers 
           (nome, telefone, telegram_id, status_cadastro, ativo, 
@@ -37,7 +51,7 @@ export default async function driversRoutes(fastify) {
       return { id: result.rows[0].id, mensagem: 'Cadastro enviado para aprovação' } 
     } catch (err) { 
       if (err.message.includes('unique') || err.message.includes('UNIQUE')) { 
-        return reply.code(409).send({ error: 'Telegram ID já cadastrado' }) 
+        return reply.code(409).send({ error: 'Telegram ID já cadastrado como motorista' }) 
       } 
       throw err 
     } 
@@ -56,23 +70,29 @@ export default async function driversRoutes(fastify) {
       nome, telefone, telegram_id, 
       modelo_carro, ano_carro, cor_carro, placa, foto_base64 
     } = request.body 
- 
+
     if (!nome || !telegram_id || !modelo_carro || !ano_carro || !cor_carro || !placa) { 
       return reply.code(400).send({ error: 'Todos os campos são obrigatórios' }) 
     } 
- 
+
     try { 
+      // Verifica se já existe motorista com esse telegram_id
+      const check = await query('SELECT id FROM drivers WHERE telegram_id = $1', [telegram_id])
+      if (check.rows.length > 0) {
+        return reply.code(409).send({ error: 'Telegram ID já cadastrado como motorista' }) 
+      }
+
       const result = await query(` 
         INSERT INTO drivers 
           (nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, foto_base64) 
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
         RETURNING id
       `, [nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, foto_base64 || null]) 
- 
+
       return { id: result.rows[0].id, mensagem: 'Motorista cadastrado com sucesso' } 
     } catch (err) { 
       if (err.message.includes('unique') || err.message.includes('UNIQUE')) { 
-        return reply.code(409).send({ error: 'Telegram ID já cadastrado' }) 
+        return reply.code(409).send({ error: 'Telegram ID já cadastrado como motorista' }) 
       } 
       throw err 
     } 
