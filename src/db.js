@@ -127,6 +127,12 @@ export async function initDB() {
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS data_aceite_termos TIMESTAMP;
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS ip_aceite_termos TEXT;
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS versao_termos TEXT DEFAULT '1.0';
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS cpf TEXT;
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS renavam TEXT;
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS crlv_base64 TEXT;
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS cnh_frente_base64 TEXT;
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS cnh_verso_base64 TEXT;
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS cnh_digital_base64 TEXT;
   `) 
  
   await query(` 

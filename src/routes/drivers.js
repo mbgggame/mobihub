@@ -6,21 +6,33 @@ export default async function driversRoutes(fastify) {
 
   fastify.post('/api/cadastro-geral', async (request, reply) => { 
     const { 
-      nome, telefone, telegram_id, 
-      modelo_carro, ano_carro, cor_carro, placa 
+      nome, telefone, telegram_id, email, cpf, cidade,
+      marca_carro, modelo_carro, ano_carro, cor_carro, placa, renavam,
+      crlv_base64, cnh_frente_base64, cnh_verso_base64, cnh_digital_base64, foto_base64
     } = request.body 
 
-    if (!nome || !telefone || !telegram_id || !modelo_carro || !ano_carro || !cor_carro || !placa) { 
-      return reply.code(400).send({ error: 'Todos os campos são obrigatórios' }) 
+    if (!nome || !telefone || !cpf || !modelo_carro || !ano_carro || !placa || !renavam) { 
+      return reply.code(400).send({ error: 'Todos os campos obrigatórios são necessários' }) 
     } 
 
     try { 
       const result = await query(` 
         INSERT INTO drivers 
-          (nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, status_cadastro, ativo) 
-        VALUES ($1, $2, $3, $4, $5, $6, $7, 'pendente', 0) 
+          (nome, telefone, telegram_id, status_cadastro, ativo, 
+           modelo_carro, ano_carro, cor_carro, placa, 
+           cpf, renavam, crlv_base64, 
+           cnh_frente_base64, cnh_verso_base64, cnh_digital_base64, foto_base64) 
+        VALUES ($1, $2, $3, 'pendente', 0, 
+                 $4, $5, $6, $7, 
+                 $8, $9, $10,
+                 $11, $12, $13, $14)
         RETURNING id
-      `, [nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa]) 
+      `, [
+        nome, telefone, telegram_id || '0', 
+        modelo_carro, ano_carro, cor_carro || 'Não informado', placa,
+        cpf, renavam, crlv_base64 || null,
+        cnh_frente_base64 || null, cnh_verso_base64 || null, cnh_digital_base64 || null, foto_base64 || null
+      ]) 
 
       return { id: result.rows[0].id, mensagem: 'Cadastro enviado para aprovação' } 
     } catch (err) { 

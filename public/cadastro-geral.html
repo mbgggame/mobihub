@@ -58,6 +58,12 @@
             class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/>
         </div>
         <div>
+          <label class="text-sm font-semibold text-zinc-400">CPF</label>
+          <input id="f-cpf" type="text" placeholder="123.456.789-00" maxlength="14"
+            oninput="aplicarMascaraCPF(this)"
+            class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/>
+        </div>
+        <div>
           <label class="text-sm font-semibold text-zinc-400">Cidade de atuação</label>
           <select id="f-cidade" 
             class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
@@ -81,15 +87,17 @@
     <div id="etapa-2" class="space-y-6 hidden">
       <h2 class="text-3xl font-extrabold mb-8">Seu veículo</h2>
       <div class="space-y-5">
-        <div>
-          <label class="text-sm font-semibold text-zinc-400">Marca</label>
-          <input id="f-marca" type="text" placeholder="Ex: Toyota" 
-            class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/>
-        </div>
-        <div>
-          <label class="text-sm font-semibold text-zinc-400">Modelo</label>
-          <input id="f-modelo" type="text" placeholder="Ex: Corolla" 
-            class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="text-sm font-semibold text-zinc-400">Marca</label>
+            <input id="f-marca" type="text" placeholder="Ex: Toyota" 
+              class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/>
+          </div>
+          <div>
+            <label class="text-sm font-semibold text-zinc-400">Modelo</label>
+            <input id="f-modelo" type="text" placeholder="Ex: Corolla" 
+              class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/>
+          </div>
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
@@ -101,6 +109,34 @@
             <label class="text-sm font-semibold text-zinc-400">Placa</label>
             <input id="f-placa" type="text" placeholder="Ex: SGZ2D22" 
               class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/>
+          </div>
+        </div>
+        <div>
+          <label class="text-sm font-semibold text-zinc-400">Renavam</label>
+          <input id="f-renavam" type="text" placeholder="Digite o Renavam" 
+            class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/>
+        </div>
+        <div>
+          <label class="text-sm font-semibold text-zinc-400 mb-3 block">CRLV (Foto ou PDF)</label>
+          <div class="flex gap-3 mb-3">
+            <button type="button" onclick="abrirCamera('crlv')" 
+              class="flex-1 flex items-center justify-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm hover:bg-zinc-800">
+              📷 Tirar foto
+            </button>
+            <button type="button" onclick="document.getElementById('input-crlv').click()" 
+              class="flex-1 flex items-center justify-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm hover:bg-zinc-800">
+              📁 Arquivo
+            </button>
+          </div>
+          <input id="input-crlv" type="file" accept="image/*,application/pdf" class="hidden" onchange="processarArquivo(event, 'crlv')"/>
+          <div id="preview-crlv" class="hidden flex justify-center mb-3">
+            <div class="relative">
+              <div class="w-32 h-32 rounded-2xl bg-zinc-800 border-4 border-green-500 flex items-center justify-center">
+                <span class="text-2xl">📄</span>
+              </div>
+              <button onclick="removerArquivo('crlv')" 
+                class="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-full text-sm flex items-center justify-center font-bold">✕</button>
+            </div>
           </div>
         </div>
       </div>
@@ -126,37 +162,66 @@
             Declaro que possuo CNH com observação <strong class="text-white">EAR (Exerce Atividade Remunerada)</strong>.
           </label>
         </div>
+        
         <div>
-          <label class="text-sm font-semibold text-zinc-400 mb-3 block">Foto da CNH</label>
+          <label class="text-sm font-semibold text-zinc-400 mb-3 block">CNH Frente</label>
           <div class="flex gap-3 mb-3">
-            <button type="button" onclick="abrirCamera()" 
+            <button type="button" onclick="abrirCamera('cnh_frente')" 
               class="flex-1 flex items-center justify-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm hover:bg-zinc-800">
               📷 Tirar foto
             </button>
-            <button type="button" onclick="document.getElementById('input-foto').click()" 
+            <button type="button" onclick="document.getElementById('input-cnh-frente').click()" 
               class="flex-1 flex items-center justify-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm hover:bg-zinc-800">
               🖼️ Galeria
             </button>
           </div>
-          <input id="input-foto" type="file" accept="image/*" class="hidden" onchange="processarFoto(event)"/>
-          <canvas id="canvas-foto" class="hidden"></canvas>
-          <div id="area-camera" class="hidden mb-3">
-            <video id="video-camera" autoplay playsinline class="w-full rounded-2xl" style="max-height:220px;object-fit:cover;background:#000"></video>
-            <div class="flex gap-3 mt-3">
-              <button type="button" onclick="capturarFoto()" 
-                class="flex-1 bg-green-500 text-zinc-950 rounded-xl py-3 text-sm font-extrabold">
-                📸 Capturar
-              </button>
-              <button type="button" onclick="fecharCamera()" 
-                class="flex-1 bg-zinc-800 text-white rounded-xl py-3 text-sm font-semibold">
-                Cancelar
-              </button>
+          <input id="input-cnh-frente" type="file" accept="image/*" class="hidden" onchange="processarFoto(event, 'cnh_frente')"/>
+          <div id="preview-cnh_frente" class="hidden flex justify-center mb-3">
+            <div class="relative">
+              <img id="img-cnh_frente" src="" class="w-32 h-32 rounded-2xl object-cover border-4 border-green-500"/>
+              <button onclick="removerArquivo('cnh_frente')" 
+                class="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-full text-sm flex items-center justify-center font-bold">✕</button>
             </div>
           </div>
-          <div id="preview-foto" class="hidden flex justify-center mb-3">
+        </div>
+
+        <div>
+          <label class="text-sm font-semibold text-zinc-400 mb-3 block">CNH Verso</label>
+          <div class="flex gap-3 mb-3">
+            <button type="button" onclick="abrirCamera('cnh_verso')" 
+              class="flex-1 flex items-center justify-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm hover:bg-zinc-800">
+              📷 Tirar foto
+            </button>
+            <button type="button" onclick="document.getElementById('input-cnh-verso').click()" 
+              class="flex-1 flex items-center justify-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm hover:bg-zinc-800">
+              🖼️ Galeria
+            </button>
+          </div>
+          <input id="input-cnh-verso" type="file" accept="image/*" class="hidden" onchange="processarFoto(event, 'cnh_verso')"/>
+          <div id="preview-cnh_verso" class="hidden flex justify-center mb-3">
             <div class="relative">
-              <img id="img-preview" src="" class="w-32 h-32 rounded-2xl object-cover border-4 border-green-500"/>
-              <button onclick="removerFoto()" 
+              <img id="img-cnh_verso" src="" class="w-32 h-32 rounded-2xl object-cover border-4 border-green-500"/>
+              <button onclick="removerArquivo('cnh_verso')" 
+                class="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-full text-sm flex items-center justify-center font-bold">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-sm font-semibold text-zinc-400 mb-3 block">CNH Digital (PDF, opcional)</label>
+          <div class="flex gap-3 mb-3">
+            <button type="button" onclick="document.getElementById('input-cnh-digital').click()" 
+              class="flex-1 flex items-center justify-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm hover:bg-zinc-800">
+              📁 Selecionar PDF
+            </button>
+          </div>
+          <input id="input-cnh-digital" type="file" accept="application/pdf" class="hidden" onchange="processarArquivo(event, 'cnh_digital')"/>
+          <div id="preview-cnh_digital" class="hidden flex justify-center mb-3">
+            <div class="relative">
+              <div class="w-32 h-32 rounded-2xl bg-zinc-800 border-4 border-green-500 flex items-center justify-center">
+                <span class="text-2xl">📄</span>
+              </div>
+              <button onclick="removerArquivo('cnh_digital')" 
                 class="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-full text-sm flex items-center justify-center font-bold">✕</button>
             </div>
           </div>
@@ -222,10 +287,33 @@
     <div id="erro-form" class="hidden mt-6 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3"></div>
   </section>
 
+  <!-- Camera Overlay -->
+  <div id="area-camera" class="hidden fixed inset-0 bg-black z-50 flex flex-col p-4">
+    <div class="flex items-center justify-between mb-4">
+      <button onclick="fecharCamera()" class="text-white px-4 py-2 text-lg font-semibold">
+        ← Cancelar
+      </button>
+    </div>
+    <video id="video-camera" autoplay playsinline class="w-full flex-1 rounded-2xl" style="object-fit:cover;"></video>
+    <div class="flex gap-3 mt-4">
+      <button type="button" onclick="capturarFoto()" 
+        class="flex-1 bg-green-500 text-zinc-950 rounded-xl py-4 text-lg font-extrabold">
+        📸 Capturar
+      </button>
+    </div>
+  </div>
+  <canvas id="canvas-foto" class="hidden"></canvas>
+
   <script>
     let etapaAtual = 1
-    let fotoBase64 = null
     let streamCamera = null
+    let currentCameraType = null
+    const dados = {
+      crlv_base64: null,
+      cnh_frente_base64: null,
+      cnh_verso_base64: null,
+      cnh_digital_base64: null
+    }
 
     const etapasTitulos = {
       1: 'Informações Básicas',
@@ -244,6 +332,15 @@
       }
     }
 
+    function aplicarMascaraCPF(input) {
+      let valor = input.value.replace(/\D/g, '')
+      valor = valor.slice(0, 11)
+      valor = valor.replace(/(\d{3})(\d)/, '$1.$2')
+      valor = valor.replace(/(\d{3})(\d)/, '$1.$2')
+      valor = valor.replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+      input.value = valor
+    }
+
     function proximaEtapa() {
       document.getElementById('erro-form').classList.add('hidden')
       
@@ -252,7 +349,8 @@
         const nome = document.getElementById('f-nome').value.trim()
         const email = document.getElementById('f-email').value.trim()
         const telefone = document.getElementById('f-telefone').value.trim()
-        if (!nome || !email || !telefone) {
+        const cpf = document.getElementById('f-cpf').value.trim()
+        if (!nome || !email || !telefone || !cpf) {
           mostrarErro('Preencha todos os campos obrigatórios')
           return
         }
@@ -264,7 +362,8 @@
         const modelo = document.getElementById('f-modelo').value.trim()
         const ano = parseInt(document.getElementById('f-ano').value)
         const placa = document.getElementById('f-placa').value.trim()
-        if (!marca || !modelo || !ano || !placa) {
+        const renavam = document.getElementById('f-renavam').value.trim()
+        if (!marca || !modelo || !ano || !placa || !renavam) {
           mostrarErro('Preencha todos os campos do veículo')
           return
         }
@@ -304,10 +403,11 @@
     }
 
     // Camera functions
-    async function abrirCamera() {
+    async function abrirCamera(tipo) {
+      currentCameraType = tipo
       try {
         streamCamera = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'user', width: 400, height: 400 }, audio: false
+          video: { facingMode: 'environment', width: 1200, height: 1600 }, audio: false
         })
         document.getElementById('video-camera').srcObject = streamCamera
         document.getElementById('area-camera').classList.remove('hidden')
@@ -323,23 +423,30 @@
       }
       document.getElementById('area-camera').classList.add('hidden')
       document.getElementById('video-camera').srcObject = null
+      currentCameraType = null
     }
 
     function capturarFoto() {
       const video = document.getElementById('video-camera')
       const canvas = document.getElementById('canvas-foto')
-      const size = 400
-      canvas.width = size
-      canvas.height = size
+      const sizeW = 1200
+      const sizeH = 1600
+      canvas.width = sizeW
+      canvas.height = sizeH
       const ctx = canvas.getContext('2d')
       const vw = video.videoWidth, vh = video.videoHeight
-      const lado = Math.min(vw, vh)
-      ctx.drawImage(video, (vw-lado)/2, (vh-lado)/2, lado, lado, 0, 0, size, size)
-      aplicarFoto(canvas.toDataURL('image/jpeg', 0.85))
+      const scale = Math.max(sizeW / vw, sizeH / vh)
+      const dw = vw * scale
+      const dh = vh * scale
+      const dx = (sizeW - dw) / 2
+      const dy = (sizeH - dh) / 2
+      ctx.drawImage(video, dx, dy, dw, dh)
+      const base64 = canvas.toDataURL('image/jpeg', 0.9)
+      aplicarArquivo(currentCameraType, base64, true)
       fecharCamera()
     }
 
-    function processarFoto(event) {
+    function processarFoto(event, tipo) {
       const file = event.target.files[0]
       if (!file) return
       const reader = new FileReader()
@@ -347,13 +454,18 @@
         const img = new Image()
         img.onload = () => {
           const canvas = document.getElementById('canvas-foto')
-          const size = 400
-          canvas.width = size
-          canvas.height = size
+          const sizeW = 1200
+          const sizeH = 1600
+          canvas.width = sizeW
+          canvas.height = sizeH
           const ctx = canvas.getContext('2d')
-          const lado = Math.min(img.width, img.height)
-          ctx.drawImage(img, (img.width-lado)/2, (img.height-lado)/2, lado, lado, 0, 0, size, size)
-          aplicarFoto(canvas.toDataURL('image/jpeg', 0.85))
+          const scale = Math.max(sizeW / img.width, sizeH / img.height)
+          const dw = img.width * scale
+          const dh = img.height * scale
+          const dx = (sizeW - dw) / 2
+          const dy = (sizeH - dh) / 2
+          ctx.drawImage(img, dx, dy, dw, dh)
+          aplicarArquivo(tipo, canvas.toDataURL('image/jpeg', 0.9), true)
         }
         img.src = e.target.result
       }
@@ -361,16 +473,33 @@
       event.target.value = ''
     }
 
-    function aplicarFoto(base64) {
-      fotoBase64 = base64
-      document.getElementById('img-preview').src = base64
-      document.getElementById('preview-foto').classList.remove('hidden')
+    function processarArquivo(event, tipo) {
+      const file = event.target.files[0]
+      if (!file) return
+      const reader = new FileReader()
+      reader.onload = e => {
+        aplicarArquivo(tipo, e.target.result, file.type.startsWith('image/'))
+      }
+      reader.readAsDataURL(file)
+      event.target.value = ''
     }
 
-    function removerFoto() {
-      fotoBase64 = null
-      document.getElementById('preview-foto').classList.add('hidden')
-      document.getElementById('img-preview').src = ''
+    function aplicarArquivo(tipo, base64, isImage) {
+      dados[tipo + '_base64'] = base64
+      const previewId = 'preview-' + tipo
+      document.getElementById(previewId).classList.remove('hidden')
+      if (isImage) {
+        const imgId = 'img-' + tipo
+        const imgEl = document.getElementById(imgId)
+        if (imgEl) {
+          imgEl.src = base64
+        }
+      }
+    }
+
+    function removerArquivo(tipo) {
+      dados[tipo + '_base64'] = null
+      document.getElementById('preview-' + tipo).classList.add('hidden')
     }
 
     async function enviarCadastro() {
@@ -383,12 +512,18 @@
         const body = {
           nome: document.getElementById('f-nome').value.trim(),
           telefone: document.getElementById('f-telefone').value.trim(),
-          telegram_id: '0', // Será solicitado depois
+          email: document.getElementById('f-email').value.trim(),
+          cpf: document.getElementById('f-cpf').value.trim(),
+          cidade: document.getElementById('f-cidade').value,
+          marca_carro: document.getElementById('f-marca').value.trim(),
           modelo_carro: `${document.getElementById('f-marca').value.trim()} ${document.getElementById('f-modelo').value.trim()}`,
           ano_carro: document.getElementById('f-ano').value,
-          cor_carro: 'Não informado',
           placa: document.getElementById('f-placa').value.trim(),
-          foto_base64: fotoBase64
+          renavam: document.getElementById('f-renavam').value.trim(),
+          crlv_base64: dados.crlv_base64,
+          cnh_frente_base64: dados.cnh_frente_base64,
+          cnh_verso_base64: dados.cnh_verso_base64,
+          cnh_digital_base64: dados.cnh_digital_base64
         }
 
         const r = await fetch('/api/cadastro-geral', {
