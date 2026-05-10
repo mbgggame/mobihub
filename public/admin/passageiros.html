@@ -1,0 +1,97 @@
+<!DOCTYPE html> 
+<html lang="pt-BR"> 
+<head> 
+  <meta charset="UTF-8"/> 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
+  <title>MobiHub Admin | Passageiros</title> 
+  <script src="https://cdn.tailwindcss.com"></script> 
+</head> 
+<body class="bg-gray-50 min-h-screen pb-10"> 
+
+<div class="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10"> 
+  <div class="flex items-center gap-3"> 
+    <a href="/admin/dashboard" class="text-gray-500 hover:text-gray-700 text-sm">← Dashboard</a> 
+    <span class="text-gray-300">|</span> 
+    <span class="font-semibold text-gray-900">Passageiros</span> 
+  </div> 
+  <button onclick="sair()" class="text-sm text-gray-500 border border-gray-200 px-3 py-1.5 rounded-lg">Sair</button> 
+</div> 
+
+<div class="max-w-2xl mx-auto px-4 py-6 space-y-6"> 
+
+  <!-- LISTA RESUMIDA --> 
+  <div> 
+    <div class="flex items-center justify-between mb-3"> 
+      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Passageiros</h2> 
+      <button onclick="carregarPassageiros()" class="text-xs text-green-600 hover:text-green-800">↻ Atualizar</button> 
+    </div> 
+    <div id="lista-passageiros" class="space-y-3"></div> 
+  </div> 
+
+</div> 
+
+<script> 
+const token = () => localStorage.getItem('mobihub_token') 
+const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` }) 
+
+const isLoginPage = window.location.pathname === '/admin/login';
+const tokenVal = localStorage.getItem('mobihub_token');
+
+if (!tokenVal && !isLoginPage) {
+  location.href = '/admin/login';
+} 
+
+let passageirosGlobais = []
+
+function sair() { 
+  localStorage.removeItem('mobihub_token'); 
+  location.href = '/admin/login' 
+} 
+
+async function carregarPassageiros() { 
+  console.log('[Passageiros] Carregando passageiros...')
+  const r = await fetch('/api/clients', { headers: headers() }) 
+  console.log('[Passageiros] Resposta da API:', r.status)
+  if (r.status === 401) { location.href = '/admin/login'; return } 
+  const lista = await r.json() 
+  console.log('Passageiros carregados:', lista)
+  passageirosGlobais = lista
+  renderizarPassageiros(lista) 
+} 
+
+function renderizarPassageiros(lista) { 
+  const div = document.getElementById('lista-passageiros') 
+  if (!lista.length) { 
+    div.innerHTML = '<p class="text-sm text-gray-400 text-center py-8">Nenhum passageiro cadastrado ainda.</p>' 
+    return 
+  } 
+  div.innerHTML = lista.map((c, i) => { 
+    const estrelas = '★'.repeat(Math.round(c.media_avaliacao || 0)) + '☆'.repeat(5 - Math.round(c.media_avaliacao || 0))
+    return ` 
+    <div class="bg-white border border-gray-200 rounded-xl p-4"> 
+      <div class="flex items-center justify-between gap-4"> 
+        <div class="flex items-center gap-3"> 
+          <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-lg overflow-hidden border-2 border-gray-200"> 
+            ${c.nome ? c.nome.charAt(0).toUpperCase() : '?'} 
+          </div> 
+          <div> 
+            <p class="font-semibold text-gray-900">${c.nome || 'Passageiro Anônimo'}</p>
+            <p class="text-xs text-gray-500">${c.telefone}</p>
+            <div class="flex items-center gap-1 mt-1">
+              <span class="text-yellow-500 text-sm">${estrelas}</span>
+              <span class="text-xs text-gray-500">${(c.media_avaliacao || 0).toFixed(1)} (${c.total_avaliacoes || 0} aval.)</span>
+            </div>
+          </div> 
+        </div> 
+        <div class="text-right">
+          <p class="text-sm text-gray-600 font-medium">${c.total_corridas || 0} corridas</p>
+        </div>
+      </div> 
+    </div> 
+  `}).join('') 
+} 
+
+carregarPassageiros() 
+</script> 
+</body> 
+</html>

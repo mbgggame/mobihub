@@ -58,6 +58,7 @@ fastify.get('/admin/dashboard', (req, reply) => reply.sendFile('admin/dashboard.
 fastify.get('/admin/login', (req, reply) => reply.sendFile('admin/login.html')) 
 fastify.get('/admin/nova-corrida', (req, reply) => reply.sendFile('admin/nova-corrida.html')) 
 fastify.get('/admin/motoristas', (req, reply) => reply.sendFile('admin/motoristas.html')) 
+fastify.get('/admin/passageiros', (req, reply) => reply.sendFile('admin/passageiros.html')) 
 fastify.get('/admin/tarifas', (req, reply) => reply.sendFile('admin/tarifas.html')) 
 fastify.get('/admin/reputacao', (req, reply) => reply.sendFile('admin/reputacao.html'))
 fastify.get('/admin/configuracoes', (req, reply) => reply.sendFile('admin/configuracoes.html')) 

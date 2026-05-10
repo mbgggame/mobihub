@@ -137,8 +137,7 @@
     <div class="rounded-xl overflow-hidden border border-gray-200"> 
       <div id="map"></div> 
     </div> 
-    <p id="txt-motoristas-online" class="text-xs text-center text-gray-400 py-1">Carregando motoristas...</p> 
-    <p class="text-xs text-center text-gray-400">Ou toque no mapa para marcar os pontos</p> 
+    <p id="txt-motoristas-online" class="text-xs text-center text-gray-400 py-1">Carregando motoristas...</p></p> 
  
     <div id="ponto-origem" class="hidden bg-green-50 border border-green-200 rounded-xl px-4 py-3"> 
       <div class="flex items-start justify-between"> 
@@ -412,15 +411,7 @@
        }).addTo(map) 
      });
  
-   map.on('click', async (e) => { 
-     const { lat, lng } = e.latlng 
-     const tipo = !pontos.origem ? 'origem' : 'destino' 
-     try { 
-       const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`) 
-       const d = await r.json() 
-       if (d && d.display_name) marcarPonto(lat, lng, d.display_name, tipo) 
-     } catch(err) { console.error(err) } 
-   }) 
+ 
  
    setupAutocomplete('busca-orig', 'origem') 
    setupAutocomplete('busca-dest', 'destino') 
