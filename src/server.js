@@ -85,17 +85,8 @@ fastify.addHook('onReady', async () => {
 await initDB() 
 initBot() 
 initScheduler() 
- 
-const port = parseInt(process.env.PORT || '3000') 
-try {
-  await fastify.listen({ port, host: '0.0.0.0' }) 
-  console.log(`[SERVER] MobiHub rodando em http://localhost:${port}`)
-} catch (err) {
-  console.error('[ERRO DE INICIALIZAÇÃO RENDER]:', err)
-  process.exit(1)
-}
 
-// Inicializa Socket.IO
+// Inicializa Socket.IO (antes de listen!)
 const io = new Server(fastify.server, { cors: { origin: '*' } }); 
 io.on('connection', (socket) => { 
   socket.on('motorista:posicao', (data) => { 
@@ -105,4 +96,13 @@ io.on('connection', (socket) => {
   socket.on('entrar:corrida', (rideId) => { 
     socket.join(`ride:${rideId}`); 
   }); 
-}); 
+});
+
+const port = parseInt(process.env.PORT || '3000') 
+try {
+  await fastify.listen({ port, host: '0.0.0.0' }) 
+  console.log(`[SERVER] MobiHub rodando em http://localhost:${port}`)
+} catch (err) {
+  console.error('[ERRO DE INICIALIZAÇÃO RENDER]:', err)
+  process.exit(1)
+} 
