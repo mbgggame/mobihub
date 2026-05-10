@@ -371,28 +371,6 @@ export default async function ridesRoutes(fastify) {
     } 
   }) 
  
-  // Configurações gerais 
-  fastify.get('/api/configuracoes', { preHandler: requireAuth }, async () => { 
-    const result = await dbQuery('SELECT * FROM configuracoes') 
-    const configs = result.rows
-    const obj = {} 
-    configs.forEach(c => obj[c.chave] = c.valor) 
-    return obj 
-  }) 
- 
-  fastify.put('/api/configuracoes', { preHandler: requireAuth }, async (request) => { 
-    const configs = request.body 
-    
-    for (const [chave, valor] of Object.entries(configs)) { 
-      await dbQuery(` 
-        INSERT INTO configuracoes (chave, valor) VALUES ($1, $2) 
-        ON CONFLICT(chave) DO UPDATE SET valor = EXCLUDED.valor 
-      `, [chave, String(valor)]) 
-    } 
-    
-    return { mensagem: 'Configurações salvas' } 
-  }) 
- 
   // Motorista chegou ao ponto de embarque 
   fastify.put('/api/rides/:id/motorista-chegou', async (request, reply) => { 
     const { id } = request.params 
