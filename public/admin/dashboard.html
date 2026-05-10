@@ -8,7 +8,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
 </head> 
 <body class="bg-gray-50 min-h-screen"> 
- 
+
 <div class="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10"> 
   <div class="flex items-center gap-3"> 
     <span class="font-bold text-green-700 text-lg">MobiHub</span> 
@@ -21,19 +21,19 @@
       🔗 Convidar motorista 
     </button> 
     <a href="/admin" class="text-sm text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg">Corridas</a> 
-    <a href="/admin/configuracoes" class="text-sm text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50">⚙️ Configs</a> 
     <a href="/admin/motoristas" class="text-sm text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg">Motoristas</a> 
     <a href="/admin/reputacao" class="text-sm text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50">Reputação</a> 
+    <a href="/admin/configuracoes" class="text-sm text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50">⚙️ Configs</a> 
     <button onclick="sair()" class="text-sm text-gray-500 border border-gray-200 px-3 py-1.5 rounded-lg">Sair</button> 
   </div> 
 </div> 
- 
+
 <div class="max-w-6xl mx-auto px-4 py-6 space-y-8"> 
- 
+
   <!-- CARDS RESUMO --> 
   <div> 
     <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">Resumo de hoje</h2> 
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-3"> 
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3"> 
       <div class="bg-white border border-gray-200 rounded-xl p-4"> 
         <p class="text-xs text-gray-500">Total corridas</p> 
         <p id="card-total" class="text-2xl font-semibold text-gray-900 mt-1">—</p> 
@@ -41,6 +41,10 @@
       <div class="bg-white border border-gray-200 rounded-xl p-4"> 
         <p class="text-xs text-gray-500">Receita hoje</p> 
         <p id="card-receita" class="text-2xl font-semibold text-green-700 mt-1">—</p> 
+      </div> 
+      <div class="bg-white border border-gray-200 rounded-xl p-4"> 
+        <p class="text-xs text-gray-500">Lucro ELVIVA (25%)</p> 
+        <p id="card-lucro" class="text-2xl font-semibold text-blue-700 mt-1">—</p> 
       </div> 
       <div class="bg-white border border-gray-200 rounded-xl p-4"> 
         <p class="text-xs text-gray-500">Abertas agora</p> 
@@ -56,7 +60,32 @@
       </div> 
     </div> 
   </div> 
- 
+
+  <!-- SEÇÃO TEMPO REAL --> 
+  <div> 
+    <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">Tempo Real</h2> 
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4"> 
+      <div class="bg-white border border-gray-200 rounded-xl p-4"> 
+        <h3 class="text-sm font-medium text-gray-700 mb-3">🚗 Frota Atual</h3> 
+        <div class="grid grid-cols-2 gap-4"> 
+          <div class="text-center"> 
+            <p class="text-xs text-gray-500">Disponíveis</p> 
+            <p id="card-disponiveis" class="text-3xl font-semibold text-green-700 mt-1">—</p> 
+          </div> 
+          <div class="text-center"> 
+            <p class="text-xs text-gray-500">Em Viagem</p> 
+            <p id="card-em-viagem" class="text-3xl font-semibold text-yellow-700 mt-1">—</p> 
+          </div> 
+        </div> 
+      </div> 
+      <div class="bg-white border border-gray-200 rounded-xl p-4"> 
+        <h3 class="text-sm font-medium text-gray-700 mb-3">👥 Passageiros Online</h3> 
+        <p class="text-3xl font-semibold text-gray-900 mt-1" id="card-passageiros-online">—</p> 
+        <p class="text-xs text-gray-400 mt-1">Últimos 5 minutos</p> 
+      </div> 
+    </div> 
+  </div> 
+
   <!-- MOTORISTAS PENDENTES --> 
   <div id="section-pendentes" class="hidden"> 
     <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3"> 
@@ -64,25 +93,29 @@
     </h2> 
     <div id="lista-pendentes" class="space-y-3"></div> 
   </div> 
- 
+
   <!-- CORRIDAS ATIVAS --> 
   <div> 
     <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">Corridas ativas agora</h2> 
     <div id="corridas-ativas" class="space-y-2"></div> 
   </div> 
- 
+
   <!-- GRÁFICOS --> 
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6"> 
-    <div class="bg-white border border-gray-200 rounded-xl p-4"> 
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6"> 
+    <div class="bg-white border border-gray-200 rounded-xl p-4 md:col-span-1"> 
       <h3 class="text-sm font-medium text-gray-700 mb-4">Corridas — últimos 15 dias</h3> 
       <canvas id="grafico-corridas" height="200"></canvas> 
     </div> 
-    <div class="bg-white border border-gray-200 rounded-xl p-4"> 
-      <h3 class="text-sm font-medium text-gray-700 mb-4">Receita — últimos 15 dias</h3> 
+    <div class="bg-white border border-gray-200 rounded-xl p-4 md:col-span-2"> 
+      <h3 class="text-sm font-medium text-gray-700 mb-4">Receita vs Lucro — últimos 15 dias</h3> 
       <canvas id="grafico-receita" height="200"></canvas> 
     </div> 
+    <div class="bg-white border border-gray-200 rounded-xl p-4 md:col-span-3"> 
+      <h3 class="text-sm font-medium text-gray-700 mb-4">Demandas por Hora (últimos 7 dias)</h3> 
+      <canvas id="grafico-demandas" height="150"></canvas> 
+    </div> 
   </div> 
- 
+
   <!-- MÉTRICAS --> 
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4"> 
     <div class="bg-white border border-gray-200 rounded-xl p-4"> 
@@ -99,162 +132,7 @@
       <p class="text-xs text-gray-400 mt-1">minutos (últimos 15 dias)</p> 
     </div> 
   </div> 
- 
-  <!-- CONFIGURAÇÕES AGENDAMENTO --> 
-  <div class="bg-white border border-gray-200 rounded-xl p-6"> 
-    <h2 class="text-sm font-medium text-gray-700 uppercase tracking-wide mb-4">Configurações de agendamento</h2> 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6"> 
-      <div class="space-y-4"> 
-        <div class="flex items-center justify-between"> 
-          <div> 
-            <p class="text-sm font-medium text-gray-700">Disparo imediato</p> 
-            <p class="text-xs text-gray-400">Envia para o Telegram na hora que o admin criar</p> 
-          </div> 
-          <label class="relative inline-flex items-center cursor-pointer"> 
-            <input type="checkbox" id="cfg-disparo-imediato" class="sr-only peer"> 
-            <div class="w-11 h-6 bg-gray-200 peer-checked:bg-green-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div> 
-          </label> 
-        </div> 
-        <div> 
-          <label class="text-sm font-medium text-gray-700">Minutos antes do disparo</label> 
-          <p class="text-xs text-gray-400 mb-1">Usado quando disparo imediato está desativado</p> 
-          <input type="number" id="cfg-minutos-antes" min="5" max="1440" step="5" 
-            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-        </div> 
-      </div> 
-      <div class="space-y-4"> 
-        <div class="flex items-center justify-between"> 
-          <div> 
-            <p class="text-sm font-medium text-gray-700">Bloqueio do motorista</p> 
-            <p class="text-xs text-gray-400">Impede aceite de novas corridas antes do agendamento</p> 
-          </div> 
-          <label class="relative inline-flex items-center cursor-pointer"> 
-            <input type="checkbox" id="cfg-bloqueio-ativo" class="sr-only peer"> 
-            <div class="w-11 h-6 bg-gray-200 peer-checked:bg-green-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div> 
-          </label> 
-        </div> 
-        <div> 
-          <label class="text-sm font-medium text-gray-700">Minutos de bloqueio antes do horário</label> 
-          <p class="text-xs text-gray-400 mb-1">Quanto antes do agendamento o motorista fica bloqueado</p> 
-          <input type="number" id="cfg-minutos-bloqueio" min="15" max="480" step="15" 
-            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-        </div> 
-      </div> 
-    </div> 
-    <button onclick="salvarConfigs()" 
-      class="mt-6 bg-green-600 text-white rounded-lg px-6 py-2.5 text-sm font-medium hover:bg-green-700"> 
-      Salvar configurações de agendamento 
-    </button> 
- 
-    <!-- CONFIGURAÇÕES DE CHEGADA AUTOMÁTICA --> 
-    <div class="bg-white border border-gray-200 rounded-xl p-6 mt-4"> 
-      <h2 class="text-sm font-medium text-gray-700 uppercase tracking-wide mb-4">Finalização automática</h2> 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6"> 
-        <div class="flex items-center justify-between"> 
-          <div> 
-            <p class="text-sm font-medium text-gray-700">Finalização automática</p> 
-            <p class="text-xs text-gray-400">Conclui a corrida quando motorista chegar ao destino</p> 
-          </div> 
-          <label class="relative inline-flex items-center cursor-pointer"> 
-            <input type="checkbox" id="cfg-chegada-auto" class="sr-only peer"> 
-            <div class="w-11 h-6 bg-gray-200 peer-checked:bg-green-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div> 
-          </label> 
-        </div> 
-        <div> 
-          <label class="text-sm font-medium text-gray-700">Raio de chegada (metros)</label> 
-          <p class="text-xs text-gray-400 mb-1">Distância para considerar que chegou ao destino</p> 
-          <input type="number" id="cfg-raio-metros" min="50" max="500" step="50" 
-            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-        </div> 
-      </div> 
-      <button onclick="salvarChegada()" 
-        class="mt-4 bg-green-600 text-white rounded-lg px-6 py-2.5 text-sm font-medium hover:bg-green-700"> 
-        Salvar configurações de chegada 
-      </button> 
-    </div> 
-  </div> 
- 
-  <!-- CONFIGURAÇÕES DE PREÇO --> 
-  <div class="bg-white border border-gray-200 rounded-xl p-6"> 
-    <h2 class="text-sm font-medium text-gray-700 uppercase tracking-wide mb-4">Configurações de preço — corrida normal</h2> 
-    <div class="grid grid-cols-3 gap-4"> 
-      <div> 
-        <label class="text-sm font-medium text-gray-700">Valor mínimo (R$)</label> 
-        <input type="number" step="0.50" id="cfg-valor-minimo" 
-          class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-      </div> 
-      <div> 
-        <label class="text-sm font-medium text-gray-700">Km do valor mínimo</label> 
-        <input type="number" step="0.5" id="cfg-km-minimo" 
-          class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-      </div> 
-      <div> 
-        <label class="text-sm font-medium text-gray-700">R$ por km excedente</label> 
-        <input type="number" step="0.10" id="cfg-valor-km" 
-          class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-      </div> 
-    </div> 
-    <button onclick="salvarPrecos()" 
-      class="mt-4 bg-green-600 text-white rounded-lg px-6 py-2.5 text-sm font-medium hover:bg-green-700"> 
-      Salvar preços 
-    </button> 
-  </div> 
- 
-  <!-- CONFIGURAÇÕES DE COBRANÇA DINÂMICA --> 
-  <div class="bg-white border border-gray-200 rounded-xl p-6"> 
-    <h2 class="text-sm font-medium text-gray-700 uppercase tracking-wide mb-4">Cobrança dinâmica — espera e paradas</h2> 
-    <div class="grid grid-cols-2 md:grid-cols-3 gap-4"> 
-      <div> 
-        <label class="text-sm font-medium text-gray-700">Espera grátis (min)</label> 
-        <p class="text-xs text-gray-400 mb-1">Minutos grátis ao chegar</p> 
-        <input type="number" step="1" id="cfg-espera-gratis" 
-          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-      </div> 
-      <div> 
-        <label class="text-sm font-medium text-gray-700">R$/min espera</label> 
-        <p class="text-xs text-gray-400 mb-1">Valor por minuto após grátis</p> 
-        <input type="number" step="0.10" id="cfg-espera-valor" 
-          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-      </div> 
-      <div> 
-        <label class="text-sm font-medium text-gray-700">Máx. espera (min)</label> 
-        <p class="text-xs text-gray-400 mb-1">Limite para cancelamento</p> 
-        <input type="number" step="1" id="cfg-espera-max" 
-          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-      </div> 
-      <div> 
-        <label class="text-sm font-medium text-gray-700">Taxa cancelamento (R$)</label> 
-        <p class="text-xs text-gray-400 mb-1">Cobrado do passageiro</p> 
-        <input type="number" step="0.50" id="cfg-espera-taxa" 
-          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-      </div> 
-      <div> 
-        <label class="text-sm font-medium text-gray-700">Parada grátis (min)</label> 
-        <p class="text-xs text-gray-400 mb-1">Minutos grátis por parada</p> 
-        <input type="number" step="1" id="cfg-parada-gratis" 
-          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-      </div> 
-      <div> 
-        <label class="text-sm font-medium text-gray-700">R$/min parada</label> 
-        <p class="text-xs text-gray-400 mb-1">Valor por minuto de parada</p> 
-        <input type="number" step="0.10" id="cfg-parada-valor" 
-          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-      </div> 
-    </div> 
-    <button onclick="salvarCobranca()" 
-      class="mt-4 bg-green-600 text-white rounded-lg px-6 py-2.5 text-sm font-medium hover:bg-green-700"> 
-      Salvar configurações de cobrança 
-    </button> 
-  </div> 
- 
-  <!-- TARIFAS AGENDAMENTO --> 
-  <div class="bg-white border border-gray-200 rounded-xl p-6"> 
-    <h2 class="text-sm font-medium text-gray-700 uppercase tracking-wide mb-4">Tarifas de agendamento</h2> 
-    <p class="text-xs text-gray-400 mb-4">O sistema aplica a tarifa de maior valor quando dois períodos se sobrepõem.</p> 
-    <div id="lista-tarifas" class="space-y-3"></div> 
-  </div> 
- 
-</div> 
+</div>
 
 <!-- MODAL DOSSIÊ --> 
 <div id="modal-dossie" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-start justify-center p-4 z-50 overflow-y-auto"> 
@@ -262,15 +140,15 @@
     <div class="flex items-center justify-between p-5 border-b border-gray-200"> 
       <h3 id="modal-dossie-titulo" class="font-semibold text-gray-900 text-lg">Dossiê do Motorista</h3> 
       <button onclick="fecharModalDossie()" class="text-gray-500 hover:text-gray-700 text-xl font-bold">✕</button> 
-    </div> 
+    </div>
 
     <div id="modal-dossie-conteudo" class="p-5 space-y-5"> 
-    </div> 
+    </div>
 
     <div id="modal-dossie-acoes" class="p-5 border-t border-gray-200"> 
     </div> 
   </div> 
-</div> 
+</div>
 
 <!-- MODAL DOCUMENTO --> 
 <div id="modal-documento-dash" class="hidden fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-50"> 
@@ -282,7 +160,7 @@
     <div id="modal-doc-conteudo-dash" class="flex-1 overflow-auto p-4 flex items-center justify-center"> 
     </div> 
   </div> 
-</div> 
+</div>
  
 <script> 
  let motoristaAtualDossie = null 
@@ -292,14 +170,14 @@
    'Content-Type': 'application/json', 
    'Authorization': `Bearer ${localStorage.getItem('mobihub_token')}` 
  }) 
- 
+
  const isLoginPage = window.location.pathname === '/admin/login';
  const tokenVal = localStorage.getItem('mobihub_token');
 
  if (!tokenVal && !isLoginPage) {
    location.href = '/admin/login';
  } 
- 
+
  const DIAS_NOMES = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'] 
  const STATUS_CLS = { 
    aberta: 'bg-blue-100 text-blue-700', 
@@ -308,63 +186,65 @@
    concluida: 'bg-green-100 text-green-700', 
    cancelada: 'bg-red-100 text-red-700' 
  } 
- 
- let graficoCorridas, graficoReceita 
- 
+
+ let graficoCorridas, graficoReceita, graficoDemandas
+
  async function carregar() { 
    const tk = token() 
    if (!tk) { location.href = '/admin/login'; return } 
- 
+
    try { 
      const [metricasRes, configsRes, tarifasRes] = await Promise.all([ 
        fetch('/api/metricas', { headers: headers() }), 
        fetch('/api/configuracoes', { headers: headers() }), 
        fetch('/api/tarifas', { headers: headers() }) 
      ]) 
- 
+
      // Se qualquer rota retornar 401, redireciona para login 
      if (metricasRes.status === 401 || configsRes.status === 401 || tarifasRes.status === 401) { 
        localStorage.removeItem('mobihub_token') 
        location.href = '/admin/login' 
        return 
      } 
- 
+
      const metricas = await metricasRes.json() 
      const configs = await configsRes.json() 
      const tarifas = await tarifasRes.json() 
- 
+
      if (!metricas || !metricas.resumoDia) { 
        console.error('[DASHBOARD] Dados de métricas inválidos:', metricas) 
        return 
      } 
- 
+
      renderCards(metricas.resumoDia) 
      renderCorridasAtivas(metricas.corridasAtivas || []) 
-     renderGraficos(metricas.ultimos15dias || []) 
+     renderGraficos(metricas.ultimos15dias || [], metricas.demandas_por_hora || []) 
      renderTopMotoristas(metricas.topMotoristas || []) 
      renderAvaliacoes(metricas.avaliacaoMedia || {}) 
      renderConfigs(configs || {}) 
-     renderTarifas(tarifas || []) 
- 
-     await carregarPendentes()
- 
      document.getElementById('tempo-aceite').textContent = 
        metricas.tempoMedioAceite ? `${metricas.tempoMedioAceite} min` : '—' 
- 
+
+     await carregarPendentes()
+
    } catch(err) { 
      console.error('[DASHBOARD] Erro ao carregar:', err.message) 
    } 
  } 
- 
+
  function renderCards(r) { 
    console.log('[DASHBOARD] renderCards:', r) 
    document.getElementById('card-total').textContent = r.total_hoje || 0 
    document.getElementById('card-receita').textContent = `R$ ${Number(r.receita_hoje || 0).toFixed(2)}` 
+   document.getElementById('card-lucro').textContent = `R$ ${Number(r.lucro_hoje || 0).toFixed(2)}` 
    document.getElementById('card-abertas').textContent = r.abertas || 0 
    document.getElementById('card-agendadas').textContent = r.agendadas || 0 
    document.getElementById('card-motoristas').textContent = r.motoristas_ativos || 0 
+   document.getElementById('card-disponiveis').textContent = r.motoristas_disponiveis || 0 
+   document.getElementById('card-em-viagem').textContent = r.motoristas_em_viagem || 0 
+   document.getElementById('card-passageiros-online').textContent = '0' 
  } 
- 
+
  function renderCorridasAtivas(corridas) { 
    const div = document.getElementById('corridas-ativas') 
    if (!corridas.length) { 
@@ -380,30 +260,35 @@
        origemTexto = c.origem; 
      }
      return ` 
-     <div class="bg-white border border-gray-200 rounded-xl px-4 py-3 flex items-center justify-between"> 
-       <div> 
+     <div class="bg-white border border-gray-200 rounded-xl px-4 py-4 flex items-center justify-between"> 
+       <div class="flex-1 min-w-0"> 
          <div class="flex items-center gap-2 mb-1"> 
            <span class="px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_CLS[c.status]}">${c.status}</span> 
            ${c.tipo === 'agendada' ? `<span class="text-xs text-purple-600">🗓️ ${new Date(c.agendada_para).toLocaleString('pt-BR')}</span>` : ''} 
          </div> 
-         <p class="text-sm text-gray-800">${origemTexto} → ${c.destino}</p> 
+         <p class="text-sm font-medium text-gray-800 truncate">${origemTexto} ➔ ${c.destino}</p> 
          <p class="text-xs text-gray-500 mt-0.5">${c.driver_nome ? `Motorista: ${c.driver_nome} • ${c.placa}` : 'Aguardando motorista'}</p> 
        </div> 
-       <div class="text-right ml-4"> 
-         <p class="text-sm font-semibold text-green-700">R$ ${Number(c.valor).toFixed(2)}</p> 
-         <div class="flex gap-1 mt-2"> 
-           ${c.status === 'aceita' ? `<button onclick="atualizarStatus(${c.id},'concluida')" class="text-xs bg-green-600 text-white px-2 py-1 rounded">✓ Concluir</button>` : ''} 
-           ${['aberta','aceita','agendada'].includes(c.status) ? `<button onclick="atualizarStatus(${c.id},'cancelada')" class="text-xs bg-red-50 text-red-600 border border-red-200 px-2 py-1 rounded">✕</button>` : ''} 
+       <div class="text-right ml-4 flex-shrink-0"> 
+         <p class="text-lg font-semibold text-green-700">R$ ${Number(c.valor).toFixed(2)}</p> 
+         <div class="flex gap-1 mt-2 justify-end"> 
+           ${c.status === 'aceita' ? `<button onclick="atualizarStatus(${c.id},'concluida')" class="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg">✓ Concluir</button>` : ''} 
+           ${['aberta','aceita','agendada'].includes(c.status) ? `<button onclick="atualizarStatus(${c.id},'cancelada')" class="text-xs bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg">✕</button>` : ''} 
          </div> 
        </div> 
      </div> 
    `}).join('') 
  } 
- 
- function renderGraficos(dados) { 
-   const labels = dados.map(d => new Date(d.dia + 'T12:00:00').toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' })) 
+
+ function renderGraficos(dados, demandas) { 
+   const labels = dados.map(d => {
+     const date = new Date(d.dia)
+     return date.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' })
+   })
    if (graficoCorridas) graficoCorridas.destroy() 
    if (graficoReceita) graficoReceita.destroy() 
+   if (graficoDemandas) graficoDemandas.destroy()
+
    graficoCorridas = new Chart(document.getElementById('grafico-corridas'), { 
      type: 'bar', 
      data: { labels, datasets: [{ label: 'Corridas', data: dados.map(d => d.corridas), backgroundColor: '#16a34a', borderRadius: 6 }] }, 
@@ -411,11 +296,37 @@
    }) 
    graficoReceita = new Chart(document.getElementById('grafico-receita'), { 
      type: 'line', 
-     data: { labels, datasets: [{ label: 'Receita (R$)', data: dados.map(d => d.receita), borderColor: '#16a34a', backgroundColor: 'rgba(22,163,74,0.1)', tension: 0.4, fill: true }] }, 
-     options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } } 
-   }) 
+     data: { 
+       labels, 
+       datasets: [
+         { label: 'Faturamento Total', data: dados.map(d => d.receita), borderColor: '#16a34a', backgroundColor: 'rgba(22,163,74,0.1)', tension: 0.4, fill: true },
+         { label: 'Lucro ELVIVA (25%)', data: dados.map(d => d.lucro_liquido), borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.1)', tension: 0.4, fill: true }
+       ] 
+     }, 
+     options: { plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } } 
+   })
+
+   // Demandas por hora
+   const horasLabels = Array.from({length: 24}, (_, i) => `${i.toString().padStart(2, '0')}:00`)
+   const demandasData = Array(24).fill(0)
+   demandas.forEach(d => {
+     if (d.hora >=0 && d.hora <24) {
+       demandasData[d.hora] = d.total
+     }
+   })
+   graficoDemandas = new Chart(document.getElementById('grafico-demandas'), {
+     type: 'bar',
+     data: {
+       labels: horasLabels,
+       datasets: [{ label: 'Pedidos', data: demandasData, backgroundColor: '#059669', borderRadius: 4 }]
+     },
+     options: {
+       plugins: { legend: { display: false } },
+       scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 } } } }
+     }
+   })
  } 
- 
+
  function renderTopMotoristas(motoristas) { 
    const div = document.getElementById('top-motoristas') 
    if (!motoristas.length) { div.innerHTML = '<p class="text-xs text-gray-400">Sem dados ainda</p>'; return } 
@@ -432,7 +343,7 @@
      </div> 
    `).join('') 
  } 
- 
+
  function renderAvaliacoes(av) { 
    document.getElementById('avaliacoes').innerHTML = ` 
      <div class="space-y-3"> 
@@ -448,382 +359,204 @@
        </div> 
      </div>` 
  } 
- 
+
  function renderConfigs(c) { 
-   document.getElementById('cfg-disparo-imediato').checked = c.agendamento_disparo_imediato === 'true' 
-   document.getElementById('cfg-minutos-antes').value = c.agendamento_minutos_antes || 30 
-   document.getElementById('cfg-bloqueio-ativo').checked = c.agendamento_bloqueio_ativo === 'true' 
-   document.getElementById('cfg-minutos-bloqueio').value = c.agendamento_minutos_bloqueio || 60 
-   document.getElementById('cfg-valor-minimo').value = c.corrida_valor_minimo || 15 
-   document.getElementById('cfg-km-minimo').value = c.corrida_km_minimo || 7.5 
-   document.getElementById('cfg-valor-km').value = c.corrida_valor_km || 2 
- 
-   if (document.getElementById('cfg-chegada-auto')) { 
-     document.getElementById('cfg-chegada-auto').checked = c.chegada_auto_ativo === 'true' 
-     document.getElementById('cfg-raio-metros').value = c.chegada_raio_metros || 150 
-   } 
- 
-   // Cobrança dinâmica 
-   if (document.getElementById('cfg-espera-gratis')) { 
-     document.getElementById('cfg-espera-gratis').value = c.espera_minutos_gratis || 5 
-     document.getElementById('cfg-espera-valor').value = c.espera_valor_minuto || 0.60 
-     document.getElementById('cfg-espera-max').value = c.espera_max_cancelamento || 10 
-     document.getElementById('cfg-espera-taxa').value = c.espera_taxa_cancelamento || 7.00 
-     document.getElementById('cfg-parada-gratis').value = c.parada_minutos_gratis || 2 
-     document.getElementById('cfg-parada-valor').value = c.parada_valor_minuto || 0.60 
-   } 
+   // Configs já estão em /admin/configuracoes, não precisamos mais aqui!
  } 
- 
- async function salvarCobranca() { 
-   const body = { 
-     espera_minutos_gratis: document.getElementById('cfg-espera-gratis').value, 
-     espera_valor_minuto: document.getElementById('cfg-espera-valor').value, 
-     espera_max_cancelamento: document.getElementById('cfg-espera-max').value, 
-     espera_taxa_cancelamento: document.getElementById('cfg-espera-taxa').value, 
-     parada_minutos_gratis: document.getElementById('cfg-parada-gratis').value, 
-     parada_valor_minuto: document.getElementById('cfg-parada-valor').value 
-   } 
-   const r = await fetch('/api/configuracoes', { 
-     method: 'PUT', headers: headers(), body: JSON.stringify(body) 
-   }) 
-   if (r.ok) alert('✅ Configurações de cobrança salvas!') 
-   else alert('Erro ao salvar') 
- } 
- 
- function renderTarifas(tarifas) { 
-   const div = document.getElementById('lista-tarifas') 
-   div.innerHTML = tarifas.map(t => { 
-     const diasAtivos = t.dias.split(',').map(Number) 
-     const diasHtml = DIAS_NOMES.map((d, i) => ` 
-       <label class="flex items-center gap-1 text-xs cursor-pointer select-none"> 
-         <input type="checkbox" data-tarifa="${t.id}" data-dia="${i}" 
-           ${diasAtivos.includes(i) ? 'checked' : ''} class="dia-check rounded"/> ${d} 
-       </label>`).join('') 
-     return ` 
-     <div class="border border-gray-200 rounded-xl p-4"> 
-       <div class="flex items-center justify-between mb-3"> 
-         <input type="text" id="t-nome-${t.id}" value="${t.nome}" 
-           class="font-semibold text-gray-900 border-b border-transparent hover:border-gray-300 focus:border-green-500 focus:outline-none bg-transparent text-sm"/> 
-         <span class="text-xs px-2 py-0.5 rounded-full ${t.ativo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}">${t.ativo ? 'Ativa' : 'Inativa'}</span> 
-       </div> 
-       <div class="flex gap-3 flex-wrap mb-3">${diasHtml}</div> 
-       <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3"> 
-         <div> 
-           <label class="text-xs text-gray-500">Hora início</label> 
-           <input type="time" id="t-hi-${t.id}" value="${t.hora_inicio}" 
-             class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-         </div> 
-         <div> 
-           <label class="text-xs text-gray-500">Hora fim</label> 
-           <input type="time" id="t-hf-${t.id}" value="${t.hora_fim}" 
-             class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-         </div> 
-         <div> 
-           <label class="text-xs text-gray-500">Valor mínimo (R$)</label> 
-           <input type="number" step="0.50" id="t-vm-${t.id}" value="${t.valor_minimo}" 
-             class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-         </div> 
-         <div> 
-           <label class="text-xs text-gray-500">R$/km excedente</label> 
-           <input type="number" step="0.10" id="t-vk-${t.id}" value="${t.valor_km}" 
-             class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-         </div> 
-       </div> 
-       <button onclick="salvarTarifa(${t.id})" 
-         class="w-full bg-green-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-green-700"> 
-         Salvar tarifa 
-       </button> 
-     </div>` 
-   }).join('') 
- } 
- 
- async function salvarConfigs() { 
-   const body = { 
-     agendamento_disparo_imediato: document.getElementById('cfg-disparo-imediato').checked ? 'true' : 'false', 
-     agendamento_minutos_antes: document.getElementById('cfg-minutos-antes').value, 
-     agendamento_bloqueio_ativo: document.getElementById('cfg-bloqueio-ativo').checked ? 'true' : 'false', 
-     agendamento_minutos_bloqueio: document.getElementById('cfg-minutos-bloqueio').value 
-   } 
-   const r = await fetch('/api/configuracoes', { method: 'PUT', headers: headers(), body: JSON.stringify(body) }) 
-   if (r.ok) alert('Configurações salvas!') 
-   else alert('Erro ao salvar') 
- } 
- 
- async function salvarPrecos() { 
-   const body = { 
-     corrida_valor_minimo: document.getElementById('cfg-valor-minimo').value, 
-     corrida_km_minimo: document.getElementById('cfg-km-minimo').value, 
-     corrida_valor_km: document.getElementById('cfg-valor-km').value 
-   } 
-   const r = await fetch('/api/configuracoes', { method: 'PUT', headers: headers(), body: JSON.stringify(body) }) 
-   if (r.ok) alert('Preços salvos!') 
-   else alert('Erro ao salvar') 
- } 
- 
- async function salvarChegada() { 
-   const body = { 
-     chegada_auto_ativo: document.getElementById('cfg-chegada-auto').checked ? 'true' : 'false', 
-     chegada_raio_metros: document.getElementById('cfg-raio-metros').value 
-   } 
-   const r = await fetch('/api/configuracoes', { method: 'PUT', headers: headers(), body: JSON.stringify(body) }) 
-   if (r.ok) alert('Configurações de chegada salvas!') 
-   else alert('Erro ao salvar') 
- } 
- 
- async function salvarTarifa(id) { 
-   const diasChecked = [...document.querySelectorAll(`input[data-tarifa="${id}"].dia-check`)] 
-     .filter(c => c.checked).map(c => c.dataset.dia).join(',') 
-   const body = { 
-     nome: document.getElementById(`t-nome-${id}`).value, 
-     dias: diasChecked, 
-     hora_inicio: document.getElementById(`t-hi-${id}`).value, 
-     hora_fim: document.getElementById(`t-hf-${id}`).value, 
-     valor_minimo: parseFloat(document.getElementById(`t-vm-${id}`).value), 
-     valor_km: parseFloat(document.getElementById(`t-vk-${id}`).value) 
-   } 
-   const r = await fetch(`/api/tarifas/${id}`, { method: 'PUT', headers: headers(), body: JSON.stringify(body) }) 
-   if (r.ok) alert('Tarifa salva!') 
-   else alert('Erro ao salvar tarifa') 
- } 
- 
+
  async function atualizarStatus(id, status) { 
    await fetch(`/api/rides/${id}/status`, { 
      method: 'PUT', headers: headers(), body: JSON.stringify({ status }) 
    }) 
    carregar() 
  } 
- 
+
  // ── MODAL DOCUMENTO
  function abrirModalDocumentoDash(titulo, base64) {
    document.getElementById('modal-doc-titulo-dash').textContent = titulo
    const conteudo = document.getElementById('modal-doc-conteudo-dash')
-   conteudo.innerHTML = ''
-   
-   if (base64.startsWith('data:application/pdf')) {
-     const iframe = document.createElement('iframe')
-     iframe.src = base64
-     iframe.className = 'w-full h-[70vh]'
-     conteudo.appendChild(iframe)
+   if (base64.startsWith('data:')) {
+     conteudo.innerHTML = `<img src="${base64}" class="max-w-full max-h-[80vh] rounded-lg" />`
    } else {
-     const img = document.createElement('img')
-     img.src = base64
-     img.className = 'max-w-full max-h-[80vh] rounded-lg'
-     conteudo.appendChild(img)
+     conteudo.innerHTML = `<img src="data:image/jpeg;base64,${base64}" class="max-w-full max-h-[80vh] rounded-lg" />`
    }
-   
    document.getElementById('modal-documento-dash').classList.remove('hidden')
  }
-
  function fecharModalDocumentoDash() {
    document.getElementById('modal-documento-dash').classList.add('hidden')
-   document.getElementById('modal-doc-conteudo-dash').innerHTML = ''
  }
 
- // ── MODAL DOSSIÊ
- function abrirDossie(d) {
-   motoristaAtualDossie = d
+ // ── Dossiê (copiado de motoristas.html)
+ function fecharModalDossie() {
+   document.getElementById('modal-dossie').classList.add('hidden')
+   document.getElementById('modal-dossie-conteudo').innerHTML = ''
+   document.getElementById('modal-dossie-acoes').innerHTML = ''
+   motoristaAtualDossie = null
+ }
 
-   document.getElementById('modal-dossie-titulo').textContent = d.nome
-
-   const conteudo = document.getElementById('modal-dossie-conteudo')
-   conteudo.innerHTML = `
+ function abrirDossie(m) {
+   motoristaAtualDossie = m
+   document.getElementById('modal-dossie-titulo').textContent = `Dossiê de ${m.nome}`
+   let modalHtml = `
      <div>
-       <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Dados Pessoais</h4>
-       <div class="bg-gray-50 rounded-lg px-4 py-3 text-sm text-gray-600 space-y-1">
-         <p><span class="font-medium">CPF:</span> ${d.cpf || '—'}</p>
-         <p><span class="font-medium">Telefone:</span> ${d.telefone || '—'}</p>
-         <p><span class="font-medium">Telegram ID:</span> ${d.telegram_id}</p>
-         <p><span class="font-medium">Renavam:</span> ${d.renavam || '—'}</p>
+       <h4 class="text-sm font-medium text-gray-700 mb-2">Dados pessoais</h4>
+       <div class="grid grid-cols-2 gap-3">
+         <div class="bg-gray-50 rounded-lg p-3">
+           <p class="text-xs text-gray-500">Nome</p>
+           <p class="text-sm text-gray-800 font-medium">${m.nome}</p>
+         </div>
+         <div class="bg-gray-50 rounded-lg p-3">
+           <p class="text-xs text-gray-500">CPF</p>
+           <p class="text-sm text-gray-800 font-medium">${m.cpf || '—'}</p>
+         </div>
+         <div class="bg-gray-50 rounded-lg p-3">
+           <p class="text-xs text-gray-500">Celular</p>
+           <p class="text-sm text-gray-800 font-medium">${m.celular || '—'}</p>
+         </div>
+         <div class="bg-gray-50 rounded-lg p-3">
+           <p class="text-xs text-gray-500">Email</p>
+           <p class="text-sm text-gray-800 font-medium">${m.email || '—'}</p>
+         </div>
        </div>
      </div>
 
      <div>
-       <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Veículo</h4>
-       <div class="bg-gray-50 rounded-lg px-4 py-3 text-sm text-gray-600 space-y-1">
-         <p><span class="font-medium">Marca/Modelo:</span> ${d.modelo_carro || '—'}</p>
-         <p><span class="font-medium">Ano:</span> ${d.ano_carro || '—'}</p>
-         <p><span class="font-medium">Cor:</span> ${d.cor_carro || '—'}</p>
-         <p><span class="font-medium">Placa:</span> <span class="font-mono">${d.placa || '—'}</span></p>
+       <h4 class="text-sm font-medium text-gray-700 mb-2">Veículo</h4>
+       <div class="grid grid-cols-2 gap-3">
+         <div class="bg-gray-50 rounded-lg p-3">
+           <p class="text-xs text-gray-500">Marca/Modelo</p>
+           <p class="text-sm text-gray-800 font-medium">${m.marca || '—'} ${m.modelo || ''}</p>
+         </div>
+         <div class="bg-gray-50 rounded-lg p-3">
+           <p class="text-xs text-gray-500">Cor</p>
+           <p class="text-sm text-gray-800 font-medium">${m.cor || '—'}</p>
+         </div>
+         <div class="bg-gray-50 rounded-lg p-3">
+           <p class="text-xs text-gray-500">Placa</p>
+           <p class="text-sm text-gray-800 font-medium">${m.placa || '—'}</p>
+         </div>
+         <div class="bg-gray-50 rounded-lg p-3">
+           <p class="text-xs text-gray-500">Ano</p>
+           <p class="text-sm text-gray-800 font-medium">${m.ano || '—'}</p>
+         </div>
        </div>
      </div>
 
      <div>
-       <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Documentos</h4>
-       <div class="grid grid-cols-2 gap-2">
-         <button id="btn-crlv" ${!d.crlv_base64 ? 'disabled' : ''}
-           class="text-xs ${d.crlv_base64 
-             ? 'text-gray-700 border border-gray-200 hover:bg-gray-50' 
-             : 'text-gray-400 border border-gray-100 cursor-not-allowed'} rounded-lg py-2">
-           ${d.crlv_base64 ? '👁️ Ver CRLV' : 'Documento ausente'}
+       <h4 class="text-sm font-medium text-gray-700 mb-2">Documentos</h4>
+       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+         ${m.foto ? `
+         <button onclick='abrirModalDocumentoDash("Foto do Motorista", ${JSON.stringify(m.foto)})' class="border border-gray-200 rounded-lg p-4 text-left hover:bg-gray-50">
+           <p class="text-sm font-medium text-gray-800">📸 Foto</p>
+           <p class="text-xs text-gray-400 mt-1">Clique para visualizar</p>
          </button>
-         ${d.cnh_digital_base64 
-           ? `<button id="btn-cnh-digital"
-               class="text-xs text-gray-700 border border-gray-200 hover:bg-gray-50 rounded-lg py-2 col-span-2">
-               📄 Ver CNH Digital
-             </button>` 
-           : `
-           <button id="btn-cnh-frente" ${!d.cnh_frente_base64 ? 'disabled' : ''}
-             class="text-xs ${d.cnh_frente_base64 
-               ? 'text-gray-700 border border-gray-200 hover:bg-gray-50' 
-               : 'text-gray-400 border border-gray-100 cursor-not-allowed'} rounded-lg py-2">
-             ${d.cnh_frente_base64 ? '🖼️ Ver CNH Frente' : 'Documento ausente'}
-           </button>
-           <button id="btn-cnh-verso" ${!d.cnh_verso_base64 ? 'disabled' : ''}
-             class="text-xs ${d.cnh_verso_base64 
-               ? 'text-gray-700 border border-gray-200 hover:bg-gray-50' 
-               : 'text-gray-400 border border-gray-100 cursor-not-allowed'} rounded-lg py-2">
-             ${d.cnh_verso_base64 ? '🖼️ Ver CNH Verso' : 'Documento ausente'}
-           </button>
-           `}
+         ` : ''}
+         ${m.cnh ? `
+         <button onclick='abrirModalDocumentoDash("CNH", ${JSON.stringify(m.cnh)})' class="border border-gray-200 rounded-lg p-4 text-left hover:bg-gray-50">
+           <p class="text-sm font-medium text-gray-800">🚗 CNH</p>
+           <p class="text-xs text-gray-400 mt-1">Clique para visualizar</p>
+         </button>
+         ` : ''}
+         ${m.crlv ? `
+         <button onclick='abrirModalDocumentoDash("CRLV", ${JSON.stringify(m.crlv)})' class="border border-gray-200 rounded-lg p-4 text-left hover:bg-gray-50">
+           <p class="text-sm font-medium text-gray-800">📄 CRLV</p>
+           <p class="text-xs text-gray-400 mt-1">Clique para visualizar</p>
+         </button>
+         ` : ''}
+         ${m.foto_veiculo ? `
+         <button onclick='abrirModalDocumentoDash("Foto do Veículo", ${JSON.stringify(m.foto_veiculo)})' class="border border-gray-200 rounded-lg p-4 text-left hover:bg-gray-50">
+           <p class="text-sm font-medium text-gray-800">🚙 Foto Veículo</p>
+           <p class="text-xs text-gray-400 mt-1">Clique para visualizar</p>
+         </button>
+         ` : ''}
        </div>
      </div>
    `
+   document.getElementById('modal-dossie-conteudo').innerHTML = modalHtml
 
-   const acoes = document.getElementById('modal-dossie-acoes')
-   acoes.innerHTML = `
-     <div class="mb-3">
-       <label class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Motivo da reprovação (opcional)</label>
-       <input id="motivo-reprovacao-dash" type="text" placeholder="Ex: Documento ilegível"
-         class="mt-2 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
-     </div>
-     <div class="grid grid-cols-2 gap-3">
-       <button onclick="reprovarMotoristaDash()" 
-         class="text-sm text-red-600 border border-red-200 rounded-xl py-3 hover:bg-red-50 font-semibold">
-         ❌ Reprovar
-       </button>
-       <button onclick="aprovarMotoristaDash()" 
-         class="text-sm text-white bg-green-600 rounded-xl py-3 hover:bg-green-700 font-semibold">
-         ✅ Aprovar
-       </button>
-     </div>
-   `
-
-   // Add event listeners for document buttons
-   if (d.crlv_base64) {
-     document.getElementById('btn-crlv').addEventListener('click', () => abrirModalDocumentoDash('CRLV', d.crlv_base64))
-   }
-   if (d.cnh_digital_base64) {
-     document.getElementById('btn-cnh-digital').addEventListener('click', () => abrirModalDocumentoDash('CNH Digital', d.cnh_digital_base64))
+   if (m.status_cadastro === 'pendente') {
+     document.getElementById('modal-dossie-acoes').innerHTML = `
+       <div class="flex gap-2">
+         <button onclick='aprovarMotorista(${m.id})' class="flex-1 bg-green-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-green-700">✓ Aprovar</button>
+         <button onclick='rejeitarMotorista(${m.id})' class="flex-1 bg-red-500 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-red-600">✗ Rejeitar</button>
+       </div>
+     `
    } else {
-     if (d.cnh_frente_base64) {
-       document.getElementById('btn-cnh-frente').addEventListener('click', () => abrirModalDocumentoDash('CNH Frente', d.cnh_frente_base64))
-     }
-     if (d.cnh_verso_base64) {
-       document.getElementById('btn-cnh-verso').addEventListener('click', () => abrirModalDocumentoDash('CNH Verso', d.cnh_verso_base64))
-     }
+     document.getElementById('modal-dossie-acoes').innerHTML = ''
    }
 
    document.getElementById('modal-dossie').classList.remove('hidden')
  }
 
- function fecharModalDossie() {
-   document.getElementById('modal-dossie').classList.add('hidden')
-   motoristaAtualDossie = null
- }
-
- async function aprovarMotoristaDash() {
-   if (!motoristaAtualDossie) return
-   const r = await fetch(`/api/drivers/${motoristaAtualDossie.id}/aprovar`, { 
-     method: 'PUT', 
-     headers: headers() 
-   }) 
-   if (r.ok) { 
-     alert('✅ Motorista aprovado! Ele receberá uma notificação no Telegram.') 
-     fecharModalDossie()
-     carregar() 
-   } else { 
-     alert('Erro ao aprovar motorista') 
-   } 
- }
-
- async function reprovarMotoristaDash() {
-   if (!motoristaAtualDossie) return
-   const motivo = document.getElementById('motivo-reprovacao-dash').value.trim()
-   const r = await fetch(`/api/drivers/${motoristaAtualDossie.id}/reprovar`, { 
-     method: 'PUT', 
-     headers: headers(), 
-     body: JSON.stringify({ motivo }) 
-   }) 
-   if (r.ok) { 
-     alert('Motorista reprovado.') 
-     fecharModalDossie()
-     carregar() 
-   } else { 
-     alert('Erro ao reprovar motorista') 
-   } 
- }
-
- async function carregarPendentes() { 
-   console.log('[DASHBOARD] Buscando motoristas pendentes...') 
-   const r = await fetch('/api/drivers/pendentes', { headers: headers() }) 
-   console.log('[DASHBOARD] Resposta da API /api/drivers/pendentes:', r.status) 
-   if (!r.ok) { 
-     console.error('[DASHBOARD] Erro ao buscar pendentes:', r.statusText) 
-     return 
-   } 
-   const pendentes = await r.json() 
-   motoristasPendentesGlobais = pendentes 
-   console.log('[DASHBOARD] Motoristas pendentes recebidos:', pendentes) 
-   const section = document.getElementById('section-pendentes') 
-   const lista = document.getElementById('lista-pendentes') 
-
-   if (!pendentes.length) { 
-     section.classList.add('hidden') 
-     return 
-   } 
-
-   section.classList.remove('hidden') 
-   lista.innerHTML = pendentes.map((d, index) => { 
-     console.log('[DASHBOARD] Renderizando motorista:', d) 
-     return ` 
-     <div class="bg-white border-2 border-yellow-300 rounded-xl p-4 flex items-center justify-between gap-4"> 
-       <div class="flex items-center gap-3"> 
-         <div class="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 border-2 border-yellow-300 ${d.foto_base64 ? '' : 'bg-yellow-100 flex items-center justify-center'}"> 
-           ${d.foto_base64 
-             ? `<img src="${d.foto_base64}" class="w-full h-full object-cover"/>` 
-             : `<span class="text-yellow-700 font-bold text-lg">${d.nome.charAt(0).toUpperCase()}</span>` 
-           } 
-         </div> 
-         <div> 
-           <p class="font-semibold text-gray-900">${d.nome}</p> 
-           <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700"> 
-             Pendente 
-           </span> 
-         </div> 
-       </div> 
-       <button onclick='abrirDossiePorIndice(${index})'
-         class="text-sm text-yellow-700 border border-yellow-200 rounded-lg px-4 py-2.5 hover:bg-yellow-50 font-semibold">
-         🔍 ABRIR DOSSIÊ COMPLETO
+ async function carregarPendentes() {
+   const r = await fetch('/api/motoristas/pendentes', { headers: headers() })
+   const pendentes = await r.json()
+   motoristasPendentesGlobais = pendentes
+   const section = document.getElementById('section-pendentes')
+   const lista = document.getElementById('lista-pendentes')
+   if (!pendentes.length) {
+     section.classList.add('hidden')
+     return
+   }
+   section.classList.remove('hidden')
+   lista.innerHTML = pendentes.map((m, i) => `
+     <div class="bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between">
+       <div>
+         <p class="text-sm font-medium text-gray-800">${m.nome}</p>
+         <p class="text-xs text-gray-500">${m.celular || '—'}</p>
+       </div>
+       <button onclick="abrirDossiePorIndice(${i})" class="text-xs text-blue-600 border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-50">
+         Ver dossiê
        </button>
-     </div> 
-   `}).join('') 
- } 
- 
- function abrirDossiePorIndice(index) { 
-   abrirDossie(motoristasPendentesGlobais[index]) 
- } 
- 
- async function gerarConvite() { 
-   const r = await fetch('/api/drivers/convite', { 
-     method: 'POST', 
-     headers: { 'Authorization': `Bearer ${token()}` } 
-   }) 
-   const d = await r.json() 
-   if (r.ok) { 
-     navigator.clipboard.writeText(d.link) 
-     alert(`✅ Link de convite gerado e copiado!\n\n${d.link}\n\nExpira em 7 dias.`) 
-   } else { 
-     alert('Erro ao gerar convite') 
-   } 
- } 
- 
- function sair() { 
-   localStorage.removeItem('mobihub_token') 
-   location.href = '/admin/login' 
- } 
- 
- carregar() 
- setInterval(carregar, 30000) 
- </script> 
+     </div>
+   `).join('')
+ }
+
+ function abrirDossiePorIndice(index) {
+   abrirDossie(motoristasPendentesGlobais[index])
+ }
+
+ async function aprovarMotorista(id) {
+   const r = await fetch(`/api/motoristas/${id}/aprovar`, {
+     method: 'POST', headers: headers()
+   })
+   if (r.ok) {
+     fecharModalDossie()
+     carregar()
+   }
+ }
+
+ async function rejeitarMotorista(id) {
+   if (!confirm('Tem certeza que quer rejeitar esse motorista?')) return
+   const r = await fetch(`/api/motoristas/${id}/rejeitar`, {
+     method: 'POST', headers: headers()
+   })
+   if (r.ok) {
+     fecharModalDossie()
+     carregar()
+   }
+ }
+
+ function sair() {
+   localStorage.removeItem('mobihub_token')
+   location.href = '/admin/login'
+ }
+
+ function gerarConvite() {
+   const baseUrl = window.location.origin
+   const link = `${baseUrl}/motorista/cadastro`
+   const textarea = document.createElement('textarea')
+   textarea.value = link
+   document.body.appendChild(textarea)
+   textarea.select()
+   document.execCommand('copy')
+   document.body.removeChild(textarea)
+   alert('✅ Link de convite copiado: ' + link)
+ }
+
+ // Inicializa
+ carregar()
+ setInterval(carregar, 30000) // Atualiza a cada 30 segundos
+</script> 
 </body> 
-</html> 
+</html>

@@ -297,7 +297,8 @@ export default async function ridesRoutes(fastify) {
     const resumoDiaResult = await dbQuery(` 
       SELECT 
         COUNT(*) as total_hoje, 
-        ROUND(SUM(CASE WHEN status = 'concluida' THEN valor ELSE 0 END)::numeric, 2) as receita_hoje, 
+        ROUND(SUM(CASE WHEN status = 'concluida' THEN valor ELSE 0 END)::numeric, 2) as receita_hoje,
+        ROUND(SUM(CASE WHEN status = 'concluida' THEN valor * 0.25 ELSE 0 END)::numeric, 2) as lucro_hoje,
         SUM(CASE WHEN status = 'aberta' THEN 1 ELSE 0 END) as abertas, 
         SUM(CASE WHEN status = 'agendada' THEN 1 ELSE 0 END) as agendadas, 
         SUM(CASE WHEN status = 'concluida' THEN 1 ELSE 0 END) as concluidas 
@@ -305,17 +306,33 @@ export default async function ridesRoutes(fastify) {
       WHERE created_at::date = CURRENT_DATE 
     `) 
     const resumoDia = resumoDiaResult.rows[0]
- 
+
     const motoristasAtivosResult = await dbQuery( 
       'SELECT COUNT(*) as total FROM drivers WHERE ativo = 1' 
     ) 
     const motoristasAtivos = motoristasAtivosResult.rows[0]
- 
+
+    // Frota atual
+    const motoristasDisponiveisResult = await dbQuery(`
+      SELECT COUNT(*) as total FROM drivers 
+      WHERE ativo = 1 AND online = 1 AND status_cadastro = 'aprovado'
+      AND NOT EXISTS (SELECT 1 FROM rides WHERE driver_id = drivers.id AND status IN ('aceita', 'em_viagem'))
+    `)
+    const motoristasDisponiveis = motoristasDisponiveisResult.rows[0]
+
+    const motoristasEmViagemResult = await dbQuery(`
+      SELECT COUNT(*) as total FROM drivers
+      WHERE ativo = 1 AND online = 1 AND status_cadastro = 'aprovado'
+      AND EXISTS (SELECT 1 FROM rides WHERE driver_id = drivers.id AND status IN ('aceita', 'em_viagem'))
+    `)
+    const motoristasEmViagem = motoristasEmViagemResult.rows[0]
+
     const ultimos15diasResult = await dbQuery(` 
       SELECT 
         created_at::date as dia, 
         COUNT(*) as corridas, 
-        ROUND(SUM(CASE WHEN status='concluida' THEN valor ELSE 0 END)::numeric, 2) as receita, 
+        ROUND(SUM(CASE WHEN status='concluida' THEN valor ELSE 0 END)::numeric, 2) as receita,
+        ROUND(SUM(CASE WHEN status='concluida' THEN valor * 0.25 ELSE 0 END)::numeric, 2) as lucro_liquido, 
         SUM(CASE WHEN status='concluida' THEN 1 ELSE 0 END) as concluidas 
       FROM rides 
       WHERE created_at >= CURRENT_TIMESTAMP - INTERVAL '15 days' 
@@ -324,12 +341,27 @@ export default async function ridesRoutes(fastify) {
     `) 
     const ultimos15dias = ultimos15diasResult.rows
 
+    // Demandas por hora
+    const demandasPorHoraResult = await dbQuery(`
+      SELECT 
+        EXTRACT(HOUR FROM created_at) as hora,
+        COUNT(*) as total
+      FROM rides
+      WHERE created_at >= CURRENT_TIMESTAMP - INTERVAL '7 days'
+      GROUP BY EXTRACT(HOUR FROM created_at)
+      ORDER BY hora ASC
+    `)
+    const demandasPorHora = demandasPorHoraResult.rows.map(r => ({
+      hora: parseInt(r.hora),
+      total: parseInt(r.total)
+    }))
+
     const tempoMedioAceiteResult = await dbQuery(` 
       SELECT ROUND(AVG(EXTRACT(EPOCH FROM (aceita_at - created_at)) / 60)::numeric, 1) as minutos 
       FROM rides WHERE aceita_at IS NOT NULL AND created_at >= CURRENT_TIMESTAMP - INTERVAL '15 days' 
     `) 
     const tempoMedioAceite = tempoMedioAceiteResult.rows[0]
- 
+
     const topMotoristasResult = await dbQuery(` 
       SELECT d.nome, d.total_viagens, ROUND(d.media_avaliacao::numeric, 1) as nota, 
         ROUND(SUM(r.valor)::numeric, 2) as receita 
@@ -345,7 +377,7 @@ export default async function ridesRoutes(fastify) {
       FROM ratings 
     `) 
     const avaliacaoMedia = avaliacaoMediaResult.rows[0]
- 
+
     const corridasAtivasResult = await dbQuery(` 
       SELECT r.*, d.nome as driver_nome, d.placa 
       FROM rides r LEFT JOIN drivers d ON r.driver_id = d.id 
@@ -353,17 +385,21 @@ export default async function ridesRoutes(fastify) {
       ORDER BY r.created_at DESC 
     `) 
     const corridasAtivas = corridasAtivasResult.rows
- 
+
     return { 
       resumoDia: { 
         total_hoje: parseInt(resumoDia.total_hoje) || 0, 
-        receita_hoje: parseFloat(resumoDia.receita_hoje) || 0, 
+        receita_hoje: parseFloat(resumoDia.receita_hoje) || 0,
+        lucro_hoje: parseFloat(resumoDia.lucro_hoje) || 0,
         abertas: parseInt(resumoDia.abertas) || 0, 
         agendadas: parseInt(resumoDia.agendadas) || 0, 
         concluidas: parseInt(resumoDia.concluidas) || 0, 
-        motoristas_ativos: parseInt(motoristasAtivos.total) || 0 
+        motoristas_ativos: parseInt(motoristasAtivos.total) || 0,
+        motoristas_disponiveis: parseInt(motoristasDisponiveis.total) || 0,
+        motoristas_em_viagem: parseInt(motoristasEmViagem.total) || 0
       }, 
-      ultimos15dias, 
+      ultimos15dias,
+      demandas_por_hora: demandasPorHora,
       tempoMedioAceite: parseFloat(tempoMedioAceite.minutos) || 0, 
       topMotoristas, 
       avaliacaoMedia, 
