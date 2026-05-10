@@ -3,1179 +3,412 @@
 <head> 
   <meta charset="UTF-8"/> 
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
-  <title>MobiHub — Solicitar corrida</title> 
+  <title>MobiHub — Solicitar</title> 
   <script src="https://cdn.tailwindcss.com"></script> 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" /> 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script> 
-  <script src="/socket.io/socket.io.js"></script>
-  <style>
-    #map { height: 280px; } 
-    .autocomplete-list { position: absolute; z-index: 1000; background: white; width: 100%; border: 1px solid #e5e7eb; border-radius: 0.5rem; margin-top: 0.25rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); max-height: 200px; overflow-y: auto; }
-    .autocomplete-item { padding: 0.75rem 1rem; cursor: pointer; border-bottom: 1px solid #f3f4f6; font-size: 0.875rem; }
-    .autocomplete-item:last-child { border-bottom: none; }
-    .autocomplete-item:hover { background: #f9fafb; }
+  <script src="/socket.io/socket.io.js"></script> 
+  <style> 
+    #map { height: 200px; border-radius: 12px; margin-bottom: 10px; z-index: 1; } 
+    .autocomplete-list { position: absolute; z-index: 1000; background: white; width: 100%; border: 1px solid #e5e7eb; border-radius: 0.5rem; margin-top: 0.25rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); max-height: 200px; overflow-y: auto; } 
+    .autocomplete-item { padding: 0.75rem 1rem; cursor: pointer; border-bottom: 1px solid #f3f4f6; font-size: 0.875rem; } 
+    .autocomplete-item:hover { background: #f9fafb; } 
   </style> 
 </head> 
 <body class="bg-gray-50 min-h-screen pb-10"> 
 
-<!-- MODAL DE ACEITE DOS TERMOS PARA PASSAGEIRO -->
-<div id="modal-termos-passageiro" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4 py-6">
-  <div class="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
-    <div class="p-6 space-y-4">
-      <div class="text-center">
-        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-          <svg class="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-        </div>
-        <h2 class="text-xl font-bold text-gray-900">Termos de Uso e LGPD</h2>
-        <p class="text-sm text-gray-500 mt-1">ELVIVA GROUP LTDA • CNPJ: 62.444.354/0001-82</p>
-      </div>
-      
-      <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 text-xs text-gray-700 space-y-3 max-h-60 overflow-y-auto">
-        <p><strong>1. Natureza da Relação</strong></p>
-        <p>A presente relação é de natureza CÍVEL e COMERCIAL, sendo regida pelo Código Civil e pelo Código de Defesa do Consumidor.</p>
-        
-        <p><strong>2. Consentimento de Geolocalização e Tratamento de Dados (LGPD)</strong></p>
-        <p>Ao aceitar estes termos, você consente expressamente com a coleta, tratamento, armazenamento e, se necessário, transferência de seus dados pessoais e de geolocalização para a ELVIVA GROUP LTDA (CNPJ: 62.444.354/0001-82), inclusive para fins de sucessão, venda ou transferência do negócio, sempre em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018). O usuário autoriza que a ELVIVA GROUP LTDA transfira todos os dados coletados a empresas sucessoras em caso de venda ou fusão do MobiHub.</p>
-        
-        <p><strong>3. Conformidade</strong></p>
-        <p>Declaro que li, entendi e concordo com todos os termos acima, ciente de meus direitos e obrigações.</p>
-      </div>
-      
-      <button id="btn-aceitar-termos-passageiro" onclick="aceitarTermosPassageiro()"
-        class="w-full bg-green-600 text-white rounded-xl py-3 font-bold text-base hover:bg-green-700">
-        ✅ Concordo e aceito os termos
-      </button>
-    </div>
-  </div>
-</div> 
-
-<!-- MODAL DE HISTÓRICO -->
-<div id="modal-historico" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4 py-6 hidden">
-  <div class="bg-white rounded-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto shadow-2xl">
-    <div class="p-6 space-y-4">
-      <div class="flex items-center justify-between">
-        <h2 class="text-xl font-bold text-gray-900">🕒 Meu Histórico</h2>
-        <button onclick="fecharModalHistorico()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-      </div>
-      <div id="lista-historico" class="space-y-3"></div>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL DE AVALIAÇÃO DO MOTORISTA -->
-<div id="modal-avaliacao" class="fixed inset-0 bg-black bg-opacity-50 z-[99999] flex items-center justify-center px-4 py-6 hidden">
-  <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl">
-    <div class="p-6 space-y-4">
-      <div class="text-center">
-        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-          <span class="text-3xl">⭐</span>
-        </div>
-        <h2 class="text-xl font-bold text-gray-900">Avalie o motorista!</h2>
-        <p class="text-sm text-gray-500 mt-1">Como foi sua corrida?</p>
-      </div>
-      <div class="flex justify-center gap-2" id="estrelas-avaliacao">
-        <button onclick="selecionarEstrela(1)" class="text-4xl text-gray-300 hover:text-yellow-400" data-estrela="1">★</button>
-        <button onclick="selecionarEstrela(2)" class="text-4xl text-gray-300 hover:text-yellow-400" data-estrela="2">★</button>
-        <button onclick="selecionarEstrela(3)" class="text-4xl text-gray-300 hover:text-yellow-400" data-estrela="3">★</button>
-        <button onclick="selecionarEstrela(4)" class="text-4xl text-gray-300 hover:text-yellow-400" data-estrela="4">★</button>
-        <button onclick="selecionarEstrela(5)" class="text-4xl text-gray-300 hover:text-yellow-400" data-estrela="5">★</button>
-      </div>
-      <div>
-        <label class="text-xs text-gray-500 font-medium">Comentário (opcional)</label>
-        <textarea id="comentario-avaliacao" rows="3" placeholder="Como foi a corrida?"
-          class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></textarea>
-      </div>
-      <button id="btn-enviar-avaliacao" onclick="enviarAvaliacao()" disabled
-        class="w-full bg-green-600 text-white rounded-xl py-3 font-bold text-base opacity-40 cursor-not-allowed hover:bg-green-700">
-        Enviar avaliação
-      </button>
-    </div>
-  </div>
-</div>
-
+<!-- CABEÇALHO --> 
 <div class="bg-green-600 text-white px-4 py-3 flex items-center justify-between shadow sticky top-0 z-20"> 
-  <div class="flex items-center gap-2">
-    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg> 
-    <span class="font-bold text-lg">MobiHub</span>
-  </div>
-  <button onclick="abrirModalHistorico()" class="text-sm bg-green-700 px-3 py-1.5 rounded-lg">🕒 Meu Histórico</button>
+  <div class="flex items-center gap-2"> 
+    <span class="font-bold text-lg">MobiHub</span> 
+  </div> 
+  <button onclick="abrirModalHistorico()" class="text-xs bg-green-700 px-3 py-2 rounded-lg font-bold uppercase">🕒 Histórico</button> 
 </div> 
 
-<div id="conteudo-solicitar" class="max-w-lg mx-auto px-4 py-4 space-y-4"> 
-
+<div id="conteudo-principal" class="max-w-lg mx-auto px-4 py-4 space-y-4"> 
   <!-- TELA 1: CADASTRO --> 
-  <div id="tela-cadastro"> 
-    <div class="bg-white border border-gray-200 rounded-xl p-5"> 
-      <h2 id="msg-boas-vindas" class="font-semibold text-gray-900 mb-1">Bem-vindo ao MobiHub!</h2> 
-      <p class="text-sm text-gray-500 mb-4">Preencha seus dados uma única vez para continuar.</p> 
-      <div class="space-y-3"> 
-        <div> 
-          <label class="text-xs text-gray-500 font-medium">Nome completo</label> 
-          <input id="cad-nome" type="text" placeholder="Seu nome" 
-            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-        </div> 
-        <div> 
-          <label class="text-xs text-gray-500 font-medium">Celular (WhatsApp)</label> 
-          <input id="cad-celular" type="tel" placeholder="(27) 99999-9999" 
-            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-        </div> 
-        <div> 
-          <label class="text-xs text-gray-500 font-medium">E-mail</label> 
-          <input id="cad-email" type="email" placeholder="seu@email.com" 
-            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-        </div> 
-        <div id="erro-cadastro" class="hidden text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2"></div> 
-        <button onclick="salvarCadastro()" 
-          class="w-full bg-green-600 text-white rounded-xl py-3 font-semibold text-sm hover:bg-green-700"> 
-          Continuar → 
-        </button> 
+  <div id="tela-cadastro" class="hidden"> 
+    <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm"> 
+      <h2 class="font-bold text-xl text-gray-900 mb-1">Bem-vindo!</h2> 
+      <p class="text-sm text-gray-500 mb-6">Identifique-se para solicitar sua primeira corrida.</p> 
+      <div class="space-y-4"> 
+        <input id="cad-nome" type="text" placeholder="Seu nome" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none"/> 
+        <input id="cad-celular" type="tel" placeholder="Seu Celular (DDD + Número)" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none"/> 
+        <button onclick="salvarCadastro()" class="w-full bg-green-600 text-white rounded-xl py-3.5 font-bold hover:bg-green-700 transition-all">Começar Agora</button> 
       </div> 
     </div> 
   </div> 
 
   <!-- TELA 2: SOLICITAR --> 
   <div id="tela-solicitar" class="hidden space-y-4"> 
-
-    <div class="flex items-center justify-between"> 
-      <div class="flex items-center gap-3">
-        <div class="flex items-center gap-2">
-          <p class="text-sm text-gray-600">Olá, <span id="txt-nome-cliente" class="font-semibold text-green-700"></span>!</p> 
-        </div>
-        <div id="sua-nota" class="flex items-center gap-1 bg-yellow-50 border border-yellow-200 px-3 py-1 rounded-full">
-          <span id="sua-nota-estrelas" class="text-yellow-500"></span>
-          <span id="sua-nota-texto" class="text-xs font-medium text-yellow-700"></span>
-        </div>
-      </div>
-      <button onclick="trocarCadastro()" class="text-xs text-gray-400 hover:text-gray-600 underline">Trocar dados</button> 
+    <div class="flex items-center justify-between bg-white p-4 rounded-xl border border-gray-100 shadow-sm"> 
+        <div> 
+            <p class="text-xs text-gray-400 uppercase font-bold tracking-tight">Passageiro</p> 
+            <p class="font-bold text-gray-800"><span id="txt-nome-cliente">---</span> <span id="txt-nota-cliente" class="ml-2 text-yellow-500">⭐ 5.0</span></p> 
+        </div> 
+        <button onclick="trocarCadastro()" class="text-xs text-red-500 font-bold uppercase">Sair</button> 
     </div> 
 
-    <div class="flex gap-2"> 
-      <button id="btn-agora" onclick="setTipo('normal')" 
-        class="flex-1 bg-green-600 text-white rounded-xl py-3 font-semibold text-sm"> 
-        🚗 Corrida agora 
-      </button> 
-      <button id="btn-agendar" onclick="setTipo('agendada')" 
-        class="flex-1 bg-white border border-green-600 text-green-600 rounded-xl py-3 font-semibold text-sm"> 
-        🗓️ Agendar 
-      </button> 
-    </div> 
+    <div id="map"></div> 
 
-    <div id="campo-agendamento" class="hidden bg-white border border-gray-200 rounded-xl p-4"> 
-      <label class="text-sm font-medium text-gray-700">Data e hora da corrida</label> 
-      <input id="data-agendamento" type="datetime-local" 
-        class="mt-2 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-      <p class="text-xs text-gray-400 mt-1">Mínimo 2 horas de antecedência • Máximo 10 dias</p> 
-    </div> 
-
-    <div class="bg-white border border-gray-200 rounded-xl p-4 space-y-3"> 
+    <div class="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm space-y-4"> 
       <div class="relative"> 
-         <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">📍 Origem</label> 
-         <div class="flex gap-2 mt-1"> 
-           <input id="busca-orig" type="text" placeholder="Ex: Aeroporto, Shopping, Rua X 123..." 
-             class="flex-1 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-           <button onclick="usarLocalizacaoAtual()" 
-             class="text-xs text-green-600 border border-green-200 rounded-lg px-2 py-1 hover:bg-green-50 flex-shrink-0 flex items-center gap-1"> 
-             📍 Minha localização 
-           </button> 
-         </div> 
-         <div id="lista-orig" class="autocomplete-list hidden"></div>
-       </div> 
+         <label class="text-[10px] font-bold text-gray-400 uppercase">📍 Local de Partida</label> 
+         <input id="busca-orig" type="text" placeholder="Onde você está?" class="w-full border-b border-gray-100 py-2 text-sm focus:outline-none"/> 
+         <div id="lista-orig" class="autocomplete-list hidden"></div> 
+      </div> 
       <div class="relative"> 
-        <label class="text-xs text-gray-500 font-medium uppercase tracking-wide">🏁 Destino</label> 
-        <input id="busca-dest" type="text" placeholder="Ex: Aeroporto, Shopping, Rua X 123..." 
-          class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-        <div id="lista-dest" class="autocomplete-list hidden"></div>
+        <label class="text-[10px] font-bold text-gray-400 uppercase">🏁 Para onde vamos?</label> 
+        <input id="busca-dest" type="text" placeholder="Digite o destino..." class="w-full border-b border-gray-100 py-2 text-sm focus:outline-none"/> 
+        <div id="lista-dest" class="autocomplete-list hidden"></div> 
       </div> 
-    </div> 
 
-    <div class="rounded-xl overflow-hidden border border-gray-200"> 
-      <div id="map"></div> 
-    </div> 
-    <p id="txt-motoristas-online" class="text-xs text-center text-gray-400 py-1">Carregando motoristas...</p>
-
-    <div id="ponto-origem" class="hidden bg-green-50 border border-green-200 rounded-xl px-4 py-3"> 
-      <div class="flex items-start justify-between"> 
-        <div> 
-          <p class="text-xs text-green-600 font-medium">Origem</p> 
-          <p id="txt-origem" class="text-sm text-green-900 font-semibold mt-0.5"></p> 
-        </div> 
-        <div class="flex gap-1 mt-1"> 
-          <button onclick="salvarFavorito('casa')" title="Salvar como Casa" 
-            class="text-xs text-green-600 border border-green-300 rounded px-2 py-0.5 hover:bg-green-100">🏠</button> 
-          <button onclick="salvarFavorito('trabalho')" title="Salvar como Trabalho" 
-            class="text-xs text-green-600 border border-green-300 rounded px-2 py-0.5 hover:bg-green-100">💼</button> 
-        </div> 
+      <div id="box-valor" class="hidden pt-2 text-center"> 
+          <p class="text-xs text-gray-400 font-bold uppercase">Valor Estimado</p> 
+          <p id="txt-valor" class="text-3xl font-black text-green-600">R$ 0,00</p> 
       </div> 
-    </div> 
 
-    <div id="ponto-destino" class="hidden bg-red-50 border border-red-200 rounded-xl px-4 py-3"> 
-      <div class="flex items-start justify-between"> 
-        <div> 
-          <p class="text-xs text-red-600 font-medium">Destino</p> 
-          <p id="txt-destino" class="text-sm text-red-900 font-semibold mt-0.5"></p> 
-        </div> 
-        <button onclick="limparPontos()" class="text-xs text-red-400 hover:text-red-600 mt-1">Limpar</button> 
-      </div> 
-    </div> 
-
-    <div id="card-valor" class="hidden bg-green-50 border border-green-200 rounded-xl px-4 py-4"> 
-      <div class="flex items-center justify-between"> 
-        <div> 
-          <p class="text-xs text-green-600 font-medium">Valor estimado</p> 
-          <p id="txt-valor" class="text-3xl font-bold text-green-800 mt-0.5"></p> 
-          <span class="inline-block mt-2 px-2 py-1 bg-green-600 text-white text-[10px] font-bold rounded-full">Motorista Recomendado MobiHub</span>
-        </div> 
-        <div class="text-right"> 
-          <p id="txt-distancia" class="text-sm text-green-600 font-medium"></p> 
-          <p id="txt-duracao" class="text-xs text-green-500 mt-0.5"></p> 
-          <p id="txt-tarifa-nome" class="text-xs text-green-400 mt-0.5"></p> 
-        </div> 
-      </div> 
-    </div> 
-
-    <div id="erro-solicitar" class="hidden bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3"></div> 
-
-    <div class="bg-blue-50 border border-blue-200 rounded-xl p-3"> 
-      <p class="text-xs font-medium text-blue-700 mb-1">ℹ️ Política de espera e paradas</p> 
-      <p class="text-xs text-blue-600">• Espera ao chegar: 3 min grátis. Após: R$ 0,60/min</p> 
-       <p class="text-xs text-blue-600">• Paradas: 2 min grátis. Após: R$ 0,60/min</p> 
-       <p class="text-xs text-blue-600">• Cancelamento: Taxa de R$ 10,00 após 2 min de aceite</p> 
-    </div> 
-
-    <button id="btn-solicitar" onclick="solicitar()" disabled 
-      class="w-full bg-green-600 text-white rounded-xl py-4 font-bold text-base opacity-40 cursor-not-allowed transition-all"> 
-      Solicitar corrida 
-    </button> 
-
-    <div id="atalhos" class="hidden"> 
-      <p class="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">Atalhos rápidos</p> 
-      <div id="atalhos-lista" class="flex gap-2 flex-wrap"></div> 
-    </div> 
-
-    <div id="historico-section" class="hidden"> 
-      <p class="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">Corridas recentes</p> 
-      <div id="historico-lista" class="space-y-2"></div> 
-    </div> 
-
-  </div> 
-
-  <!-- TELA 3: CONFIRMAÇÃO --> 
-  <div id="tela-confirmacao" class="hidden"> 
-    <div id="card-confirmacao" class="bg-white border border-gray-200 rounded-2xl p-6 text-center space-y-4"> 
-      <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto"> 
-        <svg class="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"> 
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/> 
-        </svg> 
-      </div> 
-      <div> 
-        <h2 class="text-xl font-bold text-gray-900">Corrida solicitada!</h2> 
-        <p class="text-sm text-gray-500 mt-1">Aguarde um motorista aceitar sua corrida.</p> 
-      </div> 
-      <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 text-left"> 
-        <p class="text-xs text-gray-500 mb-1">Link de acompanhamento</p> 
-        <p id="txt-link-corrida" class="text-xs text-green-600 font-mono break-all"></p> 
-      </div> 
-      <div class="space-y-2"> 
-        <a id="btn-acompanhar" href="#" 
-          class="block w-full bg-green-600 text-white rounded-xl py-3 font-semibold text-sm"> 
-          🗺️ Acompanhar corrida 
-        </a> 
-        <button onclick="copiarLink()" 
-          class="w-full border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm"> 
-          📋 Copiar link 
-        </button> 
-        <button onclick="compartilharCorrida()" 
-          class="w-full bg-green-50 text-green-600 border border-green-200 rounded-xl py-2.5 text-sm font-medium"> 
-          🔗 Compartilhar corrida 
-        </button> 
-        <button onclick="novaCorrida()" 
-          class="w-full text-gray-400 text-sm py-1"> 
-          Solicitar outra corrida 
-        </button> 
-      </div> 
+      <button id="btn-pedir" onclick="pedirCorrida()" disabled class="w-full bg-gray-200 text-gray-400 rounded-xl py-4 font-black uppercase tracking-wider cursor-not-allowed">Solicitar MobiHub</button> 
     </div> 
   </div> 
-
 </div> 
+
+<!-- MODAL HISTÓRICO --> 
+<div id="modal-historico" class="fixed inset-0 bg-black/60 z-[100] hidden items-end justify-center"> 
+    <div class="bg-white w-full max-w-lg rounded-t-3xl p-6 space-y-4 animate-slide-up"> 
+        <div class="flex justify-between items-center border-b pb-4"> 
+            <h2 class="font-black text-gray-800 uppercase">Últimas Corridas</h2> 
+            <button onclick="fecharModalHistorico()" class="text-2xl font-bold text-gray-400">&times;</button> 
+        </div> 
+        <div id="lista-historico" class="space-y-3 max-h-[60vh] overflow-y-auto"> 
+            <!-- Corridas aqui --> 
+        </div> 
+    </div> 
+</div> 
+
 <script> 
- console.log('[SOLICITAR] Página carregada') 
- function encurtarEndereco(endereco) { 
-   try { 
-     const obj = JSON.parse(endereco); 
-     endereco = obj.endereco || obj.display_name || endereco; 
-   } catch(e) {} 
-   const partes = endereco.split(','); 
-   return partes.slice(0, 2).join(',').trim(); 
- } 
- window.origemLat = null 
- window.origemLng = null 
- window.destinoLat = null 
- window.destinoLng = null 
- window.origem = null 
- window.destino = null 
- window.valorCalculado = null 
+let cliente = { nome: '', telefone: '' }; 
+let orig = null, dest = null, valorFinal = 0; 
+let map, marcadores = { origem: null, destino: null };
+const socket = io(); 
 
- const STORAGE_CLIENTE = 'mobi_cliente' 
- const STORAGE_FAV = 'mobi_favoritos' 
- const STORAGE_HIST = 'mobi_historico' 
- const STORAGE_TERMOS_PASSAGEIRO = 'mobi_termos_passageiro'
- const STORAGE_RIDE_ID = 'mobi_ride_id'
-
- let map, geocoder 
- let marcadores = { origem: null, destino: null } 
- let pontos = { origem: null, destino: null } 
- let origem = null, destino = null 
- let origemLat, origemLng, origemEndereco, destinoLat, destinoLng 
- let tipoCorreida = 'normal' 
- let valorCalculado = 0 
- let intervalRedirect = null 
- let linkAcompanhamento = ''
- let rideIdAvaliacao = null
- let estrelasSelecionadas = 0
- let socket = null
-
- function verificarTermosPassageiro() {
-   const termosAceitos = localStorage.getItem(STORAGE_TERMOS_PASSAGEIRO)
-   const modal = document.getElementById('modal-termos-passageiro')
-   const conteudo = document.getElementById('conteudo-solicitar')
-   
-   console.log('[DIAGNÓSTICO PASSAGEIRO] termosAceitos:', termosAceitos)
-   
-   if (termosAceitos === 'true') {
-     modal.style.display = 'none'
-     modal.classList.add('hidden')
-     conteudo.classList.remove('hidden')
-   } else {
-     modal.style.display = 'flex'
-     modal.classList.remove('hidden')
-     conteudo.classList.add('hidden')
-   }
- }
-
- function aceitarTermosPassageiro() {
-   localStorage.setItem(STORAGE_TERMOS_PASSAGEIRO, 'true')
-   verificarTermosPassageiro()
- }
-
- // BUG FIX: Ícones do Leaflet 
- const iconeOrigem = L.icon({ 
-   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png', 
-   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png', 
-   iconSize: [25, 41], 
-   iconAnchor: [12, 41] 
- }); 
-
- const iconeDestino = L.icon({ 
-   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png', 
-   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png', 
-   iconSize: [25, 41], 
-   iconAnchor: [12, 41] 
- }); 
-
- const iconeMotorista = L.icon({ 
-   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png', 
-   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png', 
-   iconSize: [25, 41], 
-   iconAnchor: [12, 41] 
- }); 
-
- function verificarCadastro() { 
-   const cliente_nome = localStorage.getItem('cliente_nome')
-   const cliente_telefone = localStorage.getItem('cliente_telefone')
-   const cliente_email = localStorage.getItem('cliente_email')
-   if (cliente_telefone && cliente_nome) { 
-     document.getElementById('tela-cadastro').classList.add('hidden') 
-     document.getElementById('tela-solicitar').classList.remove('hidden') 
-     document.getElementById('txt-nome-cliente').textContent = cliente_nome 
-     carregarSuaNota(cliente_telefone)
-     renderizarAtalhos() 
-     renderizarHistorico() 
-     initSocket()
-   } 
- } 
-
- function salvarCadastro() { 
-   const nome = document.getElementById('cad-nome').value.trim() 
-   const celular = document.getElementById('cad-celular').value.trim() 
-   const email = document.getElementById('cad-email').value.trim() 
-   const erro = document.getElementById('erro-cadastro') 
-   if (!nome) { erro.textContent = 'Nome é obrigatório'; erro.classList.remove('hidden'); return } 
-   if (!celular) { erro.textContent = 'Celular é obrigatório'; erro.classList.remove('hidden'); return } 
-   erro.classList.add('hidden') 
-   localStorage.setItem('cliente_nome', nome)
-   localStorage.setItem('cliente_telefone', celular)
-   if (email) localStorage.setItem('cliente_email', email)
-   localStorage.setItem(STORAGE_CLIENTE, JSON.stringify({ nome, celular, email })) 
-   verificarCadastro() 
- } 
-
- function trocarCadastro() { 
-   localStorage.removeItem(STORAGE_CLIENTE)
-   localStorage.removeItem('cliente_nome')
-   localStorage.removeItem('cliente_telefone')
-   localStorage.removeItem('cliente_email')
-   document.getElementById('tela-solicitar').classList.add('hidden') 
-   document.getElementById('tela-cadastro').classList.remove('hidden') 
- } 
-
- function verificarBotaoSolicitar() { 
-   const btn = document.getElementById('btn-solicitar'); 
-   const origemOk = document.getElementById('busca-orig').value.trim() !== '' && origemLat;
-   const destinoOk = document.getElementById('busca-dest').value.trim() !== '' && destinoLat;
-
-   if (origemOk && destinoOk) { 
-     btn.disabled = false; 
-     btn.classList.remove('opacity-40', 'cursor-not-allowed'); 
-   } else { 
-     btn.disabled = true; 
-     btn.classList.add('opacity-40', 'cursor-not-allowed'); 
-   } 
- } 
-
- function setTipo(tipo) { 
-   tipoCorreida = tipo 
-   const campo = document.getElementById('campo-agendamento') 
-   document.getElementById('btn-agora').className = tipo === 'normal' 
-     ? 'flex-1 bg-green-600 text-white rounded-xl py-3 font-semibold text-sm' 
-     : 'flex-1 bg-white border border-green-600 text-green-600 rounded-xl py-3 font-semibold text-sm' 
-   document.getElementById('btn-agendar').className = tipo === 'agendada' 
-     ? 'flex-1 bg-green-600 text-white rounded-xl py-3 font-semibold text-sm' 
-     : 'flex-1 bg-white border border-green-600 text-green-600 rounded-xl py-3 font-semibold text-sm' 
-   if (tipo === 'agendada') { 
-     campo.classList.remove('hidden') 
-     const agora = new Date() 
-
-     // Mínimo: 2 horas a partir de agora 
-     const min = new Date(agora.getTime() + 2 * 60 * 60 * 1000) 
-
-     // Máximo: exatamente 10 dias corridos a partir de hoje 
-     const max = new Date(agora) 
-     max.setDate(max.getDate() + 10) 
-     max.setHours(23, 59, 0, 0) 
-
-     const input = document.getElementById('data-agendamento') 
-     input.min = min.toISOString().slice(0, 16) 
-     input.max = max.toISOString().slice(0, 16) 
-     if (!input.value || input.value < input.min) { 
-       input.value = min.toISOString().slice(0, 16) 
-     } 
-     input.onchange = recalcularValor 
-   } else { 
-     campo.classList.add('hidden') 
-   } 
-   recalcularValor() 
- } 
-
- function initMap() { 
-   map = L.map('map').setView([-20.3155, -40.3128], 13) 
-   fetch('/api/config/mapbox') 
-     .then(r => r.json()) 
-     .then(({ token }) => { 
-       L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${token}`, { 
-         attribution: '© <a href="https://www.mapbox.com/">Mapbox</a> © <a href="https://www.openstreetmap.org/">OpenStreetMap</a>', 
-         tileSize: 512, 
-         zoomOffset: -1, 
-         maxZoom: 19 
-       }).addTo(map) 
-     });
-
-   setupAutocomplete('busca-orig', 'origem') 
-   setupAutocomplete('busca-dest', 'destino') 
-
-   carregarMotoristasOnline() 
-   setInterval(carregarMotoristasOnline, 30000) 
- } 
-
- let marcadoresMotoristas = [] 
-
- async function carregarMotoristasOnline() { 
-   try { 
-     const r = await fetch('/api/motoristas-online') 
-     if (!r.ok) return 
-     const motoristas = await r.json() 
-
-     // Remove pins anteriores 
-     marcadoresMotoristas.forEach(m => { 
-       if (m.marker) map.removeLayer(m.marker) 
-     }) 
-     marcadoresMotoristas = [] 
-
-     const txt = document.getElementById('txt-motoristas-online') 
-
-     if (!motoristas.length) { 
-       if (txt) { 
-         txt.textContent = '😔 Nenhum motorista disponível agora' 
-         txt.className = 'text-xs text-center text-red-400' 
-       } 
-       return 
-     } 
-
-     const comLocalizacao = motoristas.filter(m => m.lat && m.lng) 
-
-     comLocalizacao.forEach(m => { 
-       const marker = L.marker([parseFloat(m.lat), parseFloat(m.lng)], { 
-         icon: iconeMotorista, 
-         title: `${m.nome} — ${m.carro}` 
-       }).addTo(map) 
-
-       const popupContent = ` 
-           <div style="font-size:13px;padding:4px;min-width:120px"> 
-             <p style="font-weight:bold;margin:0;color:#1f2937">${m.nome}</p> 
-             <p style="color:#6b7280;margin:2px 0;font-size:12px">${m.carro}</p> 
-             <p style="color:#f59e0b;margin:0">${'★'.repeat(Math.round(m.media || 0))}${'☆'.repeat(5 - Math.round(m.media || 0))} ${Number(m.media || 0).toFixed(1)}</p> 
-             <p style="color:#16a34a;font-size:11px;margin:2px 0">${m.viagens || 0} viagens</p> 
-             <p style="color:#16a34a;font-size:11px;font-weight:bold">✅ Disponível</p> 
-           </div> 
-       ` 
-       marker.bindPopup(popupContent) 
-       marcadoresMotoristas.push({ marker }) 
-     }) 
-
-     if (txt) { 
-       txt.textContent = `🟢 ${motoristas.length} motorista${motoristas.length > 1 ? 's' : ''} disponível${motoristas.length > 1 ? 'is' : ''} agora` 
-       txt.className = 'text-xs text-center text-green-600 font-medium' 
-     } 
-
-     if (typeof origemLat !== 'undefined' && origemLat) { 
-       desenharLinhasMotoristas(origemLat, origemLng) 
-     } 
-
-   } catch(e) { 
-     console.error('[MOTORISTAS ONLINE]', e) 
-   } 
- } 
-
- function setupAutocomplete(inputId, tipo) { 
-   const input = document.getElementById(inputId) 
-   const list = document.getElementById(tipo === 'origem' ? 'lista-orig' : 'lista-dest')
-   let timeout = null 
-
-   input.addEventListener('input', () => { 
-     if (timeout) clearTimeout(timeout) 
-     const query = input.value.trim() 
-     if (query.length < 3) {
-       list.classList.add('hidden')
-       return 
-     }
-
-     timeout = setTimeout(async () => { 
-       try { 
-         const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=br&addressdetails=1&limit=5`) 
-         const d = await r.json() 
-         
-         if (d && d.length > 0) { 
-           list.innerHTML = d.map(res => `
-             <div class="autocomplete-item" 
-               onclick="selecionarSugestao('${tipo}', '${res.display_name.replace(/'/g, "\\'")}', ${res.lat}, ${res.lon})"
-               style="padding:12px;cursor:pointer;border-bottom:1px solid #eee;font-size:14px;">
-               ${res.display_name}
-             </div>
-           `).join('')
-           list.classList.remove('hidden')
-         } else {
-           list.classList.add('hidden')
-         }
-       } catch(err) { console.error(err) } 
-     }, 400) 
-   }) 
-
-   // Fecha lista ao clicar fora — com delay para não interferir no toque mobile 
-   document.addEventListener('click', (e) => { 
-     setTimeout(() => { 
-       if (!input.contains(e.target) && !list.contains(e.target)) { 
-         list.classList.add('hidden') 
-       } 
-     }, 300) 
-   }) 
- } 
-
- function selecionarSugestao(tipo, endereco, lat, lon) {
-   const input = document.getElementById(tipo === 'origem' ? 'busca-orig' : 'busca-dest')
-   const list = document.getElementById(tipo === 'origem' ? 'lista-orig' : 'lista-dest')
-   
-   const enderecoCurto = encurtarEndereco(endereco);
-   input.value = enderecoCurto
-   list.classList.add('hidden')
-
-   if (tipo === 'origem') { 
-     origemLat = lat 
-     origemLng = lon 
-     origemEndereco = enderecoCurto 
-     origem = enderecoCurto 
-     mostrarOrigemNoMapa(lat, lon, enderecoCurto) 
-   } else { 
-     destinoLat = lat 
-     destinoLng = lon 
-     destino = enderecoCurto 
-   }
-
-   marcarPonto(lat, lon, enderecoCurto, tipo) 
-   map.setView([lat, lon], 15) 
-   verificarBotaoSolicitar()
- } 
-
- function mostrarOrigemNoMapa(lat, lng, endereco) { 
-   if (window.markerOrigem) { 
-     map.removeLayer(window.markerOrigem) 
-   } 
-
-   window.markerOrigem = L.marker([lat, lng], { 
-     icon: iconeOrigem, 
-     title: 'Sua localização: ' + endereco 
-   }).addTo(map) 
-
-   map.panTo([lat, lng]) 
-   map.setZoom(14) 
-
-   // Desenha linhas tracejadas dos motoristas até a origem 
-   desenharLinhasMotoristas(lat, lng) 
- } 
-
- let linhasMotoristas = [] 
-
- function desenharLinhasMotoristas(origemLat, origemLng) { 
-   // Remove linhas anteriores 
-   linhasMotoristas.forEach(l => map.removeLayer(l)) 
-   linhasMotoristas = [] 
-
-   marcadoresMotoristas.forEach(item => { 
-     if (!item.marker) return 
-     const pos = item.marker.getLatLng() 
-     if (!pos) return 
-
-     const linha = L.polyline([ 
-       [pos.lat, pos.lng], 
-       [origemLat, origemLng] 
-     ], { 
-       color: '#2563eb', 
-       dashArray: '5, 10', 
-       weight: 2, 
-       opacity: 0.6 
-     }).addTo(map) 
-
-     linhasMotoristas.push(linha) 
-   }) 
- } 
-
- function usarLocalizacaoAtual() { 
-   const erroEl = document.getElementById('erro-solicitar');
-   if (!navigator.geolocation) { 
-     erroEl.textContent = 'Geolocalização não suportada';
-     erroEl.classList.remove('hidden');
-     return 
-   } 
-   navigator.geolocation.getCurrentPosition(pos => { 
-     const lat = pos.coords.latitude 
-     const lng = pos.coords.longitude 
-
-     fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=pt-BR`) 
-       .then(r => r.json()) 
-       .then(d => { 
-         if (d && d.display_name) { 
-           origemLat = lat 
-           origemLng = lng 
-           origemEndereco = d.display_name.substring(0, 60); 
-           document.getElementById('busca-orig').value = origemEndereco 
-           mostrarOrigemNoMapa(lat, lng, origemEndereco) 
-           verificarBotaoSolicitar()
-           if (destinoLat) calcularValor() 
-           erroEl.classList.add('hidden');
-         } 
-       }) 
-       .catch(() => {
-         erroEl.textContent = 'Não foi possível obter sua localização. Digite o endereço manualmente.';
-         erroEl.classList.remove('hidden');
-       }) 
-   }, (err) => { 
-     erroEl.textContent = 'Não foi possível obter sua localização. Digite o endereço manualmente.';
-     erroEl.classList.remove('hidden');
-   }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }) 
- } 
-
- function marcarPonto(lat, lng, endereco, tipo) { 
-   if (marcadores[tipo]) map.removeLayer(marcadores[tipo]) 
-   marcadores[tipo] = L.marker([lat, lng], { 
-     icon: tipo === 'origem' ? iconeOrigem : iconeDestino, 
-     title: tipo === 'origem' ? 'Origem' : 'Destino' 
-   }).addTo(map) 
+window.onload = () => { 
+    const nome = localStorage.getItem('cliente_nome'); 
+    const telefone = localStorage.getItem('cliente_telefone'); 
     
-   pontos[tipo] = { lat, lng, endereco } 
-   origem = pontos.origem 
-   destino = pontos.destino 
-   if (tipo === 'origem') { 
-     document.getElementById('txt-origem').textContent = endereco 
-     document.getElementById('ponto-origem').classList.remove('hidden') 
-   } else { 
-     document.getElementById('txt-destino').textContent = endereco 
-     document.getElementById('ponto-destino').classList.remove('hidden') 
-   } 
-   if (pontos.origem && pontos.destino) { 
-     const bounds = L.latLngBounds([pontos.origem.lat, pontos.origem.lng], [pontos.destino.lat, pontos.destino.lng]) 
-     map.fitBounds(bounds, { padding: [60, 60] }) 
-     calcularDistancia() 
-   } 
- } 
+    if (nome && telefone) { 
+        cliente = { nome, telefone }; 
+        document.getElementById('txt-nome-cliente').innerText = nome; 
+        mostrarTela('tela-solicitar'); 
+        carregarReputacao(); 
+        carregarHistorico();
+    } else { 
+        mostrarTela('tela-cadastro'); 
+    } 
+    initMap(); 
+}; 
 
- function limparPontos() { 
-   if (marcadores.origem) map.removeLayer(marcadores.origem) 
-   if (marcadores.destino) map.removeLayer(marcadores.destino) 
-   marcadores = { origem: null, destino: null } 
-   pontos = { origem: null, destino: null } 
-   origem = null; destino = null 
-   document.getElementById('ponto-origem').classList.add('hidden') 
-   document.getElementById('ponto-destino').classList.add('hidden') 
-   document.getElementById('busca-orig').value = '' 
-   document.getElementById('busca-dest').value = '' 
-   document.getElementById('card-valor').classList.add('hidden') 
-   const btn = document.getElementById('btn-solicitar') 
-   btn.disabled = true 
-   btn.classList.add('opacity-40', 'cursor-not-allowed') 
- } 
+function mostrarTela(id) { 
+    document.getElementById('tela-cadastro').classList.add('hidden'); 
+    document.getElementById('tela-solicitar').classList.add('hidden'); 
+    document.getElementById(id).classList.remove('hidden'); 
+} 
 
- function calcularDistancia() { 
-   if (!pontos.origem || !pontos.destino) return 
-   // Usando Haversine para cálculo de distância gratuito 
-   const lat1 = pontos.origem.lat, lon1 = pontos.origem.lng 
-   const lat2 = pontos.destino.lat, lon2 = pontos.destino.lng 
-   const R = 6371; // km 
-   const dLat = (lat2 - lat1) * Math.PI / 180 
-   const dLon = (lon2 - lon1) * Math.PI / 180 
-   const a = Math.sin(dLat/2) * Math.sin(dLat/2) + 
-             Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-             Math.sin(dLon/2) * Math.sin(dLon/2) 
-   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) 
-   const distanciaKm = R * c 
-   // Duração estimada simples (30km/h média urbana) 
-   const duracaoMin = Math.round((distanciaKm / 30) * 60) 
-   exibirValor(distanciaKm, duracaoMin) 
- } 
+function salvarCadastro() { 
+    const nome = document.getElementById('cad-nome').value.trim(); 
+    const tel = document.getElementById('cad-celular').value.trim(); 
+    if(!nome || !tel) return alert('Preencha seu nome e celular!'); 
+    
+    localStorage.setItem('cliente_nome', nome); 
+    localStorage.setItem('cliente_telefone', tel); 
+    location.reload(); 
+} 
 
- async function exibirValor(distanciaKm, duracaoMin) { 
-   let valor = 0 
-   let tarifaNome = '' 
-   if (tipoCorreida === 'agendada') { 
-     const dataHora = document.getElementById('data-agendamento').value 
-     if (dataHora) { 
-       try { 
-         const r = await fetch(`/api/tarifas/calcular?data_hora=${encodeURIComponent(dataHora)}&distancia_km=${distanciaKm.toFixed(2)}`) 
-         const d = await r.json() 
-         valor = d.valor 
-         tarifaNome = d.tarifa 
-       } catch(e) { 
-         valor = calcularValorLocal(distanciaKm, 25, 7.5, 2) 
-       } 
-     } 
-   } else { 
-     valor = calcularValorLocal(distanciaKm, 15, 7.5, 2) 
-   } 
-   valorCalculado = valor 
-   document.getElementById('txt-valor').textContent = `R$ ${valor.toFixed(2)}` 
-   document.getElementById('txt-distancia').textContent = `${distanciaKm.toFixed(1)} km` 
-   document.getElementById('txt-duracao').textContent = `~${duracaoMin} min` 
-   if (tarifaNome) document.getElementById('txt-tarifa-nome').textContent = tarifaNome 
-   document.getElementById('card-valor').classList.remove('hidden') 
-   const btn = document.getElementById('btn-solicitar') 
-   btn.disabled = false 
-   btn.classList.remove('opacity-40', 'cursor-not-allowed') 
- } 
+function trocarCadastro() { 
+    localStorage.removeItem('cliente_nome');
+    localStorage.removeItem('cliente_telefone');
+    localStorage.removeItem('cliente_email');
+    localStorage.removeItem('mobi_cliente');
+    location.reload(); 
+} 
 
- function calcularValorLocal(distanciaKm, valorMin, kmMin, valorKm) { 
-   if (distanciaKm <= kmMin) return valorMin 
-   return valorMin + ((distanciaKm - kmMin) * valorKm) 
- } 
+async function carregarReputacao() { 
+    try { 
+        const res = await fetch(`/api/client/reputation?telefone=${cliente.telefone}`); 
+        const data = await res.json(); 
+        document.getElementById('txt-nota-cliente').innerText = `⭐ ${data.media || '5.0'}`; 
+    } catch(e) {} 
+} 
 
- function recalcularValor() { 
-   if (pontos.origem && pontos.destino) calcularDistancia() 
- } 
+async function carregarHistorico() {
+    try {
+        const res = await fetch(`/api/my-rides?telefone=${cliente.telefone}`);
+        const data = await res.json();
+        const listaDiv = document.getElementById('lista-historico');
+        if (!data.rides || data.rides.length === 0) {
+            listaDiv.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">Nenhuma corrida encontrada.</p>';
+            return;
+        }
+        listaDiv.innerHTML = data.rides.map(ride => {
+            function encurtarEndereco(endereco) {
+                try {
+                    const obj = JSON.parse(endereco);
+                    endereco = obj.endereco || obj.display_name || endereco;
+                } catch(e) {}
+                const partes = endereco.split(',');
+                return partes.slice(0, 2).join(',').trim();
+            }
+            return `
+                <div class="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <p class="text-sm font-semibold text-gray-800">${encurtarEndereco(ride.origem)} → ${encurtarEndereco(ride.destino)}</p>
+                            <p class="text-xs text-gray-500 mt-1">${new Date(ride.created_at).toLocaleDateString('pt-BR')} • ${ride.status}</p>
+                        </div>
+                        <button onclick="repetirCorrida('${encodeURIComponent(encurtarEndereco(ride.origem))}', ${ride.origem_lat}, ${ride.origem_lng}, '${encodeURIComponent(encurtarEndereco(ride.destino))}', ${ride.destino_lat}, ${ride.destino_lng})"
+                            class="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700">
+                            Repetir
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch(e) {
+        console.error('[HISTÓRICO]', e);
+    }
+}
 
- async function solicitar() { 
-   const termosAceitos = localStorage.getItem(STORAGE_TERMOS_PASSAGEIRO)
-   if (termosAceitos !== 'true') {
-     alert('Por favor aceite os termos de uso antes de solicitar uma corrida!')
-     verificarTermosPassageiro()
-     return
-   }
+function abrirModalHistorico() {
+    const modal = document.getElementById('modal-historico');
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+}
 
-   const cliente_nome = localStorage.getItem('cliente_nome')
-   const cliente_telefone = localStorage.getItem('cliente_telefone')
-   const cliente_email = localStorage.getItem('cliente_email')
-   const cliente = { nome: cliente_nome, celular: cliente_telefone, email: cliente_email } 
+function fecharModalHistorico() {
+    const modal = document.getElementById('modal-historico');
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+}
 
-   if (!origem || !origemLat) { 
-     alert('Por favor informe o endereço de origem') 
-     return 
-   } 
-   if (!destino || !destinoLat) { 
-     alert('Por favor informe o endereço de destino') 
-     return 
-   } 
-   if (!cliente) { 
-     // Abre modal de cadastro (ou tela de cadastro no seu caso) 
-     document.getElementById('tela-cadastro')?.classList.remove('hidden') 
-     document.getElementById('tela-solicitar')?.classList.add('hidden') 
-     return 
-   } 
+// LOGICA DE REPETIR CORRIDA CORRIGIDA 
+async function repetirCorrida(o_text_encoded, o_lat, o_lng, d_text_encoded, d_lat, d_lng) { 
+    const o_text = decodeURIComponent(o_text_encoded);
+    const d_text = decodeURIComponent(d_text_encoded);
+    
+    document.getElementById('busca-orig').value = o_text; 
+    document.getElementById('busca-dest').value = d_text; 
+    
+    orig = { lat: o_lat, lng: o_lng, text: o_text }; 
+    dest = { lat: d_lat, lng: d_lng, text: d_text }; 
+    
+    // Marca os pontos no mapa
+    if (map) {
+        if (marcadores.origem) map.removeLayer(marcadores.origem);
+        if (marcadores.destino) map.removeLayer(marcadores.destino);
 
-   const btn = document.getElementById('btn-solicitar') 
-   btn.disabled = true 
-   btn.textContent = 'Solicitando...' 
+        const iconeOrigem = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+            shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41]
+        });
 
-   // Usa valor calculado ou valor mínimo 
-   const valor = valorCalculado || 15.00 
+        const iconeDestino = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+            shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41]
+        });
 
-   try { 
-     const r = await fetch('/api/solicitar', { 
-       method: 'POST', 
-       headers: { 'Content-Type': 'application/json' }, 
-       body: JSON.stringify({ 
-         nome: cliente.nome,
-         celular: cliente.celular,
-         email: cliente.email,
-         origem, 
-         origem_lat: origemLat, 
-         origem_lng: origemLng, 
-         destino, 
-         destino_lat: destinoLat, 
-         destino_lng: destinoLng, 
-         valor, 
-         tipo: tipoCorreida || 'normal', 
-         agendada_para: (tipoCorreida === 'agendada' ? document.getElementById('data-agendamento').value : null) 
-       }) 
-     }) 
+        marcadores.origem = L.marker([o_lat, o_lng], { icon: iconeOrigem }).addTo(map);
+        marcadores.destino = L.marker([d_lat, d_lng], { icon: iconeDestino }).addTo(map);
 
-     const d = await r.json() 
-     if (!r.ok) { 
-       alert('Erro: ' + (d.error || 'Tente novamente')) 
-       btn.disabled = false 
-       btn.textContent = 'Solicitar corrida' 
-       return 
-     } 
+        const bounds = L.latLngBounds([o_lat, o_lng], [d_lat, d_lng]);
+        map.fitBounds(bounds, { padding: [40, 40] });
+    }
+    
+    fecharModalHistorico(); 
+    
+    // Força o cálculo do preço 
+    calcularPreco(); 
+} 
 
-     // Salva ride ID para avaliação
-     localStorage.setItem(STORAGE_RIDE_ID, d.rideId || d.id)
+async function calcularPreco() { 
+    if(!orig || !dest) return; 
+    
+    // Simulação de cálculo de distância (Haversine básico no front para destravar botão)
+    const lat1 = orig.lat, lon1 = orig.lng;
+    const lat2 = dest.lat, lon2 = dest.lng;
+    const R = 6371; // km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const distanciaKm = R * c;
 
-     // Sucesso: Configura link e redirecionamento 
-     linkAcompanhamento = `${window.location.origin}/r/${d.token}` 
-     document.getElementById('txt-link-corrida').textContent = linkAcompanhamento 
-     document.getElementById('btn-acompanhar').href = linkAcompanhamento 
+    valorFinal = distanciaKm <= 2 ? 15 : 15 + ((distanciaKm - 2) * 2);
+    document.getElementById('txt-valor').innerText = `R$ ${valorFinal.toFixed(2).replace('.', ',')}`; 
+    document.getElementById('box-valor').classList.remove('hidden'); 
+    
+    const btn = document.getElementById('btn-pedir'); 
+    btn.disabled = false; 
+    btn.classList.remove('bg-gray-200', 'text-gray-400', 'cursor-not-allowed'); 
+    btn.classList.add('bg-green-600', 'text-white'); 
+} 
 
-     salvarHistorico() 
-     document.getElementById('tela-solicitar').classList.add('hidden') 
-     document.getElementById('tela-confirmacao').classList.remove('hidden') 
-   } catch(e) { 
-     alert('Erro de conexão') 
-     btn.disabled = false 
-     btn.textContent = 'Solicitar corrida' 
-   } 
- } 
+function initMap() {
+    map = L.map('map').setView([-20.3155, -40.3128], 13);
+    fetch('/api/config/mapbox')
+        .then(r => r.json())
+        .then(({ token }) => {
+            L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${token}`, {
+                attribution: '© <a href="https://www.mapbox.com/">Mapbox</a> © <a href="https://www.openstreetmap.org/">OpenStreetMap</a>',
+                tileSize: 512,
+                zoomOffset: -1,
+                maxZoom: 19
+            }).addTo(map);
+        });
+    
+    setupAutocomplete('busca-orig', 'origem');
+    setupAutocomplete('busca-dest', 'destino');
+}
 
- function copiarLink() { 
-   navigator.clipboard.writeText(linkAcompanhamento) 
-   alert('Link copiado!') 
- } 
+function setupAutocomplete(inputId, tipo) {
+    const input = document.getElementById(inputId);
+    const list = document.getElementById(tipo === 'origem' ? 'lista-orig' : 'lista-dest');
+    let timeout = null;
 
- function compartilharCorrida() { 
-   if (navigator.share) { 
-     navigator.share({ 
-       title: 'Minha corrida MobiHub', 
-       text: 'Acompanhe minha corrida em tempo real!', 
-       url: linkAcompanhamento 
-     }) 
-   } else { 
-     copiarLink() 
-   } 
- } 
+    input.addEventListener('input', () => {
+        if (timeout) clearTimeout(timeout);
+        const query = input.value.trim();
+        if (query.length < 3) {
+            list.classList.add('hidden');
+            return;
+        }
 
- function novaCorrida() { 
-   if (intervalRedirect) clearInterval(intervalRedirect) 
-   linkAcompanhamento = '' 
-   valorCalculado = 0 
-   limparPontos() 
-   document.getElementById('tela-confirmacao').classList.add('hidden') 
-   document.getElementById('tela-solicitar').classList.remove('hidden') 
-   document.getElementById('btn-solicitar').textContent = 'Solicitar corrida' 
- } 
+        timeout = setTimeout(async () => {
+            try {
+                const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=br&addressdetails=1&limit=5`);
+                const d = await r.json();
+                
+                if (d && d.length > 0) {
+                    list.innerHTML = d.map(res => {
+                        function encurtarEndereco(endereco) {
+                            const partes = endereco.split(',');
+                            return partes.slice(0, 2).join(',').trim();
+                        }
+                        const enderecoCurto = encurtarEndereco(res.display_name);
+                        return `
+                            <div class="autocomplete-item" onclick="selecionarSugestao('${tipo}', '${res.display_name.replace(/'/g, "\\'")}', ${res.lat}, ${res.lon}, '${enderecoCurto.replace(/'/g, "\\'")}')">
+                                ${enderecoCurto}
+                            </div>
+                        `;
+                    }).join('');
+                    list.classList.remove('hidden');
+                } else {
+                    list.classList.add('hidden');
+                }
+            } catch(err) { console.error(err) } 
+        }, 400);
+    });
 
- function salvarFavorito(tipo) { 
-   if (!pontos.origem) return 
-   const favs = JSON.parse(localStorage.getItem(STORAGE_FAV) || '{}') 
-   favs[tipo] = { ...pontos.origem } 
-   localStorage.setItem(STORAGE_FAV, JSON.stringify(favs)) 
-   renderizarAtalhos() 
-   alert(`Salvo como ${tipo === 'casa' ? 'Casa 🏠' : 'Trabalho 💼'}!`) 
- } 
+    document.addEventListener('click', (e) => {
+        setTimeout(() => {
+            if (!input.contains(e.target) && !list.contains(e.target)) {
+                list.classList.add('hidden');
+            }
+        }, 300);
+    });
+}
 
- function salvarHistorico() { 
-   if (!pontos.origem || !pontos.destino) return 
-   const hist = JSON.parse(localStorage.getItem(STORAGE_HIST) || '[]') 
-   const entrada = { origem: pontos.origem, destino: pontos.destino, data: new Date().toLocaleDateString('pt-BR') } 
-   const filtrado = hist.filter(h => 
-     h.origem.endereco !== entrada.origem.endereco || 
-     h.destino.endereco !== entrada.destino.endereco 
-   ) 
-   filtrado.unshift(entrada) 
-   localStorage.setItem(STORAGE_HIST, JSON.stringify(filtrado.slice(0, 5))) 
-   renderizarHistorico() 
- } 
+function selecionarSugestao(tipo, enderecoCompleto, lat, lon, enderecoCurto) {
+    const input = document.getElementById(tipo === 'origem' ? 'busca-orig' : 'busca-dest');
+    const list = document.getElementById(tipo === 'origem' ? 'lista-orig' : 'lista-dest');
+    
+    input.value = enderecoCurto;
+    list.classList.add('hidden');
 
- function renderizarAtalhos() { 
-   const favs = JSON.parse(localStorage.getItem(STORAGE_FAV) || '{}') 
-   const lista = document.getElementById('atalhos-lista') 
-   const section = document.getElementById('atalhos') 
-   lista.innerHTML = '' 
-   const items = Object.entries(favs) 
-   if (!items.length) { section.classList.add('hidden'); return } 
-   section.classList.remove('hidden') 
-   items.forEach(([tipo, f]) => { 
-     const btn = document.createElement('button') 
-     btn.className = 'flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm hover:bg-green-50 hover:border-green-300' 
-     btn.innerHTML = `<span>${tipo === 'casa' ? '🏠' : '💼'}</span><div class="text-left"><p class="text-xs font-medium text-green-700">${tipo === 'casa' ? 'Casa' : 'Trabalho'}</p><p class="text-xs text-gray-500 truncate max-w-[140px]">${f.endereco.split(',')[0]}</p></div>` 
-     btn.onclick = () => { 
-       marcarPonto(f.lat, f.lng, f.endereco, 'origem') 
-       map.setCenter({ lat: f.lat, lng: f.lng }) 
-       map.setZoom(15) 
-     } 
-     lista.appendChild(btn) 
-   }) 
- } 
+    if (tipo === 'origem') {
+        orig = { lat, lng: lon, text: enderecoCurto };
+    } else {
+        dest = { lat, lng: lon, text: enderecoCurto };
+    }
 
- function renderizarHistorico() { 
-   const hist = JSON.parse(localStorage.getItem(STORAGE_HIST) || '[]') 
-   const lista = document.getElementById('historico-lista') 
-   const section = document.getElementById('historico-section') 
-   if (!hist.length) { section.classList.add('hidden'); return } 
-   section.classList.remove('hidden') 
-   lista.innerHTML = hist.map((h, i) => ` 
-     <div class="bg-white border border-gray-200 rounded-xl px-3 py-2.5 flex items-center justify-between"> 
-       <div class="flex-1 min-w-0 mr-3"> 
-         <p class="text-sm text-gray-800 font-medium truncate">${h.origem.endereco.split(',')[0]} → ${h.destino.endereco.split(',')[0]}</p> 
-         <p class="text-xs text-gray-400 mt-0.5">${h.data}</p> 
-       </div> 
-       <button onclick="repetirCorrida(${i})" class="text-xs text-green-600 border border-green-300 rounded-lg px-3 py-1.5 hover:bg-green-50 whitespace-nowrap">Repetir</button> 
-     </div> 
-   `).join('') 
- } 
+    // Marca o ponto no mapa
+    if (map) {
+        const icone = tipo === 'origem' 
+            ? L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+                shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41]
+            })
+            : L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+                shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41]
+            });
 
- function repetirCorrida(i) { 
-   const hist = JSON.parse(localStorage.getItem(STORAGE_HIST) || '[]') 
-   const h = hist[i] 
-   if (!h) return 
-   marcarPonto(h.origem.lat, h.origem.lng, h.origem.endereco, 'origem') 
-   marcarPonto(h.destino.lat, h.destino.lng, h.destino.endereco, 'destino') 
-   const bounds = L.latLngBounds([h.origem.lat, h.origem.lng], [h.destino.lat, h.destino.lng]) 
-   map.fitBounds(bounds, { padding: [40, 40] }) 
- } 
+        if (marcadores[tipo]) map.removeLayer(marcadores[tipo]);
+        marcadores[tipo] = L.marker([lat, lon], { icon: icone }).addTo(map);
 
- // Funções do Histórico Modal
- async function carregarHistoricoCorridas() {
-   const cliente = JSON.parse(localStorage.getItem(STORAGE_CLIENTE) || 'null')
-   if (!cliente) return []
-   const r = await fetch(`/api/my-rides?telefone=${encodeURIComponent(cliente.celular)}`)
-   if (!r.ok) return []
-   const d = await r.json()
-   return d.rides || []
- }
+        if (orig && dest) {
+            const bounds = L.latLngBounds([orig.lat, orig.lng], [dest.lat, dest.lng]);
+            map.fitBounds(bounds, { padding: [40, 40] });
+        } else {
+            map.setView([lat, lon], 15);
+        }
+    }
 
- async function abrirModalHistorico() {
-   const modal = document.getElementById('modal-historico')
-   const lista = document.getElementById('lista-historico')
-   modal.classList.remove('hidden')
-   modal.style.display = 'flex'
-   
-   const rides = await carregarHistoricoCorridas()
-   if (!rides.length) {
-     lista.innerHTML = '<p class="text-sm text-gray-500 text-center py-8">Nenhuma corrida encontrada.</p>'
-     return
-   }
-   lista.innerHTML = rides.map((ride, i) => `
-     <div class="bg-gray-50 border border-gray-200 rounded-xl p-4">
-       <div class="flex items-center justify-between">
-         <div class="flex-1">
-           <p class="text-sm font-semibold text-gray-800">${encurtarEndereco(ride.origem)} → ${encurtarEndereco(ride.destino)}</p>
-           <p class="text-xs text-gray-500 mt-1">${new Date(ride.created_at).toLocaleDateString('pt-BR')} • ${ride.status}</p>
-         </div>
-         <button onclick="repetirCorridaFromHistorico('${ride.origem}', '${ride.destino}', ${ride.origem_lat}, ${ride.origem_lng}, ${ride.destino_lat}, ${ride.destino_lng})"
-           class="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700">
-           Repetir
-         </button>
-       </div>
-     </div>
-   `).join('')
- }
+    calcularPreco();
+}
 
- function fecharModalHistorico() {
-   const modal = document.getElementById('modal-historico')
-   modal.classList.add('hidden')
-   modal.style.display = 'none'
- }
+async function pedirCorrida() {
+    if (!orig || !dest) {
+        alert('Selecione origem e destino!');
+        return;
+    }
 
- function repetirCorridaFromHistorico(origem, destino, origLat, origLng, destLat, destLng) {
-   fecharModalHistorico()
-   const origEndereco = encurtarEndereco(origem)
-   const destEndereco = encurtarEndereco(destino)
-   
-   // Preenche os inputs
-   const inputOrig = document.getElementById('busca-orig')
-   const inputDest = document.getElementById('busca-dest')
-   inputOrig.value = origEndereco
-   inputDest.value = destEndereco
-   
-   // Dispara eventos input
-   inputOrig.dispatchEvent(new Event('input', { bubbles: true }))
-   inputDest.dispatchEvent(new Event('input', { bubbles: true }))
-   
-   // Atribui variáveis globais
-   origemLat = origLat
-   origemLng = origLng
-   destinoLat = destLat
-   destinoLng = destLng
-   origem = origEndereco
-   destino = destEndereco
-   
-   // Marca pontos no mapa
-   marcarPonto(origLat, origLng, origEndereco, 'origem')
-   marcarPonto(destLat, destLng, destEndereco, 'destino')
-   
-   // Ajusta o mapa
-   const bounds = L.latLngBounds([origLat, origLng], [destLat, destLng])
-   map.fitBounds(bounds, { padding: [40, 40] })
-   
-   // Calcula o valor
-   calcularDistancia()
-   verificarBotaoSolicitar()
- }
+    const btn = document.getElementById('btn-pedir');
+    btn.disabled = true;
+    btn.textContent = 'Solicitando...';
 
- // Funções da Avaliação
- function selecionarEstrela(n) {
-   estrelasSelecionadas = n
-   const buttons = document.querySelectorAll('#estrelas-avaliacao button')
-   buttons.forEach((btn, i) => {
-     if (i < n) {
-       btn.className = 'text-4xl text-yellow-400'
-     } else {
-       btn.className = 'text-4xl text-gray-300 hover:text-yellow-400'
-     }
-   })
-   const btnEnviar = document.getElementById('btn-enviar-avaliacao')
-   btnEnviar.disabled = false
-   btnEnviar.className = 'w-full bg-green-600 text-white rounded-xl py-3 font-bold text-base hover:bg-green-700'
- }
+    try {
+        const r = await fetch('/api/solicitar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                nome: cliente.nome,
+                celular: cliente.telefone,
+                origem: orig.text,
+                origem_lat: orig.lat,
+                origem_lng: orig.lng,
+                destino: dest.text,
+                destino_lat: dest.lat,
+                destino_lng: dest.lng,
+                valor: valorFinal
+            })
+        });
 
- async function enviarAvaliacao() {
-   const rideId = localStorage.getItem(STORAGE_RIDE_ID) || rideIdAvaliacao
-   if (!rideId || !estrelasSelecionadas) return
-   const comentario = document.getElementById('comentario-avaliacao').value
-   const r = await fetch('/api/rate', {
-     method: 'POST',
-     headers: { 'Content-Type': 'application/json' },
-     body: JSON.stringify({
-       ride_id: rideId,
-       tipo: 'motorista',
-       estrelas: estrelasSelecionadas,
-       comentario: comentario || null
-     })
-   })
-   fecharModalAvaliacao()
-   localStorage.removeItem(STORAGE_RIDE_ID)
-   alert('Obrigado por sua avaliação!')
- }
+        const d = await r.json();
+        if (!r.ok) {
+            alert('Erro: ' + (d.error || 'Tente novamente'));
+            btn.disabled = false;
+            btn.textContent = 'Solicitar MobiHub';
+            return;
+        }
 
- function abrirModalAvaliacao(rideId) {
-   rideIdAvaliacao = rideId
-   const modal = document.getElementById('modal-avaliacao')
-   modal.classList.remove('hidden')
-   modal.style.display = 'flex'
-   selecionarEstrela(0)
-   document.getElementById('comentario-avaliacao').value = ''
- }
-
- function fecharModalAvaliacao() {
-   const modal = document.getElementById('modal-avaliacao')
-   modal.classList.add('hidden')
-   modal.style.display = 'none'
- }
-
- // Sua Nota
- async function carregarSuaNota(telefone) {
-   try {
-     const r = await fetch(`/api/client/reputation?telefone=${encodeURIComponent(telefone)}`)
-     const d = await r.json()
-     const media = parseFloat(d.media || 0)
-     const total = parseInt(d.total || 0)
-     const estrelasEl = document.getElementById('sua-nota-estrelas')
-     const textoEl = document.getElementById('sua-nota-texto')
-     const estrelas = '★'.repeat(Math.round(media)) + '☆'.repeat(5 - Math.round(media))
-     estrelasEl.textContent = estrelas
-     textoEl.textContent = `${media.toFixed(1)} (${total} aval.)`
-     document.getElementById('sua-nota').classList.remove('hidden')
-   } catch(e) {
-     console.error('[SUA NOTA]', e)
-   }
- }
-
- // Socket.io
- function initSocket() {
-   socket = io()
-   socket.on('corrida:concluida', async (data) => {
-     console.log('[SOCKET] corrida:concluida', data)
-     rideIdAvaliacao = data.rideId
-     abrirModalAvaliacao(data.rideId)
-   })
- }
-
- window.onload = () => { 
-   verificarTermosPassageiro()
-   
-   const cliente_nome = localStorage.getItem('cliente_nome')
-   const cliente_telefone = localStorage.getItem('cliente_telefone')
-   if (cliente_nome && cliente_telefone) { 
-     document.getElementById('tela-cadastro').classList.add('hidden') 
-     document.getElementById('tela-solicitar').classList.remove('hidden') 
-     document.getElementById('txt-nome-cliente').textContent = cliente_nome 
-     carregarSuaNota(cliente_telefone)
-     renderizarAtalhos() 
-     renderizarHistorico() 
-     initSocket()
-
-     // BUG 5: Saudação personalizada se vier de uma avaliação 
-     if (document.referrer.includes('/ride/')) { 
-       document.getElementById('txt-nome-cliente').parentElement.innerHTML =  
-         `Olá, <span class="font-semibold text-green-700">${cliente_nome}</span>! Pronto para sua próxima corrida?` 
-     } 
-   } else {
-     verificarCadastro()
-   }
-   initMap() 
-   // Recupera dados de repetir viagem se vier do painel do passageiro 
-   const repOrigem = localStorage.getItem('mobi_repetir_origem'); 
-   const repDestino = localStorage.getItem('mobi_repetir_destino'); 
-   const repOrigemLat = localStorage.getItem('mobi_repetir_origem_lat'); 
-   const repOrigemLng = localStorage.getItem('mobi_repetir_origem_lng'); 
-   const repDestinoLat = localStorage.getItem('mobi_repetir_destino_lat'); 
-   const repDestinoLng = localStorage.getItem('mobi_repetir_destino_lng'); 
-   if (repOrigem && repDestino) { 
-     setTimeout(() => { 
-       marcarPonto(parseFloat(repOrigemLat), parseFloat(repOrigemLng), repOrigem, 'origem'); 
-       marcarPonto(parseFloat(repDestinoLat), parseFloat(repDestinoLng), repDestino, 'destino'); 
-       document.getElementById('busca-orig').value = encurtarEndereco(repOrigem); 
-       document.getElementById('busca-dest').value = encurtarEndereco(repDestino); 
-       origemLat = parseFloat(repOrigemLat); 
-       origemLng = parseFloat(repOrigemLng); 
-       destinoLat = parseFloat(repDestinoLat); 
-       destinoLng = parseFloat(repDestinoLng); 
-       verificarBotaoSolicitar(); 
-       localStorage.removeItem('mobi_repetir_origem'); 
-       localStorage.removeItem('mobi_repetir_destino'); 
-       localStorage.removeItem('mobi_repetir_origem_lat'); 
-       localStorage.removeItem('mobi_repetir_origem_lng'); 
-       localStorage.removeItem('mobi_repetir_destino_lat'); 
-       localStorage.removeItem('mobi_repetir_destino_lng'); 
-     }, 800); 
-   }
- }
- </script> 
-</div>
+        // Redireciona para a página de acompanhamento
+        window.location.href = `/r/${d.token}`;
+    } catch(e) {
+        alert('Erro de conexão');
+        btn.disabled = false;
+        btn.textContent = 'Solicitar MobiHub';
+    }
+}
+</script> 
 </body> 
-</html> 
+</html>
