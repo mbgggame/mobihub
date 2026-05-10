@@ -337,7 +337,16 @@
      div.innerHTML = '<p class="text-sm text-gray-400 text-center py-8">Nenhum motorista cadastrado ainda.</p>' 
      return 
    } 
-   div.innerHTML = lista.map(d => ` 
+   div.innerHTML = lista.map(d => { 
+     const statusCadastro = d.status_cadastro || 'aprovado'
+     const statusCor = statusCadastro === 'aprovado' ? 'bg-green-100 text-green-700' 
+       : statusCadastro === 'pendente' ? 'bg-yellow-100 text-yellow-700' 
+       : 'bg-red-100 text-red-700'
+     const statusTexto = statusCadastro === 'aprovado' ? 'Aprovado' 
+       : statusCadastro === 'pendente' ? 'Pendente' 
+       : 'Reprovado'
+     
+     return ` 
      <div class="bg-white border border-gray-200 rounded-xl p-4"> 
        <div class="flex items-center gap-3 mb-3"> 
          <div class="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 border-2 border-gray-200 ${d.foto_base64 ? '' : 'bg-green-100 flex items-center justify-center'}"> 
@@ -349,6 +358,9 @@
          <div class="flex-1 min-w-0"> 
            <div class="flex items-center gap-2 flex-wrap"> 
              <p class="font-semibold text-gray-900">${d.nome}</p> 
+             <span class="px-2 py-0.5 rounded-full text-xs font-medium ${statusCor}"> 
+               ${statusTexto} 
+             </span> 
              <span class="px-2 py-0.5 rounded-full text-xs font-medium ${d.ativo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}"> 
                ${d.ativo ? 'Ativo' : 'Inativo'} 
              </span> 
@@ -357,13 +369,13 @@
            <p class="text-xs text-gray-400">⭐ ${Number(d.media_avaliacao || 0).toFixed(1)} • ${d.total_viagens || 0} viagens</p> 
          </div> 
        </div> 
- 
+
        <div class="bg-gray-50 rounded-lg px-3 py-2 mb-3 text-xs text-gray-600 space-y-0.5"> 
          <p><span class="font-medium">Carro:</span> ${d.modelo_carro} ${d.cor_carro} ${d.ano_carro}</p> 
          <p><span class="font-medium">Placa:</span> <span class="font-mono">${d.placa}</span></p> 
          <p><span class="font-medium">Telegram ID:</span> ${d.telegram_id}</p> 
        </div> 
- 
+
        <div class="grid grid-cols-2 gap-2"> 
          <button onclick='editarMotorista(${JSON.stringify(d).replace(/'/g, "\\'")})' 
            class="text-sm text-green-600 border border-green-200 rounded-lg py-2 hover:bg-green-50"> 
@@ -375,6 +387,16 @@
              : 'text-blue-600 border border-blue-200 hover:bg-blue-50'} rounded-lg py-2"> 
            ${d.ativo ? '⏸️ Desativar' : '▶️ Reativar'} 
          </button> 
+         ${statusCadastro === 'pendente' ? `
+         <button onclick="aprovar(${d.id})" 
+           class="text-sm text-green-600 border border-green-200 rounded-lg py-2 hover:bg-green-50"> 
+           ✅ Aprovar 
+         </button> 
+         <button onclick="reprovar(${d.id})" 
+           class="text-sm text-red-600 border border-red-200 rounded-lg py-2 hover:bg-red-50"> 
+           ❌ Reprovar 
+         </button> 
+         ` : `
          <button onclick="gerarToken(${d.id}, '${d.nome.replace(/'/g, "\\'")}')" 
            class="text-sm text-purple-600 border border-purple-200 rounded-lg py-2 hover:bg-purple-50"> 
            🔗 ${d.token_perfil ? 'Atualizar link' : 'Gerar link perfil'} 
@@ -383,6 +405,7 @@
            class="text-sm text-red-500 border border-red-200 rounded-lg py-2 hover:bg-red-50"> 
            🗑️ Excluir 
          </button> 
+         `} 
          ${d.token_perfil ? ` 
          <a href="/motorista/${d.token_perfil}" target="_blank" 
            class="col-span-2 text-center text-sm text-blue-600 border border-blue-200 rounded-lg py-2 hover:bg-blue-50"> 
@@ -390,7 +413,25 @@
          </a>` : ''} 
        </div> 
      </div> 
-   `).join('') 
+   `}).join('') 
+ } 
+
+ async function aprovar(id) { 
+   await fetch(`/api/drivers/${id}`, { 
+     method: 'PUT', 
+     headers: headers(), 
+     body: JSON.stringify({ status_cadastro: 'aprovado' }) 
+   }) 
+   carregarMotoristas() 
+ } 
+
+ async function reprovar(id) { 
+   await fetch(`/api/drivers/${id}`, { 
+     method: 'PUT', 
+     headers: headers(), 
+     body: JSON.stringify({ status_cadastro: 'reprovado' }) 
+   }) 
+   carregarMotoristas() 
  } 
  
  // ── AÇÕES ──────────────────────────────── 

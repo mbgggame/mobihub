@@ -32,7 +32,7 @@ export default async function driversRoutes(fastify) {
   }) 
 
   fastify.get('/api/drivers', { preHandler: requireAuth }, async () => { 
-    const result = await query('SELECT id, nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, total_viagens, media_avaliacao, total_avaliacoes, ativo, foto_base64, token_perfil, created_at FROM drivers ORDER BY nome')
+    const result = await query('SELECT id, nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, total_viagens, media_avaliacao, total_avaliacoes, ativo, foto_base64, token_perfil, created_at, status_cadastro FROM drivers ORDER BY nome')
     return result.rows
   }) 
  
@@ -66,13 +66,20 @@ export default async function driversRoutes(fastify) {
   fastify.put('/api/drivers/:id', { preHandler: requireAuth }, async (request, reply) => { 
     console.log('[DEBUG] PUT /api/drivers/:id chamado, id:', request.params.id) 
     console.log('[DEBUG] Body recebido:', request.body) 
-    const { nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, ativo, foto_base64 } = request.body 
+    const { nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, ativo, foto_base64, status_cadastro } = request.body 
     const { id } = request.params 
- 
+
     const driverResult = await query('SELECT id FROM drivers WHERE id = $1', [id])
     const driver = driverResult.rows[0]
     if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
- 
+
+    let novoAtivo = ativo
+    if (status_cadastro === 'aprovado') {
+      novoAtivo = 1
+    } else if (status_cadastro === 'reprovado' || status_cadastro === 'pendente') {
+      novoAtivo = 0
+    }
+
     await query(` 
       UPDATE drivers SET 
         nome = COALESCE($1, nome), 
@@ -83,10 +90,11 @@ export default async function driversRoutes(fastify) {
         cor_carro = COALESCE($6, cor_carro), 
         placa = COALESCE($7, placa), 
         ativo = COALESCE($8, ativo), 
-        foto_base64 = COALESCE($9, foto_base64) 
-      WHERE id = $10 
-    `, [nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, ativo, foto_base64, id]) 
- 
+        foto_base64 = COALESCE($9, foto_base64),
+        status_cadastro = COALESCE($10, status_cadastro)
+      WHERE id = $11 
+    `, [nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, novoAtivo, foto_base64, status_cadastro, id]) 
+
     return { mensagem: 'Motorista atualizado' } 
   }) 
  
