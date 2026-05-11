@@ -268,6 +268,11 @@ async function seedConfigs() {
 } 
  
 async function seedTarifas() { 
+  const existing = await pool.query('SELECT COUNT(*) as total FROM tarifas') 
+  if (parseInt(existing.rows[0].total) > 0) { 
+    return; 
+  }
+  
   const tarifas = [ 
     ['Padrão', '1,2,3,4,5', '09:00', '17:00', 15.00, 2.50, 1.0], 
     ['Pico manhã', '1,2,3,4,5', '06:00', '09:00', 20.00, 3.00, 1.0], 
@@ -279,7 +284,7 @@ async function seedTarifas() {
   
   for (const t of tarifas) { 
     await pool.query( 
-      'INSERT INTO tarifas (nome, dias, hora_inicio, hora_fim, valor_minimo, valor_km, km_minimo, ativo) VALUES ($1, $2, $3, $4, $5, $6, $7, 1) ON CONFLICT (nome) DO NOTHING', 
+      'INSERT INTO tarifas (nome, dias, hora_inicio, hora_fim, valor_minimo, valor_km, km_minimo) VALUES ($1, $2, $3, $4, $5, $6, $7)', 
       [t[0], t[1], t[2], t[3], t[4], t[5], t[6]] 
     ) 
   } 
