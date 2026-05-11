@@ -1,5 +1,6 @@
 import TelegramBot from 'node-telegram-bot-api' 
-import { query as dbQuery, pool } from './db.js' 
+import { query as dbQuery, pool } from './db.js'
+import { getIo } from './server.js' 
  
 let bot 
  
@@ -96,9 +97,15 @@ export function initBot() {
        } 
  
        const ride = result.rows[0] 
- 
+
        bot.answerCallbackQuery(query.id, { text: '✅ Corrida aceita!' }) 
- 
+
+       // Emite evento socket.io para redirecionar o passageiro
+       const io = getIo()
+       if (io) {
+         io.to(`ride:${rideId}`).emit('corrida:aceita', { token: ride.token, rideId: rideId, driver_id: driver.id })
+       }
+
        // Edita mensagem no grupo 
        try { 
          await editGroupMessage( 

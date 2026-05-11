@@ -1,5 +1,6 @@
 import { query, pool } from '../db.js' 
-import { requireAuth } from '../middleware/auth.js' 
+import { requireAuth } from '../middleware/auth.js'
+import { getIo } from '../server.js' 
 
 export default async function publicRoutes(fastify) { 
 
@@ -409,6 +410,10 @@ export default async function publicRoutes(fastify) {
         await editGroupMessage(ride.telegram_message_id, `✅ *Corrida aceita!*\n\n📍 ${ride.origem}\n🏁 ${ride.destino}\n\n🧑‍✈️ *${driver.nome}*\n🚗 ${driver.modelo_carro} ${driver.cor_carro}`) 
       } catch(e) {} 
     } 
+    const io = getIo()
+    if (io) {
+      io.to(`ride:${id}`).emit('corrida:aceita', { token: ride.token, rideId: id, driver_id: driver.id })
+    }
     return { mensagem: 'Corrida aceita!', token: ride.token } 
   })
 
