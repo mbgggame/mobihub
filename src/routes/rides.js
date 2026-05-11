@@ -4,7 +4,7 @@ import { sendRideToGroup, notifyDriverRateClient, editGroupMessage } from '../te
 import { v4 as uuidv4 } from 'uuid' 
 import { calculateInitialWaitCost, calculateStopCost, calculateTotalRideCost, calcularTempoMinutos, podeMotoristaCancel } from '../billing.js'
 import { getIo } from '../server.js' 
- 
+
 async function getConfig() { 
   const configs = (await query('SELECT chave, valor FROM configuracoes')).rows 
   const obj = {} 
@@ -154,13 +154,7 @@ export default async function ridesRoutes(fastify) {
       } catch (err) { 
         console.error('[RIDES] Erro ao enviar para Telegram:', err.message) 
       } 
-    }
-    // Emite nova corrida para todos os motoristas via socket.io
-    const { getIo } = await import('../server.js')
-    const io = getIo()
-    if (io) {
-      io.emit('nova_corrida', ride)
-    }
+    } 
 
     return { 
       id: ride.id, 
