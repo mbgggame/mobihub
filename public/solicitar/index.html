@@ -862,14 +862,8 @@
        socket.emit('entrar:corrida', rideId)
      }
 
-     // Sucesso: Configura link e redirecionamento 
-     linkAcompanhamento = `${window.location.origin}/r/${d.token}` 
-     document.getElementById('txt-link-corrida').textContent = linkAcompanhamento 
-     document.getElementById('btn-acompanhar').href = linkAcompanhamento 
-
-     salvarHistorico() 
-     document.getElementById('tela-solicitar').classList.add('hidden') 
-     document.getElementById('tela-confirmacao').classList.remove('hidden') 
+     // Redireciona IMEDIATAMENTE para a página de acompanhamento
+     window.location.href = '/r/' + d.token 
    } catch(e) { 
      alert('Erro de conexão') 
      btn.disabled = false 
