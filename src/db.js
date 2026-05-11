@@ -162,7 +162,8 @@ export async function initDB() {
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS valor_final DOUBLE PRECISION; 
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS cancelado_por_espera INTEGER DEFAULT 0; 
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS taxa_cancelamento DOUBLE PRECISION DEFAULT 0; 
- 
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS cancelado_por TEXT;
+
     -- Campos de Memória de Cálculo (Transparência Billing) 
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS base_value DOUBLE PRECISION DEFAULT 0; 
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS wait_extra_minutes DOUBLE PRECISION DEFAULT 0; 
