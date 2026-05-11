@@ -457,6 +457,38 @@
  let corridaAtualToken = null 
  let corridasIgnoradas = []
 
+ // Wake Lock — mantém tela acesa enquanto online 
+ let wakeLock = null 
+ 
+ async function ativarWakeLock() { 
+   try { 
+     if ('wakeLock' in navigator) { 
+       wakeLock = await navigator.wakeLock.request('screen') 
+       console.log('[WAKE LOCK] Tela mantida acesa') 
+       wakeLock.addEventListener('release', () => { 
+         console.log('[WAKE LOCK] Liberado') 
+       }) 
+     } 
+   } catch(e) { 
+     console.warn('[WAKE LOCK] Não suportado ou negado:', e.message) 
+   } 
+ } 
+ 
+ async function liberarWakeLock() { 
+   if (wakeLock) { 
+     await wakeLock.release() 
+     wakeLock = null 
+     console.log('[WAKE LOCK] Liberado manualmente') 
+   } 
+ } 
+ 
+ // Reativa o Wake Lock se o app voltar para primeiro plano 
+ document.addEventListener('visibilitychange', async () => { 
+   if (wakeLock !== null && document.visibilityState === 'visible' && motoristOnline) { 
+     await ativarWakeLock() 
+   } 
+ })
+
  // Listener para novas corridas via socket.io
  socket.on('nova_corrida', (corrida) => {
    console.log('[SOCKET] Nova corrida recebida:', corrida)
@@ -717,7 +749,15 @@
        headers: { 'Content-Type': 'application/json' }, 
        body: JSON.stringify({ online: novoStatus ? 1 : 0 }) 
      }) 
-     if (r.ok) { motoristOnline = novoStatus; renderizarStatusOnline({ online: novoStatus ? 1 : 0 }) } 
+     if (r.ok) { 
+      motoristOnline = novoStatus; 
+      renderizarStatusOnline({ online: novoStatus ? 1 : 0 }); 
+      if (novoStatus) { 
+        ativarWakeLock() 
+      } else { 
+        liberarWakeLock() 
+      } 
+    } 
    } catch(e) { alert('Erro de conexão') } 
    btn.disabled = false 
  } 

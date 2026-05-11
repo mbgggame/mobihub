@@ -399,6 +399,36 @@
  let estrelaSelecionada = 0 
  let markerOrigem, markerDestino, markerMotorista 
  let dadosAtuais = null
+ let wakeLock = null 
+ 
+ async function ativarWakeLock() { 
+   try { 
+     if ('wakeLock' in navigator) { 
+       wakeLock = await navigator.wakeLock.request('screen') 
+       console.log('[WAKE LOCK] Tela mantida acesa') 
+       wakeLock.addEventListener('release', () => { 
+         console.log('[WAKE LOCK] Liberado') 
+       }) 
+     } 
+   } catch(e) { 
+     console.warn('[WAKE LOCK] Não suportado ou negado:', e.message) 
+   } 
+ } 
+ 
+ async function liberarWakeLock() { 
+   if (wakeLock) { 
+     await wakeLock.release() 
+     wakeLock = null 
+   } 
+ } 
+ 
+ // Reativa se o app voltar para primeiro plano durante corrida ativa 
+ document.addEventListener('visibilitychange', async () => { 
+   if (wakeLock !== null && document.visibilityState === 'visible') { 
+     await ativarWakeLock() 
+   } 
+ })
+
  const waitingMessages = [
    "Buscando motoristas recomendados na região...",
    "Garantindo seu padrão Comfort MobiHub...",
@@ -1037,6 +1067,7 @@
  function verificarParaPolling(status) { 
    if (status === 'concluida' || status === 'cancelada') { 
      pollingAtivo = false 
+     liberarWakeLock() 
      console.log('[POLLING] Parado — corrida finalizada') 
    } 
  } 
@@ -1172,6 +1203,7 @@ function repetirViagemPassageiro(i) {
 
 // Inicia o polling 
 function iniciarPollingAutomatico() { 
+   ativarWakeLock()
    console.log('[POLLING] Iniciando...'); 
    iniciarPolling(); 
    
