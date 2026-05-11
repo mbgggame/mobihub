@@ -285,20 +285,24 @@ async function atualizarStatus(status) {
 } 
 
 async function confirmarCancelamento(id) {
-  if (confirm("Tem certeza que deseja cancelar esta corrida?")) {
-    const r = await fetch(`/api/rides/${id}/cancelar`, {
-      method: 'PUT',
-      headers: headers()
-    })
-    if (r.ok) {
-      fecharModal()
-      carregar()
-      alert("Corrida cancelada com sucesso!")
-    } else {
-      const d = await r.json()
-      alert("Erro ao cancelar corrida: " + (d.error || 'Tente novamente'))
-    }
-  }
+  if (!confirm('Tem certeza que deseja cancelar esta corrida?')) return 
+  try { 
+    const r = await fetch(`/api/rides/${id}/cancelar`, { 
+      method: 'PUT', 
+      headers: { 'Content-Type': 'application/json', ...headers() }, 
+      body: JSON.stringify({ cancelado_por: 'admin' }) 
+    }) 
+    const d = await r.json() 
+    if (r.ok) { 
+      alert('Corrida cancelada com sucesso') 
+      fecharModal() 
+      carregar() 
+    } else { 
+      alert('Erro: ' + (d.error || d.mensagem)) 
+    } 
+  } catch(e) { 
+    alert('Erro de conexão') 
+  } 
 }
  
 async function controlarCorrida(id, acao, method = 'PUT') { 
