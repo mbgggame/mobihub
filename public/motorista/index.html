@@ -455,7 +455,15 @@
  let motoristOnline = false 
  let corridaAtualId = null 
  let corridaAtualToken = null 
- let corridasIgnoradas = [] 
+ let corridasIgnoradas = []
+
+ // Listener para novas corridas via socket.io
+ socket.on('nova_corrida', (corrida) => {
+   console.log('[SOCKET] Nova corrida recebida:', corrida)
+   if (motoristOnline && !corridasIgnoradas.includes(corrida.id) && !corridaAtualId) {
+     mostrarNovaCorrida(corrida)
+   }
+ }) 
  
  // BUG FIX 1: Áudio Motorista 
  const audio = new Audio('/audio/alerta.mp3') 

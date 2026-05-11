@@ -392,7 +392,12 @@ export default async function publicRoutes(fastify) {
         const messageId = await sendRideToGroup(ride) 
         if (messageId) await query('UPDATE rides SET telegram_message_id = $1 WHERE id = $2', [messageId, ride.id]) 
       } catch(err) { console.error('[SOLICITAR] Erro Telegram:', err.message) } 
-    } 
+    }
+    // Emite nova corrida para todos os motoristas
+    const io = getIo()
+    if (io) {
+      io.emit('nova_corrida', ride)
+    }
     return { token, link: `${process.env.BASE_URL}/r/${token}`, mensagem: 'Corrida solicitada!' } 
   })
 
