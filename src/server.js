@@ -79,13 +79,19 @@ fastify.post('/webhook/telegram', async (request, reply) => {
 
 // Configura webhook após iniciar 
 fastify.addHook('onReady', async () => { 
-  const isProduction = process.env.BASE_URL && !process.env.BASE_URL.includes('localhost') 
-  if (isProduction) { 
-    const { getBot } = await import('./telegram.js') 
-    const bot = getBot() 
-    const webhookUrl = `${process.env.BASE_URL}/webhook/telegram` 
-    await bot.setWebHook(webhookUrl) 
-    console.log('[BOT] Webhook configurado:', webhookUrl) 
+  try { 
+    const isProduction = process.env.BASE_URL && !process.env.BASE_URL.includes('localhost') 
+    if (isProduction) { 
+      const { getBot } = await import('./telegram.js') 
+      const bot = getBot() 
+      if (bot) { 
+        const webhookUrl = `${process.env.BASE_URL}/webhook/telegram` 
+        await bot.setWebHook(webhookUrl) 
+        console.log('[BOT] Webhook configurado:', webhookUrl) 
+      } 
+    } 
+  } catch (err) { 
+    console.error('[BOT ERROR] Erro ao configurar Webhook (ignorando para subir servidor):', err.message) 
   } 
 }) 
  
