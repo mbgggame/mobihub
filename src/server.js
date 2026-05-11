@@ -22,7 +22,8 @@ let ioInstance = null
 
 export function getIo() { 
   return ioInstance 
-} 
+}
+ 
 
 const fastify = Fastify({ logger: true }) 
 
