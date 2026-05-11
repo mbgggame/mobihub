@@ -1191,6 +1191,11 @@ function iniciarPollingAutomatico() {
      console.log('[SOCKET] Corrida finalizada:', data);
      carregar();
    });
+
+   socket.on('corrida:aceita', (data) => {
+     console.log('[SOCKET] Corrida aceita! Atualizando...');
+     carregar();
+   });
  } 
 
  iniciarPollingAutomatico(); 
