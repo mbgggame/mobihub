@@ -154,8 +154,14 @@ export default async function ridesRoutes(fastify) {
       } catch (err) { 
         console.error('[RIDES] Erro ao enviar para Telegram:', err.message) 
       } 
-    } 
- 
+    }
+    // Emite nova corrida para todos os motoristas via socket.io
+    const { getIo } = await import('../server.js')
+    const io = getIo()
+    if (io) {
+      io.emit('nova_corrida', ride)
+    }
+
     return { 
       id: ride.id, 
       token: ride.token, 
