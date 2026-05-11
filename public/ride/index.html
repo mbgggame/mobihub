@@ -476,19 +476,7 @@
  
  async function carregar() { 
    try { 
-     if (apiTimeout) clearTimeout(apiTimeout)
-     
-     apiTimeout = setTimeout(() => {
-       pollingAtivo = false
-       location.href = '/solicitar'
-     }, 10000)
-     
      const r = await fetch(`/api/ride/${token}`) 
-     
-     if (apiTimeout) {
-       clearTimeout(apiTimeout)
-       apiTimeout = null
-     }
      
      if (!r.ok) { 
        pollingAtivo = false 
@@ -496,7 +484,10 @@
        return 
      } 
      const { ride, rating, paradas, config } = await r.json() 
-     console.log('[POLLING] Status atual:', ride.status, '| Motorista:', ride.driver_nome) 
+     console.log('[POLLING] Status atual:', ride.status, '| Motorista:', ride.driver_nome)
+
+     // Entra na sala da corrida
+     socket.emit('entrar:corrida', ride.id) 
  
      if (ride.status === 'concluida') {
        pollingAtivo = false
