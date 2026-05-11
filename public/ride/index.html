@@ -487,23 +487,18 @@
      console.log('[POLLING] Status atual:', ride.status, '| Motorista:', ride.driver_nome)
 
      // Entra na sala da corrida
-     socket.emit('entrar:corrida', ride.id) 
+     socket.emit('entrar:corrida', String(ride.id)) 
  
      if (ride.status === 'concluida') {
        pollingAtivo = false
-       // Abrir modal de avaliação
-       if (document.getElementById('modal-avaliacao-passageiro')) {
-         document.getElementById('modal-avaliacao-passageiro').classList.remove('hidden')
-         document.getElementById('modal-avaliacao-passageiro').style.display = 'flex'
-       } else {
-         // Se não houver modal, redirecionar para solicitar para que o modal apareça lá
-         location.href = '/solicitar'
-       }
+       dadosAtuais = { ride, rating, paradas, config }
+       renderizar(ride, rating, paradas, config)
        return
      }
      if (ride.status === 'cancelada') { 
        pollingAtivo = false 
-       location.href = '/solicitar' 
+       dadosAtuais = { ride, rating, paradas, config }
+       renderizar(ride, rating, paradas, config)
        return 
      } 
  
@@ -523,7 +518,7 @@
          ['aguardando_passageiro', 'em_andamento', 'em_parada'].includes(ride.status_detalhe)) { 
        document.getElementById('card-chat').classList.remove('hidden') 
        carregarMensagens() 
-       socket.emit('entrar:corrida', ride.id) 
+       socket.emit('entrar:corrida', String(ride.id)) 
      } 
    } catch(e) { 
      console.error('[CARREGAR]', e) 
