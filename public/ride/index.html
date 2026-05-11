@@ -1196,6 +1196,11 @@ function iniciarPollingAutomatico() {
      console.log('[SOCKET] Corrida aceita! Atualizando...');
      carregar();
    });
+
+   socket.on('corrida:status_atualizado', (data) => {
+     console.log('[SOCKET] Status atualizado:', data);
+     carregar();
+   });
  } 
 
  iniciarPollingAutomatico(); 

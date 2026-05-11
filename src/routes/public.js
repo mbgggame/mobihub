@@ -413,6 +413,7 @@ export default async function publicRoutes(fastify) {
     const io = getIo()
     if (io) {
       io.to(`ride:${id}`).emit('corrida:aceita', { token: ride.token, rideId: id, driver_id: driver.id })
+      io.to(`ride:${id}`).emit('corrida:status_atualizado', { status: 'aceita', token: ride.token, rideId: id })
     }
     return { mensagem: 'Corrida aceita!', token: ride.token } 
   })
@@ -544,6 +545,12 @@ export default async function publicRoutes(fastify) {
       } 
     } catch(e) {} 
   
+    // Emite evento socket.io
+    const io = getIo()
+    if (io) {
+      io.to(`ride:${ride.id}`).emit('corrida:status_atualizado', { status: 'cancelada', token: ride.token, rideId: ride.id })
+    }
+  
     return { mensagem: 'Corrida cancelada' } 
   })
 
@@ -592,6 +599,12 @@ export default async function publicRoutes(fastify) {
         ) 
       } 
     } catch(e) {} 
+  
+    // Emite evento socket.io
+    const io = getIo()
+    if (io) {
+      io.to(`ride:${rideId}`).emit('corrida:status_atualizado', { status: 'cancelada', token: ride.token, rideId: rideId })
+    }
   
     return { mensagem: 'Corrida cancelada com sucesso' } 
   })
