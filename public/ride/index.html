@@ -108,7 +108,7 @@
        </div> 
        <div class="flex items-center gap-2 text-sm text-blue-800"> 
          <span>❌</span> 
-         <span>Cancelamento por espera: taxa de R$ 10,00</span> 
+         <span id="txt-politica-cancelamento">Cancelamento por espera: taxa de R$ 10,00</span> 
        </div> 
      </div> 
    </div> 
@@ -656,11 +656,13 @@
    if (ride.status === 'aberta') { 
      document.getElementById('card-politica').classList.remove('hidden') 
      if (config) { 
-       document.getElementById('txt-politica-espera').textContent = 
-         `${config.espera_minutos_gratis || 3} minutos de espera grátis. Após isso: R$ ${config.espera_valor_minuto || '0,60'}/min` 
-       document.getElementById('txt-politica-parada').textContent = 
-         `Paradas: ${config.parada_minutos_gratis || 5} minutos grátis, depois R$ ${config.parada_valor_minuto || '0,60'}/min` 
-     } 
+      document.getElementById('txt-politica-espera').textContent = 
+        `${config.espera_minutos_gratis || 3} minutos de espera grátis. Após isso: R$ ${config.espera_valor_minuto || '0,60'}/min` 
+      document.getElementById('txt-politica-parada').textContent = 
+        `Paradas: ${config.parada_minutos_gratis || 5} minutos grátis, depois R$ ${config.parada_valor_minuto || '0,60'}/min` 
+      document.getElementById('txt-politica-cancelamento').textContent = 
+        `Cancelamento por espera: taxa de R$ ${config.espera_taxa_cancelamento || '10,00'} após ${config.espera_max_cancelamento || 10} min` 
+    } 
    } else { 
      document.getElementById('card-politica').classList.add('hidden') 
    } 
