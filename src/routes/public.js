@@ -859,6 +859,13 @@ export default async function publicRoutes(fastify) {
     return { media: parseFloat(client.media_avaliacao || 0), total: parseInt(client.total_avaliacoes || 0) }
   })
 
+  fastify.get('/api/config/politica', async (request, reply) => { 
+    const configs = (await query('SELECT chave, valor FROM configuracoes')).rows 
+    const config = {} 
+    configs.forEach(c => config[c.chave] = c.valor) 
+    return config 
+  })
+
   fastify.post('/api/rate', async (request, reply) => {
     const { ride_id, tipo, estrelas, comentario, token } = request.body
     if (!ride_id || !tipo || !estrelas || estrelas < 1 || estrelas > 5) {
