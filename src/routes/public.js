@@ -432,15 +432,42 @@ export default async function publicRoutes(fastify) {
     const ride = (await query('SELECT * FROM rides WHERE id = $1 AND driver_id = $2', [rideId, driver.id])).rows[0] 
     if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
 
+    // Busca motorista_chegou_at para calcular tempo de espera 
+    const agora = new Date() 
+    let tempoEsperaMin = 0 
+    let custoEspera = 0 
+    
+    if (ride.motorista_chegou_at) { 
+      const ms = agora - new Date(ride.motorista_chegou_at) 
+      tempoEsperaMin = parseFloat((ms / 1000 / 60).toFixed(2)) 
+    
+      // Busca configurações de espera 
+      const configs = (await query('SELECT chave, valor FROM configuracoes')).rows 
+      const config = {} 
+      configs.forEach(c => config[c.chave] = c.valor) 
+    
+      const minutosGratis = parseFloat(config.espera_minutos_gratis || 5) 
+      const valorMinuto = parseFloat(config.espera_valor_minuto || 0.60) 
+    
+      if (tempoEsperaMin > minutosGratis) { 
+        const minutosExtras = tempoEsperaMin - minutosGratis 
+        custoEspera = parseFloat((minutosExtras * valorMinuto).toFixed(2)) 
+      } 
+    
+      console.log(`[EMBARQUE] Espera: ${tempoEsperaMin} min | Custo: R$${custoEspera}`) 
+    } 
+    
     await query(` 
       UPDATE rides SET 
         status = 'em_viagem', 
         status_detalhe = 'em_andamento', 
-        passageiro_embarcou_at = CURRENT_TIMESTAMP 
+        passageiro_embarcou_at = CURRENT_TIMESTAMP, 
+        tempo_espera_inicial_min = $2, 
+        custo_espera_inicial = $3 
       WHERE id = $1 
-    `, [rideId]) 
-
-    return { success: true, mensagem: 'Passageiro embarcou!' } 
+    `, [rideId, tempoEsperaMin, custoEspera]) 
+    
+    return { success: true, mensagem: 'Passageiro embarcou!', tempo_espera_min: tempoEsperaMin, custo_espera: custoEspera } 
   }) 
 
   // Motorista informa que a corrida foi finalizada 
