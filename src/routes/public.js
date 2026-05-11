@@ -452,7 +452,8 @@ export default async function publicRoutes(fastify) {
     const ride = (await query(` 
       SELECT id, valor, valor_motorista, custo_espera_inicial, custo_paradas, 
         num_paradas, tempo_espera_inicial_min, tempo_paradas_total_min, 
-        origem, destino, telegram_message_id, client_id 
+        origem, destino, telegram_message_id, client_id,
+        origem_lat, origem_lng, destino_lat, destino_lng 
       FROM rides 
       WHERE id = $1 AND driver_id = $2 AND status IN ('aceita', 'em_viagem') 
     `, [id, driver.id])).rows[0] 
@@ -462,9 +463,54 @@ export default async function publicRoutes(fastify) {
     const config = {} 
     configs.forEach(c => config[c.chave] = c.valor) 
 
+    // Buscar tarifa ativa para o horário de criação da corrida 
+    const agora = new Date() 
+    const diaSemana = agora.getDay() // 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sab 
+    const horaAtual = agora.getHours() * 60 + agora.getMinutes() 
+ 
+    const tarifas = (await query('SELECT * FROM tarifas WHERE ativo = 1')).rows 
+ 
+    let tarifaAtiva = null 
+    for (const t of tarifas) { 
+      const dias = String(t.dias).split(',').map(Number) 
+      if (!dias.includes(diaSemana)) continue 
+      const [hIni, mIni] = t.hora_inicio.split(':').map(Number) 
+      const [hFim, mFim] = t.hora_fim.split(':').map(Number) 
+      const inicio = hIni * 60 + mIni 
+      const fim = hFim * 60 + mFim 
+      // Suporte a tarifas que cruzam meia-noite (ex: 20:00 - 06:00) 
+      const ativa = fim < inicio 
+        ? (horaAtual >= inicio || horaAtual < fim) 
+        : (horaAtual >= inicio && horaAtual < fim) 
+      if (ativa) { tarifaAtiva = t; break } 
+    } 
+ 
+    // Calcular valor base pela distância e tarifa ativa 
+    let valorBase = parseFloat(ride.valor || 15) 
+    if (tarifaAtiva && ride.origem_lat && ride.destino_lat) { 
+      const lat1 = parseFloat(ride.origem_lat), lng1 = parseFloat(ride.origem_lng) 
+      const lat2 = parseFloat(ride.destino_lat), lng2 = parseFloat(ride.destino_lng) 
+      const R = 6371 
+      const dLat = (lat2 - lat1) * Math.PI / 180 
+      const dLng = (lng2 - lng1) * Math.PI / 180 
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) + 
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+        Math.sin(dLng/2) * Math.sin(dLng/2) 
+      const distKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) 
+      const kmMin = parseFloat(tarifaAtiva.km_minimo || 7.5) 
+      const valorMin = parseFloat(tarifaAtiva.valor_minimo || 15) 
+      const rsPorKm = parseFloat(tarifaAtiva.valor_km || 2) 
+      valorBase = distKm <= kmMin 
+        ? valorMin 
+        : parseFloat((valorMin + (distKm - kmMin) * rsPorKm).toFixed(2)) 
+      console.log(`[BILLING] Tarifa: ${tarifaAtiva.nome} | Dist: ${distKm.toFixed(2)}km | Base: R$${valorBase}`) 
+    } else { 
+      console.log(`[BILLING] Sem tarifa ativa — usando valor fixo: R$${valorBase}`) 
+    } 
+
     // Cálculo detalhado para memória de cálculo 
     const waitInfo = calculateInitialWaitCost(ride.tempo_espera_inicial_min || 0, config) 
-    const valorFinal = calculateTotalRideCost(ride.valor || 0, waitInfo.cost, ride.custo_paradas || 0, config) 
+    const valorFinal = calculateTotalRideCost(valorBase, waitInfo.cost, ride.custo_paradas || 0, config) 
     const valorMotorista = parseFloat((valorFinal * 0.70).toFixed(2)) 
 
     await query(` 
@@ -485,7 +531,7 @@ export default async function publicRoutes(fastify) {
       valorFinal, 
       valorMotorista, 
       parseFloat((valorFinal - valorMotorista).toFixed(2)), 
-      ride.valor || 0, 
+      valorBase, 
       waitInfo.extraMinutes, 
       waitInfo.cost, 
       ride.tempo_paradas_total_min || 0, 
