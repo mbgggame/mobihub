@@ -101,7 +101,7 @@ export default async function ridesRoutes(fastify) {
       origem, origem_lat, origem_lng, 
       destino, destino_lat, destino_lng, 
       valor, client_id, tipo, agendada_para, 
-      nome_cliente, telefone_cliente 
+      nome_cliente, telefone_cliente, forma_pagamento 
     } = request.body 
  
     if (!origem || !destino) { 
@@ -133,12 +133,12 @@ export default async function ridesRoutes(fastify) {
     const result = await dbQuery(` 
       INSERT INTO rides 
         (token, client_id, origem, origem_lat, origem_lng, destino, destino_lat, 
-         destino_lng, valor, valor_motorista, valor_mobihub, tipo, agendada_para, status) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) 
+         destino_lng, valor, valor_motorista, valor_mobihub, tipo, agendada_para, status, forma_pagamento) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) 
       RETURNING id
     `, [token, clientId, origem, origem_lat, origem_lng, destino, 
            destino_lat, destino_lng, valor, (valor * 0.75) || null, 
-           (valor * 0.25) || null, tipo || 'normal', agendada_para || null, statusInicial]) 
+           (valor * 0.25) || null, tipo || 'normal', agendada_para || null, statusInicial, forma_pagamento || 'dinheiro']) 
  
     const rideId = result.rows[0].id
     const rideResult = await dbQuery('SELECT * FROM rides WHERE id = $1', [rideId]) 

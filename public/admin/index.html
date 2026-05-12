@@ -184,7 +184,11 @@ function renderizar(corridas) {
        <div class="flex justify-between"><span class="text-gray-500">Status</span><span class="px-2 py-0.5 rounded-full text-xs font-medium status-${c.status}">${c.status}</span></div> 
        <div class="flex justify-between"><span class="text-gray-500">Origem</span><span class="text-right font-medium max-w-[60%]">${encurtarEndereco(c.origem)}</span></div> 
        <div class="flex justify-between"><span class="text-gray-500">Destino</span><span class="text-right font-medium max-w-[60%]">${encurtarEndereco(c.destino)}</span></div> 
-      <div class="flex justify-between"><span class="text-gray-500">Valor</span><span class="font-semibold text-green-700">R$ ${Number(c.valor).toFixed(2)}</span></div> 
+      <div class="flex justify-between"><span class="text-gray-500">Valor</span><span class="font-semibold text-green-700">R$ ${Number(c.valor).toFixed(2)}</span></div>
+      <div class="flex justify-between text-sm py-1"> 
+        <span class="text-gray-500">Forma de Pagamento</span> 
+        <span class="font-medium text-gray-800">${c.forma_pagamento === 'pix' ? '📱 Pix' : c.forma_pagamento === 'cartao' ? '💳 Cartão' : '💵 Dinheiro'}</span> 
+      </div> 
       
       // Resumo financeiro detalhado 
       ${c.custo_espera_inicial > 0 || c.custo_paradas > 0 ? ` 

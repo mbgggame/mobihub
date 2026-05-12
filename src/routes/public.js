@@ -479,7 +479,7 @@ export default async function publicRoutes(fastify) {
     const ride = (await query(` 
       SELECT id, valor, valor_motorista, custo_espera_inicial, custo_paradas, 
         num_paradas, tempo_espera_inicial_min, tempo_paradas_total_min, 
-        origem, destino, telegram_message_id, client_id,
+        origem, destino, telegram_message_id, client_id, token, forma_pagamento,
         origem_lat, origem_lng, destino_lat, destino_lng 
       FROM rides 
       WHERE id = $1 AND driver_id = $2 AND status IN ('aceita', 'em_viagem') 
@@ -594,6 +594,7 @@ export default async function publicRoutes(fastify) {
         motorista_nome: driverInfo?.nome, 
         motorista_token: driverInfo?.token_perfil, 
         lider_id: driverInfo?.lider_id || null, 
+        forma_pagamento: ride.forma_pagamento || 'dinheiro',
         split: { 
           percentual_plataforma: splitRule?.percentual_plataforma || 15, 
           percentual_lider: splitRule?.percentual_lider || 2, 
