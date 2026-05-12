@@ -571,6 +571,40 @@ export default async function publicRoutes(fastify) {
     ]) 
     await query('UPDATE drivers SET total_viagens = total_viagens + 1 WHERE id = $1', [driver.id]) 
     if (ride.client_id) await query('UPDATE clients SET total_corridas = total_corridas + 1 WHERE id = $1', [ride.client_id]) 
+
+    // Disparar webhook de corrida finalizada 
+    try { 
+      const { dispararWebhook } = await import('../webhook.js') 
+      const driverInfo = (await query( 
+        'SELECT id, nome, token_perfil, lider_id, codigo_indicacao FROM drivers WHERE id = $1', 
+        [driver.id] 
+      )).rows[0] 
+ 
+      const splitRule = (await query( 
+        "SELECT * FROM split_rules WHERE ativo = 1 ORDER BY id LIMIT 1" 
+      )).rows[0] 
+ 
+      await dispararWebhook('corrida.finalizada', { 
+        corrida_id: id, 
+        corrida_token: ride.token || null, 
+        valor_total: valorFinal, 
+        valor_motorista: valorMotorista, 
+        valor_plataforma: parseFloat((valorFinal - valorMotorista).toFixed(2)), 
+        motorista_id: driver.id, 
+        motorista_nome: driverInfo?.nome, 
+        motorista_token: driverInfo?.token_perfil, 
+        lider_id: driverInfo?.lider_id || null, 
+        split: { 
+          percentual_plataforma: splitRule?.percentual_plataforma || 15, 
+          percentual_lider: splitRule?.percentual_lider || 2, 
+          percentual_motorista: splitRule?.percentual_motorista || 83 
+        }, 
+        finalizada_at: new Date().toISOString() 
+      }) 
+    } catch(e) { 
+      console.error('[WEBHOOK] Erro:', e.message) 
+    } 
+
     try { 
       const { notifyDriverRateClient, editGroupMessage } = await import('../telegram.js') 
       await notifyDriverRateClient(driver, ride) 

@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MobiHub — Integrações</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <!-- HEADER -->
+  <div class="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+    <div class="flex items-center gap-3">
+      <a href="/admin" class="text-gray-500 hover:text-gray-700">← Voltar</a>
+      <h1 class="font-bold text-gray-900">🔗 Integrações</h1>
+    </div>
+    <div class="flex gap-2">
+      <a href="/admin/tarifas" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors">💸 Tarifas</a>
+      <a href="/admin/dashboard" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors">📊 Dashboard</a>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto p-4 space-y-6">
+    <!-- WEBHOOKS -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold text-gray-900">📡 Webhooks</h2>
+        <button onclick="abrirModalWebhook()" class="bg-green-600 hover:bg-green-700 text-white rounded-xl px-4 py-2 text-sm font-semibold transition-colors">+ Novo Webhook</button>
+      </div>
+      <div id="lista-webhooks" class="space-y-3"></div>
+    </div>
+
+    <!-- LOGS DE WEBHOOK -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+      <h2 class="text-lg font-bold text-gray-900 mb-4">📋 Logs de Webhooks</h2>
+      <div id="lista-logs" class="space-y-2 max-h-80 overflow-y-auto"></div>
+    </div>
+
+    <!-- SPLIT FINANCEIRO -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+      <h2 class="text-lg font-bold text-gray-900 mb-4">💰 Split Financeiro</h2>
+      <div id="lista-split" class="space-y-3"></div>
+    </div>
+
+    <!-- MOTORISTAS E LÍDERES -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+      <h2 class="text-lg font-bold text-gray-900 mb-4">👥 Motoristas e Líderes</h2>
+      <div id="lista-motoristas-lider" class="space-y-3"></div>
+    </div>
+  </div>
+
+  <!-- MODAL WEBHOOK -->
+  <div id="modal-webhook" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h2 id="modal-webhook-titulo" class="font-semibold text-lg">Novo Webhook</h2>
+        <button onclick="fecharModalWebhook()" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+      </div>
+      <form id="form-webhook" class="space-y-4">
+        <input type="hidden" id="webhook-id">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Nome</label>
+          <input id="webhook-nome" type="text" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" required>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">URL</label>
+          <input id="webhook-url" type="url" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" required>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Evento</label>
+          <select id="webhook-evento" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" required>
+            <option value="corrida.finalizada">corrida.finalizada</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Secret Key (opcional)</label>
+          <input id="webhook-secret" type="text" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+        </div>
+        <div class="flex items-center gap-2">
+          <input type="checkbox" id="webhook-ativo" class="w-4 h-4 rounded">
+          <label for="webhook-ativo" class="text-sm font-medium text-gray-700">Ativo</label>
+        </div>
+        <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl py-3 font-bold text-base transition-colors">Salvar</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL SPLIT -->
+  <div id="modal-split" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h2 id="modal-split-titulo" class="font-semibold text-lg">Regra de Split</h2>
+        <button onclick="fecharModalSplit()" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+      </div>
+      <form id="form-split" class="space-y-4">
+        <input type="hidden" id="split-id">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Nome</label>
+          <input id="split-nome" type="text" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" required>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Categoria</label>
+          <input id="split-categoria" type="text" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" required>
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Plataforma (%)</label>
+            <input id="split-plataforma" type="number" step="0.1" min="0" max="100" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" required>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Líder (%)</label>
+            <input id="split-lider" type="number" step="0.1" min="0" max="100" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" required>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Motorista (%)</label>
+            <input id="split-motorista" type="number" step="0.1" min="0" max="100" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" required>
+          </div>
+        </div>
+        <p id="split-total" class="text-sm text-gray-500"></p>
+        <div class="flex items-center gap-2">
+          <input type="checkbox" id="split-ativo" class="w-4 h-4 rounded">
+          <label for="split-ativo" class="text-sm font-medium text-gray-700">Ativo</label>
+        </div>
+        <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl py-3 font-bold text-base transition-colors">Salvar</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL LÍDER MOTORISTA -->
+  <div id="modal-lider" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="font-semibold text-lg">Definir Líder</h2>
+        <button onclick="fecharModalLider()" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+      </div>
+      <form id="form-lider" class="space-y-4">
+        <input type="hidden" id="motorista-id">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">ID do Líder</label>
+          <input id="lider-id" type="text" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Código de Indicação</label>
+          <input id="codigo-indicacao" type="text" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+        </div>
+        <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl py-3 font-bold text-base transition-colors">Salvar</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const token = () => localStorage.getItem('mobihub_token')
+    const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` })
+
+    const isLoginPage = window.location.pathname === '/admin/login'
+    const tokenVal = localStorage.getItem('mobihub_token')
+
+    if (!tokenVal && !isLoginPage) {
+      location.href = '/admin/login'
+    }
+
+    let webhooks = []
+    let logs = []
+    let splits = []
+    let motoristas = []
+
+    async function carregarTudo() {
+      await Promise.all([
+        carregarWebhooks(),
+        carregarLogs(),
+        carregarSplits(),
+        carregarMotoristas()
+      ])
+    }
+
+    async function carregarWebhooks() {
+      try {
+        const r = await fetch('/api/admin/webhooks', { headers: headers() })
+        webhooks = await r.json()
+        renderizarWebhooks()
+      } catch (e) {
+        console.error(e)
+      }
+    }
+
+    function renderizarWebhooks() {
+      const el = document.getElementById('lista-webhooks')
+      if (!webhooks.length) {
+        el.innerHTML = '<p class="text-center text-gray-400 py-4">Nenhum webhook configurado.</p>'
+        return
+      }
+      el.innerHTML = webhooks.map(wh => `
+        <div class="border border-gray-200 rounded-xl p-4">
+          <div class="flex items-start justify-between">
+            <div>
+              <p class="font-semibold text-gray-900">${wh.nome}</p>
+              <p class="text-xs text-gray-500 truncate">${wh.url}</p>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="text-xs px-2 py-0.5 rounded-full ${wh.ativo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}">${wh.ativo ? 'Ativo' : 'Inativo'}</span>
+                <span class="text-xs text-gray-500">Evento: ${wh.evento}</span>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="testarWebhook(${wh.id})" class="text-sm text-blue-600 hover:text-blue-700 font-medium">Testar</button>
+              <button onclick="editarWebhook(${wh.id})" class="text-sm text-gray-600 hover:text-gray-700 font-medium">Editar</button>
+              <button onclick="deletarWebhook(${wh.id})" class="text-sm text-red-600 hover:text-red-700 font-medium">Deletar</button>
+            </div>
+          </div>
+        </div>
+      `).join('')
+    }
+
+    function abrirModalWebhook(wh = null) {
+      document.getElementById('modal-webhook').classList.remove('hidden')
+      document.getElementById('modal-webhook-titulo').textContent = wh ? 'Editar Webhook' : 'Novo Webhook'
+      document.getElementById('webhook-id').value = wh?.id || ''
+      document.getElementById('webhook-nome').value = wh?.nome || ''
+      document.getElementById('webhook-url').value = wh?.url || ''
+      document.getElementById('webhook-evento').value = wh?.evento || 'corrida.finalizada'
+      document.getElementById('webhook-secret').value = wh?.secret_key || ''
+      document.getElementById('webhook-ativo').checked = wh ? wh.ativo === 1 : true
+    }
+
+    function fecharModalWebhook() {
+      document.getElementById('modal-webhook').classList.add('hidden')
+    }
+
+    document.getElementById('form-webhook').addEventListener('submit', async (e) => {
+      e.preventDefault()
+      const id = document.getElementById('webhook-id').value
+      const data = {
+        nome: document.getElementById('webhook-nome').value,
+        url: document.getElementById('webhook-url').value,
+        evento: document.getElementById('webhook-evento').value,
+        secret_key: document.getElementById('webhook-secret').value || null,
+        ativo: document.getElementById('webhook-ativo').checked ? 1 : 0
+      }
+      try {
+        const r = await fetch(id ? `/api/admin/webhooks/${id}` : '/api/admin/webhooks', {
+          method: id ? 'PUT' : 'POST',
+          headers: headers(),
+          body: JSON.stringify(data)
+        })
+        if (r.ok) {
+          fecharModalWebhook()
+          carregarWebhooks()
+        } else {
+          const d = await r.json()
+          alert(d.error || 'Erro')
+        }
+      } catch (e) {
+        alert('Erro de conexão')
+      }
+    })
+
+    async function editarWebhook(id) {
+      const wh = webhooks.find(w => w.id === id)
+      if (wh) abrirModalWebhook(wh)
+    }
+
+    async function deletarWebhook(id) {
+      if (!confirm('Tem certeza?')) return
+      try {
+        await fetch(`/api/admin/webhooks/${id}`, { method: 'DELETE', headers: headers() })
+        carregarWebhooks()
+      } catch (e) {
+        alert('Erro')
+      }
+    }
+
+    async function testarWebhook(id) {
+      try {
+        const r = await fetch(`/api/admin/webhooks/${id}/testar`, { method: 'POST', headers: headers() })
+        if (r.ok) {
+          alert('Webhook de teste disparado!')
+          carregarLogs()
+        } else {
+          const d = await r.json()
+          alert(d.error || 'Erro')
+        }
+      } catch (e) {
+        alert('Erro de conexão')
+      }
+    }
+
+    async function carregarLogs() {
+      try {
+        const r = await fetch('/api/admin/webhooks/logs', { headers: headers() })
+        logs = await r.json()
+        renderizarLogs()
+      } catch (e) {
+        console.error(e)
+      }
+    }
+
+    function renderizarLogs() {
+      const el = document.getElementById('lista-logs')
+      if (!logs.length) {
+        el.innerHTML = '<p class="text-center text-gray-400 py-4">Nenhum log encontrado.</p>'
+        return
+      }
+      el.innerHTML = logs.map(log => `
+        <div class="border border-gray-100 rounded-lg p-3 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="font-semibold ${log.status_code >= 200 && log.status_code < 300 ? 'text-green-700' : 'text-red-600'}">${log.evento}</span>
+            <span class="text-gray-500">${new Date(log.created_at).toLocaleString('pt-BR')}</span>
+          </div>
+          <p class="text-gray-600 mt-1">Status: ${log.status_code || 'Erro'} | ${log.resposta?.substring(0, 100) || ''}</p>
+        </div>
+      `).join('')
+    }
+
+    async function carregarSplits() {
+      try {
+        const r = await fetch('/api/admin/split', { headers: headers() })
+        splits = await r.json()
+        renderizarSplits()
+      } catch (e) {
+        console.error(e)
+      }
+    }
+
+    function renderizarSplits() {
+      const el = document.getElementById('lista-split')
+      if (!splits.length) {
+        el.innerHTML = '<p class="text-center text-gray-400 py-4">Nenhuma regra de split encontrada.</p>'
+        return
+      }
+      el.innerHTML = splits.map(s => `
+        <div class="border border-gray-200 rounded-xl p-4">
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="flex items-center gap-2">
+                <p class="font-semibold text-gray-900">${s.nome}</p>
+                <span class="text-xs px-2 py-0.5 rounded-full ${s.ativo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}">${s.ativo ? 'Ativo' : 'Inativo'}</span>
+              </div>
+              <div class="flex gap-4 mt-2 text-sm">
+                <span>Plataforma: <b>${s.percentual_plataforma}%</b></span>
+                <span>Líder: <b>${s.percentual_lider}%</b></span>
+                <span>Motorista: <b>${s.percentual_motorista}%</b></span>
+              </div>
+            </div>
+            <button onclick="editarSplit(${s.id})" class="text-sm text-gray-600 hover:text-gray-700 font-medium">Editar</button>
+          </div>
+        </div>
+      `).join('')
+    }
+
+    function abrirModalSplit(s = null) {
+      document.getElementById('modal-split').classList.remove('hidden')
+      document.getElementById('modal-split-titulo').textContent = s ? 'Editar Regra' : 'Nova Regra'
+      document.getElementById('split-id').value = s?.id || ''
+      document.getElementById('split-nome').value = s?.nome || ''
+      document.getElementById('split-categoria').value = s?.categoria || 'padrao'
+      document.getElementById('split-plataforma').value = s?.percentual_plataforma || 15
+      document.getElementById('split-lider').value = s?.percentual_lider || 2
+      document.getElementById('split-motorista').value = s?.percentual_motorista || 83
+      document.getElementById('split-ativo').checked = s ? s.ativo === 1 : true
+      atualizarTotalSplit()
+    }
+
+    function fecharModalSplit() {
+      document.getElementById('modal-split').classList.add('hidden')
+    }
+
+    function atualizarTotalSplit() {
+      const p = parseFloat(document.getElementById('split-plataforma').value) || 0
+      const l = parseFloat(document.getElementById('split-lider').value) || 0
+      const m = parseFloat(document.getElementById('split-motorista').value) || 0
+      const total = p + l + m
+      const el = document.getElementById('split-total')
+      el.textContent = `Total: ${total.toFixed(1)}%`
+      el.className = `text-sm ${Math.abs(total - 100) > 0.01 ? 'text-red-600' : 'text-green-600'}`
+    }
+
+    document.getElementById('split-plataforma').addEventListener('input', atualizarTotalSplit)
+    document.getElementById('split-lider').addEventListener('input', atualizarTotalSplit)
+    document.getElementById('split-motorista').addEventListener('input', atualizarTotalSplit)
+
+    document.getElementById('form-split').addEventListener('submit', async (e) => {
+      e.preventDefault()
+      const id = document.getElementById('split-id').value
+      const data = {
+        nome: document.getElementById('split-nome').value,
+        categoria: document.getElementById('split-categoria').value,
+        percentual_plataforma: parseFloat(document.getElementById('split-plataforma').value),
+        percentual_lider: parseFloat(document.getElementById('split-lider').value),
+        percentual_motorista: parseFloat(document.getElementById('split-motorista').value),
+        ativo: document.getElementById('split-ativo').checked ? 1 : 0
+      }
+      try {
+        const r = await fetch(id ? `/api/admin/split/${id}` : '/api/admin/split', {
+          method: id ? 'PUT' : 'POST',
+          headers: headers(),
+          body: JSON.stringify(data)
+        })
+        if (r.ok) {
+          fecharModalSplit()
+          carregarSplits()
+        } else {
+          const d = await r.json()
+          alert(d.error || 'Erro')
+        }
+      } catch (e) {
+        alert('Erro de conexão')
+      }
+    })
+
+    async function editarSplit(id) {
+      const s = splits.find(x => x.id === id)
+      if (s) abrirModalSplit(s)
+    }
+
+    async function carregarMotoristas() {
+      try {
+        const r = await fetch('/api/drivers', { headers: headers() })
+        motoristas = await r.json()
+        renderizarMotoristas()
+      } catch (e) {
+        console.error(e)
+      }
+    }
+
+    function renderizarMotoristas() {
+      const el = document.getElementById('lista-motoristas-lider')
+      if (!motoristas.length) {
+        el.innerHTML = '<p class="text-center text-gray-400 py-4">Nenhum motorista encontrado.</p>'
+        return
+      }
+      el.innerHTML = motoristas.map(m => `
+        <div class="border border-gray-200 rounded-xl p-4 flex items-center justify-between">
+          <div>
+            <p class="font-semibold text-gray-900">${m.nome}</p>
+            <p class="text-xs text-gray-500">ID: ${m.id} | Líder: ${m.lider_id || '—'} | Indicação: ${m.codigo_indicacao || '—'}</p>
+          </div>
+          <button onclick="abrirModalLider(${m.id}, '${m.lider_id || ''}', '${m.codigo_indicacao || ''}')" class="text-sm text-blue-600 hover:text-blue-700 font-medium">Definir Líder</button>
+        </div>
+      `).join('')
+    }
+
+    function abrirModalLider(id, liderId, codigoIndicacao) {
+      document.getElementById('modal-lider').classList.remove('hidden')
+      document.getElementById('motorista-id').value = id
+      document.getElementById('lider-id').value = liderId
+      document.getElementById('codigo-indicacao').value = codigoIndicacao
+    }
+
+    function fecharModalLider() {
+      document.getElementById('modal-lider').classList.add('hidden')
+    }
+
+    document.getElementById('form-lider').addEventListener('submit', async (e) => {
+      e.preventDefault()
+      const id = document.getElementById('motorista-id').value
+      const data = {
+        lider_id: document.getElementById('lider-id').value || null,
+        codigo_indicacao: document.getElementById('codigo-indicacao').value || null
+      }
+      try {
+        const r = await fetch(`/api/admin/motoristas/${id}/lider`, {
+          method: 'PUT',
+          headers: headers(),
+          body: JSON.stringify(data)
+        })
+        if (r.ok) {
+          fecharModalLider()
+          carregarMotoristas()
+        } else {
+          const d = await r.json()
+          alert(d.error || 'Erro')
+        }
+      } catch (e) {
+        alert('Erro de conexão')
+      }
+    })
+
+    window.onload = carregarTudo
+  </script>
+</body>
+</html>

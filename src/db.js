@@ -208,6 +208,46 @@ export async function initDB() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
     ) 
   `) 
+
+  await query(` 
+    -- Campo líder no cadastro do motorista 
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS lider_id TEXT; 
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS codigo_indicacao TEXT; 
+
+    -- Tabela de configurações de webhook 
+    CREATE TABLE IF NOT EXISTS webhooks ( 
+      id SERIAL PRIMARY KEY, 
+      nome TEXT NOT NULL, 
+      url TEXT NOT NULL, 
+      evento TEXT NOT NULL, 
+      ativo INTEGER DEFAULT 1, 
+      secret_key TEXT, 
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
+    ); 
+
+    -- Tabela de regras de split financeiro 
+    CREATE TABLE IF NOT EXISTS split_rules ( 
+      id SERIAL PRIMARY KEY, 
+      nome TEXT NOT NULL, 
+      categoria TEXT DEFAULT 'padrao', 
+      percentual_plataforma DOUBLE PRECISION DEFAULT 15, 
+      percentual_lider DOUBLE PRECISION DEFAULT 2, 
+      percentual_motorista DOUBLE PRECISION DEFAULT 83, 
+      ativo INTEGER DEFAULT 1, 
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
+    ); 
+
+    -- Tabela de log de webhooks disparados 
+    CREATE TABLE IF NOT EXISTS webhook_logs ( 
+      id SERIAL PRIMARY KEY, 
+      webhook_id INTEGER, 
+      evento TEXT, 
+      payload TEXT, 
+      resposta TEXT, 
+      status_code INTEGER, 
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
+    ); 
+  `) 
  
   // Migra veículos existentes dos motoristas para a nova tabela 
   await query(` 
@@ -234,6 +274,14 @@ export async function initDB() {
   await seedAdmin() 
   await seedConfigs() 
   await seedTarifas() 
+
+  // Seed da regra de split padrão
+  const splitExisting = await query('SELECT COUNT(*) as total FROM split_rules') 
+  if (parseInt(splitExisting.rows[0].total) === 0) { 
+    await query(`INSERT INTO split_rules (nome, categoria, percentual_plataforma, percentual_lider, percentual_motorista) 
+      VALUES ('Padrão', 'padrao', 15, 2, 83)`) 
+  }
+
   console.log('[DB] PostgreSQL inicializado') 
 } 
  

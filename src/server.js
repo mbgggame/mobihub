@@ -15,6 +15,7 @@ import authRoutes from './routes/auth.js'
 import driversRoutes from './routes/drivers.js' 
 import ridesRoutes from './routes/rides.js' 
 import publicRoutes from './routes/public.js' 
+import integracoesRoutes from './routes/integracoes.js' 
 
 const __dirname = dirname(fileURLToPath(import.meta.url)) 
 
@@ -45,6 +46,7 @@ await fastify.register(authRoutes)
 await fastify.register(driversRoutes) 
 await fastify.register(ridesRoutes) 
 await fastify.register(publicRoutes) 
+await fastify.register(integracoesRoutes) 
 
 await fastify.register(fastifyStatic, { 
   root: join(__dirname, '..', 'public'), 
@@ -63,6 +65,7 @@ fastify.get('/admin/passageiros', (req, reply) => reply.sendFile('admin/passagei
 fastify.get('/admin/tarifas', (req, reply) => reply.sendFile('admin/tarifas.html')) 
 fastify.get('/admin/reputacao', (req, reply) => reply.sendFile('admin/reputacao.html')) 
 fastify.get('/admin/configuracoes', (req, reply) => reply.sendFile('admin/configuracoes.html')) 
+fastify.get('/admin/integracoes', (req, reply) => reply.sendFile('admin/integracoes.html')) 
 fastify.get('/solicitar', (req, reply) => reply.sendFile('solicitar/index.html')) 
 fastify.get('/quero-dirigir', (req, reply) => reply.sendFile('cadastro-geral.html')) 
 fastify.get('/r/:token', (req, reply) => reply.sendFile('ride/index.html')) 
