@@ -308,6 +308,12 @@
       <div id="status-detalhe-motorista" class="bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 mb-3 hidden"> 
         <p class="text-xs text-yellow-700 font-medium" id="txt-status-detalhe"></p> 
         <p class="text-lg font-mono font-bold text-yellow-800 mt-0.5" id="txt-timer-motorista"></p> 
+      </div>
+
+      <!-- Indicador de parada automática --> 
+      <div id="card-parada-auto" class="hidden bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 mb-3"> 
+        <p class="text-xs text-orange-700 font-medium">⏸️ Parada automática detectada</p> 
+        <p class="text-xs text-orange-500 mt-0.5">O sistema detectou que o veículo está parado. Timer iniciado automaticamente.</p> 
       </div> 
 
       <!-- Botões de controle --> 
@@ -1254,11 +1260,103 @@
      await carregarMsgMotorista() 
    } 
  } 
+
+ // ── DETECÇÃO AUTOMÁTICA DE PARADA ──────────────────
+ let ultimaPosicao = null 
+ let tempoParadoInicio = null 
+ let paradaAutoAtiva = false 
+ let paradaAutoId = null 
+ let intervaloDeteccao = null 
  
+ function calcularDistanciaMetros(lat1, lng1, lat2, lng2) { 
+   const R = 6371000 // metros 
+   const dLat = (lat2 - lat1) * Math.PI / 180 
+   const dLng = (lng2 - lng1) * Math.PI / 180 
+   const a = Math.sin(dLat/2) * Math.sin(dLat/2) + 
+     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+     Math.sin(dLng/2) * Math.sin(dLng/2) 
+   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) 
+ } 
+ 
+ async function verificarParadaAutomatica(lat, lng) { 
+   // Só detecta parada se estiver em viagem ativa 
+   if (!corridaAtualId) { ultimaPosicao = null; tempoParadoInicio = null; return } 
+ 
+   // Busca status atual da corrida 
+   try { 
+     const r = await fetch(`/api/motorista/${tokenMotorista}/corrida-ativa`) 
+     if (!r.ok) return 
+     const { corrida } = await r.json() 
+     // Só detecta parada se passageiro já embarcou (status_detalhe = em_andamento) 
+     if (!corrida || corrida.status_detalhe !== 'em_andamento') { 
+       ultimaPosicao = null 
+       tempoParadoInicio = null 
+       return 
+     } 
+   } catch(e) { return } 
+ 
+   const agora = Date.now() 
+ 
+   if (!ultimaPosicao) { 
+     ultimaPosicao = { lat, lng, tempo: agora } 
+     return 
+   } 
+ 
+   const distancia = calcularDistanciaMetros(ultimaPosicao.lat, ultimaPosicao.lng, lat, lng) 
+ 
+   if (distancia < 50) { 
+     // Carro parado — acumula tempo 
+     if (!tempoParadoInicio) tempoParadoInicio = agora 
+ 
+     const segundosParado = (agora - tempoParadoInicio) / 1000 
+ 
+     // Após 60 segundos parado, inicia parada automática 
+     if (segundosParado >= 60 && !paradaAutoAtiva) { 
+       paradaAutoAtiva = true 
+       document.getElementById('card-parada-auto')?.classList.remove('hidden') 
+       console.log('[PARADA AUTO] Iniciando parada automática') 
+       try { 
+         const r = await fetch(`/api/rides/${corridaAtualId}/parada/iniciar`, { 
+           method: 'POST', 
+           headers: { 'Content-Type': 'application/json' }, 
+           body: JSON.stringify({ token_motorista: tokenMotorista, automatica: true }) 
+         }) 
+         const d = await r.json() 
+         paradaAutoId = d.stop_id || null 
+         console.log('[PARADA AUTO] Parada iniciada, ID:', paradaAutoId) 
+       } catch(e) { console.error('[PARADA AUTO] Erro ao iniciar:', e) } 
+     } 
+   } else { 
+     // Carro em movimento 
+     ultimaPosicao = { lat, lng, tempo: agora } 
+     tempoParadoInicio = null 
+ 
+     // Se havia parada automática ativa, finaliza 
+     if (paradaAutoAtiva) { 
+       paradaAutoAtiva = false 
+       document.getElementById('card-parada-auto')?.classList.add('hidden') 
+       console.log('[PARADA AUTO] Finalizando parada automática') 
+       try { 
+         const url = paradaAutoId 
+           ? `/api/rides/${corridaAtualId}/parada/${paradaAutoId}/finalizar` 
+           : `/api/rides/${corridaAtualId}/parada/ultima/finalizar` 
+         await fetch(url, { 
+           method: 'PUT', 
+           headers: { 'Content-Type': 'application/json' }, 
+           body: JSON.stringify({ token_motorista: tokenMotorista }) 
+         }) 
+         paradaAutoId = null 
+         console.log('[PARADA AUTO] Parada finalizada') 
+       } catch(e) { console.error('[PARADA AUTO] Erro ao finalizar:', e) } 
+     } 
+   } 
+ }
+
  function iniciarLocalizacao() { 
    if (!navigator.geolocation || watchId) return 
    watchId = navigator.geolocation.watchPosition(async (p) => { 
      const { latitude: lat, longitude: lng } = p.coords; minhaPos = { lat, lng } 
+     verificarParadaAutomatica(lat, lng) 
      if (!map) iniciarMapaMotorista() 
      if (markerMotorista) markerMotorista.setLatLng([lat, lng]) 
      if (corridaAtualId) {
