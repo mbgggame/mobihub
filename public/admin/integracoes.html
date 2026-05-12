@@ -268,14 +268,19 @@
     }
 
     async function testarWebhook(id) {
+      if (!confirm('Disparar webhook de teste?')) return
       try {
-        const r = await fetch(`/api/admin/webhooks/${id}/testar`, { method: 'POST', headers: headers() })
+        const r = await fetch(`/api/admin/webhooks/${id}/testar`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...headers() },
+          body: JSON.stringify({})
+        })
+        const d = await r.json()
         if (r.ok) {
-          alert('Webhook de teste disparado!')
+          alert('✅ Webhook de teste disparado! Verifique os logs.')
           carregarLogs()
         } else {
-          const d = await r.json()
-          alert(d.error || 'Erro')
+          alert('Erro: ' + (d.error || d.mensagem))
         }
       } catch (e) {
         alert('Erro de conexão')
