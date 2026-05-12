@@ -1279,6 +1279,23 @@
  } 
  
  async function verificarParadaAutomatica(lat, lng) { 
+   // Busca configurações do backend (com cache de 5 minutos) 
+   if (!window._configParada || Date.now() - window._configParadaAt > 300000) { 
+     try { 
+       const rc = await fetch('/api/config/politica') 
+       if (rc.ok) { 
+         const cfg = await rc.json() 
+         window._configParada = { 
+           metros: parseFloat(cfg.parada_auto_metros || 50), 
+           segundos: parseFloat(cfg.parada_auto_segundos || 60) 
+         } 
+         window._configParadaAt = Date.now() 
+       } 
+     } catch(e) {} 
+   } 
+   const METROS_PARADO = window._configParada?.metros || 50 
+   const SEGUNDOS_PARADO = window._configParada?.segundos || 60 
+ 
    // Só detecta parada se estiver em viagem ativa 
    if (!corridaAtualId) { ultimaPosicao = null; tempoParadoInicio = null; return } 
  
@@ -1304,14 +1321,14 @@
  
    const distancia = calcularDistanciaMetros(ultimaPosicao.lat, ultimaPosicao.lng, lat, lng) 
  
-   if (distancia < 50) { 
+   if (distancia < METROS_PARADO) { 
      // Carro parado — acumula tempo 
      if (!tempoParadoInicio) tempoParadoInicio = agora 
  
      const segundosParado = (agora - tempoParadoInicio) / 1000 
  
-     // Após 60 segundos parado, inicia parada automática 
-     if (segundosParado >= 60 && !paradaAutoAtiva) { 
+     // Após X segundos parado, inicia parada automática 
+     if (segundosParado >= SEGUNDOS_PARADO && !paradaAutoAtiva) { 
        paradaAutoAtiva = true 
        document.getElementById('card-parada-auto')?.classList.remove('hidden') 
        console.log('[PARADA AUTO] Iniciando parada automática') 

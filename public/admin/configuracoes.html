@@ -69,6 +69,28 @@
           <p class="text-xs text-gray-400 mt-1">Valor cobrado por minuto excedente de parada</p>
         </div>
 
+        <div class="border-t border-gray-200 pt-4"> 
+          <p class="text-sm font-semibold text-gray-700 mb-3">🛑 Detecção Automática de Parada</p> 
+
+          <div class="mb-4"> 
+            <label class="block text-sm font-medium text-gray-700 mb-1"> 
+              Distância mínima para considerar parado (metros) 
+            </label> 
+            <input id="parada_auto_metros" type="number" min="10" max="200" step="10" 
+              class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+            <p class="text-xs text-gray-400 mt-1">Se o motorista não se mover além desta distância, considera parado (padrão: 50 metros)</p> 
+          </div> 
+
+          <div> 
+            <label class="block text-sm font-medium text-gray-700 mb-1"> 
+              Tempo mínimo parado para iniciar cobrança (segundos) 
+            </label> 
+            <input id="parada_auto_segundos" type="number" min="30" max="300" step="10" 
+              class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+            <p class="text-xs text-gray-400 mt-1">Segundos parado antes de iniciar o timer de parada automaticamente (padrão: 60 segundos)</p> 
+          </div> 
+        </div>
+
         <button id="btn-salvar-config" onclick="salvarConfiguracoes()"
           class="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl py-3 font-bold text-base transition-colors">
           ✅ Salvar Configurações
@@ -102,6 +124,8 @@
         document.getElementById('espera_max_cancelamento').value = configAtual.espera_max_cancelamento || '10'
         document.getElementById('parada_minutos_gratis').value = configAtual.parada_minutos_gratis || '5'
         document.getElementById('parada_valor_minuto').value = configAtual.parada_valor_minuto || '0.60'
+        document.getElementById('parada_auto_metros').value = configAtual.parada_auto_metros || '50'
+        document.getElementById('parada_auto_segundos').value = configAtual.parada_auto_segundos || '60'
       } catch (err) {
         alert('Erro ao carregar configurações')
       }
@@ -120,7 +144,9 @@
           espera_valor_minuto: parseFloat(document.getElementById('espera_valor_minuto').value),
           espera_max_cancelamento: document.getElementById('espera_max_cancelamento').value,
           parada_minutos_gratis: document.getElementById('parada_minutos_gratis').value,
-          parada_valor_minuto: document.getElementById('parada_valor_minuto').value
+          parada_valor_minuto: document.getElementById('parada_valor_minuto').value,
+          parada_auto_metros: document.getElementById('parada_auto_metros').value,
+          parada_auto_segundos: document.getElementById('parada_auto_segundos').value
         }
 
         const r = await fetch('/api/configuracoes', {

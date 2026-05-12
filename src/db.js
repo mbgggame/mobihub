@@ -257,7 +257,9 @@ async function seedConfigs() {
     'corrida_km_minimo': '7.5', 
     'corrida_valor_km': '2', 
     'chegada_raio_metros': '150', 
-    'chegada_auto_ativo': 'true' 
+    'chegada_auto_ativo': 'true',
+    'parada_auto_metros': '50',
+    'parada_auto_segundos': '60'
   } 
   for (const [chave, valor] of Object.entries(configs)) { 
     await pool.query( 
