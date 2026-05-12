@@ -538,7 +538,10 @@ export default async function publicRoutes(fastify) {
     // Cálculo detalhado para memória de cálculo 
     const waitInfo = calculateInitialWaitCost(ride.tempo_espera_inicial_min || 0, config) 
     const valorFinal = calculateTotalRideCost(valorBase, waitInfo.cost, ride.custo_paradas || 0, config) 
-    const valorMotorista = parseFloat((valorFinal * 0.70).toFixed(2)) 
+    const comissaoPlataforma = parseFloat(config.comissao_plataforma || 25) / 100 
+    const percentualMotorista = 1 - comissaoPlataforma 
+    const valorMotorista = parseFloat((valorFinal * percentualMotorista).toFixed(2)) 
+    console.log(`[BILLING] Comissão: ${comissaoPlataforma * 100}% | Motorista: ${percentualMotorista * 100}% | Valor motorista: R$${valorMotorista}`) 
 
     await query(` 
       UPDATE rides SET 
