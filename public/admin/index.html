@@ -187,7 +187,7 @@ function renderizar(corridas) {
       <div class="flex justify-between"><span class="text-gray-500">Valor</span><span class="font-semibold text-green-700">R$ ${Number(c.valor).toFixed(2)}</span></div>
       <div class="flex justify-between text-sm py-1"> 
         <span class="text-gray-500">Forma de Pagamento</span> 
-        <span class="font-medium text-gray-800">${c.forma_pagamento === 'pix' ? '📱 Pix' : c.forma_pagamento === 'cartao' ? '💳 Cartão' : '💵 Dinheiro'}</span> 
+        <span id="modal-forma-pagamento" class="font-medium text-gray-800">—</span> 
       </div> 
       
       // Resumo financeiro detalhado 
@@ -270,6 +270,9 @@ function renderizar(corridas) {
       </div> 
     </div> 
   ` 
+  document.getElementById('modal-forma-pagamento').textContent = 
+    c.forma_pagamento == '2' ? '📱 Pix' : 
+    c.forma_pagamento == '3' ? '💳 Cartão' : '💵 Dinheiro'
   document.getElementById('modal').classList.remove('hidden') 
   window._msgCliente = msgCliente 
 } 

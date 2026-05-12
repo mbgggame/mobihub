@@ -138,7 +138,7 @@ export default async function ridesRoutes(fastify) {
       RETURNING id
     `, [token, clientId, origem, origem_lat, origem_lng, destino, 
            destino_lat, destino_lng, valor, (valor * 0.75) || null, 
-           (valor * 0.25) || null, tipo || 'normal', agendada_para || null, statusInicial, forma_pagamento || 'dinheiro']) 
+           (valor * 0.25) || null, tipo || 'normal', agendada_para || null, statusInicial, forma_pagamento || '1']) 
  
     const rideId = result.rows[0].id
     const rideResult = await dbQuery('SELECT * FROM rides WHERE id = $1', [rideId]) 

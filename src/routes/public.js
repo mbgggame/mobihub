@@ -594,7 +594,7 @@ export default async function publicRoutes(fastify) {
         motorista_nome: driverInfo?.nome, 
         motorista_token: driverInfo?.token_perfil, 
         lider_id: driverInfo?.lider_id || null, 
-        forma_pagamento: ride.forma_pagamento || 'dinheiro',
+        forma_pagamento: ride.forma_pagamento || '1',
         split: { 
           percentual_plataforma: splitRule?.percentual_plataforma || 15, 
           percentual_lider: splitRule?.percentual_lider || 2, 
