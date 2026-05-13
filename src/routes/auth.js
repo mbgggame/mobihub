@@ -71,6 +71,12 @@ export default async function authRoutes(fastify) {
     return { mensagem: `Tokens gerados para ${driversToUpdate.length} motoristas` }
   })
 
+  fastify.get('/api/temp/check-rides', { preHandler: requireAuth }, async (request, reply) => {
+    const statuses = await query('SELECT DISTINCT status FROM rides')
+    const rides = await query('SELECT id, status, valor, valor_motorista, valor_mobihub, driver_id FROM rides LIMIT 5')
+    return { statuses: statuses.rows, rides: rides.rows }
+  })
+
   // --- ROTAS DE RELATÓRIOS FINANCEIROS
   fastify.get('/api/relatorios/por-corrida', { preHandler: requireAuth }, async (request, reply) => {
     const { data_inicio, data_fim } = request.query
