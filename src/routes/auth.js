@@ -59,38 +59,7 @@ export default async function authRoutes(fastify) {
     return { mensagem: 'Configurações salvas com sucesso!' }
   })
 
-  fastify.post('/api/temp/fix-tokens', { preHandler: requireAuth }, async (request, reply) => {
-    const { v4: uuidv4 } = await import('uuid')
-    const driversToUpdate = (await query('SELECT id FROM drivers WHERE token_perfil IS NULL OR token_perfil = \'\'')).rows
-    
-    for (const driver of driversToUpdate) {
-      const token = uuidv4()
-      await query('UPDATE drivers SET token_perfil = $1 WHERE id = $2', [token, driver.id])
-    }
-    
-    return { mensagem: `Tokens gerados para ${driversToUpdate.length} motoristas` }
-  })
 
-  fastify.get('/api/temp/check-rides', { preHandler: requireAuth }, async (request, reply) => {
-    const now = await query('SELECT NOW()')
-    const statuses = await query('SELECT DISTINCT status FROM rides')
-    const rides = await query('SELECT id, created_at, status, valor_final, valor_total FROM rides ORDER BY id DESC LIMIT 5')
-    return { now: now.rows, statuses: statuses.rows, rides: rides.rows }
-  })
-
-  fastify.post('/api/temp/fix-splits', { preHandler: requireAuth }, async (request, reply) => {
-    await query('DELETE FROM split_rules')
-    await query(
-      'INSERT INTO split_rules (nome, percentual_plataforma, percentual_lider, percentual_motorista, com_lider, ativo) VALUES ($1, $2, $3, $4, $5, $6)',
-      ['Padrão sem Líder', 18, 0, 82, false, 1]
-    )
-    await query(
-      'INSERT INTO split_rules (nome, percentual_plataforma, percentual_lider, percentual_motorista, com_lider, ativo) VALUES ($1, $2, $3, $4, $5, $6)',
-      ['Padrão com Líder', 15, 3, 82, true, 1]
-    )
-    const splits = (await query('SELECT * FROM split_rules')).rows
-    return { mensagem: 'Splits atualizados com sucesso!', splits }
-  })
 
   // --- ROTAS DE RELATÓRIOS FINANCEIROS
   fastify.get('/api/relatorios/por-corrida', { preHandler: requireAuth }, async (request, reply) => {
