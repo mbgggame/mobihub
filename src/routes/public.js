@@ -596,8 +596,14 @@ export default async function publicRoutes(fastify) {
       )).rows[0] 
 
       const balance_due_atual = parseFloat(driverInfo?.balance_due || 0)
-      const balance_due_novo = parseFloat((balance_due_atual + valorPlataforma).toFixed(2))
-      await query('UPDATE drivers SET balance_due = $1 WHERE id = $2', [balance_due_novo, driver.id])
+      const formaPagamento = ride.forma_pagamento || '1'
+      const corridaDinheiro = formaPagamento === '1' || formaPagamento === 1
+      
+      let balance_due_novo = balance_due_atual
+      if (corridaDinheiro) {
+        balance_due_novo = parseFloat((balance_due_atual + valorPlataforma).toFixed(2))
+        await query('UPDATE drivers SET balance_due = $1 WHERE id = $2', [balance_due_novo, driver.id])
+      }
 
       await dispararWebhook('corrida.finalizada', { 
         corrida_id: id, 
