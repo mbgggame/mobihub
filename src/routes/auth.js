@@ -58,9 +58,4 @@ export default async function authRoutes(fastify) {
     }
     return { mensagem: 'Configurações salvas com sucesso!' }
   })
-
-  fastify.get('/api/temp/get-driver-2', { preHandler: requireAuth }, async (request, reply) => {
-    const result = await query('SELECT id, nome, balance_due FROM drivers WHERE id = 2')
-    return { driver: result.rows[0] || null }
-  })
 }
