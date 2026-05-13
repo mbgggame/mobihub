@@ -306,8 +306,8 @@ function renderizarMotoristas(lista) {
         </div> 
       </div> 
       <div class="flex items-center gap-2">
-        <button onclick="window.open('/motorista/${d.token_perfil}', '_blank')"
-          class="text-sm text-blue-600 border border-blue-200 rounded-lg px-4 py-2.5 hover:bg-blue-50 font-semibold">
+        <button onclick="${d.token_perfil ? `window.open('/motorista/${d.token_perfil}', '_blank')` : `alert('Motorista sem token de perfil')`}"
+          class="text-sm ${d.token_perfil ? 'text-blue-600 border border-blue-200 hover:bg-blue-50' : 'text-gray-400 border border-gray-200 cursor-not-allowed'} rounded-lg px-4 py-2.5 font-semibold">
           🚗 Abrir painel
         </button>
         <button onclick="abrirModalDetalhesPorIndice(${i})"
