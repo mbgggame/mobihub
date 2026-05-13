@@ -72,9 +72,10 @@ export default async function authRoutes(fastify) {
   })
 
   fastify.get('/api/temp/check-rides', { preHandler: requireAuth }, async (request, reply) => {
+    const now = await query('SELECT NOW()')
     const statuses = await query('SELECT DISTINCT status FROM rides')
-    const rides = await query('SELECT id, status, valor, valor_motorista, valor_mobihub, driver_id FROM rides LIMIT 5')
-    return { statuses: statuses.rows, rides: rides.rows }
+    const rides = await query('SELECT id, created_at, status, valor_final, valor_total FROM rides ORDER BY id DESC LIMIT 5')
+    return { now: now.rows, statuses: statuses.rows, rides: rides.rows }
   })
 
   // --- ROTAS DE RELATÓRIOS FINANCEIROS
