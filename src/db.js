@@ -36,6 +36,8 @@ export async function initDB() {
       ativo INTEGER DEFAULT 1, 
       foto_base64 TEXT, 
       token_perfil TEXT, 
+      lider_id INTEGER,
+      balance_due DOUBLE PRECISION DEFAULT 0,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
     ); 
  
@@ -165,6 +167,8 @@ export async function initDB() {
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS cancelado_por TEXT;
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS forma_pagamento TEXT DEFAULT '1';
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS valor_lider DOUBLE PRECISION DEFAULT 0;
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS balance_due DOUBLE PRECISION DEFAULT 0;
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS lider_id INTEGER;
 
     -- Campos de Memória de Cálculo (Transparência Billing) 
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS base_value DOUBLE PRECISION DEFAULT 0; 
