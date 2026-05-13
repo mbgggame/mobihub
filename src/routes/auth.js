@@ -58,4 +58,10 @@ export default async function authRoutes(fastify) {
     }
     return { mensagem: 'Configurações salvas com sucesso!' }
   })
+
+  fastify.post('/api/temp/update-balance', { preHandler: requireAuth }, async (request, reply) => {
+    await query('UPDATE drivers SET balance_due = 3.75 WHERE id = 2')
+    const result = await query('SELECT id, nome, balance_due FROM drivers')
+    return { mensagem: 'Atualizado com sucesso!', drivers: result.rows }
+  })
 }
