@@ -58,4 +58,16 @@ export default async function authRoutes(fastify) {
     }
     return { mensagem: 'Configurações salvas com sucesso!' }
   })
+
+  fastify.post('/api/temp/fix-tokens', { preHandler: requireAuth }, async (request, reply) => {
+    const { v4: uuidv4 } = await import('uuid')
+    const driversToUpdate = (await query('SELECT id FROM drivers WHERE token_perfil IS NULL OR token_perfil = \'\'')).rows
+    
+    for (const driver of driversToUpdate) {
+      const token = uuidv4()
+      await query('UPDATE drivers SET token_perfil = $1 WHERE id = $2', [token, driver.id])
+    }
+    
+    return { mensagem: `Tokens gerados para ${driversToUpdate.length} motoristas` }
+  })
 }

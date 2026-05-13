@@ -209,23 +209,28 @@ export default async function driversRoutes(fastify) {
   // Aprovar motorista 
   fastify.put('/api/drivers/:id/aprovar', { preHandler: requireAuth }, async (request, reply) => { 
     const { id } = request.params 
-    await query(` 
-      UPDATE drivers SET status_cadastro = 'aprovado', ativo = 1 WHERE id = $1 
-    `, [id]) 
- 
-    // Notifica motorista via Telegram 
     const driverResult = await query('SELECT * FROM drivers WHERE id = $1', [id]) 
     const driver = driverResult.rows[0]
+    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' })
+
+    const { v4: uuidv4 } = await import('uuid')
+    const token = driver.token_perfil || uuidv4()
+    
+    await query(` 
+      UPDATE drivers SET status_cadastro = 'aprovado', ativo = 1, token_perfil = $1 WHERE id = $2 
+    `, [token, id]) 
+
+    // Notifica motorista via Telegram 
     if (driver?.telegram_id) { 
       const { getBot } = await import('../telegram.js') 
       const bot = getBot() 
-      const linkPerfil = `${process.env.BASE_URL}/motorista/${driver.token_perfil}` 
+      const linkPerfil = `${process.env.BASE_URL}/motorista/${token}` 
       bot?.sendMessage(driver.telegram_id, 
         `✅ Seu cadastro foi *aprovado!*\n\nBem-vindo ao MobiHub!\n\n👤 Acesse seu painel:\n${linkPerfil}`, 
         { parse_mode: 'Markdown' } 
       ).catch(() => {}) 
     } 
- 
+
     return { mensagem: 'Motorista aprovado com sucesso' } 
   }) 
  
