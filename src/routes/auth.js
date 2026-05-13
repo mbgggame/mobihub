@@ -70,4 +70,132 @@ export default async function authRoutes(fastify) {
     
     return { mensagem: `Tokens gerados para ${driversToUpdate.length} motoristas` }
   })
+
+  // --- ROTAS DE RELATÓRIOS FINANCEIROS
+  fastify.get('/api/relatorios/por-corrida', { preHandler: requireAuth }, async (request, reply) => {
+    const { data_inicio, data_fim } = request.query
+    let sql = `
+      SELECT 
+        r.id AS corrida_id,
+        r.created_at AS data,
+        d.nome AS motorista,
+        r.valor AS total,
+        r.valor_mobihub AS plataforma,
+        r.valor_lider AS lider,
+        r.valor_motorista AS motorista_valor,
+        r.forma_pagamento AS forma_pagamento
+      FROM rides r
+      LEFT JOIN drivers d ON r.driver_id = d.id
+      WHERE r.status = 'finalizada'
+    `
+    const params = []
+    let paramIndex = 1
+
+    if (data_inicio) {
+      sql += ` AND r.created_at >= $${paramIndex++}`
+      params.push(data_inicio)
+    }
+    if (data_fim) {
+      sql += ` AND r.created_at <= $${paramIndex++}`
+      params.push(data_fim)
+    }
+    sql += ` ORDER BY r.created_at DESC`
+
+    const result = await query(sql, params)
+    return result.rows
+  })
+
+  fastify.get('/api/relatorios/por-motorista', { preHandler: requireAuth }, async (request, reply) => {
+    const { data_inicio, data_fim } = request.query
+    let sql = `
+      SELECT 
+        d.id AS motorista_id,
+        d.nome AS nome,
+        COUNT(r.id) AS total_corridas,
+        COALESCE(SUM(r.valor), 0) AS total_arrecadado,
+        COALESCE(SUM(r.valor_motorista), 0) AS valor_repassado,
+        d.balance_due AS saldo_devedor
+      FROM drivers d
+      LEFT JOIN rides r ON d.id = r.driver_id AND r.status = 'finalizada'
+    `
+    const params = []
+    let paramIndex = 1
+    const conditions = []
+
+    if (data_inicio) {
+      conditions.push(` r.created_at >= $${paramIndex++}`)
+      params.push(data_inicio)
+    }
+    if (data_fim) {
+      conditions.push(` r.created_at <= $${paramIndex++}`)
+      params.push(data_fim)
+    }
+    if (conditions.length > 0) {
+      sql += ` WHERE ` + conditions.join(' AND ')
+    }
+    sql += ` GROUP BY d.id, d.nome, d.balance_due ORDER BY d.nome`
+
+    const result = await query(sql, params)
+    return result.rows
+  })
+
+  fastify.get('/api/relatorios/por-passageiro', { preHandler: requireAuth }, async (request, reply) => {
+    const { data_inicio, data_fim } = request.query
+    let sql = `
+      SELECT 
+        c.id AS passageiro_id,
+        c.nome AS nome,
+        COUNT(r.id) AS total_corridas,
+        COALESCE(SUM(r.valor), 0) AS total_gasto
+      FROM clients c
+      LEFT JOIN rides r ON c.id = r.client_id AND r.status = 'finalizada'
+    `
+    const params = []
+    let paramIndex = 1
+    const conditions = []
+
+    if (data_inicio) {
+      conditions.push(` r.created_at >= $${paramIndex++}`)
+      params.push(data_inicio)
+    }
+    if (data_fim) {
+      conditions.push(` r.created_at <= $${paramIndex++}`)
+      params.push(data_fim)
+    }
+    if (conditions.length > 0) {
+      sql += ` WHERE ` + conditions.join(' AND ')
+    }
+    sql += ` GROUP BY c.id, c.nome ORDER BY c.nome`
+
+    const result = await query(sql, params)
+    return result.rows
+  })
+
+  fastify.get('/api/relatorios/resumo-geral', { preHandler: requireAuth }, async (request, reply) => {
+    const { data_inicio, data_fim } = request.query
+    let sql = `
+      SELECT 
+        COUNT(id) AS total_corridas,
+        COALESCE(SUM(valor), 0) AS faturamento_total,
+        COALESCE(SUM(valor_motorista), 0) AS repasse_motoristas,
+        COALESCE(SUM(valor_mobihub), 0) AS comissao_plataforma,
+        COALESCE(SUM(valor_lider), 0) AS comissao_lideres
+      FROM rides
+      WHERE status = 'finalizada'
+    `
+    const params = []
+    let paramIndex = 1
+
+    if (data_inicio) {
+      sql += ` AND created_at >= $${paramIndex++}`
+      params.push(data_inicio)
+    }
+    if (data_fim) {
+      sql += ` AND created_at <= $${paramIndex++}`
+      params.push(data_fim)
+    }
+
+    const result = await query(sql, params)
+    return result.rows[0]
+  })
 }

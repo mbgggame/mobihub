@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MobiHub — Relatórios Financeiros</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <div class="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+    <div class="flex items-center gap-3">
+      <a href="/admin" class="text-gray-500 hover:text-gray-700">← Voltar</a>
+      <h1 class="font-bold text-gray-900">📈 Relatórios Financeiros</h1>
+    </div>
+    <div class="flex gap-2">
+      <a href="/admin/dashboard" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors">📊 Dashboard</a>
+      <a href="/admin/tarifas" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors">💸 Tarifas</a>
+      <a href="/admin/integracoes" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors">🔗 Integrações</a>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto p-4 space-y-6">
+    <!-- FILTRO DE PERÍODO
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-semibold text-gray-900">📅 Período</h2>
+        <button onclick="carregarDados()" class="text-sm bg-green-600 hover:bg-green-700 text-white rounded-xl px-4 py-2 font-semibold">
+          Aplicar filtro
+        </button>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1">Data Início</label>
+          <input id="data-inicio" type="date" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1">Data Fim</label>
+          <input id="data-fim" type="date" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+        </div>
+      </div>
+    </div>
+
+    <!-- ABAS
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="flex border-b border-gray-200">
+        <button onclick="setAba('por-corrida" id="aba-por-corrida" class="aba-btn flex-1 px-6 py-3 text-sm font-semibold text-gray-700 hover:text-green-700 hover:bg-green-50 border-b-2 border-transparent">
+          1. Por Corrida
+        </button>
+        <button onclick="setAba('por-motorista')" id="aba-por-motorista" class="aba-btn flex-1 px-6 py-3 text-sm font-semibold text-gray-500 hover:text-gray-700 hover:bg-gray-50 border-b-2 border-transparent">
+          2. Por Motorista
+        </button>
+        <button onclick="setAba('por-passageiro')" id="aba-por-passageiro" class="aba-btn flex-1 px-6 py-3 text-sm font-semibold text-gray-500 hover:text-gray-700 hover:bg-gray-50 border-b-2 border-transparent">
+          3. Por Passageiro
+        </button>
+        <button onclick="setAba('resumo-geral')" id="aba-resumo-geral" class="aba-btn flex-1 px-6 py-3 text-sm font-semibold text-gray-500 hover:text-gray-700 hover:bg-gray-50 border-b-2 border-transparent">
+          4. Resumo Geral
+        </button>
+      </div>
+
+      <!-- CONTEÚDO DAS ABAS
+      <div id="conteudo-por-corrida" class="p-6">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead class="bg-gray-50 text-xs text-gray-500 font-semibold uppercase tracking-wider">
+              <tr>
+                <th class="px-4 py-3">Data</th>
+                <th class="px-4 py-3">Corrida ID</th>
+                <th class="px-4 py-3">Motorista</th>
+                <th class="px-4 py-3">Total</th>
+                <th class="px-4 py-3">Plataforma</th>
+                <th class="px-4 py-3">Líder</th>
+                <th class="px-4 py-3">Motorista Valor</th>
+                <th class="px-4 py-3">Forma Pagamento</th>
+              </tr>
+            </thead>
+            <tbody id="tabela-por-corrida" class="text-sm text-gray-600">
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="conteudo-por-motorista" class="p-6 hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead class="bg-gray-50 text-xs text-gray-500 font-semibold uppercase tracking-wider">
+              <tr>
+                <th class="px-4 py-3">Nome</th>
+                <th class="px-4 py-3">Total Corridas</th>
+                <th class="px-4 py-3">Total Arrecadado</th>
+                <th class="px-4 py-3">Valor Repassado</th>
+                <th class="px-4 py-3">Saldo Devedor</th>
+              </tr>
+            </thead>
+            <tbody id="tabela-por-motorista" class="text-sm text-gray-600">
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="conteudo-por-passageiro" class="p-6 hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead class="bg-gray-50 text-xs text-gray-500 font-semibold uppercase tracking-wider">
+              <tr>
+                <th class="px-4 py-3">Nome</th>
+                <th class="px-4 py-3">Total Corridas</th>
+                <th class="px-4 py-3">Total Gasto</th>
+              </tr>
+            </thead>
+            <tbody id="tabela-por-passageiro" class="text-sm text-gray-600">
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="conteudo-resumo-geral" class="p-6 hidden">
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div class="bg-indigo-50 border border-indigo-200 rounded-2xl p-5">
+            <p class="text-xs text-indigo-600 font-medium mb-1">Total Corridas</p>
+            <p id="resumo-total-corridas" class="text-3xl font-bold text-indigo-900">—</p>
+          </div>
+          <div class="bg-green-50 border border-green-200 rounded-2xl p-5">
+            <p class="text-xs text-green-600 font-medium mb-1">Faturamento Total</p>
+            <p id="resumo-faturamento-total" class="text-3xl font-bold text-green-900">—</p>
+          </div>
+          <div class="bg-blue-50 border border-blue-200 rounded-2xl p-5">
+            <p class="text-xs text-blue-600 font-medium mb-1">Repasse Motoristas</p>
+            <p id="resumo-repasse-motoristas" class="text-3xl font-bold text-blue-900">—</p>
+          </div>
+          <div class="bg-purple-50 border border-purple-200 rounded-2xl p-5">
+            <p class="text-xs text-purple-600 font-medium mb-1">Comissão Plataforma</p>
+            <p id="resumo-comissao-plataforma" class="text-3xl font-bold text-purple-900">—</p>
+          </div>
+          <div class="bg-orange-50 border border-orange-200 rounded-2xl p-5">
+            <p class="text-xs text-orange-600 font-medium mb-1">Comissão Líderes</p>
+            <p id="resumo-comissao-lideres" class="text-3xl font-bold text-orange-900">—</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const token = () => localStorage.getItem('mobihub_token')
+    const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` })
+
+    const isLoginPage = window.location.pathname === '/admin/login'
+    const tokenVal = localStorage.getItem('mobihub_token')
+
+    if (!tokenVal && !isLoginPage) {
+      location.href = '/admin/login'
+    }
+
+    let abaAtual = 'por-corrida'
+
+    function formatarData(dataStr) {
+      return new Date(dataStr).toLocaleString('pt-BR')
+    }
+
+    function formatarValor(valor) {
+      return 'R$ ' + (parseFloat(valor) || 0).toFixed(2)
+    }
+
+    function formatarFormaPagamento(valor) {
+      return valor === '2' ? '📱 Pix' : valor === '3' ? '💳 Cartão' : '💵 Dinheiro'
+    }
+
+    function setAba(aba) {
+      abaAtual = aba
+
+      document.querySelectorAll('.aba-btn').forEach(btn => {
+        btn.classList.remove('text-green-700', 'bg-green-50', 'border-green-600')
+        btn.classList.add('text-gray-500', 'border-transparent')
+      })
+
+      document.getElementById(`aba-${aba}`).classList.remove('text-gray-500', 'border-transparent')
+      document.getElementById(`aba-${aba}`).classList.add('text-green-700', 'bg-green-50', 'border-green-600')
+
+      document.querySelectorAll('[id^="conteudo-"]').forEach(el => el.classList.add('hidden'))
+      document.getElementById(`conteudo-${aba}`).classList.remove('hidden')
+
+      carregarDados()
+    }
+
+    async function carregarDados() {
+      const dataInicio = document.getElementById('data-inicio').value
+      const dataFim = document.getElementById('data-fim').value
+      const params = new URLSearchParams()
+      if (dataInicio) params.append('data_inicio', dataInicio)
+      if (dataFim) params.append('data_fim', dataFim)
+      const queryString = params.toString() ? `?${params.toString()}` : ''
+
+      try {
+        if (abaAtual === 'por-corrida') {
+          const r = await fetch(`/api/relatorios/por-corrida${queryString}`, { headers: headers() })
+          const dados = await r.json()
+          const tbody = document.getElementById('tabela-por-corrida')
+          tbody.innerHTML = dados.map(d => `
+            <tr class="border-b border-gray-100">
+              <td class="px-4 py-3">${formatarData(d.data)}</td>
+              <td class="px-4 py-3">#${d.corrida_id}</td>
+              <td class="px-4 py-3">${d.motorista || '—'}</td>
+              <td class="px-4 py-3">${formatarValor(d.total)}</td>
+              <td class="px-4 py-3">${formatarValor(d.plataforma)}</td>
+              <td class="px-4 py-3">${formatarValor(d.lider)}</td>
+              <td class="px-4 py-3">${formatarValor(d.motorista_valor)}</td>
+              <td class="px-4 py-3">${formatarFormaPagamento(d.forma_pagamento)}</td>
+            </tr>
+          `).join('')
+        }
+
+        if (abaAtual === 'por-motorista') {
+          const r = await fetch(`/api/relatorios/por-motorista${queryString}`, { headers: headers() })
+          const dados = await r.json()
+          const tbody = document.getElementById('tabela-por-motorista')
+          tbody.innerHTML = dados.map(d => `
+            <tr class="border-b border-gray-100">
+              <td class="px-4 py-3">${d.nome}</td>
+              <td class="px-4 py-3">${d.total_corridas}</td>
+              <td class="px-4 py-3">${formatarValor(d.total_arrecadado)}</td>
+              <td class="px-4 py-3">${formatarValor(d.valor_repassado)}</td>
+              <td class="px-4 py-3">${formatarValor(d.saldo_devedor)}</td>
+            </tr>
+          `).join('')
+        }
+
+        if (abaAtual === 'por-passageiro') {
+          const r = await fetch(`/api/relatorios/por-passageiro${queryString}`, { headers: headers() })
+          const dados = await r.json()
+          const tbody = document.getElementById('tabela-por-passageiro')
+          tbody.innerHTML = dados.map(d => `
+            <tr class="border-b border-gray-100">
+              <td class="px-4 py-3">${d.nome}</td>
+              <td class="px-4 py-3">${d.total_corridas}</td>
+              <td class="px-4 py-3">${formatarValor(d.total_gasto)}</td>
+            </tr>
+          `).join('')
+        }
+
+        if (abaAtual === 'resumo-geral') {
+          const r = await fetch(`/api/relatorios/resumo-geral${queryString}`, { headers: headers() })
+          const d = await r.json()
+          document.getElementById('resumo-total-corridas').textContent = d.total_corridas
+          document.getElementById('resumo-faturamento-total').textContent = formatarValor(d.faturamento_total)
+          document.getElementById('resumo-repasse-motoristas').textContent = formatarValor(d.repasse_motoristas)
+          document.getElementById('resumo-comissao-plataforma').textContent = formatarValor(d.comissao_plataforma)
+          document.getElementById('resumo-comissao-lideres').textContent = formatarValor(d.comissao_lideres)
+        }
+      } catch (e) {
+        console.error(e)
+      }
+    }
+
+    window.onload = () => {
+      setAba('por-corrida')
+      carregarDados()
+    }
+  </script>
+</body>
+</html>
