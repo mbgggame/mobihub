@@ -99,11 +99,11 @@ export default async function authRoutes(fastify) {
     let paramIndex = 1
 
     if (data_inicio) {
-      sql += ` AND r.created_at >= $${paramIndex++}`
+      sql += ` AND DATE(r.created_at AT TIME ZONE 'America/Sao_Paulo') >= $${paramIndex++}`
       params.push(data_inicio)
     }
     if (data_fim) {
-      sql += ` AND r.created_at <= $${paramIndex++}`
+      sql += ` AND DATE(r.created_at AT TIME ZONE 'America/Sao_Paulo') <= $${paramIndex++}`
       params.push(data_fim)
     }
     sql += ` ORDER BY r.created_at DESC`
@@ -130,11 +130,11 @@ export default async function authRoutes(fastify) {
     const onConditions = []
 
     if (data_inicio) {
-      onConditions.push(` r.created_at >= $${paramIndex++}`)
+      onConditions.push(` DATE(r.created_at AT TIME ZONE 'America/Sao_Paulo') >= $${paramIndex++}`)
       params.push(data_inicio)
     }
     if (data_fim) {
-      onConditions.push(` r.created_at <= $${paramIndex++}`)
+      onConditions.push(` DATE(r.created_at AT TIME ZONE 'America/Sao_Paulo') <= $${paramIndex++}`)
       params.push(data_fim)
     }
     if (onConditions.length > 0) {
@@ -166,11 +166,11 @@ export default async function authRoutes(fastify) {
     const onConditions = []
 
     if (data_inicio) {
-      onConditions.push(` r.created_at >= $${paramIndex++}`)
+      onConditions.push(` DATE(r.created_at AT TIME ZONE 'America/Sao_Paulo') >= $${paramIndex++}`)
       params.push(data_inicio)
     }
     if (data_fim) {
-      onConditions.push(` r.created_at <= $${paramIndex++}`)
+      onConditions.push(` DATE(r.created_at AT TIME ZONE 'America/Sao_Paulo') <= $${paramIndex++}`)
       params.push(data_fim)
     }
     if (onConditions.length > 0) {
@@ -201,11 +201,11 @@ export default async function authRoutes(fastify) {
     let paramIndex = 1
 
     if (data_inicio) {
-      sql += ` AND created_at >= $${paramIndex++}`
+      sql += ` AND DATE(created_at AT TIME ZONE 'America/Sao_Paulo') >= $${paramIndex++}`
       params.push(data_inicio)
     }
     if (data_fim) {
-      sql += ` AND created_at <= $${paramIndex++}`
+      sql += ` AND DATE(created_at AT TIME ZONE 'America/Sao_Paulo') <= $${paramIndex++}`
       params.push(data_fim)
     }
 
