@@ -80,8 +80,14 @@ export default async function authRoutes(fastify) {
 
   fastify.post('/api/temp/fix-splits', { preHandler: requireAuth }, async (request, reply) => {
     await query('DELETE FROM split_rules')
-    await query(`INSERT INTO split_rules (nome, percentual_plataforma, percentual_lider, percentual_motorista, com_lider, ativo) VALUES ('Padrão sem Líder', 18, 0, 82, false, 1)`)
-    await query(`INSERT INTO split_rules (nome, percentual_plataforma, percentual_lider, percentual_motorista, com_lider, ativo) VALUES ('Padrão com Líder', 15, 3, 82, true, 1)`)
+    await query(
+      'INSERT INTO split_rules (nome, percentual_plataforma, percentual_lider, percentual_motorista, com_lider, ativo) VALUES ($1, $2, $3, $4, $5, $6)',
+      ['Padrão sem Líder', 18, 0, 82, false, 1]
+    )
+    await query(
+      'INSERT INTO split_rules (nome, percentual_plataforma, percentual_lider, percentual_motorista, com_lider, ativo) VALUES ($1, $2, $3, $4, $5, $6)',
+      ['Padrão com Líder', 15, 3, 82, true, 1]
+    )
     const splits = (await query('SELECT * FROM split_rules')).rows
     return { mensagem: 'Splits atualizados com sucesso!', splits }
   })
