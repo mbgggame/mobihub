@@ -588,9 +588,12 @@ export default async function publicRoutes(fastify) {
     try { 
       const { dispararWebhook } = await import('../webhook.js') 
       const driverInfo = (await query( 
-        'SELECT id, nome, token_perfil, lider_id, codigo_indicacao FROM drivers WHERE id = $1', 
+        'SELECT id, nome, token_perfil, lider_id, codigo_indicacao, balance_due FROM drivers WHERE id = $1', 
         [driver.id] 
       )).rows[0] 
+
+      const balance_due_atual = parseFloat(driverInfo?.balance_due || 0)
+      const balance_due_novo = parseFloat((balance_due_atual + valorPlataforma).toFixed(2))
 
       await dispararWebhook('corrida.finalizada', { 
         corrida_id: id, 
@@ -599,6 +602,7 @@ export default async function publicRoutes(fastify) {
         valor_motorista: valorMotorista, 
         valor_plataforma: valorPlataforma, 
         valor_lider: valorLider,
+        balance_due_novo,
         motorista_id: driver.id, 
         motorista_nome: driverInfo?.nome, 
         motorista_token: driverInfo?.token_perfil, 
