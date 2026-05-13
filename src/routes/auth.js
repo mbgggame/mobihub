@@ -85,14 +85,14 @@ export default async function authRoutes(fastify) {
         r.id AS corrida_id,
         r.created_at AS data,
         d.nome AS motorista,
-        r.valor AS total,
+        r.valor_final AS total,
         r.valor_mobihub AS plataforma,
         r.valor_lider AS lider,
         r.valor_motorista AS motorista_valor,
         r.forma_pagamento AS forma_pagamento
       FROM rides r
       LEFT JOIN drivers d ON r.driver_id = d.id
-      WHERE r.status = 'finalizada'
+      WHERE r.status = 'concluida'
     `
     const params = []
     let paramIndex = 1
@@ -118,11 +118,11 @@ export default async function authRoutes(fastify) {
         d.id AS motorista_id,
         d.nome AS nome,
         COUNT(r.id) AS total_corridas,
-        COALESCE(SUM(r.valor), 0) AS total_arrecadado,
+        COALESCE(SUM(r.valor_final), 0) AS total_arrecadado,
         COALESCE(SUM(r.valor_motorista), 0) AS valor_repassado,
         d.balance_due AS saldo_devedor
       FROM drivers d
-      LEFT JOIN rides r ON d.id = r.driver_id AND r.status = 'finalizada'
+      LEFT JOIN rides r ON d.id = r.driver_id AND r.status = 'concluida'
     `
     const params = []
     let paramIndex = 1
@@ -139,8 +139,8 @@ export default async function authRoutes(fastify) {
     if (onConditions.length > 0) {
       // Encontrar o ponto de junção e adicionar as condições no ON
       sql = sql.replace(
-        'LEFT JOIN rides r ON d.id = r.driver_id AND r.status = \'finalizada\'',
-        'LEFT JOIN rides r ON d.id = r.driver_id AND r.status = \'finalizada\' AND ' + onConditions.join(' AND ')
+        'LEFT JOIN rides r ON d.id = r.driver_id AND r.status = \'concluida\'',
+        'LEFT JOIN rides r ON d.id = r.driver_id AND r.status = \'concluida\' AND ' + onConditions.join(' AND ')
       )
     }
     sql += ` GROUP BY d.id, d.nome, d.balance_due ORDER BY d.nome`
@@ -156,9 +156,9 @@ export default async function authRoutes(fastify) {
         c.id AS passageiro_id,
         c.nome AS nome,
         COUNT(r.id) AS total_corridas,
-        COALESCE(SUM(r.valor), 0) AS total_gasto
+        COALESCE(SUM(r.valor_final), 0) AS total_gasto
       FROM clients c
-      LEFT JOIN rides r ON c.id = r.client_id AND r.status = 'finalizada'
+      LEFT JOIN rides r ON c.id = r.client_id AND r.status = 'concluida'
     `
     const params = []
     let paramIndex = 1
@@ -174,8 +174,8 @@ export default async function authRoutes(fastify) {
     }
     if (onConditions.length > 0) {
       sql = sql.replace(
-        'LEFT JOIN rides r ON c.id = r.client_id AND r.status = \'finalizada\'',
-        'LEFT JOIN rides r ON c.id = r.client_id AND r.status = \'finalizada\' AND ' + onConditions.join(' AND ')
+        'LEFT JOIN rides r ON c.id = r.client_id AND r.status = \'concluida\'',
+        'LEFT JOIN rides r ON c.id = r.client_id AND r.status = \'concluida\' AND ' + onConditions.join(' AND ')
       )
     }
     sql += ` GROUP BY c.id, c.nome ORDER BY c.nome`
@@ -189,12 +189,12 @@ export default async function authRoutes(fastify) {
     let sql = `
       SELECT 
         COUNT(id) AS total_corridas,
-        COALESCE(SUM(valor), 0) AS faturamento_total,
+        COALESCE(SUM(valor_final), 0) AS faturamento_total,
         COALESCE(SUM(valor_motorista), 0) AS repasse_motoristas,
         COALESCE(SUM(valor_mobihub), 0) AS comissao_plataforma,
         COALESCE(SUM(valor_lider), 0) AS comissao_lideres
       FROM rides
-      WHERE status = 'finalizada'
+      WHERE status = 'concluida'
     `
     const params = []
     let paramIndex = 1
