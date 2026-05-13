@@ -98,53 +98,16 @@ export default async function driversRoutes(fastify) {
     } 
   }) 
  
-  fastify.put('/api/drivers/:id', { preHandler: requireAuth }, async (request, reply) => { 
-    console.log('[DEBUG] PUT /api/drivers/:id chamado, id:', request.params.id) 
-    console.log('[DEBUG] Body recebido:', request.body) 
-    const { nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, ativo, foto_base64, status_cadastro } = request.body 
-    const { id } = request.params 
-
-    const driverResult = await query('SELECT id, status_cadastro FROM drivers WHERE id = $1', [id])
-    const driver = driverResult.rows[0]
-    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
-
-    let novoAtivo = ativo
-    const novoStatus = status_cadastro || driver.status_cadastro
-
-    if (novoStatus === 'aprovado') {
-      novoAtivo = 1
-    } else if (novoStatus === 'reprovado' || novoStatus === 'pendente') {
-      novoAtivo = 0
-    }
-
-    await query(` 
-      UPDATE drivers SET 
-        nome = COALESCE($1, nome), 
-        telefone = COALESCE($2, telefone), 
-        telegram_id = COALESCE($3, telegram_id),
-        modelo_carro = COALESCE($4, modelo_carro), 
-        ano_carro = COALESCE($5, ano_carro), 
-        cor_carro = COALESCE($6, cor_carro), 
-        placa = COALESCE($7, placa), 
-        ativo = $8, 
-        foto_base64 = COALESCE($9, foto_base64),
-        status_cadastro = COALESCE($10, status_cadastro)
-      WHERE id = $11 
-    `, [nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, novoAtivo, foto_base64, novoStatus, id]) 
-
-    return { mensagem: 'Motorista atualizado' } 
-  }) 
- 
   fastify.delete('/api/drivers/:id', { preHandler: requireAuth }, async (request, reply) => { 
     const { id } = request.params 
     const driverResult = await query('SELECT id FROM drivers WHERE id = $1', [id])
     const driver = driverResult.rows[0]
     if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
- 
+
     await query('UPDATE drivers SET ativo = 0 WHERE id = $1', [id]) 
     return { mensagem: 'Motorista desativado' } 
   }) 
- 
+
   fastify.post('/api/drivers/:id/gerar-token', { preHandler: requireAuth }, async (request, reply) => { 
     console.log('[GERAR-TOKEN] Chamado com id:', request.params.id) 
     console.log('[GERAR-TOKEN] Headers:', request.headers.authorization ? 'JWT presente' : 'JWT ausente') 
@@ -167,7 +130,7 @@ export default async function driversRoutes(fastify) {
       return reply.code(500).send({ error: err.message }) 
     } 
   }) 
- 
+
   fastify.delete('/api/drivers/:id/excluir', { preHandler: requireAuth }, async (request, reply) => { 
     const { id } = request.params 
     const driverResult = await query('SELECT * FROM drivers WHERE id = $1', [id])
@@ -179,22 +142,22 @@ export default async function driversRoutes(fastify) {
     await query('DELETE FROM drivers WHERE id = $1', [id]) 
     return { mensagem: 'Motorista excluído com sucesso' } 
   }) 
- 
+
   // Gerar link de convite para motorista 
   fastify.post('/api/drivers/convite', { preHandler: requireAuth }, async (request, reply) => { 
     const { v4: uuidv4 } = await import('uuid') 
     const token = uuidv4() 
     const expira = new Date() 
     expira.setDate(expira.getDate() + 7) 
- 
+
     await query(` 
       INSERT INTO convites (token, expira_em, usado) VALUES ($1, $2, false) 
     `, [token, expira.toISOString()]) 
- 
+
     const link = `${process.env.BASE_URL}/cadastro-motorista/${token}` 
     return { token, link, expira: expira.toISOString() } 
   }) 
- 
+
   // Listar motoristas pendentes 
   fastify.get('/api/drivers/pendentes', { preHandler: requireAuth }, async () => { 
     console.log('[API] Buscando motoristas pendentes...') 
@@ -205,7 +168,7 @@ export default async function driversRoutes(fastify) {
     console.log('[API] Dados dos motoristas:', result.rows) 
     return result.rows 
   }) 
- 
+
   // Aprovar motorista 
   fastify.put('/api/drivers/:id/aprovar', { preHandler: requireAuth }, async (request, reply) => { 
     const { id } = request.params 
@@ -242,8 +205,8 @@ export default async function driversRoutes(fastify) {
     })
 
     return { mensagem: 'Motorista aprovado com sucesso' } 
-  }) 
- 
+  })
+
   // Reprovar motorista 
   fastify.put('/api/drivers/:id/reprovar', { preHandler: requireAuth }, async (request, reply) => { 
     const { motivo } = request.body 
@@ -251,7 +214,7 @@ export default async function driversRoutes(fastify) {
     await query(` 
       UPDATE drivers SET status_cadastro = 'reprovado', ativo = 0, motivo_reprovacao = $1 WHERE id = $2 
     `, [motivo || null, id]) 
- 
+
     const driverResult = await query('SELECT * FROM drivers WHERE id = $1', [id]) 
     const driver = driverResult.rows[0]
     if (driver?.telegram_id) { 
@@ -262,7 +225,7 @@ export default async function driversRoutes(fastify) {
         { parse_mode: 'Markdown' } 
       ).catch(() => {}) 
     } 
- 
+
     return { mensagem: 'Motorista reprovado' } 
   })
 
@@ -299,6 +262,43 @@ export default async function driversRoutes(fastify) {
     })
 
     return { mensagem: 'Motorista ativado' }
+  })
+
+  fastify.put('/api/drivers/:id', { preHandler: requireAuth }, async (request, reply) => { 
+    console.log('[DEBUG] PUT /api/drivers/:id chamado, id:', request.params.id) 
+    console.log('[DEBUG] Body recebido:', request.body) 
+    const { nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, ativo, foto_base64, status_cadastro } = request.body 
+    const { id } = request.params 
+
+    const driverResult = await query('SELECT id, status_cadastro FROM drivers WHERE id = $1', [id])
+    const driver = driverResult.rows[0]
+    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
+
+    let novoAtivo = ativo
+    const novoStatus = status_cadastro || driver.status_cadastro
+
+    if (novoStatus === 'aprovado') {
+      novoAtivo = 1
+    } else if (novoStatus === 'reprovado' || novoStatus === 'pendente') {
+      novoAtivo = 0
+    }
+
+    await query(` 
+      UPDATE drivers SET 
+        nome = COALESCE($1, nome), 
+        telefone = COALESCE($2, telefone), 
+        telegram_id = COALESCE($3, telegram_id),
+        modelo_carro = COALESCE($4, modelo_carro), 
+        ano_carro = COALESCE($5, ano_carro), 
+        cor_carro = COALESCE($6, cor_carro), 
+        placa = COALESCE($7, placa), 
+        ativo = $8, 
+        foto_base64 = COALESCE($9, foto_base64),
+        status_cadastro = COALESCE($10, status_cadastro)
+      WHERE id = $11 
+    `, [nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, novoAtivo, foto_base64, novoStatus, id]) 
+
+    return { mensagem: 'Motorista atualizado' } 
   }) 
  
 
