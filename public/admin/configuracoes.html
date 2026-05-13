@@ -24,11 +24,7 @@
       <h2 class="text-lg font-bold text-gray-900 mb-4">⚙️ Configurações da ELVIVA GROUP LTDA</h2>
       
       <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-1">Comissão da Plataforma (%)</label>
-          <input id="comissao_plataforma" type="number" step="1" min="0" max="100" 
-            class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
-        </div>
+
 
         <div>
           <label class="block text-sm font-semibold text-gray-700 mb-1">Taxa de Cancelamento (R$)</label>
@@ -117,7 +113,7 @@
         const r = await fetch('/api/configuracoes', { headers: headers() })
         configAtual = await r.json()
         
-        document.getElementById('comissao_plataforma').value = configAtual.comissao_plataforma || 25
+
         document.getElementById('espera_taxa_cancelamento').value = configAtual.espera_taxa_cancelamento || 10.00
         document.getElementById('espera_minutos_gratis').value = configAtual.espera_minutos_gratis || 3
         document.getElementById('espera_valor_minuto').value = configAtual.espera_valor_minuto || 0.60
@@ -138,7 +134,6 @@
 
       try {
         const body = {
-          comissao_plataforma: parseFloat(document.getElementById('comissao_plataforma').value),
           espera_taxa_cancelamento: parseFloat(document.getElementById('espera_taxa_cancelamento').value),
           espera_minutos_gratis: parseInt(document.getElementById('espera_minutos_gratis').value),
           espera_valor_minuto: parseFloat(document.getElementById('espera_valor_minuto').value),

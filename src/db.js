@@ -164,6 +164,7 @@ export async function initDB() {
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS taxa_cancelamento DOUBLE PRECISION DEFAULT 0; 
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS cancelado_por TEXT;
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS forma_pagamento TEXT DEFAULT '1';
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS valor_lider DOUBLE PRECISION DEFAULT 0;
 
     -- Campos de Memória de Cálculo (Transparência Billing) 
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS base_value DOUBLE PRECISION DEFAULT 0; 
@@ -267,8 +268,7 @@ export async function initDB() {
       ('espera_taxa_cancelamento', '10.00'), 
       ('parada_minutos_gratis', '5'), 
       ('parada_valor_minuto', '0.60'), 
-      ('valor_minimo_corrida', '15.00'),
-      ('comissao_plataforma', '25')
+      ('valor_minimo_corrida', '15.00')
     ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor
   `) 
  

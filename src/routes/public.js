@@ -535,13 +535,23 @@ export default async function publicRoutes(fastify) {
       console.log(`[BILLING] Sem tarifa ativa — usando valor fixo: R$${valorBase}`) 
     } 
 
+    // Buscar regra de split ativa 
+    const splitRule = (await query( 
+      "SELECT * FROM split_rules WHERE ativo = 1 ORDER BY id LIMIT 1" 
+    )).rows[0] 
+
+    const percentualPlataforma = splitRule?.percentual_plataforma || 15 
+    const percentualLider = splitRule?.percentual_lider || 2 
+    const percentualMotorista = splitRule?.percentual_motorista || 83 
+
     // Cálculo detalhado para memória de cálculo 
     const waitInfo = calculateInitialWaitCost(ride.tempo_espera_inicial_min || 0, config) 
     const valorFinal = calculateTotalRideCost(valorBase, waitInfo.cost, ride.custo_paradas || 0, config) 
-    const comissaoPlataforma = parseFloat(config.comissao_plataforma || 25) / 100 
-    const percentualMotorista = 1 - comissaoPlataforma 
-    const valorMotorista = parseFloat((valorFinal * percentualMotorista).toFixed(2)) 
-    console.log(`[BILLING] Comissão: ${comissaoPlataforma * 100}% | Motorista: ${percentualMotorista * 100}% | Valor motorista: R$${valorMotorista}`) 
+
+    const valorPlataforma = parseFloat((valorFinal * percentualPlataforma / 100).toFixed(2)) 
+    const valorLider = parseFloat((valorFinal * percentualLider / 100).toFixed(2)) 
+    const valorMotorista = parseFloat((valorFinal - valorPlataforma - valorLider).toFixed(2)) 
+    console.log(`[BILLING] Split: Plataforma ${percentualPlataforma}% (R$${valorPlataforma}) | Líder ${percentualLider}% (R$${valorLider}) | Motorista ${percentualMotorista}% (R$${valorMotorista})`) 
 
     await query(` 
       UPDATE rides SET 
@@ -550,17 +560,19 @@ export default async function publicRoutes(fastify) {
         valor_final = $1, 
         valor_motorista = $2, 
         valor_mobihub = $3, 
-        base_value = $4, 
-        wait_extra_minutes = $5, 
-        wait_extra_charge = $6, 
-        stop_extra_minutes = $7, 
-        stop_extra_charge = $8, 
-        total_value = $9 
-      WHERE id = $10 
+        valor_lider = $4,
+        base_value = $5, 
+        wait_extra_minutes = $6, 
+        wait_extra_charge = $7, 
+        stop_extra_minutes = $8, 
+        stop_extra_charge = $9, 
+        total_value = $10 
+      WHERE id = $11 
     `, [ 
       valorFinal, 
       valorMotorista, 
-      parseFloat((valorFinal - valorMotorista).toFixed(2)), 
+      valorPlataforma, 
+      valorLider,
       valorBase, 
       waitInfo.extraMinutes, 
       waitInfo.cost, 
@@ -579,26 +591,23 @@ export default async function publicRoutes(fastify) {
         'SELECT id, nome, token_perfil, lider_id, codigo_indicacao FROM drivers WHERE id = $1', 
         [driver.id] 
       )).rows[0] 
- 
-      const splitRule = (await query( 
-        "SELECT * FROM split_rules WHERE ativo = 1 ORDER BY id LIMIT 1" 
-      )).rows[0] 
- 
+
       await dispararWebhook('corrida.finalizada', { 
         corrida_id: id, 
         corrida_token: ride.token || null, 
         valor_total: valorFinal, 
         valor_motorista: valorMotorista, 
-        valor_plataforma: parseFloat((valorFinal - valorMotorista).toFixed(2)), 
+        valor_plataforma: valorPlataforma, 
+        valor_lider: valorLider,
         motorista_id: driver.id, 
         motorista_nome: driverInfo?.nome, 
         motorista_token: driverInfo?.token_perfil, 
         lider_id: driverInfo?.lider_id || null, 
         forma_pagamento: ride.forma_pagamento || '1',
         split: { 
-          percentual_plataforma: splitRule?.percentual_plataforma || 15, 
-          percentual_lider: splitRule?.percentual_lider || 2, 
-          percentual_motorista: splitRule?.percentual_motorista || 83 
+          percentual_plataforma: percentualPlataforma, 
+          percentual_lider: percentualLider, 
+          percentual_motorista: percentualMotorista 
         }, 
         finalizada_at: new Date().toISOString() 
       }) 

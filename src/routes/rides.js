@@ -659,15 +659,24 @@ export default async function ridesRoutes(fastify) {
     const { id } = request.params 
     const ride = (await query('SELECT * FROM rides WHERE id = $1', [id])).rows[0] 
     if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
- 
+
     const config = await getConfig() 
     const paradas = (await query('SELECT * FROM ride_stops WHERE ride_id = $1 ORDER BY iniciada_at', [id])).rows 
- 
+
     const valorBase = ride.valor || 0 
     const custoEspera = ride.custo_espera_inicial || 0 
     const custoParadas = ride.custo_paradas || 0 
     const valorFinal = calculateTotalRideCost(valorBase, custoEspera, custoParadas, config) 
- 
+
+    const splitRule = (await query("SELECT * FROM split_rules WHERE ativo = 1 ORDER BY id LIMIT 1")).rows[0]
+    const percentualPlataforma = splitRule?.percentual_plataforma || 15 
+    const percentualLider = splitRule?.percentual_lider || 2 
+    const percentualMotorista = splitRule?.percentual_motorista || 83 
+
+    const valorPlataforma = parseFloat((valorFinal * percentualPlataforma / 100).toFixed(2)) 
+    const valorLider = parseFloat((valorFinal * percentualLider / 100).toFixed(2)) 
+    const valorMotorista = parseFloat((valorFinal - valorPlataforma - valorLider).toFixed(2)) 
+
     return { 
       valor_base: valorBase, 
       custo_espera_inicial: custoEspera, 
@@ -676,8 +685,9 @@ export default async function ridesRoutes(fastify) {
       tempo_paradas_min: ride.tempo_paradas_total_min || 0, 
       num_paradas: ride.num_paradas || 0, 
       valor_final: valorFinal, 
-      valor_motorista: parseFloat((valorFinal * 0.75).toFixed(2)), 
-      valor_mobihub: parseFloat((valorFinal * 0.25).toFixed(2)), 
+      valor_motorista: valorMotorista, 
+      valor_mobihub: valorPlataforma, 
+      valor_lider: valorLider,
       paradas_detalhe: paradas, 
       cancelado_por_espera: ride.cancelado_por_espera === 1, 
       taxa_cancelamento: ride.taxa_cancelamento || 0 
