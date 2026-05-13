@@ -78,6 +78,14 @@ export default async function authRoutes(fastify) {
     return { now: now.rows, statuses: statuses.rows, rides: rides.rows }
   })
 
+  fastify.post('/api/temp/fix-splits', { preHandler: requireAuth }, async (request, reply) => {
+    await query('DELETE FROM split_rules')
+    await query(`INSERT INTO split_rules (nome, percentual_plataforma, percentual_lider, percentual_motorista, com_lider, ativo) VALUES ('Padrão sem Líder', 18, 0, 82, false, 1)`)
+    await query(`INSERT INTO split_rules (nome, percentual_plataforma, percentual_lider, percentual_motorista, com_lider, ativo) VALUES ('Padrão com Líder', 15, 3, 82, true, 1)`)
+    const splits = (await query('SELECT * FROM split_rules')).rows
+    return { mensagem: 'Splits atualizados com sucesso!', splits }
+  })
+
   // --- ROTAS DE RELATÓRIOS FINANCEIROS
   fastify.get('/api/relatorios/por-corrida', { preHandler: requireAuth }, async (request, reply) => {
     const { data_inicio, data_fim } = request.query
