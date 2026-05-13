@@ -231,6 +231,16 @@ export default async function driversRoutes(fastify) {
       ).catch(() => {}) 
     } 
 
+    // Disparar webhook motorista.aprovado para Make
+    const { dispararWebhook } = await import('../webhook.js')
+    await dispararWebhook('motorista.aprovado', { 
+      driver_id: driver.id, 
+      nome: driver.nome, 
+      status: 'ACTIVE', 
+      balance_due: 0, 
+      rides_month: 0 
+    })
+
     return { mensagem: 'Motorista aprovado com sucesso' } 
   }) 
  
