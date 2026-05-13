@@ -267,7 +267,7 @@ async function reprovarMotorista() {
 async function desativarMotorista(id) {
   const r = await fetch(`/api/drivers/${id}/desativar`, { 
     method: 'PUT', 
-    headers: headers() 
+    headers: { 'Authorization': `Bearer ${token()}` }
   })
   if (r.ok) {
     alert('⛔ Motorista desativado com sucesso!')
@@ -280,7 +280,7 @@ async function desativarMotorista(id) {
 async function ativarMotorista(id) {
   const r = await fetch(`/api/drivers/${id}/ativar`, { 
     method: 'PUT', 
-    headers: headers() 
+    headers: { 'Authorization': `Bearer ${token()}` }
   })
   if (r.ok) {
     alert('✅ Motorista ativado com sucesso!')
