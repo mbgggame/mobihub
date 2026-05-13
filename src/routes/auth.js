@@ -120,18 +120,22 @@ export default async function authRoutes(fastify) {
     `
     const params = []
     let paramIndex = 1
-    const conditions = []
+    const onConditions = []
 
     if (data_inicio) {
-      conditions.push(` r.created_at >= $${paramIndex++}`)
+      onConditions.push(` r.created_at >= $${paramIndex++}`)
       params.push(data_inicio)
     }
     if (data_fim) {
-      conditions.push(` r.created_at <= $${paramIndex++}`)
+      onConditions.push(` r.created_at <= $${paramIndex++}`)
       params.push(data_fim)
     }
-    if (conditions.length > 0) {
-      sql += ` WHERE ` + conditions.join(' AND ')
+    if (onConditions.length > 0) {
+      // Encontrar o ponto de junção e adicionar as condições no ON
+      sql = sql.replace(
+        'LEFT JOIN rides r ON d.id = r.driver_id AND r.status = \'finalizada\'',
+        'LEFT JOIN rides r ON d.id = r.driver_id AND r.status = \'finalizada\' AND ' + onConditions.join(' AND ')
+      )
     }
     sql += ` GROUP BY d.id, d.nome, d.balance_due ORDER BY d.nome`
 
@@ -152,18 +156,21 @@ export default async function authRoutes(fastify) {
     `
     const params = []
     let paramIndex = 1
-    const conditions = []
+    const onConditions = []
 
     if (data_inicio) {
-      conditions.push(` r.created_at >= $${paramIndex++}`)
+      onConditions.push(` r.created_at >= $${paramIndex++}`)
       params.push(data_inicio)
     }
     if (data_fim) {
-      conditions.push(` r.created_at <= $${paramIndex++}`)
+      onConditions.push(` r.created_at <= $${paramIndex++}`)
       params.push(data_fim)
     }
-    if (conditions.length > 0) {
-      sql += ` WHERE ` + conditions.join(' AND ')
+    if (onConditions.length > 0) {
+      sql = sql.replace(
+        'LEFT JOIN rides r ON c.id = r.client_id AND r.status = \'finalizada\'',
+        'LEFT JOIN rides r ON c.id = r.client_id AND r.status = \'finalizada\' AND ' + onConditions.join(' AND ')
+      )
     }
     sql += ` GROUP BY c.id, c.nome ORDER BY c.nome`
 
