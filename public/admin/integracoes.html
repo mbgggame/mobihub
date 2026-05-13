@@ -102,6 +102,13 @@
           <label class="block text-sm font-semibold text-gray-700 mb-1">Categoria</label>
           <input id="split-categoria" type="text" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" required>
         </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Tipo</label>
+          <select id="split-com-lider" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" required>
+            <option value="false">❌ Sem Líder</option>
+            <option value="true">✅ Com Líder</option>
+          </select>
+        </div>
         <div class="grid grid-cols-3 gap-3">
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-1">Plataforma (%)</label>
@@ -338,6 +345,7 @@
               <div class="flex items-center gap-2">
                 <p class="font-semibold text-gray-900">${s.nome}</p>
                 <span class="text-xs px-2 py-0.5 rounded-full ${s.ativo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}">${s.ativo ? 'Ativo' : 'Inativo'}</span>
+                <span class="text-xs px-2 py-0.5 rounded-full ${s.com_lider ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}">${s.com_lider ? 'Com Líder' : 'Sem Líder'}</span>
               </div>
               <div class="flex gap-4 mt-2 text-sm">
                 <span>Plataforma: <b>${s.percentual_plataforma}%</b></span>
@@ -357,6 +365,7 @@
       document.getElementById('split-id').value = s?.id || ''
       document.getElementById('split-nome').value = s?.nome || ''
       document.getElementById('split-categoria').value = s?.categoria || 'padrao'
+      document.getElementById('split-com-lider').value = s?.com_lider ? 'true' : 'false'
       document.getElementById('split-plataforma').value = s?.percentual_plataforma || 15
       document.getElementById('split-lider').value = s?.percentual_lider || 2
       document.getElementById('split-motorista').value = s?.percentual_motorista || 83
@@ -388,6 +397,7 @@
       const data = {
         nome: document.getElementById('split-nome').value,
         categoria: document.getElementById('split-categoria').value,
+        com_lider: document.getElementById('split-com-lider').value === 'true',
         percentual_plataforma: parseFloat(document.getElementById('split-plataforma').value),
         percentual_lider: parseFloat(document.getElementById('split-lider').value),
         percentual_motorista: parseFloat(document.getElementById('split-motorista').value),

@@ -239,6 +239,7 @@ export async function initDB() {
       percentual_plataforma DOUBLE PRECISION DEFAULT 15, 
       percentual_lider DOUBLE PRECISION DEFAULT 2, 
       percentual_motorista DOUBLE PRECISION DEFAULT 83, 
+      com_lider BOOLEAN DEFAULT false, 
       ativo INTEGER DEFAULT 1, 
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
     ); 
@@ -278,13 +279,18 @@ export async function initDB() {
  
   await seedAdmin() 
   await seedConfigs() 
-  await seedTarifas() 
+  await seedTarifas()
 
-  // Seed da regra de split padrão
+  // Adicionar coluna com_lider se não existir
+  await query(`ALTER TABLE split_rules ADD COLUMN IF NOT EXISTS com_lider BOOLEAN DEFAULT false`)
+
+  // Seed das regras de split padrão
   const splitExisting = await query('SELECT COUNT(*) as total FROM split_rules') 
   if (parseInt(splitExisting.rows[0].total) === 0) { 
-    await query(`INSERT INTO split_rules (nome, categoria, percentual_plataforma, percentual_lider, percentual_motorista) 
-      VALUES ('Padrão', 'padrao', 15, 2, 83)`) 
+    await query(`INSERT INTO split_rules (nome, categoria, percentual_plataforma, percentual_lider, percentual_motorista, com_lider, ativo) 
+      VALUES 
+        ('Padrão sem Líder', 'padrao', 18, 0, 82, false, 1),
+        ('Padrão com Líder', 'padrao', 15, 3, 82, true, 1)`) 
   }
 
   console.log('[DB] PostgreSQL inicializado') 

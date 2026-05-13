@@ -536,9 +536,11 @@ export default async function publicRoutes(fastify) {
       console.log(`[BILLING] Sem tarifa ativa — usando valor fixo: R$${valorBase}`) 
     } 
 
-    // Buscar regra de split ativa 
+    // Buscar regra de split ativa baseada se o motorista tem líder
+    const temLider = !!driver.lider_id
     const splitRule = (await query( 
-      "SELECT * FROM split_rules WHERE ativo = 1 ORDER BY id LIMIT 1" 
+      "SELECT * FROM split_rules WHERE ativo = 1 AND com_lider = $1 ORDER BY id LIMIT 1", 
+      [temLider] 
     )).rows[0] 
 
     const percentualPlataforma = splitRule?.percentual_plataforma || 15 

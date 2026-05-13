@@ -71,24 +71,24 @@ export default async function integracoesRoutes(fastify) {
  
   // Criar regra de split 
   fastify.post('/api/admin/split', { preHandler: requireAuth }, async (req, reply) => { 
-    const { nome, categoria, percentual_plataforma, percentual_lider, percentual_motorista } = req.body 
+    const { nome, categoria, percentual_plataforma, percentual_lider, percentual_motorista, com_lider } = req.body 
     const total = parseFloat(percentual_plataforma) + parseFloat(percentual_lider) + parseFloat(percentual_motorista) 
     if (Math.abs(total - 100) > 0.01) return reply.code(400).send({ error: `Percentuais devem somar 100%. Soma atual: ${total}%` }) 
     const r = (await query( 
-      'INSERT INTO split_rules (nome, categoria, percentual_plataforma, percentual_lider, percentual_motorista) VALUES ($1,$2,$3,$4,$5) RETURNING *', 
-      [nome, categoria, percentual_plataforma, percentual_lider, percentual_motorista] 
+      'INSERT INTO split_rules (nome, categoria, percentual_plataforma, percentual_lider, percentual_motorista, com_lider) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *', 
+      [nome, categoria, percentual_plataforma, percentual_lider, percentual_motorista, com_lider] 
     )).rows[0] 
     return r 
   }) 
- 
+
   // Atualizar regra de split 
   fastify.put('/api/admin/split/:id', { preHandler: requireAuth }, async (req, reply) => { 
-    const { nome, categoria, percentual_plataforma, percentual_lider, percentual_motorista, ativo } = req.body 
+    const { nome, categoria, percentual_plataforma, percentual_lider, percentual_motorista, com_lider, ativo } = req.body 
     const total = parseFloat(percentual_plataforma) + parseFloat(percentual_lider) + parseFloat(percentual_motorista) 
     if (Math.abs(total - 100) > 0.01) return reply.code(400).send({ error: `Percentuais devem somar 100%. Soma atual: ${total}%` }) 
     const r = (await query( 
-      'UPDATE split_rules SET nome=$1, categoria=$2, percentual_plataforma=$3, percentual_lider=$4, percentual_motorista=$5, ativo=$6 WHERE id=$7 RETURNING *', 
-      [nome, categoria, percentual_plataforma, percentual_lider, percentual_motorista, ativo, req.params.id] 
+      'UPDATE split_rules SET nome=$1, categoria=$2, percentual_plataforma=$3, percentual_lider=$4, percentual_motorista=$5, com_lider=$6, ativo=$7 WHERE id=$8 RETURNING *', 
+      [nome, categoria, percentual_plataforma, percentual_lider, percentual_motorista, com_lider, ativo, req.params.id] 
     )).rows[0] 
     return r 
   }) 
