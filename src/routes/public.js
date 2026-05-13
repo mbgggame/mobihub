@@ -365,7 +365,8 @@ export default async function publicRoutes(fastify) {
       nome, celular, email, 
       origem, origem_lat, origem_lng, 
       destino, destino_lat, destino_lng, 
-      valor, tipo, agendada_para 
+      valor, tipo, agendada_para, 
+      forma_pagamento 
     } = request.body 
     if (!origem || !destino || !valor || !celular) return reply.code(400).send({ error: 'Dados incompletos' }) 
     const clientResult = await query('SELECT * FROM clients WHERE telefone = $1', [celular]) 
@@ -382,9 +383,9 @@ export default async function publicRoutes(fastify) {
     const valorMotorista = parseFloat((valor * 0.70).toFixed(2)) 
     const valorMobihub = parseFloat((valor * 0.30).toFixed(2)) 
     const result = await query(` 
-      INSERT INTO rides (token, client_id, origem, origem_lat, origem_lng, destino, destino_lat, destino_lng, valor, valor_motorista, valor_mobihub, tipo, agendada_para, status) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING id 
-    `, [token, client.id, origem, origem_lat, origem_lng, destino, destino_lat, destino_lng, valor, valorMotorista, valorMobihub, tipo || 'normal', agendada_para || null, statusInicial]) 
+      INSERT INTO rides (token, client_id, origem, origem_lat, origem_lng, destino, destino_lat, destino_lng, valor, valor_motorista, valor_mobihub, tipo, agendada_para, status, forma_pagamento) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING id 
+    `, [token, client.id, origem, origem_lat, origem_lng, destino, destino_lat, destino_lng, valor, valorMotorista, valorMobihub, tipo || 'normal', agendada_para || null, statusInicial, forma_pagamento || '1']) 
     const ride = (await query('SELECT * FROM rides WHERE id = $1', [result.rows[0].id])).rows[0] 
     if (!tipo || tipo === 'normal') { 
       try { 

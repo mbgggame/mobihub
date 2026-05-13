@@ -233,7 +233,25 @@
           <p id="txt-tarifa-nome" class="text-xs text-green-400 mt-0.5"></p> 
         </div> 
       </div> 
-    </div> 
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded-xl p-4">
+      <label class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-3 block">💳 Forma de Pagamento</label>
+      <div class="grid grid-cols-3 gap-2">
+        <button type="button" onclick="selecionarFormaPagamento('1')" data-valor="1"
+          class="forma-pagamento-btn border border-gray-200 rounded-lg py-3 text-sm font-semibold hover:border-blue-300 hover:bg-blue-50 transition-all">
+          💵 Dinheiro
+        </button>
+        <button type="button" onclick="selecionarFormaPagamento('2')" data-valor="2"
+          class="forma-pagamento-btn border border-gray-200 rounded-lg py-3 text-sm font-semibold hover:border-blue-300 hover:bg-blue-50 transition-all">
+          📱 Pix
+        </button>
+        <button type="button" onclick="selecionarFormaPagamento('3')" data-valor="3"
+          class="forma-pagamento-btn border border-gray-200 rounded-lg py-3 text-sm font-semibold hover:border-blue-300 hover:bg-blue-50 transition-all">
+          💳 Cartão
+        </button>
+      </div>
+    </div>
 
     <div id="erro-solicitar" class="hidden bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3"></div> 
 
@@ -335,6 +353,7 @@
  let rideIdAvaliacao = null
  let estrelasSelecionadas = 0
  let socket = null
+ let formaPagamentoSelecionada = null
 
  function verificarTermosPassageiro() {
    const termosAceitos = localStorage.getItem(STORAGE_TERMOS_PASSAGEIRO)
@@ -420,12 +439,28 @@
    document.getElementById('tela-cadastro').classList.remove('hidden') 
  } 
 
+ function selecionarFormaPagamento(valor) {
+   formaPagamentoSelecionada = valor
+   const botoes = document.querySelectorAll('.forma-pagamento-btn')
+   botoes.forEach(btn => {
+     if (btn.dataset.valor === valor) {
+       btn.classList.add('bg-blue-100', 'border-blue-500', 'text-blue-700')
+       btn.classList.remove('border-gray-200', 'hover:border-blue-300', 'hover:bg-blue-50')
+     } else {
+       btn.classList.remove('bg-blue-100', 'border-blue-500', 'text-blue-700')
+       btn.classList.add('border-gray-200', 'hover:border-blue-300', 'hover:bg-blue-50')
+     }
+   })
+   verificarBotaoSolicitar()
+ }
+
  function verificarBotaoSolicitar() { 
    const btn = document.getElementById('btn-solicitar'); 
    const origemOk = document.getElementById('busca-orig').value.trim() !== '' && origemLat;
    const destinoOk = document.getElementById('busca-dest').value.trim() !== '' && destinoLat;
+   const formaPagamentoOk = formaPagamentoSelecionada !== null
 
-   if (origemOk && destinoOk) { 
+   if (origemOk && destinoOk && formaPagamentoOk) { 
      btn.disabled = false; 
      btn.classList.remove('opacity-40', 'cursor-not-allowed'); 
    } else { 
@@ -818,6 +853,11 @@
      return 
    } 
 
+   if (!formaPagamentoSelecionada) {
+     alert('Selecione a forma de pagamento')
+     return
+   }
+
    const btn = document.getElementById('btn-solicitar') 
    btn.disabled = true 
    btn.textContent = 'Solicitando...' 
@@ -841,7 +881,8 @@
          destino_lng: destinoLng, 
          valor, 
          tipo: tipoCorreida || 'normal', 
-         agendada_para: (tipoCorreida === 'agendada' ? document.getElementById('data-agendamento').value : null) 
+         agendada_para: (tipoCorreida === 'agendada' ? document.getElementById('data-agendamento').value : null),
+         forma_pagamento: formaPagamentoSelecionada
        }) 
      }) 
 
