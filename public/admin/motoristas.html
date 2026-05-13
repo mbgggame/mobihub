@@ -264,6 +264,32 @@ async function reprovarMotorista() {
   carregarMotoristas()
 }
 
+async function desativarMotorista(id) {
+  const r = await fetch(`/api/drivers/${id}/desativar`, { 
+    method: 'PUT', 
+    headers: headers() 
+  })
+  if (r.ok) {
+    alert('⛔ Motorista desativado com sucesso!')
+    carregarMotoristas()
+  } else {
+    alert('❌ Erro ao desativar motorista!')
+  }
+}
+
+async function ativarMotorista(id) {
+  const r = await fetch(`/api/drivers/${id}/ativar`, { 
+    method: 'PUT', 
+    headers: headers() 
+  })
+  if (r.ok) {
+    alert('✅ Motorista ativado com sucesso!')
+    carregarMotoristas()
+  } else {
+    alert('❌ Erro ao ativar motorista!')
+  }
+}
+
 async function carregarMotoristas() { 
   console.log('[Motoristas] Carregando motoristas...')
   const r = await fetch('/api/drivers', { headers: headers() }) 
@@ -306,6 +332,12 @@ function renderizarMotoristas(lista) {
         </div> 
       </div> 
       <div class="flex items-center gap-2">
+        ${d.status_cadastro === 'aprovado' || d.status_cadastro === 'inativo' ? `
+          <button onclick="${d.ativo ? `desativarMotorista(${d.id})` : `ativarMotorista(${d.id})`}"
+            class="text-sm ${d.ativo ? 'text-red-600 border border-red-200 hover:bg-red-50' : 'text-green-600 border border-green-200 hover:bg-green-50'} rounded-lg px-4 py-2.5 font-semibold">
+            ${d.ativo ? '⛔ Desativar' : '✅ Ativar'}
+          </button>
+        ` : ''}
         <button onclick="${d.token_perfil ? `window.open('/motorista/${d.token_perfil}', '_blank')` : `alert('Motorista sem token de perfil')`}"
           class="text-sm ${d.token_perfil ? 'text-blue-600 border border-blue-200 hover:bg-blue-50' : 'text-gray-400 border border-gray-200 cursor-not-allowed'} rounded-lg px-4 py-2.5 font-semibold">
           🚗 Abrir painel

@@ -264,6 +264,41 @@ export default async function driversRoutes(fastify) {
     } 
  
     return { mensagem: 'Motorista reprovado' } 
+  })
+
+  // Desativar motorista
+  fastify.put('/api/drivers/:id/desativar', { preHandler: requireAuth }, async (request, reply) => {
+    const { id } = request.params
+    await query(`
+      UPDATE drivers SET ativo = 0, status_cadastro = 'inativo' WHERE id = $1
+    `, [id])
+    return { mensagem: 'Motorista desativado' }
+  })
+
+  // Ativar motorista
+  fastify.put('/api/drivers/:id/ativar', { preHandler: requireAuth }, async (request, reply) => {
+    const { id } = request.params
+    const { v4: uuidv4 } = await import('uuid')
+    const token = uuidv4()
+    
+    await query(`
+      UPDATE drivers SET ativo = 1, status_cadastro = 'aprovado', token_perfil = $1 WHERE id = $2
+    `, [token, id])
+
+    const driverResult = await query('SELECT * FROM drivers WHERE id = $1', [id])
+    const driver = driverResult.rows[0]
+
+    // Disparar webhook motorista.aprovado
+    const { dispararWebhook } = await import('../webhook.js')
+    await dispararWebhook('motorista.aprovado', { 
+      driver_id: driver.id, 
+      nome: driver.nome, 
+      status: 'ACTIVE', 
+      balance_due: parseFloat(driver.balance_due || 0), 
+      rides_month: 0 
+    })
+
+    return { mensagem: 'Motorista ativado' }
   }) 
  
 
