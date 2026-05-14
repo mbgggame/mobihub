@@ -750,6 +750,7 @@ export default async function publicRoutes(fastify) {
       UPDATE rides SET 
         status = 'concluida', 
         concluida_at = CURRENT_TIMESTAMP, 
+        updated_at = CURRENT_TIMESTAMP,
         valor_final = $1, 
         valor_motorista = $2, 
         valor_mobihub = $3, 
