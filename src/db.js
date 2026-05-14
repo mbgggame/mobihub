@@ -138,6 +138,13 @@ export async function initDB() {
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS chave_pix TEXT;
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS tipo_chave_pix TEXT;
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS asaas_id TEXT;
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS cep TEXT;
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS logradouro TEXT;
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS numero TEXT;
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS complemento TEXT;
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS bairro TEXT;
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS cidade TEXT;
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS estado TEXT;
     
     -- Remove unique constraint on telegram_id (allow same ID for client -> driver)
     ALTER TABLE drivers DROP CONSTRAINT IF EXISTS drivers_telegram_id_key;

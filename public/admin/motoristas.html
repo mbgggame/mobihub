@@ -150,6 +150,21 @@ function abrirModalDetalhes(d) {
     </div>
 
     <div>
+      <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Endereço</h4>
+      <div class="bg-gray-50 rounded-lg px-4 py-3 text-sm text-gray-600 space-y-1">
+        ${d.cep || d.logradouro || d.numero || d.complemento || d.bairro || d.cidade || d.estado ? 
+          `<p><span class="font-medium">CEP:</span> ${d.cep || '—'}</p>
+           <p><span class="font-medium">Logradouro:</span> ${d.logradouro || '—'}</p>
+           <p><span class="font-medium">Número:</span> ${d.numero || '—'}</p>
+           <p><span class="font-medium">Complemento:</span> ${d.complemento || '—'}</p>
+           <p><span class="font-medium">Bairro:</span> ${d.bairro || '—'}</p>
+           <p><span class="font-medium">Cidade:</span> ${d.cidade || '—'}</p>
+           <p><span class="font-medium">Estado:</span> ${d.estado || '—'}</p>` 
+          : '<p>—</p>'}
+      </div>
+    </div>
+
+    <div>
       <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Veículo</h4>
       <div class="bg-gray-50 rounded-lg px-4 py-3 text-sm text-gray-600 space-y-1">
         <p><span class="font-medium">Marca/Modelo:</span> ${d.modelo_carro || '—'}</p>

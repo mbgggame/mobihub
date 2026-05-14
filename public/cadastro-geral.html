@@ -81,15 +81,45 @@
             class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/>
         </div>
         <div>
-          <label class="text-sm font-semibold text-zinc-400">Cidade de atuação</label>
-          <select id="f-cidade" 
-            class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
-            <option value="Grande Vitória">Grande Vitória</option>
-            <option value="Vitória">Vitória</option>
-            <option value="Vila Velha">Vila Velha</option>
-            <option value="Cariacica">Cariacica</option>
-            <option value="São Mateus">São Mateus</option>
-          </select>
+          <label class="text-sm font-semibold text-zinc-400">CEP</label>
+          <input id="f-cep" type="text" placeholder="00000-000" maxlength="9"
+            oninput="aplicarMascaraCEP(this); buscarCEP()"
+            class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/>
+        </div>
+        <div id="cep-status" class="text-xs hidden"></div>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="col-span-2">
+            <label class="text-sm font-semibold text-zinc-400">Logradouro</label>
+            <input id="f-logradouro" type="text" placeholder="Rua, Avenida, etc."
+              class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/>
+          </div>
+          <div>
+            <label class="text-sm font-semibold text-zinc-400">Número</label>
+            <input id="f-numero" type="text" placeholder="123"
+              class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/>
+          </div>
+          <div>
+            <label class="text-sm font-semibold text-zinc-400">Complemento</label>
+            <input id="f-complemento" type="text" placeholder="Apto 101, Bloco B, etc."
+              class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/>
+          </div>
+        </div>
+        <div class="grid grid-cols-3 gap-4">
+          <div>
+            <label class="text-sm font-semibold text-zinc-400">Bairro</label>
+            <input id="f-bairro" type="text" placeholder="Centro"
+              class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/>
+          </div>
+          <div>
+            <label class="text-sm font-semibold text-zinc-400">Cidade</label>
+            <input id="f-cidade" type="text" placeholder="Vitória"
+              class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/>
+          </div>
+          <div>
+            <label class="text-sm font-semibold text-zinc-400">Estado</label>
+            <input id="f-estado" type="text" placeholder="ES" maxlength="2"
+              class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/>
+          </div>
         </div>
       </div>
       <div class="pt-4">
@@ -367,7 +397,13 @@
         const email = document.getElementById('f-email').value.trim()
         const telefone = document.getElementById('f-telefone').value.trim()
         const cpf = document.getElementById('f-cpf').value.trim()
-        if (!nome || !email || !telefone || !cpf) {
+        const cep = document.getElementById('f-cep').value.trim()
+        const logradouro = document.getElementById('f-logradouro').value.trim()
+        const numero = document.getElementById('f-numero').value.trim()
+        const bairro = document.getElementById('f-bairro').value.trim()
+        const cidade = document.getElementById('f-cidade').value.trim()
+        const estado = document.getElementById('f-estado').value.trim()
+        if (!nome || !email || !telefone || !cpf || !cep || !logradouro || !numero || !bairro || !cidade || !estado) {
           mostrarErro('Preencha todos os campos obrigatórios')
           return
         }
@@ -529,6 +565,59 @@
       document.getElementById('preview-' + tipo).classList.add('hidden')
     }
 
+    function aplicarMascaraCEP(input) {
+      let valor = input.value.replace(/\D/g, '')
+      valor = valor.slice(0, 8)
+      if (valor.length > 5) {
+        valor = valor.replace(/(\d{5})(\d)/, '$1-$2')
+      }
+      input.value = valor
+    }
+
+    let cepTimeout = null
+    async function buscarCEP() {
+      const cepInput = document.getElementById('f-cep')
+      const cepStatus = document.getElementById('cep-status')
+      const cep = cepInput.value.replace(/\D/g, '')
+
+      cepStatus.classList.add('hidden')
+      cepInput.classList.remove('border-green-500', 'border-red-500', 'bg-green-500/10', 'bg-red-500/10')
+
+      if (cep.length !== 8) return
+
+      cepStatus.textContent = '🔍 Buscando CEP...'
+      cepStatus.className = 'text-xs text-yellow-400'
+      cepStatus.classList.remove('hidden')
+
+      clearTimeout(cepTimeout)
+      cepTimeout = setTimeout(async () => {
+        try {
+          const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+          const data = await res.json()
+
+          if (data.erro) {
+            cepStatus.textContent = '❌ CEP não encontrado'
+            cepStatus.className = 'text-xs text-red-400'
+            cepInput.classList.add('border-red-500', 'bg-red-500/10')
+            return
+          }
+
+          document.getElementById('f-logradouro').value = data.logradouro || ''
+          document.getElementById('f-bairro').value = data.bairro || ''
+          document.getElementById('f-cidade').value = data.localidade || ''
+          document.getElementById('f-estado').value = data.uf || ''
+
+          cepStatus.textContent = '✅ CEP encontrado!'
+          cepStatus.className = 'text-xs text-green-400'
+          cepInput.classList.add('border-green-500', 'bg-green-500/10')
+        } catch (e) {
+          cepStatus.textContent = '❌ Erro ao buscar CEP'
+          cepStatus.className = 'text-xs text-red-400'
+          cepInput.classList.add('border-red-500', 'bg-red-500/10')
+        }
+      }, 300)
+    }
+
     async function enviarCadastro() {
       const btn = document.getElementById('btn-enviar')
       btn.textContent = 'Enviando...'
@@ -541,7 +630,13 @@
           telefone: document.getElementById('f-telefone').value.trim(),
           email: document.getElementById('f-email').value.trim(),
           cpf: document.getElementById('f-cpf').value.trim(),
-          cidade: document.getElementById('f-cidade').value,
+          cep: document.getElementById('f-cep').value.trim(),
+          logradouro: document.getElementById('f-logradouro').value.trim(),
+          numero: document.getElementById('f-numero').value.trim(),
+          complemento: document.getElementById('f-complemento').value.trim(),
+          bairro: document.getElementById('f-bairro').value.trim(),
+          cidade: document.getElementById('f-cidade').value.trim(),
+          estado: document.getElementById('f-estado').value.trim(),
           marca_carro: document.getElementById('f-marca').value.trim(),
           modelo_carro: `${document.getElementById('f-marca').value.trim()} ${document.getElementById('f-modelo').value.trim()}`,
           ano_carro: document.getElementById('f-ano').value,
