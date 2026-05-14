@@ -1047,6 +1047,19 @@ export default async function publicRoutes(fastify) {
     return result.rows
   })
 
+  fastify.post('/api/temp/fix-ride', async (request, reply) => {
+    const token = '521026ac-b6a2-4ba2-a87c-166471eddc3d'
+    
+    // Primeiro, busca a corrida
+    const rideResult = await query('SELECT id, status, driver_id, client_id, token FROM rides WHERE token = $1', [token])
+    const ride = rideResult.rows[0]
+    
+    // Depois, atualiza o status para cancelada
+    await query("UPDATE rides SET status = 'cancelada' WHERE token = $1", [token])
+    
+    return { ride_antes: ride, status: 'atualizado para cancelada' }
+  })
+
   fastify.put('/api/clients/:telefone', async (request, reply) => {
     const { telefone } = request.params
     const { nome, cpf } = request.body
