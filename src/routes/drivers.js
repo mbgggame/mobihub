@@ -9,7 +9,8 @@ export default async function driversRoutes(fastify) {
       nome, telefone, telegram_id, email, cpf,
       marca_carro, modelo_carro, ano_carro, cor_carro, placa, renavam,
       crlv_base64, cnh_frente_base64, cnh_verso_base64, cnh_digital_base64, foto_base64,
-      tipo_chave_pix, chave_pix, cep, logradouro, numero, complemento, bairro, cidade, estado
+      tipo_chave_pix, chave_pix, cep, logradouro, numero, complemento, bairro, cidade, estado,
+      data_nascimento
     } = request.body 
 
     if (!nome || !telefone || !cpf || !modelo_carro || !ano_carro || !placa || !renavam || !numero) { 
@@ -37,12 +38,13 @@ export default async function driversRoutes(fastify) {
            modelo_carro, ano_carro, cor_carro, placa, 
            cpf, renavam, crlv_base64, 
            cnh_frente_base64, cnh_verso_base64, cnh_digital_base64, foto_base64,
-           tipo_chave_pix, chave_pix, cep, logradouro, numero, complemento, bairro, cidade, estado) 
+           tipo_chave_pix, chave_pix, cep, logradouro, numero, complemento, bairro, cidade, estado,
+           data_nascimento) 
         VALUES ($1, $2, $3, $4, 'pendente', 0, 
                  $5, $6, $7, $8, 
                  $9, $10, $11,
-                 $12, $13, $14, $15, $16, $17, $18,
-                 $19, $20, $21, $22, $23, $24, $25)
+                 $12, $13, $14, $15, $16, $17, $18, $19,
+                 $20, $21, $22, $23, $24, $25, $26)
         RETURNING id
       `, [
         nome, telefone, email || null, telegram_id || '0', 
@@ -50,7 +52,8 @@ export default async function driversRoutes(fastify) {
         cpf, renavam, crlv_base64 || null,
         cnh_frente_base64 || null, cnh_verso_base64 || null, cnh_digital_base64 || null, foto_base64 || null,
         tipo_chave_pix || null, chave_pix || null,
-        cep || null, logradouro || null, numero, complemento || null, bairro || null, cidade || null, estado || null
+        cep || null, logradouro || null, numero, complemento || null, bairro || null, cidade || null, estado || null,
+        data_nascimento || null
       ]) 
 
       return { id: result.rows[0].id, mensagem: 'Cadastro enviado para aprovação' } 
@@ -67,7 +70,7 @@ export default async function driversRoutes(fastify) {
       total_viagens, media_avaliacao, total_avaliacoes, ativo, foto_base64, token_perfil, created_at, status_cadastro,
       cpf, renavam, crlv_base64, cnh_frente_base64, cnh_verso_base64, cnh_digital_base64,
       tipo_chave_pix, chave_pix, asaas_id,
-      cep, logradouro, numero, complemento, bairro, cidade, estado
+      cep, logradouro, numero, complemento, bairro, cidade, estado, data_nascimento
     FROM drivers ORDER BY nome`)
     return result.rows
   }) 
@@ -214,7 +217,8 @@ export default async function driversRoutes(fastify) {
             complement: driver.complemento, 
             province: driver.bairro, 
             postalCode: driver.cep?.replace('-', ''), 
-            companyType: 'INDIVIDUAL' 
+            companyType: 'INDIVIDUAL',
+            birthDate: driver.data_nascimento ? new Date(driver.data_nascimento).toISOString().split('T')[0] : undefined
           }) 
         })
         console.log('[ASAAS] Status da resposta:', asaasResponse.status)
@@ -324,7 +328,8 @@ export default async function driversRoutes(fastify) {
             complement: driver.complemento, 
             province: driver.bairro, 
             postalCode: driver.cep?.replace('-', ''), 
-            companyType: 'INDIVIDUAL' 
+            companyType: 'INDIVIDUAL',
+            birthDate: driver.data_nascimento ? new Date(driver.data_nascimento).toISOString().split('T')[0] : undefined
           }) 
         })
         console.log('[ASAAS] Status da resposta:', asaasResponse.status)
@@ -357,7 +362,7 @@ export default async function driversRoutes(fastify) {
   fastify.put('/api/drivers/:id', { preHandler: requireAuth }, async (request, reply) => { 
     console.log('[DEBUG] PUT /api/drivers/:id chamado, id:', request.params.id) 
     console.log('[DEBUG] Body recebido:', request.body) 
-    const { nome, telefone, email, telegram_id, modelo_carro, ano_carro, cor_carro, placa, ativo, foto_base64, status_cadastro, tipo_chave_pix, chave_pix, asaas_id, cep, logradouro, numero, complemento, bairro, cidade, estado, cpf, renavam } = request.body 
+    const { nome, telefone, email, telegram_id, modelo_carro, ano_carro, cor_carro, placa, ativo, foto_base64, status_cadastro, tipo_chave_pix, chave_pix, asaas_id, cep, logradouro, numero, complemento, bairro, cidade, estado, cpf, renavam, data_nascimento } = request.body 
     const { id } = request.params 
 
     const driverResult = await query('SELECT id, status_cadastro FROM drivers WHERE id = $1', [id])
@@ -397,9 +402,10 @@ export default async function driversRoutes(fastify) {
         cidade = COALESCE($20, cidade),
         estado = COALESCE($21, estado),
         cpf = COALESCE($22, cpf),
-        renavam = COALESCE($23, renavam)
-      WHERE id = $24 
-    `, [nome, telefone, email, telegram_id, modelo_carro, ano_carro, cor_carro, placa, novoAtivo, foto_base64, novoStatus, tipo_chave_pix, chave_pix, asaas_id, cep, logradouro, numero, complemento, bairro, cidade, estado, cpf, renavam, id]) 
+        renavam = COALESCE($23, renavam),
+        data_nascimento = COALESCE($24, data_nascimento)
+      WHERE id = $25 
+    `, [nome, telefone, email, telegram_id, modelo_carro, ano_carro, cor_carro, placa, novoAtivo, foto_base64, novoStatus, tipo_chave_pix, chave_pix, asaas_id, cep, logradouro, numero, complemento, bairro, cidade, estado, cpf, renavam, data_nascimento, id]) 
 
     return { mensagem: 'Motorista atualizado' } 
   }) 
@@ -452,7 +458,7 @@ export default async function driversRoutes(fastify) {
  
   // Atualizar perfil do motorista
   fastify.put('/api/drivers/perfil', async (request, reply) => {
-    const { token_perfil, tipo_chave_pix, chave_pix, cep, logradouro, numero, complemento, bairro, cidade, estado } = request.body
+    const { token_perfil, data_nascimento, tipo_chave_pix, chave_pix, cep, logradouro, numero, complemento, bairro, cidade, estado } = request.body
     if (!token_perfil) return reply.code(400).send({ error: 'Token do motorista ausente' })
 
     const driverResult = await query('SELECT id FROM drivers WHERE token_perfil = $1', [token_perfil])
@@ -461,17 +467,18 @@ export default async function driversRoutes(fastify) {
 
     await query(`
       UPDATE drivers SET
-        tipo_chave_pix = COALESCE($1, tipo_chave_pix),
-        chave_pix = COALESCE($2, chave_pix),
-        cep = COALESCE($3, cep),
-        logradouro = COALESCE($4, logradouro),
-        numero = COALESCE($5, numero),
-        complemento = COALESCE($6, complemento),
-        bairro = COALESCE($7, bairro),
-        cidade = COALESCE($8, cidade),
-        estado = COALESCE($9, estado)
-      WHERE id = $10
-    `, [tipo_chave_pix || null, chave_pix || null, cep || null, logradouro || null, numero || null, complemento || null, bairro || null, cidade || null, estado || null, driver.id])
+        data_nascimento = COALESCE($1, data_nascimento),
+        tipo_chave_pix = COALESCE($2, tipo_chave_pix),
+        chave_pix = COALESCE($3, chave_pix),
+        cep = COALESCE($4, cep),
+        logradouro = COALESCE($5, logradouro),
+        numero = COALESCE($6, numero),
+        complemento = COALESCE($7, complemento),
+        bairro = COALESCE($8, bairro),
+        cidade = COALESCE($9, cidade),
+        estado = COALESCE($10, estado)
+      WHERE id = $11
+    `, [data_nascimento || null, tipo_chave_pix || null, chave_pix || null, cep || null, logradouro || null, numero || null, complemento || null, bairro || null, cidade || null, estado || null, driver.id])
 
     return { mensagem: 'Dados atualizados com sucesso' }
   })

@@ -73,6 +73,11 @@
 
       <div class="space-y-4">
         <div>
+          <label class="text-sm font-semibold text-gray-700">Data de Nascimento</label>
+          <input id="md-data-nascimento" type="date"
+            class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
+        </div>
+        <div>
           <label class="text-sm font-semibold text-gray-700">Tipo de Chave Pix</label>
           <select id="md-tipo-chave-pix"
             class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
@@ -1050,6 +1055,7 @@
    modal.classList.remove('hidden')
    
    if (dadosAtuaisDriver) {
+     document.getElementById('md-data-nascimento').value = dadosAtuaisDriver.data_nascimento || ''
      document.getElementById('md-tipo-chave-pix').value = dadosAtuaisDriver.tipo_chave_pix || ''
      document.getElementById('md-chave-pix').value = dadosAtuaisDriver.chave_pix || ''
      document.getElementById('md-cep').value = dadosAtuaisDriver.cep || ''
@@ -1067,6 +1073,7 @@
  }
 
  async function salvarMeusDados() {
+   const data_nascimento = document.getElementById('md-data-nascimento').value
    const tipo_chave_pix = document.getElementById('md-tipo-chave-pix').value
    const chave_pix = document.getElementById('md-chave-pix').value.trim()
    const cep = document.getElementById('md-cep').value.trim()
@@ -1083,6 +1090,7 @@
        headers: { 'Content-Type': 'application/json' },
        body: JSON.stringify({ 
          token_perfil: tokenMotorista, 
+         data_nascimento,
          tipo_chave_pix, chave_pix,
          cep, logradouro, numero, complemento, bairro, cidade, estado
        })

@@ -64,6 +64,11 @@
             class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/>
         </div>
         <div>
+          <label class="text-sm font-semibold text-zinc-400">Data de Nascimento</label>
+          <input id="f-data-nascimento" type="date"
+            class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/>
+        </div>
+        <div>
           <label class="text-sm font-semibold text-zinc-400">Tipo de Chave Pix</label>
           <select id="f-tipo-chave-pix"
             class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
@@ -397,13 +402,14 @@
         const email = document.getElementById('f-email').value.trim()
         const telefone = document.getElementById('f-telefone').value.trim()
         const cpf = document.getElementById('f-cpf').value.trim()
+        const dataNascimento = document.getElementById('f-data-nascimento').value
         const cep = document.getElementById('f-cep').value.trim()
         const logradouro = document.getElementById('f-logradouro').value.trim()
         const numero = document.getElementById('f-numero').value.trim()
         const bairro = document.getElementById('f-bairro').value.trim()
         const cidade = document.getElementById('f-cidade').value.trim()
         const estado = document.getElementById('f-estado').value.trim()
-        if (!nome || !email || !telefone || !cpf || !cep || !logradouro || !numero || !bairro || !cidade || !estado) {
+        if (!nome || !email || !telefone || !cpf || !dataNascimento || !cep || !logradouro || !numero || !bairro || !cidade || !estado) {
           mostrarErro('Preencha todos os campos obrigatórios')
           return
         }
@@ -630,6 +636,7 @@
           telefone: document.getElementById('f-telefone').value.trim(),
           email: document.getElementById('f-email').value.trim(),
           cpf: document.getElementById('f-cpf').value.trim(),
+          data_nascimento: document.getElementById('f-data-nascimento').value,
           cep: document.getElementById('f-cep').value.trim(),
           logradouro: document.getElementById('f-logradouro').value.trim(),
           numero: document.getElementById('f-numero').value.trim(),

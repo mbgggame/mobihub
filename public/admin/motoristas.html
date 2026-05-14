@@ -155,6 +155,10 @@ function renderizarModalDetalhes() {
             <label class="text-sm font-semibold text-gray-700">CPF</label>
             <input id="ed-cpf" type="text" value="${d.cpf || ''}" class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
           </div>
+            <div>
+              <label class="text-sm font-semibold text-gray-700">Data de Nascimento</label>
+              <input id="ed-data-nascimento" type="date" value="${d.data_nascimento || ''}" class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
+            </div>
           ${d.asaas_id ? `
           <div>
             <label class="text-sm font-semibold text-gray-700">ID Asaas (walletId)</label>
@@ -299,6 +303,7 @@ function renderizarModalDetalhes() {
           <p><span class="font-medium">Email:</span> ${d.email || '—'}</p>
           <p><span class="font-medium">Telefone:</span> ${d.telefone || '—'}</p>
           <p><span class="font-medium">CPF:</span> ${d.cpf || '—'}</p>
+          <p><span class="font-medium">Data de Nascimento:</span> ${d.data_nascimento || '—'}</p>
           <p><span class="font-medium">Telegram ID:</span> ${d.telegram_id || '—'}</p>
           ${d.asaas_id ? `<p><span class="font-medium">ID Asaas (walletId):</span> <span class="font-mono">${d.asaas_id}</span></p>` : ''}
         </div>
@@ -473,6 +478,7 @@ async function salvarEdicao() {
     email: document.getElementById('ed-email').value.trim(),
     telefone: document.getElementById('ed-telefone').value.trim(),
     cpf: document.getElementById('ed-cpf').value.trim(),
+    data_nascimento: document.getElementById('ed-data-nascimento').value,
     cep: document.getElementById('ed-cep').value.trim(),
     logradouro: document.getElementById('ed-logradouro').value.trim(),
     numero: document.getElementById('ed-numero').value.trim(),
