@@ -1076,6 +1076,15 @@ export default async function publicRoutes(fastify) {
     return config 
   })
 
+  fastify.get('/api/temp/pagamentos-pendentes', async (request, reply) => {
+    const result = await query(`
+      SELECT id, status, pagamento_status, asaas_payment_id, driver_id 
+      FROM rides 
+      WHERE pagamento_status = 'aguardando_pagamento'
+    `)
+    return result.rows
+  })
+
   fastify.post('/api/rate', async (request, reply) => {
     const { ride_id, tipo, estrelas, comentario, token } = request.body
     if (!ride_id || !tipo || !estrelas || estrelas < 1 || estrelas > 5) {
