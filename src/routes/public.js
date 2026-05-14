@@ -590,6 +590,20 @@ export default async function publicRoutes(fastify) {
             await query('UPDATE clients SET asaas_customer_id = $1 WHERE id = $2', [customerData.id, client.id])
           }
         }
+
+        // Atualizar customer no Asaas com CPF se disponível
+        if (asaasCustomerId && client?.cpf) {
+          await fetch(`https://www.asaas.com/api/v3/customers/${asaasCustomerId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'access_token': process.env.ASAAS_API_KEY
+            },
+            body: JSON.stringify({
+              cpfCnpj: client.cpf.replace(/\D/g, '')
+            })
+          })
+        }
         
         const asaasCobranca = await fetch('https://www.asaas.com/api/v3/payments', { 
           method: 'POST', 
