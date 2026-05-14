@@ -218,7 +218,8 @@ export default async function driversRoutes(fastify) {
             province: driver.bairro, 
             postalCode: driver.cep?.replace('-', ''), 
             companyType: 'INDIVIDUAL',
-            birthDate: driver.data_nascimento ? new Date(driver.data_nascimento).toISOString().split('T')[0] : undefined
+            birthDate: driver.data_nascimento ? new Date(driver.data_nascimento).toISOString().split('T')[0] : undefined,
+            incomeValue: 1500
           }) 
         })
         console.log('[ASAAS] Status da resposta:', asaasResponse.status)
@@ -343,7 +344,8 @@ export default async function driversRoutes(fastify) {
             province: driver.bairro, 
             postalCode: driver.cep?.replace('-', ''), 
             companyType: 'INDIVIDUAL',
-            birthDate: driver.data_nascimento ? new Date(driver.data_nascimento).toISOString().split('T')[0] : undefined
+            birthDate: driver.data_nascimento ? new Date(driver.data_nascimento).toISOString().split('T')[0] : undefined,
+            incomeValue: 1500
           }) 
         })
         console.log('[ASAAS] Status da resposta:', asaasResponse.status)
