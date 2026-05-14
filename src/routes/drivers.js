@@ -193,6 +193,7 @@ export default async function driversRoutes(fastify) {
     // Integração Asaas: criar subconta automaticamente
     if (process.env.ASAAS_API_KEY) {
       try {
+        console.log('[ASAAS] Iniciando criação de subconta para driver:', driver.id, driver.nome)
         const asaasResponse = await fetch('https://www.asaas.com/api/v3/accounts', { 
           method: 'POST', 
           headers: { 
@@ -213,9 +214,13 @@ export default async function driversRoutes(fastify) {
             companyType: 'INDIVIDUAL' 
           }) 
         })
+        console.log('[ASAAS] Status da resposta:', asaasResponse.status)
         const asaasData = await asaasResponse.json()
+        console.log('[ASAAS] Resposta completa:', JSON.stringify(asaasData, null, 2))
         if (asaasData.walletId) { 
+          console.log('[ASAAS] WalletId obtido:', asaasData.walletId)
           await query('UPDATE drivers SET asaas_id = $1 WHERE id = $2', [asaasData.walletId, driver.id]) 
+          console.log('[ASAAS] asaas_id salvo no banco')
         }
       } catch (err) {
         console.error('[ASAAS] Erro ao criar subconta:', err)
