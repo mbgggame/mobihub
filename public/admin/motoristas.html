@@ -622,38 +622,38 @@ async function abrirModalExtrato() {
     const data = await r.json()
     
     if (!data.transactions.length) {
-      conteudo.innerHTML = '&lt;p class="text-center text-gray-500 text-sm py-8"&gt;Nenhuma movimentação registrada ainda.&lt;/p&gt;'
+      conteudo.innerHTML = '<p class="text-center text-gray-500 text-sm py-8">Nenhuma movimentação registrada ainda.</p>'
     } else {
-      conteudo.innerHTML = data.transactions.map(t =&gt; {
+      conteudo.innerHTML = data.transactions.map(t => {
         const dataFormatada = new Date(t.created_at).toLocaleString('pt-BR')
-        const isCredito = t.valor &gt; 0
+        const isCredito = t.valor > 0
         const icone = isCredito ? '➕' : '➖'
         const corValor = isCredito ? 'text-green-600' : 'text-red-600'
         const valorFormatado = (isCredito ? '+' : '') + 'R$ ' + Math.abs(t.valor).toFixed(2)
         
         return `
-          &lt;div class="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3"&gt;
-            &lt;div class="flex items-center gap-3"&gt;
-              &lt;span class="text-xl"&gt;${icone}&lt;/span&gt;
-              &lt;div&gt;
-                &lt;p class="text-sm font-medium text-gray-800"&gt;${t.descricao}&lt;/p&gt;
-                &lt;p class="text-xs text-gray-500"&gt;${dataFormatada}&lt;/p&gt;
-              &lt;/div&gt;
-            &lt;/div&gt;
-            &lt;p class="text-sm font-semibold ${corValor}"&gt;${valorFormatado}&lt;/p&gt;
-          &lt;/div&gt;
+          <div class="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3">
+            <div class="flex items-center gap-3">
+              <span class="text-xl">${icone}</span>
+              <div>
+                <p class="text-sm font-medium text-gray-800">${t.descricao}</p>
+                <p class="text-xs text-gray-500">${dataFormatada}</p>
+              </div>
+            </div>
+            <p class="text-sm font-semibold ${corValor}">${valorFormatado}</p>
+          </div>
         `
       }).join('') + `
-        &lt;div class="mt-4 pt-4 border-t border-gray-200"&gt;
-          &lt;div class="flex items-center justify-between"&gt;
-            &lt;p class="text-sm font-semibold text-gray-800"&gt;Saldo com MobiHub:&lt;/p&gt;
-            &lt;p class="text-lg font-bold text-gray-900"&gt;R$ ${data.saldo_final.toFixed(2)}&lt;/p&gt;
-          &lt;/div&gt;
-        &lt;/div&gt;
+        <div class="mt-4 pt-4 border-t border-gray-200">
+          <div class="flex items-center justify-between">
+            <p class="text-sm font-semibold text-gray-800">Saldo com MobiHub:</p>
+            <p class="text-lg font-bold text-gray-900">R$ ${data.saldo_final.toFixed(2)}</p>
+          </div>
+        </div>
       `
     }
   } catch (e) {
-    conteudo.innerHTML = '&lt;p class="text-center text-red-500 text-sm py-8"&gt;Erro ao carregar extrato.&lt;/p&gt;'
+    conteudo.innerHTML = '<p class="text-center text-red-500 text-sm py-8">Erro ao carregar extrato.</p>'
   }
 }
 
