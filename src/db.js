@@ -189,6 +189,11 @@ export async function initDB() {
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS stop_extra_minutes DOUBLE PRECISION DEFAULT 0; 
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS stop_extra_charge DOUBLE PRECISION DEFAULT 0; 
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS total_value DOUBLE PRECISION DEFAULT 0; 
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS asaas_payment_id TEXT; 
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS asaas_payment_link TEXT; 
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS asaas_pix_qrcode TEXT; 
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS asaas_pix_payload TEXT; 
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS pagamento_status TEXT DEFAULT 'pendente'; 
   `) 
  
   await query(` 

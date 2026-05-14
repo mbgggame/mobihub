@@ -556,6 +556,50 @@ export default async function publicRoutes(fastify) {
     const valorMotorista = parseFloat((valorFinal - valorPlataforma - valorLider).toFixed(2)) 
     console.log(`[BILLING] Split: Plataforma ${percentualPlataforma}% (R$${valorPlataforma}) | Líder ${percentualLider}% (R$${valorLider}) | Motorista ${percentualMotorista}% (R$${valorMotorista})`) 
 
+    // Gerar cobrança Pix no Asaas se forma_pagamento = 2 
+    let asaasPaymentId = null, asaasPaymentLink = null, asaasPixPayload = null
+    if ((ride.forma_pagamento === '2' || ride.forma_pagamento === 2) && driver.asaas_id && process.env.ASAAS_API_KEY) { 
+      try { 
+        const asaasCobranca = await fetch('https://www.asaas.com/api/v3/payments', { 
+          method: 'POST', 
+          headers: { 
+            'Content-Type': 'application/json', 
+            'access_token': process.env.ASAAS_API_KEY 
+          }, 
+          body: JSON.stringify({ 
+            billingType: 'PIX', 
+            value: valorFinal, 
+            dueDate: new Date(Date.now() + 30 * 60000).toISOString().split('T')[0], 
+            description: `Corrida #${id} - MobiHub`, 
+            externalReference: String(id), 
+            split: [ 
+              { 
+                walletId: driver.asaas_id, 
+                percentualValue: percentualMotorista + (temLider ? 0 : percentualLider) 
+              } 
+            ] 
+          }) 
+        }) 
+        const asaasData = await asaasCobranca.json() 
+        if (asaasData.id) { 
+          // Buscar QR Code Pix 
+          const qrResponse = await fetch(`https://www.asaas.com/api/v3/payments/${asaasData.id}/pixQrCode`, { 
+            headers: { 'access_token': process.env.ASAAS_API_KEY } 
+          }) 
+          const qrData = await qrResponse.json() 
+          asaasPaymentId = asaasData.id
+          asaasPaymentLink = asaasData.invoiceUrl
+          asaasPixPayload = qrData.payload
+          await query( 
+            'UPDATE rides SET asaas_payment_id = $1, asaas_payment_link = $2, asaas_pix_qrcode = $3, asaas_pix_payload = $4, pagamento_status = $5 WHERE id = $6', 
+            [asaasData.id, asaasData.invoiceUrl, qrData.encodedImage, qrData.payload, 'aguardando_pagamento', id] 
+          ) 
+        } 
+      } catch (err) { 
+        console.error('[ASAAS PIX] Erro ao gerar cobrança:', err) 
+      } 
+    }
+
     await query(` 
       UPDATE rides SET 
         status = 'concluida', 
@@ -618,6 +662,9 @@ export default async function publicRoutes(fastify) {
         motorista_token: driverInfo?.token_perfil, 
         lider_id: driverInfo?.lider_id || null, 
         forma_pagamento: ride.forma_pagamento || '1',
+        asaas_payment_id: asaasPaymentId,
+        asaas_payment_link: asaasPaymentLink,
+        asaas_pix_payload: asaasPixPayload,
         split: { 
           percentual_plataforma: percentualPlataforma, 
           percentual_lider: percentualLider, 
