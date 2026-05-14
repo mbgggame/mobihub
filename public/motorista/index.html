@@ -1267,6 +1267,7 @@
      pagamentoConfirmadoCard.classList.remove('hidden')
      document.getElementById('txt-pagamento-valor').textContent = moeda(corrida.valor_final || corrida.valor)
      document.getElementById('txt-pagamento-corrida').textContent = `Corrida #${corrida.id}`
+     setTimeout(() => { corridaAtualId = null }, 5000)
    } else if (corrida.status === 'concluida' && corrida.pagamento_status === 'aguardando_pagamento' && corrida.asaas_pix_qrcode) {
      qrCard.classList.remove('hidden')
      pagamentoConfirmadoCard.classList.add('hidden')
