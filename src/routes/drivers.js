@@ -288,6 +288,7 @@ export default async function driversRoutes(fastify) {
 
   // Ativar motorista
   fastify.put('/api/drivers/:id/ativar', { preHandler: requireAuth }, async (request, reply) => {
+    console.log('[ATIVAR] Endpoint chamado! ID:', request.params.id, 'ASAAS_KEY:', process.env.ASAAS_API_KEY?.substring(0, 20))
     const { id } = request.params
     const { v4: uuidv4 } = await import('uuid')
     const token = uuidv4()
