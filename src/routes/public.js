@@ -1071,9 +1071,14 @@ export default async function publicRoutes(fastify) {
   })
 
   fastify.get('/api/temp/check-ride-token', async (request, reply) => {
-    const token = '521026ac-b6a2-4ba2-a87c-166471eddc3d'
-    const result = await query('SELECT id, status, pagamento_status, driver_id, token FROM rides WHERE token = $1', [token])
-    return result.rows[0]
+    const tokenMotorista = '91f8a849-5830-4420-824f-f46059a7e0d6'
+    const result = await query(`
+      SELECT id, status, pagamento_status, driver_id FROM rides 
+      WHERE driver_id = (SELECT id FROM drivers WHERE token_perfil = $1) 
+      AND status NOT IN ('concluida', 'cancelada') 
+      ORDER BY id DESC LIMIT 5
+    `, [tokenMotorista])
+    return result.rows
   })
 
   fastify.put('/api/clients/:telefone', async (request, reply) => {
