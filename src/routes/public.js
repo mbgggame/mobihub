@@ -522,10 +522,41 @@ export default async function publicRoutes(fastify) {
 
     await query(
       'INSERT INTO driver_transactions (driver_id, ride_id, tipo, descricao, valor) VALUES ($1, $2, $3, $4, $5)',
-      [driver.id, id, 'credito', `Crédito corrida #${id}`, valorPlataforma]
+      [driver.id, id, 'debito', `Comissão plataforma - corrida #${id} recebida em dinheiro`, -valorPlataforma]
     )
 
     return { mensagem: 'Pagamento recebido com sucesso!', valor_plataforma: valorPlataforma }
+  })
+
+  fastify.put('/api/rides/:id/passageiro-nao-pagou', async (request, reply) => {
+    const { token_motorista } = request.body
+    const { id } = request.params
+    const driver = (await query('SELECT * FROM drivers WHERE token_perfil = $1', [token_motorista])).rows[0]
+    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' })
+    const ride = (await query('SELECT * FROM rides WHERE id = $1 AND driver_id = $2', [id, driver.id])).rows[0]
+    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' })
+
+    await query("UPDATE rides SET pagamento_status = 'nao_pago', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [id])
+
+    const temLider = !!driver.lider_id
+    const splitRule = (await query(
+      "SELECT * FROM split_rules WHERE ativo = 1 AND com_lider = $1 ORDER BY id LIMIT 1",
+      [temLider]
+    )).rows[0]
+
+    const percentualPlataforma = splitRule?.percentual_plataforma || 15
+    const valorFinal = ride.valor_final || ride.valor
+    const valorPlataforma = parseFloat((valorFinal * percentualPlataforma / 100).toFixed(2))
+    const valorDebito = -valorPlataforma
+
+    await query('UPDATE drivers SET balance_due = balance_due + $1 WHERE id = $2', [valorDebito, driver.id])
+
+    await query(
+      'INSERT INTO driver_transactions (driver_id, ride_id, tipo, descricao, valor) VALUES ($1, $2, $3, $4, $5)',
+      [driver.id, id, 'debito', `Passageiro não pagou - corrida #${id}`, valorDebito]
+    )
+
+    return { mensagem: 'Registro de não pagamento realizado!', valor_debito: valorDebito }
   })
 
   fastify.put('/api/rides/:id/finalizar-motorista', async (request, reply) => { 

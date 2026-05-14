@@ -478,9 +478,14 @@
 
       <!-- BOTÃO RECEBER EM DINHEIRO -->
       <div id="card-receber-dinheiro" class="hidden mt-4 bg-white border border-yellow-200 rounded-xl p-4">
-        <button id="btn-receber-dinheiro" onclick="receberDinheiro()" class="w-full bg-yellow-600 text-white rounded-xl py-3 font-semibold text-sm hover:bg-yellow-700">
-          💵 Recebi em dinheiro
-        </button>
+        <div class="grid grid-cols-2 gap-3">
+          <button id="btn-receber-dinheiro" onclick="receberDinheiro()" class="bg-yellow-600 text-white rounded-xl py-3 font-semibold text-sm hover:bg-yellow-700">
+            💵 Recebi em dinheiro
+          </button>
+          <button id="btn-passageiro-nao-pagou" onclick="passageiroNaoPagou()" class="bg-red-600 text-white rounded-xl py-3 font-semibold text-sm hover:bg-red-700">
+            ❌ Passageiro não pagou
+          </button>
+        </div>
       </div>
 
       <!-- PAGAMENTO CONFIRMADO --> 
@@ -1160,6 +1165,32 @@
        alert(d.error || 'Erro ao confirmar pagamento')
        btn.disabled = false
        btn.textContent = '💵 Recebi em dinheiro'
+     }
+   } catch (e) {
+     alert('Erro de conexão')
+   }
+ }
+
+ async function passageiroNaoPagou() {
+   if (!corridaAtualId) return
+   if (!confirm('Tem certeza que o passageiro não pagou?')) return
+   try {
+     const btn = document.getElementById('btn-passageiro-nao-pagou')
+     btn.disabled = true
+     btn.textContent = 'Aguarde...'
+     const r = await fetch(`/api/rides/${corridaAtualId}/passageiro-nao-pagou`, {
+       method: 'PUT',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({ token_motorista: tokenMotorista })
+     })
+     if (r.ok) {
+       alert('✅ Registro de não pagamento realizado!')
+       verificarCorridaAtiva()
+     } else {
+       const d = await r.json()
+       alert(d.error || 'Erro ao registrar não pagamento')
+       btn.disabled = false
+       btn.textContent = '❌ Passageiro não pagou'
      }
    } catch (e) {
      alert('Erro de conexão')
