@@ -126,6 +126,11 @@
           <input id="cad-email" type="email" placeholder="seu@email.com" 
             class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
         </div> 
+        <div> 
+          <label class="text-xs text-gray-500 font-medium">CPF (opcional)</label> 
+          <input id="cad-cpf" type="text" placeholder="000.000.000-00" 
+            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+        </div> 
         <div id="erro-cadastro" class="hidden text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2"></div> 
         <button onclick="salvarCadastro()" 
           class="w-full bg-green-600 text-white rounded-xl py-3 font-semibold text-sm hover:bg-green-700"> 
@@ -404,10 +409,18 @@
    const cliente_nome = localStorage.getItem('cliente_nome')
    const cliente_telefone = localStorage.getItem('cliente_telefone')
    const cliente_email = localStorage.getItem('cliente_email')
+   const cliente_cpf = localStorage.getItem('cliente_cpf')
    if (cliente_telefone && cliente_nome) { 
      document.getElementById('tela-cadastro').classList.add('hidden') 
      document.getElementById('tela-solicitar').classList.remove('hidden') 
      document.getElementById('txt-nome-cliente').textContent = cliente_nome 
+     // Populate the fields if user clicks "Trocar dados"
+     if (document.getElementById('cad-cpf')) {
+       document.getElementById('cad-nome').value = cliente_nome
+       document.getElementById('cad-celular').value = cliente_telefone
+       if (cliente_email) document.getElementById('cad-email').value = cliente_email
+       if (cliente_cpf) document.getElementById('cad-cpf').value = cliente_cpf
+     }
      carregarSuaNota(cliente_telefone)
      renderizarAtalhos() 
      renderizarHistorico() 
@@ -419,6 +432,7 @@
    const nome = document.getElementById('cad-nome').value.trim() 
    const celular = document.getElementById('cad-celular').value.trim() 
    const email = document.getElementById('cad-email').value.trim() 
+   const cpf = document.getElementById('cad-cpf').value.trim() 
    const erro = document.getElementById('erro-cadastro') 
    if (!nome) { erro.textContent = 'Nome é obrigatório'; erro.classList.remove('hidden'); return } 
    if (!celular) { erro.textContent = 'Celular é obrigatório'; erro.classList.remove('hidden'); return } 
@@ -426,7 +440,8 @@
    localStorage.setItem('cliente_nome', nome)
    localStorage.setItem('cliente_telefone', celular)
    if (email) localStorage.setItem('cliente_email', email)
-   localStorage.setItem(STORAGE_CLIENTE, JSON.stringify({ nome, celular, email })) 
+   if (cpf) localStorage.setItem('cliente_cpf', cpf)
+   localStorage.setItem(STORAGE_CLIENTE, JSON.stringify({ nome, celular, email, cpf })) 
    verificarCadastro() 
  } 
 
@@ -435,6 +450,7 @@
    localStorage.removeItem('cliente_nome')
    localStorage.removeItem('cliente_telefone')
    localStorage.removeItem('cliente_email')
+   localStorage.removeItem('cliente_cpf')
    document.getElementById('tela-solicitar').classList.add('hidden') 
    document.getElementById('tela-cadastro').classList.remove('hidden') 
  } 
@@ -836,7 +852,8 @@
    const cliente_nome = localStorage.getItem('cliente_nome')
    const cliente_telefone = localStorage.getItem('cliente_telefone')
    const cliente_email = localStorage.getItem('cliente_email')
-   const cliente = { nome: cliente_nome, celular: cliente_telefone, email: cliente_email } 
+   const cliente_cpf = localStorage.getItem('cliente_cpf')
+   const cliente = { nome: cliente_nome, celular: cliente_telefone, email: cliente_email, cpf: cliente_cpf } 
 
    if (!origem || !origemLat) { 
      alert('Por favor informe o endereço de origem') 
@@ -873,6 +890,7 @@
          nome: cliente.nome,
          celular: cliente.celular,
          email: cliente.email,
+         cpf: cliente.cpf,
          origem, 
          origem_lat: origemLat, 
          origem_lng: origemLng, 

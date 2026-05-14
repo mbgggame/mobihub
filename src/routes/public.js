@@ -362,7 +362,7 @@ export default async function publicRoutes(fastify) {
 
   fastify.post('/api/solicitar', async (request, reply) => { 
     const { 
-      nome, celular, email, 
+      nome, celular, email, cpf,
       origem, origem_lat, origem_lng, 
       destino, destino_lat, destino_lng, 
       valor, tipo, agendada_para, 
@@ -372,10 +372,10 @@ export default async function publicRoutes(fastify) {
     const clientResult = await query('SELECT * FROM clients WHERE telefone = $1', [celular]) 
     let client = clientResult.rows[0] 
     if (!client) { 
-      const r = await query(`INSERT INTO clients (telefone, nome, email) VALUES ($1, $2, $3) RETURNING id`, [celular, nome || null, email || null]) 
+      const r = await query(`INSERT INTO clients (telefone, nome, email, cpf) VALUES ($1, $2, $3, $4) RETURNING id`, [celular, nome || null, email || null, cpf || null]) 
       client = { id: r.rows[0].id } 
     } else { 
-      await query(`UPDATE clients SET nome = COALESCE($1, nome), email = COALESCE($2, email) WHERE id = $3`, [nome || null, email || null, client.id]) 
+      await query(`UPDATE clients SET nome = COALESCE($1, nome), email = COALESCE($2, email), cpf = COALESCE($3, cpf) WHERE id = $4`, [nome || null, email || null, cpf || null, client.id]) 
     } 
     const { v4: uuidv4 } = await import('uuid') 
     const token = uuidv4() 
@@ -580,7 +580,7 @@ export default async function publicRoutes(fastify) {
               name: client.nome,
               phone: client.telefone?.replace(/\D/g, ''),
               mobilePhone: client.telefone?.replace(/\D/g, ''),
-              cpfCnpj: client.cpf?.replace(/\D/g, '') || null,
+              ...(client.cpf ? { cpfCnpj: client.cpf.replace(/\D/g, '') } : {}),
               externalReference: String(client.id)
             })
           })
