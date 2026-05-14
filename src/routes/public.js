@@ -1042,51 +1042,7 @@ export default async function publicRoutes(fastify) {
     return result.rows
   })
 
-  fastify.get('/api/temp/check-clients', async (request, reply) => {
-    const result = await query('SELECT id, nome, telefone, cpf, asaas_customer_id FROM clients LIMIT 5')
-    return result.rows
-  })
 
-  fastify.get('/api/temp/check-rides-status', async (request, reply) => {
-    const result = await query("SELECT id, status, driver_id, created_at FROM rides WHERE status NOT IN ('concluida', 'cancelada') ORDER BY id DESC LIMIT 5")
-    return result.rows
-  })
-
-  fastify.get('/api/temp/check-all-rides', async (request, reply) => {
-    const result = await query("SELECT id, status, driver_id, client_id, created_at FROM rides ORDER BY id DESC LIMIT 5")
-    return result.rows
-  })
-
-  fastify.post('/api/temp/fix-ride', async (request, reply) => {
-    const token = '521026ac-b6a2-4ba2-a87c-166471eddc3d'
-    
-    // Primeiro, busca a corrida
-    const rideResult = await query('SELECT id, status, driver_id, client_id, token FROM rides WHERE token = $1', [token])
-    const ride = rideResult.rows[0]
-    
-    // Depois, atualiza o status para cancelada
-    await query("UPDATE rides SET status = 'cancelada' WHERE token = $1", [token])
-    
-    return { ride_antes: ride, status: 'atualizado para cancelada' }
-  })
-
-  fastify.get('/api/temp/check-ride-token', async (request, reply) => {
-    const tokenMotorista = 'f4d06845-9ecd-4334-80ec-4f8a57ddccc5'
-    const result = await query(`
-      SELECT id, status, pagamento_status, driver_id, token FROM rides 
-      WHERE driver_id = (SELECT id FROM drivers WHERE token_perfil = $1) 
-      ORDER BY id DESC LIMIT 5
-    `, [tokenMotorista])
-    return result.rows
-  })
-
-  fastify.post('/api/temp/fix-pagamento', async (request, reply) => {
-    const result = await query(`
-      UPDATE rides SET pagamento_status = 'cancelado' 
-      WHERE driver_id = 6 AND pagamento_status = 'aguardando_pagamento'
-    `)
-    return { mensagem: 'Pagamentos atualizados', rows_affected: result.rowCount }
-  })
 
   fastify.put('/api/clients/:telefone', async (request, reply) => {
     const { telefone } = request.params

@@ -418,7 +418,16 @@ export default async function driversRoutes(fastify) {
 
     return { mensagem: 'Motorista atualizado' } 
   }) 
- 
+
+  fastify.post('/api/admin/drivers/:id/limpar-pagamentos', { preHandler: requireAuth }, async (request, reply) => { 
+    const { id } = request.params 
+    const result = await query( 
+      "UPDATE rides SET pagamento_status = 'cancelado' WHERE driver_id = $1 AND pagamento_status = 'aguardando_pagamento'", 
+      [id] 
+    ) 
+    return { mensagem: 'Pagamentos pendentes cancelados', rows_affected: result.rowCount } 
+  }) 
+
 
 
   // Aceitar termos de uso e LGPD
