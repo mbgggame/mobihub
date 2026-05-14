@@ -682,4 +682,24 @@ export default async function driversRoutes(fastify) {
  
     return { mensagem: 'Veículo cadastrado!', veiculo: result.rows[0] } 
   }) 
+
+  // Extrato financeiro do motorista (admin)
+  fastify.get('/api/admin/drivers/:id/extrato', { preHandler: requireAuth }, async (request, reply) => {
+    const { id } = request.params
+    const driver = (await query('SELECT id FROM drivers WHERE id = $1', [id])).rows[0]
+    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' })
+    
+    const transactions = (await query(
+      'SELECT * FROM driver_transactions WHERE driver_id = $1 ORDER BY created_at ASC',
+      [id]
+    )).rows
+
+    let saldoAcumulado = 0
+    const transactionsWithBalance = transactions.map(t => {
+      saldoAcumulado += t.valor
+      return { ...t, saldo_acumulado: saldoAcumulado }
+    })
+
+    return { transactions: transactionsWithBalance, saldo_final: saldoAcumulado }
+  })
 }
