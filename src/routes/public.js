@@ -394,6 +394,9 @@ export default async function publicRoutes(fastify) {
     if (!origem || !destino || !valor || !celular) return reply.code(400).send({ error: 'Dados incompletos' }) 
     const clientResult = await query('SELECT * FROM clients WHERE telefone = $1', [celular]) 
     let client = clientResult.rows[0] 
+    if (client && client.balance_due > 0) {
+      return reply.code(400).send({ error: 'Você tem um débito pendente. Por favor, regularize antes de solicitar uma nova corrida.' })
+    }
     if (!client) { 
       const r = await query(`INSERT INTO clients (telefone, nome, email, cpf) VALUES ($1, $2, $3, $4) RETURNING id`, [celular, nome || null, email || null, cpf || null]) 
       client = { id: r.rows[0].id } 
@@ -495,6 +498,31 @@ export default async function publicRoutes(fastify) {
   }) 
 
   // Motorista informa que a corrida foi finalizada 
+  fastify.put('/api/rides/:id/receber-dinheiro', async (request, reply) => {
+    const { token_motorista } = request.body
+    const { id } = request.params
+    const driver = (await query('SELECT * FROM drivers WHERE token_perfil = $1', [token_motorista])).rows[0]
+    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' })
+    const ride = (await query('SELECT * FROM rides WHERE id = $1 AND driver_id = $2', [id, driver.id])).rows[0]
+    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' })
+
+    await query("UPDATE rides SET pagamento_status = 'pago', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [id])
+
+    const temLider = !!driver.lider_id
+    const splitRule = (await query(
+      "SELECT * FROM split_rules WHERE ativo = 1 AND com_lider = $1 ORDER BY id LIMIT 1",
+      [temLider]
+    )).rows[0]
+
+    const percentualPlataforma = splitRule?.percentual_plataforma || 15
+    const valorFinal = ride.valor_final || ride.valor
+    const valorPlataforma = parseFloat((valorFinal * percentualPlataforma / 100).toFixed(2))
+
+    await query('UPDATE drivers SET balance_due = balance_due + $1 WHERE id = $2', [valorPlataforma, driver.id])
+
+    return { mensagem: 'Pagamento recebido com sucesso!', valor_plataforma: valorPlataforma }
+  })
+
   fastify.put('/api/rides/:id/finalizar-motorista', async (request, reply) => { 
     const { token_motorista } = request.body 
     const { id } = request.params 

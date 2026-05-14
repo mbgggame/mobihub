@@ -25,10 +25,17 @@ export default async function integracoesRoutes(fastify) {
     if (event === 'PAYMENT_OVERDUE' || event === 'PAYMENT_DELETED') { 
       const paymentId = payment?.id 
       if (paymentId) { 
-        await query( 
-          "UPDATE rides SET pagamento_status = 'cancelado' WHERE asaas_payment_id = $1", 
-          [paymentId] 
-        ) 
+        const rideResult = await query('SELECT * FROM rides WHERE asaas_payment_id = $1', [paymentId]) 
+        const ride = rideResult.rows[0] 
+        if (ride) {
+          await query( 
+            "UPDATE rides SET pagamento_status = 'cancelado' WHERE asaas_payment_id = $1", 
+            [paymentId] 
+          ) 
+          if (ride.client_id) { 
+            await query('UPDATE clients SET balance_due = balance_due + $1 WHERE id = $2', [ride.valor_final || ride.valor, ride.client_id]) 
+          } 
+        } 
       } 
     } 
     

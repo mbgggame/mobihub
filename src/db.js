@@ -181,6 +181,7 @@ export async function initDB() {
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS valor_lider DOUBLE PRECISION DEFAULT 0;
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS balance_due DOUBLE PRECISION DEFAULT 0;
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS lider_id INTEGER;
+    ALTER TABLE clients ADD COLUMN IF NOT EXISTS balance_due DOUBLE PRECISION DEFAULT 0;
 
     -- Campos de Memória de Cálculo (Transparência Billing) 
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS base_value DOUBLE PRECISION DEFAULT 0; 

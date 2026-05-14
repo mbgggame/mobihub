@@ -476,6 +476,13 @@
         </div>
       </div>
 
+      <!-- BOTÃO RECEBER EM DINHEIRO -->
+      <div id="card-receber-dinheiro" class="hidden mt-4 bg-white border border-yellow-200 rounded-xl p-4">
+        <button id="btn-receber-dinheiro" onclick="receberDinheiro()" class="w-full bg-yellow-600 text-white rounded-xl py-3 font-semibold text-sm hover:bg-yellow-700">
+          💵 Recebi em dinheiro
+        </button>
+      </div>
+
       <!-- PAGAMENTO CONFIRMADO --> 
       <div id="card-pagamento-confirmado" class="hidden mt-4 bg-green-50 border border-green-200 rounded-xl p-4"> 
         <p class="text-center text-sm text-green-700 font-bold mb-3">✅ Pagamento recebido!</p>
@@ -1134,6 +1141,31 @@
    }
  }
 
+ async function receberDinheiro() {
+   if (!corridaAtualId) return
+   try {
+     const btn = document.getElementById('btn-receber-dinheiro')
+     btn.disabled = true
+     btn.textContent = 'Aguarde...'
+     const r = await fetch(`/api/rides/${corridaAtualId}/receber-dinheiro`, {
+       method: 'PUT',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({ token_motorista: tokenMotorista })
+     })
+     if (r.ok) {
+       alert('✅ Pagamento recebido com sucesso!')
+       verificarCorridaAtiva()
+     } else {
+       const d = await r.json()
+       alert(d.error || 'Erro ao confirmar pagamento')
+       btn.disabled = false
+       btn.textContent = '💵 Recebi em dinheiro'
+     }
+   } catch (e) {
+     alert('Erro de conexão')
+   }
+ }
+
  function copiarPixPayload() {
    const payload = document.getElementById('txt-pix-payload').value
    navigator.clipboard.writeText(payload).then(() => {
@@ -1258,24 +1290,40 @@
      botoesControle.classList.remove('hidden')
    }
    
-   // Mostrar/ocultar QR Code Pix ou pagamento confirmado
+   // Mostrar/ocultar QR Code Pix, botão receber dinheiro ou pagamento confirmado
    const qrCard = document.getElementById('card-qrcode-pix')
    const pagamentoConfirmadoCard = document.getElementById('card-pagamento-confirmado')
+   const receberDinheiroCard = document.getElementById('card-receber-dinheiro')
    
    if (corrida.pagamento_status === 'pago') {
      qrCard.classList.add('hidden')
      pagamentoConfirmadoCard.classList.remove('hidden')
+     receberDinheiroCard.classList.add('hidden')
      document.getElementById('txt-pagamento-valor').textContent = moeda(corrida.valor_final || corrida.valor)
      document.getElementById('txt-pagamento-corrida').textContent = `Corrida #${corrida.id}`
      setTimeout(() => { corridaAtualId = null }, 5000)
-   } else if (corrida.status === 'concluida' && corrida.pagamento_status === 'aguardando_pagamento' && corrida.asaas_pix_qrcode) {
-     qrCard.classList.remove('hidden')
-     pagamentoConfirmadoCard.classList.add('hidden')
-     document.getElementById('img-qrcode-pix').src = `data:image/png;base64,${corrida.asaas_pix_qrcode}`
-     document.getElementById('txt-pix-payload').value = corrida.asaas_pix_payload
+   } else if (corrida.status === 'concluida' && corrida.pagamento_status === 'aguardando_pagamento') {
+     if (corrida.forma_pagamento === '1' && corrida.asaas_pix_qrcode) {
+       qrCard.classList.remove('hidden')
+       receberDinheiroCard.classList.remove('hidden')
+       pagamentoConfirmadoCard.classList.add('hidden')
+       document.getElementById('img-qrcode-pix').src = `data:image/png;base64,${corrida.asaas_pix_qrcode}`
+       document.getElementById('txt-pix-payload').value = corrida.asaas_pix_payload
+     } else if (corrida.asaas_pix_qrcode) {
+       qrCard.classList.remove('hidden')
+       receberDinheiroCard.classList.add('hidden')
+       pagamentoConfirmadoCard.classList.add('hidden')
+       document.getElementById('img-qrcode-pix').src = `data:image/png;base64,${corrida.asaas_pix_qrcode}`
+       document.getElementById('txt-pix-payload').value = corrida.asaas_pix_payload
+     } else {
+       qrCard.classList.add('hidden')
+       receberDinheiroCard.classList.add('hidden')
+       pagamentoConfirmadoCard.classList.add('hidden')
+     }
    } else {
      qrCard.classList.add('hidden')
      pagamentoConfirmadoCard.classList.add('hidden')
+     receberDinheiroCard.classList.add('hidden')
    }
 
    if (corrida.origem_lat) { 
