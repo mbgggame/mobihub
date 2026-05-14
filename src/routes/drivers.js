@@ -296,6 +296,44 @@ export default async function driversRoutes(fastify) {
     const driverResult = await query('SELECT * FROM drivers WHERE id = $1', [id])
     const driver = driverResult.rows[0]
 
+    // Integração Asaas: criar subconta automaticamente
+    if (process.env.ASAAS_API_KEY) {
+      try {
+        console.log('[ASAAS] Iniciando criação de subconta para driver:', driver.id, driver.nome)
+        const asaasResponse = await fetch('https://www.asaas.com/api/v3/accounts', { 
+          method: 'POST', 
+          headers: { 
+            'Content-Type': 'application/json', 
+            'access_token': process.env.ASAAS_API_KEY 
+          }, 
+          body: JSON.stringify({ 
+            name: driver.nome, 
+            email: driver.email, 
+            cpfCnpj: driver.cpf?.replace(/\D/g, ''), 
+            phone: driver.telefone?.replace(/\D/g, ''), 
+            mobilePhone: driver.telefone?.replace(/\D/g, ''), 
+            address: driver.logradouro, 
+            addressNumber: driver.numero, 
+            complement: driver.complemento, 
+            province: driver.bairro, 
+            postalCode: driver.cep?.replace('-', ''), 
+            companyType: 'INDIVIDUAL' 
+          }) 
+        })
+        console.log('[ASAAS] Status da resposta:', asaasResponse.status)
+        const asaasData = await asaasResponse.json()
+        console.log('[ASAAS] Resposta completa:', JSON.stringify(asaasData, null, 2))
+        if (asaasData.walletId) { 
+          console.log('[ASAAS] WalletId obtido:', asaasData.walletId)
+          await query('UPDATE drivers SET asaas_id = $1 WHERE id = $2', [asaasData.walletId, driver.id]) 
+          console.log('[ASAAS] asaas_id salvo no banco')
+        }
+      } catch (err) {
+        console.error('[ASAAS] Erro ao criar subconta:', err)
+        // Não bloqueia a ativação por falha no Asaas
+      }
+    }
+
     // Disparar webhook motorista.aprovado
     const { dispararWebhook } = await import('../webhook.js')
     await dispararWebhook('motorista.aprovado', { 
