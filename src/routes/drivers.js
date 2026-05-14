@@ -193,13 +193,9 @@ export default async function driversRoutes(fastify) {
       UPDATE drivers SET status_cadastro = 'aprovado', ativo = 1, token_perfil = $1 WHERE id = $2 
     `, [token, id]) 
 
-    console.log('[ASAAS] ASAAS_API_KEY presente?', !!process.env.ASAAS_API_KEY)
-    console.log('[ASAAS] Endpoint /aprovar chamado para driver:', id)
-
     // Integração Asaas: criar subconta automaticamente
     if (process.env.ASAAS_API_KEY) {
       try {
-        console.log('[ASAAS] Iniciando criação de subconta para driver:', driver.id, driver.nome)
         const asaasResponse = await fetch('https://www.asaas.com/api/v3/accounts', { 
           method: 'POST', 
           headers: { 
@@ -222,13 +218,9 @@ export default async function driversRoutes(fastify) {
             incomeValue: 1500
           }) 
         })
-        console.log('[ASAAS] Status da resposta:', asaasResponse.status)
         const asaasData = await asaasResponse.json()
-        console.log('[ASAAS] Resposta completa:', JSON.stringify(asaasData, null, 2))
         if (asaasData.walletId) { 
-          console.log('[ASAAS] WalletId obtido:', asaasData.walletId)
           await query('UPDATE drivers SET asaas_id = $1 WHERE id = $2', [asaasData.walletId, driver.id]) 
-          console.log('[ASAAS] asaas_id salvo no banco')
         } else if (asaasData.errors?.[0]?.description?.includes('já está em uso') || 
                    asaasData.errors?.[0]?.description?.includes('já existe')) { 
           const buscarResponse = await fetch( 
@@ -241,7 +233,6 @@ export default async function driversRoutes(fastify) {
           const contaExistente = buscarData.data?.[0] 
           if (contaExistente?.walletId) { 
             await query('UPDATE drivers SET asaas_id = $1 WHERE id = $2', [contaExistente.walletId, driver.id]) 
-            console.log('[ASAAS] WalletId existente salvo:', contaExistente.walletId) 
           } 
         }
       } catch (err) {
@@ -307,7 +298,6 @@ export default async function driversRoutes(fastify) {
 
   // Ativar motorista
   fastify.put('/api/drivers/:id/ativar', { preHandler: requireAuth }, async (request, reply) => {
-    console.log('[ATIVAR] Endpoint chamado! ID:', request.params.id, 'ASAAS_KEY:', process.env.ASAAS_API_KEY?.substring(0, 20))
     const { id } = request.params
     const { v4: uuidv4 } = await import('uuid')
     const token = uuidv4()
@@ -319,13 +309,9 @@ export default async function driversRoutes(fastify) {
     const driverResult = await query('SELECT * FROM drivers WHERE id = $1', [id])
     const driver = driverResult.rows[0]
 
-    console.log('[ASAAS] ASAAS_API_KEY presente?', !!process.env.ASAAS_API_KEY)
-    console.log('[ASAAS] Endpoint /ativar chamado para driver:', id)
-
     // Integração Asaas: criar subconta automaticamente
     if (process.env.ASAAS_API_KEY) {
       try {
-        console.log('[ASAAS] Iniciando criação de subconta para driver:', driver.id, driver.nome)
         const asaasResponse = await fetch('https://www.asaas.com/api/v3/accounts', { 
           method: 'POST', 
           headers: { 
@@ -348,13 +334,9 @@ export default async function driversRoutes(fastify) {
             incomeValue: 1500
           }) 
         })
-        console.log('[ASAAS] Status da resposta:', asaasResponse.status)
         const asaasData = await asaasResponse.json()
-        console.log('[ASAAS] Resposta completa:', JSON.stringify(asaasData, null, 2))
         if (asaasData.walletId) { 
-          console.log('[ASAAS] WalletId obtido:', asaasData.walletId)
           await query('UPDATE drivers SET asaas_id = $1 WHERE id = $2', [asaasData.walletId, driver.id]) 
-          console.log('[ASAAS] asaas_id salvo no banco')
         } else if (asaasData.errors?.[0]?.description?.includes('já está em uso') || 
                    asaasData.errors?.[0]?.description?.includes('já existe')) { 
           const buscarResponse = await fetch( 
@@ -367,7 +349,6 @@ export default async function driversRoutes(fastify) {
           const contaExistente = buscarData.data?.[0] 
           if (contaExistente?.walletId) { 
             await query('UPDATE drivers SET asaas_id = $1 WHERE id = $2', [contaExistente.walletId, driver.id]) 
-            console.log('[ASAAS] WalletId existente salvo:', contaExistente.walletId) 
           } 
         }
       } catch (err) {
@@ -390,8 +371,6 @@ export default async function driversRoutes(fastify) {
   })
 
   fastify.put('/api/drivers/:id', { preHandler: requireAuth }, async (request, reply) => { 
-    console.log('[DEBUG] PUT /api/drivers/:id chamado, id:', request.params.id) 
-    console.log('[DEBUG] Body recebido:', request.body) 
     const { nome, telefone, email, telegram_id, modelo_carro, ano_carro, cor_carro, placa, ativo, foto_base64, status_cadastro, tipo_chave_pix, chave_pix, asaas_id, cep, logradouro, numero, complemento, bairro, cidade, estado, cpf, renavam, data_nascimento } = request.body 
     const { id } = request.params 
 
