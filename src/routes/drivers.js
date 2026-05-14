@@ -70,7 +70,7 @@ export default async function driversRoutes(fastify) {
       total_viagens, media_avaliacao, total_avaliacoes, ativo, foto_base64, token_perfil, created_at, status_cadastro,
       cpf, renavam, crlv_base64, cnh_frente_base64, cnh_verso_base64, cnh_digital_base64,
       tipo_chave_pix, chave_pix, asaas_id,
-      cep, logradouro, numero, complemento, bairro, cidade, estado, data_nascimento
+      cep, logradouro, numero, complemento, bairro, cidade, estado, data_nascimento, balance_due
     FROM drivers ORDER BY nome`)
     return result.rows
   }) 
