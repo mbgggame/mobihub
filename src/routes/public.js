@@ -291,6 +291,19 @@ export default async function publicRoutes(fastify) {
       )).rows[0]
     }
 
+    if (!corrida) { 
+      const dinheiroResult = await query( 
+        `SELECT * FROM rides WHERE driver_id = $1 
+         AND status = 'concluida' 
+         AND forma_pagamento = '1' 
+         AND pagamento_status NOT IN ('pago', 'nao_pago', 'cancelado') 
+         AND updated_at >= NOW() - INTERVAL '5 minutes' 
+         ORDER BY id DESC LIMIT 1`, 
+        [driver.id] 
+      ) 
+      corrida = dinheiroResult.rows[0] || null 
+    } 
+
     // Se não há corrida aguardando pagamento, busca corrida paga recentemente (últimos 30 segundos)
     if (!corrida) {
       const recemPagaResult = await query(
