@@ -277,10 +277,20 @@ export default async function publicRoutes(fastify) {
     )).rows[0] 
     if (!driver) return { corrida: null } 
 
-    const corrida = (await query( 
+    // Primeiro, busca corrida ativa (não concluída/cancelada)
+    let corrida = (await query( 
       "SELECT * FROM rides WHERE driver_id = $1 AND status NOT IN ('concluida', 'cancelada') ORDER BY aceita_at DESC LIMIT 1", 
       [driver.id] 
     )).rows[0] 
+
+    // Se não houver corrida ativa, busca a última concluída com pagamento pendente
+    if (!corrida) {
+      corrida = (await query( 
+        "SELECT * FROM rides WHERE driver_id = $1 AND status = 'concluida' AND pagamento_status = 'aguardando_pagamento' ORDER BY concluida_at DESC LIMIT 1", 
+        [driver.id] 
+      )).rows[0]
+    }
+
     return { corrida: corrida || null } 
   })
 
