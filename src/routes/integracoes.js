@@ -3,6 +3,11 @@ export default async function integracoesRoutes(fastify) {
   const { requireAuth } = await import('./auth.js') 
 
   fastify.post('/webhook/asaas', async (request, reply) => { 
+    const asaasToken = request.headers['asaas-access-token'] 
+    if (asaasToken !== process.env.ASAAS_WEBHOOK_TOKEN) { 
+      return reply.code(401).send({ error: 'Token inválido' }) 
+    } 
+
     const { event, payment } = request.body 
     
     if (event === 'PAYMENT_RECEIVED' || event === 'PAYMENT_CONFIRMED') { 
@@ -14,6 +19,30 @@ export default async function integracoesRoutes(fastify) {
           "UPDATE rides SET pagamento_status = 'pago' WHERE asaas_payment_id = $1 OR id = $2", 
           [paymentId, parseInt(externalReference)] 
         ) 
+        
+        const rideResult = await query( 
+          'SELECT r.*, d.telegram_id as driver_telegram, d.nome as driver_nome, c.nome as client_nome, c.telefone as client_telefone, c.telegram_id as client_telegram_id FROM rides r LEFT JOIN drivers d ON r.driver_id = d.id LEFT JOIN clients c ON r.client_id = c.id WHERE r.asaas_payment_id = $1 OR r.id = $2', 
+          [paymentId, parseInt(externalReference)] 
+        ) 
+        const ride = rideResult.rows[0] 
+        
+        if (ride?.driver_telegram) { 
+          const { getBot } = await import('../telegram.js') 
+          const bot = getBot() 
+          bot?.sendMessage(ride.driver_telegram, 
+            `✅ *Pagamento confirmado!*\n\n💰 Corrida #${ride.id} recebida!\nPassageiro: ${ride.client_nome}\nValor: R$ ${ride.valor}`, 
+            { parse_mode: 'Markdown' } 
+          ).catch(() => {}) 
+        } 
+        
+        if (ride?.client_telegram_id) { 
+          const { getBot } = await import('../telegram.js') 
+          const bot = getBot() 
+          bot?.sendMessage(ride.client_telegram_id, 
+            `✅ Pagamento confirmado! Obrigado por usar o MobiHub. Boa viagem! 🚗`, 
+            { parse_mode: 'Markdown' } 
+          ).catch(() => {}) 
+        } 
       } 
     } 
     

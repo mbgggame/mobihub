@@ -237,7 +237,8 @@ export async function initDB() {
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS lider_id TEXT; 
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS codigo_indicacao TEXT;
     ALTER TABLE clients ADD COLUMN IF NOT EXISTS asaas_customer_id TEXT; 
-    ALTER TABLE clients ADD COLUMN IF NOT EXISTS cpf TEXT; 
+    ALTER TABLE clients ADD COLUMN IF NOT EXISTS cpf TEXT;
+    ALTER TABLE clients ADD COLUMN IF NOT EXISTS telegram_id TEXT; 
 
     -- Tabela de configurações de webhook 
     CREATE TABLE IF NOT EXISTS webhooks ( 
