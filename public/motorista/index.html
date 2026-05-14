@@ -1302,6 +1302,10 @@
      document.getElementById('txt-pagamento-valor').textContent = moeda(corrida.valor_final || corrida.valor)
      document.getElementById('txt-pagamento-corrida').textContent = `Corrida #${corrida.id}`
      setTimeout(() => { corridaAtualId = null }, 5000)
+   } else if (corrida.status_detalhe === 'em_andamento' && (corrida.forma_pagamento === '1' || corrida.forma_pagamento === 1)) {
+     qrCard.classList.add('hidden')
+     receberDinheiroCard.classList.remove('hidden')
+     pagamentoConfirmadoCard.classList.add('hidden')
    } else if (corrida.status === 'concluida' && corrida.pagamento_status === 'aguardando_pagamento') {
      if (corrida.forma_pagamento === '1' && corrida.asaas_pix_qrcode) {
        qrCard.classList.remove('hidden')
