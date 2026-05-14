@@ -567,6 +567,30 @@ export default async function publicRoutes(fastify) {
           client = clientResult.rows[0]
         }
         
+        // Criar customer no Asaas se não existir
+        let asaasCustomerId = client?.asaas_customer_id
+        if (!asaasCustomerId && client) {
+          const customerResponse = await fetch('https://www.asaas.com/api/v3/customers', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'access_token': process.env.ASAAS_API_KEY
+            },
+            body: JSON.stringify({
+              name: client.nome,
+              phone: client.telefone?.replace(/\D/g, ''),
+              mobilePhone: client.telefone?.replace(/\D/g, ''),
+              cpfCnpj: client.cpf?.replace(/\D/g, '') || null,
+              externalReference: String(client.id)
+            })
+          })
+          const customerData = await customerResponse.json()
+          if (customerData.id) {
+            asaasCustomerId = customerData.id
+            await query('UPDATE clients SET asaas_customer_id = $1 WHERE id = $2', [customerData.id, client.id])
+          }
+        }
+        
         const asaasCobranca = await fetch('https://www.asaas.com/api/v3/payments', { 
           method: 'POST', 
           headers: { 
@@ -579,8 +603,7 @@ export default async function publicRoutes(fastify) {
             dueDate: new Date(Date.now() + 30 * 60000).toISOString().split('T')[0], 
             description: `Corrida #${id} - MobiHub`, 
             externalReference: String(id), 
-            customerName: client?.nome || 'Passageiro', 
-            customerPhone: client?.telefone || null, 
+            customer: asaasCustomerId,
             split: [ 
               { 
                 walletId: driver.asaas_id, 
