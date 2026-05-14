@@ -231,6 +231,16 @@ export async function initDB() {
       mensagem TEXT NOT NULL, 
       lida INTEGER DEFAULT 0, 
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
+    ); 
+
+    CREATE TABLE IF NOT EXISTS driver_transactions ( 
+      id SERIAL PRIMARY KEY, 
+      driver_id INTEGER REFERENCES drivers(id), 
+      ride_id INTEGER REFERENCES rides(id), 
+      tipo TEXT NOT NULL, 
+      descricao TEXT NOT NULL, 
+      valor DOUBLE PRECISION NOT NULL, 
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
     ) 
   `) 
 

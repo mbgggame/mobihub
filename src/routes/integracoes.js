@@ -35,6 +35,13 @@ export default async function integracoesRoutes(fastify) {
           if (ride.client_id) { 
             await query('UPDATE clients SET balance_due = balance_due + $1 WHERE id = $2', [ride.valor_final || ride.valor, ride.client_id]) 
           } 
+          if (ride.driver_id) {
+            const valorDebito = -(ride.valor_final || ride.valor)
+            await query(
+              'INSERT INTO driver_transactions (driver_id, ride_id, tipo, descricao, valor) VALUES ($1, $2, $3, $4, $5)',
+              [ride.driver_id, ride.id, 'debito', `Passageiro não pagou a corrida #${ride.id}`, valorDebito]
+            )
+          }
         } 
       } 
     } 

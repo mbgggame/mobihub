@@ -520,6 +520,11 @@ export default async function publicRoutes(fastify) {
 
     await query('UPDATE drivers SET balance_due = balance_due + $1 WHERE id = $2', [valorPlataforma, driver.id])
 
+    await query(
+      'INSERT INTO driver_transactions (driver_id, ride_id, tipo, descricao, valor) VALUES ($1, $2, $3, $4, $5)',
+      [driver.id, id, 'credito', `Crédito corrida #${id}`, valorPlataforma]
+    )
+
     return { mensagem: 'Pagamento recebido com sucesso!', valor_plataforma: valorPlataforma }
   })
 
