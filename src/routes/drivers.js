@@ -437,7 +437,7 @@ export default async function driversRoutes(fastify) {
     const ride = rideResult.rows[0] 
     if (!ride) return reply.code(404).send({ error: 'Nenhuma corrida aguardando pagamento' }) 
     
-    await query("UPDATE rides SET pagamento_status = 'pago' WHERE id = $1", [ride.id]) 
+    await query("UPDATE rides SET pagamento_status = 'pago', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [ride.id]) 
     
     return { mensagem: 'Pagamento simulado com sucesso', corrida_id: ride.id } 
   }) 

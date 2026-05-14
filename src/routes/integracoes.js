@@ -16,7 +16,7 @@ export default async function integracoesRoutes(fastify) {
       
       if (paymentId && externalReference) { 
         await query( 
-          "UPDATE rides SET pagamento_status = 'pago' WHERE asaas_payment_id = $1 OR id = $2", 
+          "UPDATE rides SET pagamento_status = 'pago', updated_at = CURRENT_TIMESTAMP WHERE asaas_payment_id = $1 OR id = $2", 
           [paymentId, parseInt(externalReference)] 
         ) 
       } 
