@@ -426,6 +426,32 @@ export default async function driversRoutes(fastify) {
       [id] 
     ) 
     return { mensagem: 'Pagamentos pendentes cancelados', rows_affected: result.rowCount } 
+  })
+
+  fastify.post('/api/admin/drivers/:id/simular-pagamento', { preHandler: requireAuth }, async (request, reply) => { 
+    const { id } = request.params 
+    const rideResult = await query( 
+      "SELECT * FROM rides WHERE driver_id = $1 AND pagamento_status = 'aguardando_pagamento' ORDER BY id DESC LIMIT 1", 
+      [id] 
+    ) 
+    const ride = rideResult.rows[0] 
+    if (!ride) return reply.code(404).send({ error: 'Nenhuma corrida aguardando pagamento' }) 
+    
+    await query("UPDATE rides SET pagamento_status = 'pago' WHERE id = $1", [ride.id]) 
+    
+    // Notificar motorista via Telegram 
+    const driverResult = await query('SELECT * FROM drivers WHERE id = $1', [id]) 
+    const driver = driverResult.rows[0] 
+    if (driver?.telegram_id) { 
+      const { getBot } = await import('../telegram.js') 
+      const bot = getBot() 
+      bot?.sendMessage(driver.telegram_id, 
+        `✅ *Pagamento confirmado!*\n\n💰 Corrida #${ride.id} recebida!\nValor: R$ ${ride.valor}`, 
+        { parse_mode: 'Markdown' } 
+      ).catch(() => {}) 
+    } 
+    
+    return { mensagem: 'Pagamento simulado com sucesso', corrida_id: ride.id } 
   }) 
 
 
