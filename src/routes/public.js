@@ -560,6 +560,13 @@ export default async function publicRoutes(fastify) {
     let asaasPaymentId = null, asaasPaymentLink = null, asaasPixPayload = null
     if ((ride.forma_pagamento === '2' || ride.forma_pagamento === 2) && driver.asaas_id && process.env.ASAAS_API_KEY) { 
       try { 
+        // Buscar dados do cliente
+        let client = null
+        if (ride.client_id) {
+          const clientResult = await query('SELECT * FROM clients WHERE id = $1', [ride.client_id])
+          client = clientResult.rows[0]
+        }
+        
         const asaasCobranca = await fetch('https://www.asaas.com/api/v3/payments', { 
           method: 'POST', 
           headers: { 
@@ -572,6 +579,8 @@ export default async function publicRoutes(fastify) {
             dueDate: new Date(Date.now() + 30 * 60000).toISOString().split('T')[0], 
             description: `Corrida #${id} - MobiHub`, 
             externalReference: String(id), 
+            customerName: client?.nome || 'Passageiro', 
+            customerPhone: client?.telefone || null, 
             split: [ 
               { 
                 walletId: driver.asaas_id, 
