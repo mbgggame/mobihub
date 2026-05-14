@@ -228,6 +228,20 @@ export default async function driversRoutes(fastify) {
           console.log('[ASAAS] WalletId obtido:', asaasData.walletId)
           await query('UPDATE drivers SET asaas_id = $1 WHERE id = $2', [asaasData.walletId, driver.id]) 
           console.log('[ASAAS] asaas_id salvo no banco')
+        } else if (asaasData.errors?.[0]?.description?.includes('já está em uso') || 
+                   asaasData.errors?.[0]?.description?.includes('já existe')) { 
+          const buscarResponse = await fetch( 
+            `https://www.asaas.com/api/v3/accounts?cpfCnpj=${driver.cpf?.replace(/\D/g, '')}`, 
+            { 
+              headers: { 'access_token': process.env.ASAAS_API_KEY } 
+            } 
+          ) 
+          const buscarData = await buscarResponse.json() 
+          const contaExistente = buscarData.data?.[0] 
+          if (contaExistente?.walletId) { 
+            await query('UPDATE drivers SET asaas_id = $1 WHERE id = $2', [contaExistente.walletId, driver.id]) 
+            console.log('[ASAAS] WalletId existente salvo:', contaExistente.walletId) 
+          } 
         }
       } catch (err) {
         console.error('[ASAAS] Erro ao criar subconta:', err)
@@ -339,6 +353,20 @@ export default async function driversRoutes(fastify) {
           console.log('[ASAAS] WalletId obtido:', asaasData.walletId)
           await query('UPDATE drivers SET asaas_id = $1 WHERE id = $2', [asaasData.walletId, driver.id]) 
           console.log('[ASAAS] asaas_id salvo no banco')
+        } else if (asaasData.errors?.[0]?.description?.includes('já está em uso') || 
+                   asaasData.errors?.[0]?.description?.includes('já existe')) { 
+          const buscarResponse = await fetch( 
+            `https://www.asaas.com/api/v3/accounts?cpfCnpj=${driver.cpf?.replace(/\D/g, '')}`, 
+            { 
+              headers: { 'access_token': process.env.ASAAS_API_KEY } 
+            } 
+          ) 
+          const buscarData = await buscarResponse.json() 
+          const contaExistente = buscarData.data?.[0] 
+          if (contaExistente?.walletId) { 
+            await query('UPDATE drivers SET asaas_id = $1 WHERE id = $2', [contaExistente.walletId, driver.id]) 
+            console.log('[ASAAS] WalletId existente salvo:', contaExistente.walletId) 
+          } 
         }
       } catch (err) {
         console.error('[ASAAS] Erro ao criar subconta:', err)
