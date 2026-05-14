@@ -1042,6 +1042,11 @@ export default async function publicRoutes(fastify) {
     return result.rows
   })
 
+  fastify.get('/api/temp/check-all-rides', async (request, reply) => {
+    const result = await query("SELECT id, status, driver_id, client_id, created_at FROM rides ORDER BY id DESC LIMIT 5")
+    return result.rows
+  })
+
   fastify.put('/api/clients/:telefone', async (request, reply) => {
     const { telefone } = request.params
     const { nome, cpf } = request.body
