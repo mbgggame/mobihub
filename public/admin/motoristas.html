@@ -138,6 +138,18 @@ function abrirModalDetalhes(d) {
     </div>
 
     <div>
+      <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Chave Pix</h4>
+      <div class="bg-gray-50 rounded-lg px-4 py-3 text-sm text-gray-600 space-y-1">
+        <p><span class="font-medium">Tipo:</span> ${d.tipo_chave_pix ? 
+          (d.tipo_chave_pix === 'cpf' ? 'CPF' : 
+           d.tipo_chave_pix === 'cnpj' ? 'CNPJ' : 
+           d.tipo_chave_pix === 'email' ? 'Email' : 
+           d.tipo_chave_pix === 'telefone' ? 'Telefone' : 'Chave aleatória') : '—'}</p>
+        <p><span class="font-medium">Chave:</span> ${d.chave_pix || '—'}</p>
+      </div>
+    </div>
+
+    <div>
       <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Veículo</h4>
       <div class="bg-gray-50 rounded-lg px-4 py-3 text-sm text-gray-600 space-y-1">
         <p><span class="font-medium">Marca/Modelo:</span> ${d.modelo_carro || '—'}</p>

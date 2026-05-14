@@ -64,6 +64,23 @@
             class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/>
         </div>
         <div>
+          <label class="text-sm font-semibold text-zinc-400">Tipo de Chave Pix</label>
+          <select id="f-tipo-chave-pix"
+            class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+            <option value="">Selecione o tipo</option>
+            <option value="cpf">CPF</option>
+            <option value="cnpj">CNPJ</option>
+            <option value="email">Email</option>
+            <option value="telefone">Telefone</option>
+            <option value="aleatoria">Chave aleatória</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm font-semibold text-zinc-400">Chave Pix</label>
+          <input id="f-chave-pix" type="text" placeholder="Digite sua chave Pix"
+            class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/>
+        </div>
+        <div>
           <label class="text-sm font-semibold text-zinc-400">Cidade de atuação</label>
           <select id="f-cidade" 
             class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
@@ -533,7 +550,9 @@
           crlv_base64: dados.crlv_base64,
           cnh_frente_base64: dados.cnh_frente_base64,
           cnh_verso_base64: dados.cnh_verso_base64,
-          cnh_digital_base64: dados.cnh_digital_base64
+          cnh_digital_base64: dados.cnh_digital_base64,
+          tipo_chave_pix: document.getElementById('f-tipo-chave-pix').value,
+          chave_pix: document.getElementById('f-chave-pix').value.trim()
         }
 
         const r = await fetch('/api/cadastro-geral', {
