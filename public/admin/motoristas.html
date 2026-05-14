@@ -152,11 +152,16 @@ function renderizarModalDetalhes() {
               <input id="ed-telefone" type="text" value="${d.telefone || ''}" class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
             </div>
             <div>
-              <label class="text-sm font-semibold text-gray-700">CPF</label>
-              <input id="ed-cpf" type="text" value="${d.cpf || ''}" class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
-            </div>
+            <label class="text-sm font-semibold text-gray-700">CPF</label>
+            <input id="ed-cpf" type="text" value="${d.cpf || ''}" class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
           </div>
+          ${d.asaas_id ? `
+          <div>
+            <label class="text-sm font-semibold text-gray-700">ID Asaas (walletId)</label>
+            <input type="text" value="${d.asaas_id}" class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm bg-gray-100 cursor-not-allowed" disabled/>
+          </div>` : ''}
         </div>
+      </div>
 
         <div>
           <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Endereço</h4>
@@ -295,6 +300,7 @@ function renderizarModalDetalhes() {
           <p><span class="font-medium">Telefone:</span> ${d.telefone || '—'}</p>
           <p><span class="font-medium">CPF:</span> ${d.cpf || '—'}</p>
           <p><span class="font-medium">Telegram ID:</span> ${d.telegram_id || '—'}</p>
+          ${d.asaas_id ? `<p><span class="font-medium">ID Asaas (walletId):</span> <span class="font-mono">${d.asaas_id}</span></p>` : ''}
         </div>
       </div>
 

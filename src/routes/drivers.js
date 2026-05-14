@@ -190,6 +190,39 @@ export default async function driversRoutes(fastify) {
       UPDATE drivers SET status_cadastro = 'aprovado', ativo = 1, token_perfil = $1 WHERE id = $2 
     `, [token, id]) 
 
+    // Integração Asaas: criar subconta automaticamente
+    if (process.env.ASAAS_API_KEY) {
+      try {
+        const asaasResponse = await fetch('https://www.asaas.com/api/v3/accounts', { 
+          method: 'POST', 
+          headers: { 
+            'Content-Type': 'application/json', 
+            'access_token': process.env.ASAAS_API_KEY 
+          }, 
+          body: JSON.stringify({ 
+            name: driver.nome, 
+            email: driver.email, 
+            cpfCnpj: driver.cpf?.replace(/\D/g, ''), 
+            phone: driver.telefone?.replace(/\D/g, ''), 
+            mobilePhone: driver.telefone?.replace(/\D/g, ''), 
+            address: driver.logradouro, 
+            addressNumber: driver.numero, 
+            complement: driver.complemento, 
+            province: driver.bairro, 
+            postalCode: driver.cep?.replace('-', ''), 
+            companyType: 'INDIVIDUAL' 
+          }) 
+        })
+        const asaasData = await asaasResponse.json()
+        if (asaasData.walletId) { 
+          await query('UPDATE drivers SET asaas_id = $1 WHERE id = $2', [asaasData.walletId, driver.id]) 
+        }
+      } catch (err) {
+        console.error('[ASAAS] Erro ao criar subconta:', err)
+        // Não bloqueia a aprovação por falha no Asaas
+      }
+    }
+
     // Notifica motorista via Telegram 
     if (driver?.telegram_id) { 
       const { getBot } = await import('../telegram.js') 
