@@ -190,6 +190,9 @@ export default async function driversRoutes(fastify) {
       UPDATE drivers SET status_cadastro = 'aprovado', ativo = 1, token_perfil = $1 WHERE id = $2 
     `, [token, id]) 
 
+    console.log('[ASAAS] ASAAS_API_KEY presente?', !!process.env.ASAAS_API_KEY)
+    console.log('[ASAAS] Endpoint /aprovar chamado para driver:', id)
+
     // Integração Asaas: criar subconta automaticamente
     if (process.env.ASAAS_API_KEY) {
       try {
@@ -295,6 +298,9 @@ export default async function driversRoutes(fastify) {
 
     const driverResult = await query('SELECT * FROM drivers WHERE id = $1', [id])
     const driver = driverResult.rows[0]
+
+    console.log('[ASAAS] ASAAS_API_KEY presente?', !!process.env.ASAAS_API_KEY)
+    console.log('[ASAAS] Endpoint /ativar chamado para driver:', id)
 
     // Integração Asaas: criar subconta automaticamente
     if (process.env.ASAAS_API_KEY) {
