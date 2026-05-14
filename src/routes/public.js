@@ -278,7 +278,7 @@ export default async function publicRoutes(fastify) {
     if (!driver) return { corrida: null } 
 
     const corrida = (await query( 
-      "SELECT * FROM rides WHERE driver_id = $1 AND status IN ('aceita', 'em_viagem', 'concluida') ORDER BY aceita_at DESC, concluida_at DESC LIMIT 1", 
+      "SELECT * FROM rides WHERE driver_id = $1 AND status NOT IN ('concluida', 'cancelada') ORDER BY aceita_at DESC LIMIT 1", 
       [driver.id] 
     )).rows[0] 
     return { corrida: corrida || null } 
