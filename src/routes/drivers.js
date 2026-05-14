@@ -2,7 +2,20 @@ import { v4 as uuidv4 } from 'uuid'
 import { query, pool } from '../db.js' 
 import { requireAuth } from '../middleware/auth.js' 
  
-export default async function driversRoutes(fastify) { 
+export default async function driversRoutes(fastify) {
+
+  fastify.get('/api/temp/check-transactions', async (request, reply) => {
+    const tableSchema = await query(`
+      SELECT column_name, data_type 
+      FROM information_schema.columns 
+      WHERE table_name = 'driver_transactions'
+    `)
+    const transactions = await query('SELECT * FROM driver_transactions LIMIT 10')
+    return {
+      table_columns: tableSchema.rows,
+      transactions: transactions.rows
+    }
+  })
 
   fastify.post('/api/cadastro-geral', async (request, reply) => { 
     const { 
