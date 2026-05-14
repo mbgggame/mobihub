@@ -1255,7 +1255,7 @@
    const qrCard = document.getElementById('card-qrcode-pix')
    if (corrida.status === 'concluida' && corrida.pagamento_status === 'aguardando_pagamento' && corrida.asaas_pix_qrcode) {
      qrCard.classList.remove('hidden')
-     document.getElementById('img-qrcode-pix').src = corrida.asaas_pix_qrcode
+     document.getElementById('img-qrcode-pix').src = `data:image/png;base64,${corrida.asaas_pix_qrcode}`
      document.getElementById('txt-pix-payload').value = corrida.asaas_pix_payload
    } else {
      qrCard.classList.add('hidden')
