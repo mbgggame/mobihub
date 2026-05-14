@@ -1481,6 +1481,14 @@
        motoristOnline = true 
        renderizarStatusOnline({ online: 1 })
        verificarCorridaAtiva() // Recarrega os dados da corrida para exibir QR Code
+
+       // Polling mais rápido por 30s após finalizar 
+       let rapidPollingCount = 0 
+       const rapidPolling = setInterval(async () => { 
+         await verificarCorridaAtiva() 
+         rapidPollingCount++ 
+         if (rapidPollingCount >= 15) clearInterval(rapidPolling) 
+       }, 2000) 
      } 
      return 
    } else if (acao === 'cancelar') { 
