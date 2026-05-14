@@ -1080,6 +1080,14 @@ export default async function publicRoutes(fastify) {
     return result.rows
   })
 
+  fastify.post('/api/temp/fix-pagamento', async (request, reply) => {
+    const result = await query(`
+      UPDATE rides SET pagamento_status = 'cancelado' 
+      WHERE driver_id = 6 AND pagamento_status = 'aguardando_pagamento'
+    `)
+    return { mensagem: 'Pagamentos atualizados', rows_affected: result.rowCount }
+  })
+
   fastify.put('/api/clients/:telefone', async (request, reply) => {
     const { telefone } = request.params
     const { nome, cpf } = request.body
