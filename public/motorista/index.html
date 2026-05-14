@@ -60,7 +60,46 @@
       </button>
     </div>
   </div>
-</div> 
+</div>
+
+<!-- MODAL MEUS DADOS -->
+<div id="modal-meus-dados" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4 py-6 hidden">
+  <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl">
+    <div class="p-6 space-y-4">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-xl font-bold text-gray-900">⚙️ Meus Dados</h2>
+        <button onclick="fecharModalMeusDados()" class="text-gray-500 hover:text-gray-700 text-xl font-bold">✕</button>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="text-sm font-semibold text-gray-700">Tipo de Chave Pix</label>
+          <select id="md-tipo-chave-pix"
+            class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+            <option value="">Selecione o tipo</option>
+            <option value="cpf">CPF</option>
+            <option value="cnpj">CNPJ</option>
+            <option value="email">Email</option>
+            <option value="telefone">Telefone</option>
+            <option value="aleatoria">Chave aleatória</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm font-semibold text-gray-700">Chave Pix</label>
+          <input id="md-chave-pix" type="text" placeholder="Digite sua chave Pix"
+            class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
+        </div>
+      </div>
+
+      <div class="pt-2">
+        <button onclick="salvarMeusDados()"
+          class="w-full bg-green-600 text-white rounded-lg py-3 font-semibold hover:bg-green-700">
+          Salvar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- CONTEÚDO PRINCIPAL (HIDDEN ATÉ ACEITE DOS TERMOS) -->
 <div id="conteudo-principal" class="hidden">
@@ -73,6 +112,9 @@
       <span class="font-bold text-lg">MobiHub</span> 
     </div> 
     <div class="flex items-center gap-2"> 
+      <button onclick="abrirModalMeusDados()" class="text-sm px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 font-semibold">
+        ⚙️ Meus Dados
+      </button>
       <span id="badge-online" class="hidden text-xs px-2 py-0.5 rounded-full bg-green-500 text-white border border-green-300">● Online</span> 
       <span id="badge-offline" class="text-xs px-2 py-0.5 rounded-full bg-red-500 text-white">○ Offline</span> 
     </div> 
@@ -902,6 +944,44 @@
      } 
    } catch(e) { alert('Erro de conexão') } 
  } 
+
+ function abrirModalMeusDados() {
+   const modal = document.getElementById('modal-meus-dados')
+   modal.classList.remove('hidden')
+   
+   if (dadosAtuaisDriver) {
+     document.getElementById('md-tipo-chave-pix').value = dadosAtuaisDriver.tipo_chave_pix || ''
+     document.getElementById('md-chave-pix').value = dadosAtuaisDriver.chave_pix || ''
+   }
+ }
+
+ function fecharModalMeusDados() {
+   document.getElementById('modal-meus-dados').classList.add('hidden')
+ }
+
+ async function salvarMeusDados() {
+   const tipo_chave_pix = document.getElementById('md-tipo-chave-pix').value
+   const chave_pix = document.getElementById('md-chave-pix').value.trim()
+   
+   try {
+     const r = await fetch('/api/drivers/perfil', {
+       method: 'PUT',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({ token_perfil: tokenMotorista, tipo_chave_pix, chave_pix })
+     })
+     
+     if (r.ok) {
+       alert('✅ Dados atualizados com sucesso!')
+       fecharModalMeusDados()
+       carregar()
+     } else {
+       const d = await r.json()
+       alert(d.error || 'Erro ao salvar dados')
+     }
+   } catch(e) {
+     alert('Erro de conexão')
+   }
+ }
  
  async function verificarNovasCorridas() { 
    if (!motoristOnline) return 

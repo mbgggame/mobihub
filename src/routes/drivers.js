@@ -354,6 +354,25 @@ export default async function driversRoutes(fastify) {
     return { mensagem: online ? 'Você está online' : 'Você está offline', online } 
   }) 
  
+  // Atualizar perfil do motorista
+  fastify.put('/api/drivers/perfil', async (request, reply) => {
+    const { token_perfil, tipo_chave_pix, chave_pix } = request.body
+    if (!token_perfil) return reply.code(400).send({ error: 'Token do motorista ausente' })
+
+    const driverResult = await query('SELECT id FROM drivers WHERE token_perfil = $1', [token_perfil])
+    const driver = driverResult.rows[0]
+    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' })
+
+    await query(`
+      UPDATE drivers SET
+        tipo_chave_pix = COALESCE($1, tipo_chave_pix),
+        chave_pix = COALESCE($2, chave_pix)
+      WHERE id = $3
+    `, [tipo_chave_pix || null, chave_pix || null, driver.id])
+
+    return { mensagem: 'Dados atualizados com sucesso' }
+  })
+
   // Listar veículos do motorista 
   fastify.get('/api/motorista/:token/veiculos', async (request, reply) => { 
     const driver = (await query( 
@@ -361,12 +380,12 @@ export default async function driversRoutes(fastify) {
       [request.params.token] 
     )).rows[0] 
     if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
- 
+
     const veiculos = (await query( 
       'SELECT * FROM vehicles WHERE driver_id = $1 ORDER BY ativo DESC, created_at ASC', 
       [driver.id] 
     )).rows 
- 
+
     return veiculos 
   }) 
  
