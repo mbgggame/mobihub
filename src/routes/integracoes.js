@@ -1,7 +1,35 @@
 export default async function integracoesRoutes(fastify) { 
   const { query } = await import('../db.js') 
   const { requireAuth } = await import('./auth.js') 
- 
+
+  fastify.post('/webhook/asaas', async (request, reply) => { 
+    const { event, payment } = request.body 
+    
+    if (event === 'PAYMENT_RECEIVED' || event === 'PAYMENT_CONFIRMED') { 
+      const paymentId = payment?.id 
+      const externalReference = payment?.externalReference 
+      
+      if (paymentId && externalReference) { 
+        await query( 
+          "UPDATE rides SET pagamento_status = 'pago' WHERE asaas_payment_id = $1 OR id = $2", 
+          [paymentId, parseInt(externalReference)] 
+        ) 
+      } 
+    } 
+    
+    if (event === 'PAYMENT_OVERDUE' || event === 'PAYMENT_DELETED') { 
+      const paymentId = payment?.id 
+      if (paymentId) { 
+        await query( 
+          "UPDATE rides SET pagamento_status = 'cancelado' WHERE asaas_payment_id = $1", 
+          [paymentId] 
+        ) 
+      } 
+    } 
+    
+    return { received: true } 
+  }) 
+
   // ── WEBHOOKS ────────────────────────────────────── 
  
   // Listar webhooks 

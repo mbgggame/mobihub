@@ -21,6 +21,32 @@
   </div>
 
   <div class="max-w-6xl mx-auto p-4 space-y-6">
+    <!-- WEBHOOK ASAAS -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+      <h2 class="text-lg font-bold text-gray-900 mb-4">🔔 Webhook Asaas</h2>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">URL do Webhook</label>
+          <div class="flex gap-2">
+            <input type="text" id="asaas-webhook-url" value="https://mobihub-s9yl.onrender.com/webhook/asaas" readonly
+              class="flex-1 text-sm border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 font-mono">
+            <button onclick="copiarUrlAsaas()" class="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-3 text-sm font-semibold">
+              📋 Copiar
+            </button>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Eventos suportados</label>
+          <div class="flex flex-wrap gap-2">
+            <span class="text-xs bg-gray-100 text-gray-800 rounded-lg px-3 py-1.5">PAYMENT_RECEIVED</span>
+            <span class="text-xs bg-gray-100 text-gray-800 rounded-lg px-3 py-1.5">PAYMENT_CONFIRMED</span>
+            <span class="text-xs bg-gray-100 text-gray-800 rounded-lg px-3 py-1.5">PAYMENT_OVERDUE</span>
+            <span class="text-xs bg-gray-100 text-gray-800 rounded-lg px-3 py-1.5">PAYMENT_DELETED</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- WEBHOOKS -->
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
       <div class="flex items-center justify-between mb-4">
@@ -488,6 +514,13 @@
         alert('Erro de conexão')
       }
     })
+
+    function copiarUrlAsaas() {
+      const el = document.getElementById('asaas-webhook-url')
+      el.select()
+      document.execCommand('copy')
+      alert('✅ URL copiada para a área de transferência!')
+    }
 
     window.onload = carregarTudo
   </script>
