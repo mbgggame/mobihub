@@ -64,6 +64,45 @@
   </div>
 </div>
 
+<!-- MODAL DE EDIÇÃO DE DADOS -->
+<div id="modal-editar-dados" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4 py-6 hidden">
+  <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl">
+    <div class="p-6 space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xl font-bold text-gray-900">✏️ Editar meus dados</h2>
+        <button onclick="fecharModalEditarDados()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="text-xs text-gray-500 font-medium">Nome completo</label>
+          <input id="editar-nome" type="text" placeholder="Seu nome"
+            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 font-medium">Telefone (WhatsApp)</label>
+          <input id="editar-telefone" type="tel" placeholder="(27) 99999-9999" disabled
+            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm bg-gray-50 text-gray-500"/>
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 font-medium">CPF (opcional)</label>
+          <input id="editar-cpf" type="text" placeholder="000.000.000-00"
+            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
+        </div>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button onclick="fecharModalEditarDados()"
+          class="flex-1 border border-gray-200 text-gray-600 rounded-xl py-3 font-semibold text-sm hover:bg-gray-50">
+          Cancelar
+        </button>
+        <button onclick="salvarDadosEditados()"
+          class="flex-1 bg-green-600 text-white rounded-xl py-3 font-semibold text-sm hover:bg-green-700">
+          Salvar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL DE AVALIAÇÃO DO MOTORISTA -->
 <div id="modal-avaliacao" class="fixed inset-0 bg-black bg-opacity-50 z-[99999] flex items-center justify-center px-4 py-6 hidden">
   <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl">
@@ -153,7 +192,7 @@
           <span id="sua-nota-texto" class="text-xs font-medium text-yellow-700"></span>
         </div>
       </div>
-      <button onclick="trocarCadastro()" class="text-xs text-gray-400 hover:text-gray-600 underline">Trocar dados</button> 
+      <button onclick="abrirModalEditarDados()" class="text-xs text-gray-400 hover:text-gray-600 underline">✏️ Editar meus dados</button> 
     </div> 
 
     <div class="flex gap-2"> 
@@ -453,6 +492,65 @@
    localStorage.removeItem('cliente_cpf')
    document.getElementById('tela-solicitar').classList.add('hidden') 
    document.getElementById('tela-cadastro').classList.remove('hidden') 
+ }
+
+ function abrirModalEditarDados() {
+   const cliente_nome = localStorage.getItem('cliente_nome')
+   const cliente_telefone = localStorage.getItem('cliente_telefone')
+   const cliente_cpf = localStorage.getItem('cliente_cpf')
+   
+   document.getElementById('editar-nome').value = cliente_nome
+   document.getElementById('editar-telefone').value = cliente_telefone
+   document.getElementById('editar-cpf').value = cliente_cpf || ''
+   
+   document.getElementById('modal-editar-dados').classList.remove('hidden')
+   document.getElementById('modal-editar-dados').style.display = 'flex'
+ }
+
+ function fecharModalEditarDados() {
+   document.getElementById('modal-editar-dados').classList.add('hidden')
+   document.getElementById('modal-editar-dados').style.display = 'none'
+ }
+
+ async function salvarDadosEditados() {
+   const nome = document.getElementById('editar-nome').value.trim()
+   const cpf = document.getElementById('editar-cpf').value.trim()
+   const cliente_telefone = localStorage.getItem('cliente_telefone')
+
+   if (!nome) {
+     alert('Nome é obrigatório!')
+     return
+   }
+
+   try {
+     const r = await fetch(`/api/clients/${cliente_telefone}`, {
+       method: 'PUT',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({ nome, cpf })
+     })
+
+     if (r.ok) {
+       localStorage.setItem('cliente_nome', nome)
+       if (cpf) localStorage.setItem('cliente_cpf', cpf)
+       else localStorage.removeItem('cliente_cpf')
+       
+       const cliente_email = localStorage.getItem('cliente_email')
+       localStorage.setItem(STORAGE_CLIENTE, JSON.stringify({ 
+         nome, 
+         celular: cliente_telefone, 
+         email: cliente_email, 
+         cpf: cpf || undefined 
+       }))
+       
+       document.getElementById('txt-nome-cliente').textContent = nome
+       alert('✅ Dados atualizados com sucesso!')
+       fecharModalEditarDados()
+     } else {
+       alert('Erro ao salvar dados!')
+     }
+   } catch (e) {
+     alert('Erro de conexão!')
+   }
  } 
 
  function selecionarFormaPagamento(valor) {

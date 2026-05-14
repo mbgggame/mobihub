@@ -1018,6 +1018,23 @@ export default async function publicRoutes(fastify) {
     return result.rows
   })
 
+  fastify.put('/api/clients/:telefone', async (request, reply) => {
+    const { telefone } = request.params
+    const { nome, cpf } = request.body
+
+    const clientResult = await query('SELECT * FROM clients WHERE telefone = $1', [telefone])
+    const client = clientResult.rows[0]
+
+    if (!client) return reply.code(404).send({ error: 'Cliente não encontrado' })
+
+    await query(
+      `UPDATE clients SET nome = COALESCE($1, nome), cpf = COALESCE($2, cpf) WHERE id = $3`,
+      [nome || null, cpf || null, client.id]
+    )
+
+    return { mensagem: 'Dados atualizados com sucesso!' }
+  })
+
   fastify.get('/api/client/reputation', async (request, reply) => {
     const { telefone } = request.query
     if (!telefone) return reply.code(400).send({ error: 'Telefone obrigatório' })
