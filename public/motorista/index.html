@@ -411,7 +411,7 @@
       </div> 
 
       <!-- Botões de controle --> 
-       <div class="grid grid-cols-2 gap-2"> 
+       <div id="botoes-controle-corrida" class="grid grid-cols-2 gap-2"> 
          <button onclick="acaoCorridaAtiva('chegou')" id="btn-chegou" 
            class="bg-blue-50 text-blue-700 border border-blue-200 rounded-lg py-2.5 text-sm font-medium hover:bg-blue-100"> 
            📍 Cheguei 
@@ -436,27 +436,45 @@
        </div> 
  
        <!-- DETALHAMENTO DA COBRANÇA (Transparência) --> 
-       <div id="card-detalhe-billing" class="hidden mt-4 bg-gray-50 border border-gray-200 rounded-xl p-4"> 
-         <p class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-3">Detalhamento da cobrança</p> 
-         <div class="space-y-2"> 
-           <div class="flex justify-between text-sm"> 
-             <span class="text-gray-600">Valor base</span> 
-             <span id="bill-base" class="font-medium text-gray-800">—</span> 
-           </div> 
-           <div id="bill-espera-row" class="hidden flex justify-between text-sm"> 
-             <span id="bill-espera-label" class="text-gray-600">Espera (0 min além da franquia)</span> 
-             <span id="bill-espera-valor" class="font-medium text-orange-600">—</span> 
-           </div> 
-           <div id="bill-parada-row" class="hidden flex justify-between text-sm"> 
-             <span id="bill-parada-label" class="text-gray-600">Paradas (0 min além da franquia)</span> 
-             <span id="bill-parada-valor" class="font-medium text-orange-600">—</span> 
-           </div> 
-           <div class="border-t border-gray-200 pt-2 flex justify-between"> 
-             <span class="font-bold text-gray-900">Total</span> 
-             <span id="bill-total" class="font-bold text-green-700 text-lg">—</span> 
-           </div> 
-         </div> 
-       </div> 
+      <div id="card-detalhe-billing" class="hidden mt-4 bg-gray-50 border border-gray-200 rounded-xl p-4"> 
+        <p class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-3">Detalhamento da cobrança</p> 
+        <div class="space-y-2"> 
+          <div class="flex justify-between text-sm"> 
+            <span class="text-gray-600">Valor base</span> 
+            <span id="bill-base" class="font-medium text-gray-800">—</span> 
+          </div> 
+          <div id="bill-espera-row" class="hidden flex justify-between text-sm"> 
+            <span id="bill-espera-label" class="text-gray-600">Espera (0 min além da franquia)</span> 
+            <span id="bill-espera-valor" class="font-medium text-orange-600">—</span> 
+          </div> 
+          <div id="bill-parada-row" class="hidden flex justify-between text-sm"> 
+            <span id="bill-parada-label" class="text-gray-600">Paradas (0 min além da franquia)</span> 
+            <span id="bill-parada-valor" class="font-medium text-orange-600">—</span> 
+          </div> 
+          <div class="border-t border-gray-200 pt-2 flex justify-between"> 
+            <span class="font-bold text-gray-900">Total</span> 
+            <span id="bill-total" class="font-bold text-green-700 text-lg">—</span> 
+          </div> 
+        </div> 
+      </div>
+
+      <!-- QR CODE PIX --> 
+      <div id="card-qrcode-pix" class="hidden mt-4 bg-white border border-blue-200 rounded-xl p-4"> 
+        <p class="text-center text-sm text-blue-700 font-medium mb-3">⏳ Aguardando pagamento...</p>
+        <div class="flex justify-center mb-3">
+          <img id="img-qrcode-pix" alt="QR Code Pix" class="max-w-[200px]">
+        </div>
+        <p class="text-center text-xs text-gray-600 mb-3">Mostre este QR Code para o passageiro escanear</p>
+        <div class="bg-gray-50 rounded-lg p-3">
+          <p class="text-xs text-gray-500 mb-2">Código Pix (copia e cola):</p>
+          <div class="flex gap-2">
+            <input id="txt-pix-payload" readonly class="flex-1 text-xs bg-white border border-gray-200 rounded px-2 py-1.5 font-mono">
+            <button onclick="copiarPixPayload()" class="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-blue-700">
+              📋 Copiar
+            </button>
+          </div>
+        </div>
+      </div> 
      </div> 
    </div> 
  
@@ -1108,6 +1126,15 @@
      alert('Erro de conexão')
    }
  }
+
+ function copiarPixPayload() {
+   const payload = document.getElementById('txt-pix-payload').value
+   navigator.clipboard.writeText(payload).then(() => {
+     alert('✅ Código Pix copiado!')
+   }).catch(() => {
+     alert('Erro ao copiar')
+   })
+ }
  
  async function verificarNovasCorridas() { 
    if (!motoristOnline) return 
@@ -1216,6 +1243,24 @@
    document.getElementById('card-sem-corrida').classList.add('hidden') 
    document.getElementById('card-nova-corrida').classList.add('hidden') 
    
+   // Mostrar/ocultar botões de controle
+   const botoesControle = document.getElementById('botoes-controle-corrida')
+   if (corrida.status === 'concluida') {
+     botoesControle.classList.add('hidden')
+   } else {
+     botoesControle.classList.remove('hidden')
+   }
+   
+   // Mostrar/ocultar QR Code Pix
+   const qrCard = document.getElementById('card-qrcode-pix')
+   if (corrida.status === 'concluida' && corrida.pagamento_status === 'aguardando_pagamento' && corrida.asaas_pix_qrcode) {
+     qrCard.classList.remove('hidden')
+     document.getElementById('img-qrcode-pix').src = corrida.asaas_pix_qrcode
+     document.getElementById('txt-pix-payload').value = corrida.asaas_pix_payload
+   } else {
+     qrCard.classList.add('hidden')
+   }
+
    if (corrida.origem_lat) { 
      const destLat = (corrida.status === 'aceita' && !corrida.motorista_chegou_at) ? corrida.origem_lat : corrida.destino_lat;
      const destLng = (corrida.status === 'aceita' && !corrida.motorista_chegou_at) ? corrida.origem_lng : corrida.destino_lng;
@@ -1331,12 +1376,11 @@
      if (!confirm('Finalizar?')) return 
      const r = await fetch(`/api/rides/${corridaAtualId}/finalizar-motorista`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token_motorista: tokenMotorista }) }) 
      if (r.ok) { 
-       corridaAtualId = null 
-       corridaAtualToken = null 
-       esconderCorridaAtiva() 
+       // Não limpa corridaAtualId imediatamente, para exibir QR Code Pix
        // Garante que o motorista continua online sem chamar carregar() 
        motoristOnline = true 
-       renderizarStatusOnline({ online: 1 }) 
+       renderizarStatusOnline({ online: 1 })
+       verificarCorridaAtiva() // Recarrega os dados da corrida para exibir QR Code
      } 
      return 
    } else if (acao === 'cancelar') { 
