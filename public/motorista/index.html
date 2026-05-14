@@ -474,6 +474,13 @@
             </button>
           </div>
         </div>
+      </div>
+
+      <!-- PAGAMENTO CONFIRMADO --> 
+      <div id="card-pagamento-confirmado" class="hidden mt-4 bg-green-50 border border-green-200 rounded-xl p-4"> 
+        <p class="text-center text-sm text-green-700 font-bold mb-3">✅ Pagamento recebido!</p>
+        <p id="txt-pagamento-valor" class="text-center text-2xl font-bold text-green-800 mb-1"></p>
+        <p id="txt-pagamento-corrida" class="text-center text-xs text-green-600"></p>
       </div> 
      </div> 
    </div> 
@@ -1251,14 +1258,23 @@
      botoesControle.classList.remove('hidden')
    }
    
-   // Mostrar/ocultar QR Code Pix
+   // Mostrar/ocultar QR Code Pix ou pagamento confirmado
    const qrCard = document.getElementById('card-qrcode-pix')
-   if (corrida.status === 'concluida' && corrida.pagamento_status === 'aguardando_pagamento' && corrida.asaas_pix_qrcode) {
+   const pagamentoConfirmadoCard = document.getElementById('card-pagamento-confirmado')
+   
+   if (corrida.pagamento_status === 'pago') {
+     qrCard.classList.add('hidden')
+     pagamentoConfirmadoCard.classList.remove('hidden')
+     document.getElementById('txt-pagamento-valor').textContent = moeda(corrida.valor_final || corrida.valor)
+     document.getElementById('txt-pagamento-corrida').textContent = `Corrida #${corrida.id}`
+   } else if (corrida.status === 'concluida' && corrida.pagamento_status === 'aguardando_pagamento' && corrida.asaas_pix_qrcode) {
      qrCard.classList.remove('hidden')
+     pagamentoConfirmadoCard.classList.add('hidden')
      document.getElementById('img-qrcode-pix').src = `data:image/png;base64,${corrida.asaas_pix_qrcode}`
      document.getElementById('txt-pix-payload').value = corrida.asaas_pix_payload
    } else {
      qrCard.classList.add('hidden')
+     pagamentoConfirmadoCard.classList.add('hidden')
    }
 
    if (corrida.origem_lat) { 

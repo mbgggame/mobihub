@@ -368,6 +368,12 @@
        class="block w-full bg-green-600 text-white rounded-xl py-3 font-semibold text-sm hover:bg-green-700"> 
        🚗 Solicitar nova corrida 
      </a> 
+   </div>
+
+   <!-- PAGAMENTO CONFIRMADO --> 
+   <div id="card-pagamento-confirmado-passageiro" class="hidden bg-green-50 border border-green-200 rounded-xl p-4 text-center"> 
+     <p class="text-2xl mb-2">✅</p> 
+     <p class="font-semibold text-green-800">Pagamento confirmado! Obrigado por usar o MobiHub. 🚗</p> 
    </div> 
 
    <!-- HISTÓRICO DE VIAGENS DO PASSAGEIRO --> 
@@ -557,7 +563,7 @@
  
  function renderizar(ride, rating, paradas, config) { 
    console.log('[RENDER] status:', ride.status, '| detalhe:', ride.status_detalhe) 
- 
+
    // CORREÇÃO 6: Renderizar Timeline
    if (ride.created_at) {
      document.getElementById('card-timeline').classList.remove('hidden')
@@ -578,6 +584,14 @@
        document.getElementById('tm-concluida').classList.remove('hidden')
        document.getElementById('tm-concluida-at').textContent = new Date(ride.concluida_at).toLocaleString('pt-BR')
      }
+   }
+
+   // Mostrar pagamento confirmado
+   const pagamentoConfirmadoCard = document.getElementById('card-pagamento-confirmado-passageiro')
+   if (ride.pagamento_status === 'pago') {
+     pagamentoConfirmadoCard.classList.remove('hidden')
+   } else {
+     pagamentoConfirmadoCard.classList.add('hidden')
    }
 
    // Usa status_detalhe se disponível e relevante 

@@ -439,18 +439,6 @@ export default async function driversRoutes(fastify) {
     
     await query("UPDATE rides SET pagamento_status = 'pago' WHERE id = $1", [ride.id]) 
     
-    // Notificar motorista via Telegram 
-    const driverResult = await query('SELECT * FROM drivers WHERE id = $1', [id]) 
-    const driver = driverResult.rows[0] 
-    if (driver?.telegram_id) { 
-      const { getBot } = await import('../telegram.js') 
-      const bot = getBot() 
-      bot?.sendMessage(driver.telegram_id, 
-        `✅ *Pagamento confirmado!*\n\n💰 Corrida #${ride.id} recebida!\nValor: R$ ${ride.valor}`, 
-        { parse_mode: 'Markdown' } 
-      ).catch(() => {}) 
-    } 
-    
     return { mensagem: 'Pagamento simulado com sucesso', corrida_id: ride.id } 
   }) 
 
