@@ -1085,6 +1085,14 @@ export default async function publicRoutes(fastify) {
     return result.rows
   })
 
+  fastify.post('/api/temp/confirmar-pagamento', async (request, reply) => {
+    const result = await query(
+      "UPDATE rides SET pagamento_status = 'pago' WHERE asaas_payment_id = $1",
+      ['pay_fat5zannoivthkvi']
+    )
+    return { mensagem: 'Pagamento confirmado', rows_affected: result.rowCount }
+  })
+
   fastify.post('/api/rate', async (request, reply) => {
     const { ride_id, tipo, estrelas, comentario, token } = request.body
     if (!ride_id || !tipo || !estrelas || estrelas < 1 || estrelas > 5) {
