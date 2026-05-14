@@ -138,6 +138,7 @@ export async function initDB() {
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS chave_pix TEXT;
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS tipo_chave_pix TEXT;
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS asaas_id TEXT;
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS email TEXT;
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS cep TEXT;
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS logradouro TEXT;
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS numero TEXT;

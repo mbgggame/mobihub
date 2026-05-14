@@ -33,19 +33,19 @@ export default async function driversRoutes(fastify) {
 
       const result = await query(` 
         INSERT INTO drivers 
-          (nome, telefone, telegram_id, status_cadastro, ativo, 
+          (nome, telefone, email, telegram_id, status_cadastro, ativo, 
            modelo_carro, ano_carro, cor_carro, placa, 
            cpf, renavam, crlv_base64, 
            cnh_frente_base64, cnh_verso_base64, cnh_digital_base64, foto_base64,
            tipo_chave_pix, chave_pix, cep, logradouro, numero, complemento, bairro, cidade, estado) 
-        VALUES ($1, $2, $3, 'pendente', 0, 
-                 $4, $5, $6, $7, 
-                 $8, $9, $10,
-                 $11, $12, $13, $14, $15, $16,
-                 $17, $18, $19, $20, $21, $22, $23)
+        VALUES ($1, $2, $3, $4, 'pendente', 0, 
+                 $5, $6, $7, $8, 
+                 $9, $10, $11,
+                 $12, $13, $14, $15, $16, $17, $18,
+                 $19, $20, $21, $22, $23, $24, $25)
         RETURNING id
       `, [
-        nome, telefone, telegram_id || '0', 
+        nome, telefone, email || null, telegram_id || '0', 
         modelo_carro, ano_carro, cor_carro || 'Não informado', placa,
         cpf, renavam, crlv_base64 || null,
         cnh_frente_base64 || null, cnh_verso_base64 || null, cnh_digital_base64 || null, foto_base64 || null,
@@ -63,7 +63,7 @@ export default async function driversRoutes(fastify) {
   }) 
 
   fastify.get('/api/drivers', { preHandler: requireAuth }, async () => { 
-    const result = await query(`SELECT id, nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, 
+    const result = await query(`SELECT id, nome, telefone, email, telegram_id, modelo_carro, ano_carro, cor_carro, placa, 
       total_viagens, media_avaliacao, total_avaliacoes, ativo, foto_base64, token_perfil, created_at, status_cadastro,
       cpf, renavam, crlv_base64, cnh_frente_base64, cnh_verso_base64, cnh_digital_base64,
       tipo_chave_pix, chave_pix, asaas_id,
@@ -274,7 +274,7 @@ export default async function driversRoutes(fastify) {
   fastify.put('/api/drivers/:id', { preHandler: requireAuth }, async (request, reply) => { 
     console.log('[DEBUG] PUT /api/drivers/:id chamado, id:', request.params.id) 
     console.log('[DEBUG] Body recebido:', request.body) 
-    const { nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, ativo, foto_base64, status_cadastro, tipo_chave_pix, chave_pix, asaas_id, cep, logradouro, numero, complemento, bairro, cidade, estado } = request.body 
+    const { nome, telefone, email, telegram_id, modelo_carro, ano_carro, cor_carro, placa, ativo, foto_base64, status_cadastro, tipo_chave_pix, chave_pix, asaas_id, cep, logradouro, numero, complemento, bairro, cidade, estado, cpf, renavam } = request.body 
     const { id } = request.params 
 
     const driverResult = await query('SELECT id, status_cadastro FROM drivers WHERE id = $1', [id])
@@ -294,26 +294,29 @@ export default async function driversRoutes(fastify) {
       UPDATE drivers SET 
         nome = COALESCE($1, nome), 
         telefone = COALESCE($2, telefone), 
-        telegram_id = COALESCE($3, telegram_id),
-        modelo_carro = COALESCE($4, modelo_carro), 
-        ano_carro = COALESCE($5, ano_carro), 
-        cor_carro = COALESCE($6, cor_carro), 
-        placa = COALESCE($7, placa), 
-        ativo = $8, 
-        foto_base64 = COALESCE($9, foto_base64),
-        status_cadastro = COALESCE($10, status_cadastro),
-        tipo_chave_pix = COALESCE($11, tipo_chave_pix),
-        chave_pix = COALESCE($12, chave_pix),
-        asaas_id = COALESCE($13, asaas_id),
-        cep = COALESCE($14, cep),
-        logradouro = COALESCE($15, logradouro),
-        numero = COALESCE($16, numero),
-        complemento = COALESCE($17, complemento),
-        bairro = COALESCE($18, bairro),
-        cidade = COALESCE($19, cidade),
-        estado = COALESCE($20, estado)
-      WHERE id = $21 
-    `, [nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, novoAtivo, foto_base64, novoStatus, tipo_chave_pix, chave_pix, asaas_id, cep, logradouro, numero, complemento, bairro, cidade, estado, id]) 
+        email = COALESCE($3, email),
+        telegram_id = COALESCE($4, telegram_id),
+        modelo_carro = COALESCE($5, modelo_carro), 
+        ano_carro = COALESCE($6, ano_carro), 
+        cor_carro = COALESCE($7, cor_carro), 
+        placa = COALESCE($8, placa), 
+        ativo = $9, 
+        foto_base64 = COALESCE($10, foto_base64),
+        status_cadastro = COALESCE($11, status_cadastro),
+        tipo_chave_pix = COALESCE($12, tipo_chave_pix),
+        chave_pix = COALESCE($13, chave_pix),
+        asaas_id = COALESCE($14, asaas_id),
+        cep = COALESCE($15, cep),
+        logradouro = COALESCE($16, logradouro),
+        numero = COALESCE($17, numero),
+        complemento = COALESCE($18, complemento),
+        bairro = COALESCE($19, bairro),
+        cidade = COALESCE($20, cidade),
+        estado = COALESCE($21, estado),
+        cpf = COALESCE($22, cpf),
+        renavam = COALESCE($23, renavam)
+      WHERE id = $24 
+    `, [nome, telefone, email, telegram_id, modelo_carro, ano_carro, cor_carro, placa, novoAtivo, foto_base64, novoStatus, tipo_chave_pix, chave_pix, asaas_id, cep, logradouro, numero, complemento, bairro, cidade, estado, cpf, renavam, id]) 
 
     return { mensagem: 'Motorista atualizado' } 
   }) 

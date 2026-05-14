@@ -72,6 +72,7 @@ if (!tokenVal && !isLoginPage) {
 
 let motoristaAtual = null
 let motoristasGlobais = []
+let modoEdicao = false
 
 function sair() { 
   localStorage.removeItem('mobihub_token'); 
@@ -109,6 +110,7 @@ function abrirModalDetalhesPorIndice(index) {
 
 function abrirModalDetalhes(d) {
   motoristaAtual = d
+  modoEdicao = false
 
   const statusCor = d.status_cadastro === 'aprovado' ? 'bg-green-100 text-green-700' 
       : d.status_cadastro === 'pendente' ? 'bg-yellow-100 text-yellow-700' 
@@ -118,137 +120,392 @@ function abrirModalDetalhes(d) {
       : 'Reprovado'
 
   document.getElementById('modal-titulo').textContent = d.nome
+  renderizarModalDetalhes()
+}
+
+function renderizarModalDetalhes() {
+  const d = motoristaAtual
+  const statusCor = d.status_cadastro === 'aprovado' ? 'bg-green-100 text-green-700' 
+      : d.status_cadastro === 'pendente' ? 'bg-yellow-100 text-yellow-700' 
+      : 'bg-red-100 text-red-700'
+  const statusTexto = d.status_cadastro === 'aprovado' ? 'Aprovado' 
+      : d.status_cadastro === 'pendente' ? 'Em Análise' 
+      : 'Reprovado'
 
   const conteudo = document.getElementById('modal-conteudo')
-  conteudo.innerHTML = `
-    <div>
-      <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Status</h4>
-      <span class="px-2.5 py-1 rounded-full text-xs font-medium ${statusCor}">
-        ${statusTexto}
-      </span>
-    </div>
+  if (modoEdicao) {
+    conteudo.innerHTML = `
+      <div class="space-y-5">
+        <div>
+          <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Dados Pessoais</h4>
+          <div class="space-y-3">
+            <div>
+              <label class="text-sm font-semibold text-gray-700">Nome</label>
+              <input id="ed-nome" type="text" value="${d.nome || ''}" class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-gray-700">Email</label>
+              <input id="ed-email" type="email" value="${d.email || ''}" class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-gray-700">Telefone</label>
+              <input id="ed-telefone" type="text" value="${d.telefone || ''}" class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-gray-700">CPF</label>
+              <input id="ed-cpf" type="text" value="${d.cpf || ''}" class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
+            </div>
+          </div>
+        </div>
 
-    <div>
-      <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Dados Pessoais</h4>
-      <div class="bg-gray-50 rounded-lg px-4 py-3 text-sm text-gray-600 space-y-1">
-        <p><span class="font-medium">CPF:</span> ${d.cpf || '—'}</p>
-        <p><span class="font-medium">Telefone:</span> ${d.telefone || '—'}</p>
-        <p><span class="font-medium">Telegram ID:</span> ${d.telegram_id || '—'}</p>
+        <div>
+          <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Endereço</h4>
+          <div class="space-y-3">
+            <div>
+              <label class="text-sm font-semibold text-gray-700">CEP</label>
+              <input id="ed-cep" type="text" value="${d.cep || ''}" class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-gray-700">Logradouro</label>
+              <input id="ed-logradouro" type="text" value="${d.logradouro || ''}" class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-sm font-semibold text-gray-700">Número</label>
+                <input id="ed-numero" type="text" value="${d.numero || ''}" class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
+              </div>
+              <div>
+                <label class="text-sm font-semibold text-gray-700">Complemento</label>
+                <input id="ed-complemento" type="text" value="${d.complemento || ''}" class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
+              </div>
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+              <div>
+                <label class="text-sm font-semibold text-gray-700">Bairro</label>
+                <input id="ed-bairro" type="text" value="${d.bairro || ''}" class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
+              </div>
+              <div>
+                <label class="text-sm font-semibold text-gray-700">Cidade</label>
+                <input id="ed-cidade" type="text" value="${d.cidade || ''}" class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
+              </div>
+              <div>
+                <label class="text-sm font-semibold text-gray-700">Estado</label>
+                <input id="ed-estado" type="text" maxlength="2" value="${d.estado || ''}" class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Chave Pix</h4>
+          <div class="space-y-3">
+            <div>
+              <label class="text-sm font-semibold text-gray-700">Tipo</label>
+              <select id="ed-tipo-chave-pix" class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                <option value="">Selecione o tipo</option>
+                <option value="cpf" ${d.tipo_chave_pix === 'cpf' ? 'selected' : ''}>CPF</option>
+                <option value="cnpj" ${d.tipo_chave_pix === 'cnpj' ? 'selected' : ''}>CNPJ</option>
+                <option value="email" ${d.tipo_chave_pix === 'email' ? 'selected' : ''}>Email</option>
+                <option value="telefone" ${d.tipo_chave_pix === 'telefone' ? 'selected' : ''}>Telefone</option>
+                <option value="aleatoria" ${d.tipo_chave_pix === 'aleatoria' ? 'selected' : ''}>Chave aleatória</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-gray-700">Chave</label>
+              <input id="ed-chave-pix" type="text" value="${d.chave_pix || ''}" class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Veículo</h4>
+          <div class="space-y-3">
+            <div>
+              <label class="text-sm font-semibold text-gray-700">Modelo</label>
+              <input id="ed-modelo-carro" type="text" value="${d.modelo_carro || ''}" class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-sm font-semibold text-gray-700">Ano</label>
+                <input id="ed-ano-carro" type="text" value="${d.ano_carro || ''}" class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
+              </div>
+              <div>
+                <label class="text-sm font-semibold text-gray-700">Cor</label>
+                <input id="ed-cor-carro" type="text" value="${d.cor_carro || ''}" class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-sm font-semibold text-gray-700">Placa</label>
+                <input id="ed-placa" type="text" value="${d.placa || ''}" class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
+              </div>
+              <div>
+                <label class="text-sm font-semibold text-gray-700">Renavam</label>
+                <input id="ed-renavam" type="text" value="${d.renavam || ''}" class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Status</h4>
+          <div class="space-y-3">
+            <div>
+              <label class="text-sm font-semibold text-gray-700">Status Cadastro</label>
+              <select id="ed-status-cadastro" class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                <option value="aprovado" ${d.status_cadastro === 'aprovado' ? 'selected' : ''}>Aprovado</option>
+                <option value="pendente" ${d.status_cadastro === 'pendente' ? 'selected' : ''}>Pendente</option>
+                <option value="reprovado" ${d.status_cadastro === 'reprovado' ? 'selected' : ''}>Reprovado</option>
+                <option value="inativo" ${d.status_cadastro === 'inativo' ? 'selected' : ''}>Inativo</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-gray-700">Ativo</label>
+              <select id="ed-ativo" class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                <option value="1" ${d.ativo === 1 ? 'selected' : ''}>Sim</option>
+                <option value="0" ${d.ativo === 0 ? 'selected' : ''}>Não</option>
+              </select>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-
-    <div>
-      <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Chave Pix</h4>
-      <div class="bg-gray-50 rounded-lg px-4 py-3 text-sm text-gray-600 space-y-1">
-        <p><span class="font-medium">Tipo:</span> ${d.tipo_chave_pix ? 
-          (d.tipo_chave_pix === 'cpf' ? 'CPF' : 
-           d.tipo_chave_pix === 'cnpj' ? 'CNPJ' : 
-           d.tipo_chave_pix === 'email' ? 'Email' : 
-           d.tipo_chave_pix === 'telefone' ? 'Telefone' : 'Chave aleatória') : '—'}</p>
-        <p><span class="font-medium">Chave:</span> ${d.chave_pix || '—'}</p>
+    `
+  } else {
+    conteudo.innerHTML = `
+      <div>
+        <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Status</h4>
+        <div class="flex flex-wrap gap-3">
+          <span class="px-2.5 py-1 rounded-full text-xs font-medium ${statusCor}">
+            ${statusTexto}
+          </span>
+          <span class="px-2.5 py-1 rounded-full text-xs font-medium ${d.ativo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
+            ${d.ativo ? 'Ativo' : 'Inativo'}
+          </span>
+          ${d.media_avaliacao ? `<span class="px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+            ⭐ ${Number(d.media_avaliacao).toFixed(1)} / 5.0
+          </span>` : ''}
+        </div>
       </div>
-    </div>
 
-    <div>
-      <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Endereço</h4>
-      <div class="bg-gray-50 rounded-lg px-4 py-3 text-sm text-gray-600 space-y-1">
-        ${d.cep || d.logradouro || d.numero || d.complemento || d.bairro || d.cidade || d.estado ? 
-          `<p><span class="font-medium">CEP:</span> ${d.cep || '—'}</p>
-           <p><span class="font-medium">Logradouro:</span> ${d.logradouro || '—'}</p>
-           <p><span class="font-medium">Número:</span> ${d.numero || '—'}</p>
-           <p><span class="font-medium">Complemento:</span> ${d.complemento || '—'}</p>
-           <p><span class="font-medium">Bairro:</span> ${d.bairro || '—'}</p>
-           <p><span class="font-medium">Cidade:</span> ${d.cidade || '—'}</p>
-           <p><span class="font-medium">Estado:</span> ${d.estado || '—'}</p>` 
-          : '<p>—</p>'}
+      <div>
+        <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Dados Pessoais</h4>
+        <div class="bg-gray-50 rounded-lg px-4 py-3 text-sm text-gray-600 space-y-1">
+          <p><span class="font-medium">Nome:</span> ${d.nome || '—'}</p>
+          <p><span class="font-medium">Email:</span> ${d.email || '—'}</p>
+          <p><span class="font-medium">Telefone:</span> ${d.telefone || '—'}</p>
+          <p><span class="font-medium">CPF:</span> ${d.cpf || '—'}</p>
+          <p><span class="font-medium">Telegram ID:</span> ${d.telegram_id || '—'}</p>
+        </div>
       </div>
-    </div>
 
-    <div>
-      <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Veículo</h4>
-      <div class="bg-gray-50 rounded-lg px-4 py-3 text-sm text-gray-600 space-y-1">
-        <p><span class="font-medium">Marca/Modelo:</span> ${d.modelo_carro || '—'}</p>
-        <p><span class="font-medium">Ano:</span> ${d.ano_carro || '—'}</p>
-        <p><span class="font-medium">Cor:</span> ${d.cor_carro || '—'}</p>
-        <p><span class="font-medium">Placa:</span> <span class="font-mono">${d.placa || '—'}</span></p>
-        <p><span class="font-medium">Renavam:</span> ${d.renavam || '—'}</p>
+      <div>
+        <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Endereço</h4>
+        <div class="bg-gray-50 rounded-lg px-4 py-3 text-sm text-gray-600 space-y-1">
+          ${d.cep || d.logradouro || d.numero || d.complemento || d.bairro || d.cidade || d.estado ? 
+            `<p><span class="font-medium">CEP:</span> ${d.cep || '—'}</p>
+             <p><span class="font-medium">Logradouro:</span> ${d.logradouro || '—'}</p>
+             <p><span class="font-medium">Número:</span> ${d.numero || '—'}</p>
+             <p><span class="font-medium">Complemento:</span> ${d.complemento || '—'}</p>
+             <p><span class="font-medium">Bairro:</span> ${d.bairro || '—'}</p>
+             <p><span class="font-medium">Cidade:</span> ${d.cidade || '—'}</p>
+             <p><span class="font-medium">Estado:</span> ${d.estado || '—'}</p>` 
+            : '<p>—</p>'}
+        </div>
       </div>
-    </div>
 
-    <div>
-      <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Documentos</h4>
-      <div class="grid grid-cols-2 gap-2">
-        <button id="btn-crlv-m" ${!d.crlv_base64 ? 'disabled' : ''}
-          class="text-xs ${d.crlv_base64 
-            ? 'text-gray-700 border border-gray-200 hover:bg-gray-50' 
-            : 'text-gray-400 border border-gray-100 cursor-not-allowed'} rounded-lg py-2">
-          ${d.crlv_base64 ? '👁️ Ver CRLV' : 'Documento ausente'}
-        </button>
-        ${d.cnh_digital_base64 
-          ? `<button id="btn-cnh-digital-m"
-              class="text-xs text-gray-700 border border-gray-200 hover:bg-gray-50 rounded-lg py-2 col-span-2">
-              📄 Ver CNH Digital
-            </button>` 
-          : `
-          <button id="btn-cnh-frente-m" ${!d.cnh_frente_base64 ? 'disabled' : ''}
-            class="text-xs ${d.cnh_frente_base64 
+      <div>
+        <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Chave Pix</h4>
+        <div class="bg-gray-50 rounded-lg px-4 py-3 text-sm text-gray-600 space-y-1">
+          <p><span class="font-medium">Tipo:</span> ${d.tipo_chave_pix ? 
+            (d.tipo_chave_pix === 'cpf' ? 'CPF' : 
+             d.tipo_chave_pix === 'cnpj' ? 'CNPJ' : 
+             d.tipo_chave_pix === 'email' ? 'Email' : 
+             d.tipo_chave_pix === 'telefone' ? 'Telefone' : 'Chave aleatória') : '—'}</p>
+          <p><span class="font-medium">Chave:</span> ${d.chave_pix || '—'}</p>
+        </div>
+      </div>
+
+      <div>
+        <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Veículo</h4>
+        <div class="bg-gray-50 rounded-lg px-4 py-3 text-sm text-gray-600 space-y-1">
+          <p><span class="font-medium">Modelo:</span> ${d.modelo_carro || '—'}</p>
+          <p><span class="font-medium">Ano:</span> ${d.ano_carro || '—'}</p>
+          <p><span class="font-medium">Cor:</span> ${d.cor_carro || '—'}</p>
+          <p><span class="font-medium">Placa:</span> <span class="font-mono">${d.placa || '—'}</span></p>
+          <p><span class="font-medium">Renavam:</span> ${d.renavam || '—'}</p>
+        </div>
+      </div>
+
+      <div>
+        <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Documentos</h4>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="btn-crlv-m" ${!d.crlv_base64 ? 'disabled' : ''}
+            class="text-xs ${d.crlv_base64 
               ? 'text-gray-700 border border-gray-200 hover:bg-gray-50' 
               : 'text-gray-400 border border-gray-100 cursor-not-allowed'} rounded-lg py-2">
-            ${d.cnh_frente_base64 ? '🖼️ Ver CNH Frente' : 'Documento ausente'}
+            ${d.crlv_base64 ? '👁️ Ver CRLV' : 'Documento ausente'}
           </button>
-          <button id="btn-cnh-verso-m" ${!d.cnh_verso_base64 ? 'disabled' : ''}
-            class="text-xs ${d.cnh_verso_base64 
-              ? 'text-gray-700 border border-gray-200 hover:bg-gray-50' 
-              : 'text-gray-400 border border-gray-100 cursor-not-allowed'} rounded-lg py-2">
-            ${d.cnh_verso_base64 ? '🖼️ Ver CNH Verso' : 'Documento ausente'}
-          </button>
-          `}
+          ${d.cnh_digital_base64 
+            ? `<button id="btn-cnh-digital-m"
+                class="text-xs text-gray-700 border border-gray-200 hover:bg-gray-50 rounded-lg py-2 col-span-2">
+                📄 Ver CNH Digital
+              </button>` 
+            : `
+            <button id="btn-cnh-frente-m" ${!d.cnh_frente_base64 ? 'disabled' : ''}
+              class="text-xs ${d.cnh_frente_base64 
+                ? 'text-gray-700 border border-gray-200 hover:bg-gray-50' 
+                : 'text-gray-400 border border-gray-100 cursor-not-allowed'} rounded-lg py-2">
+              ${d.cnh_frente_base64 ? '🖼️ Ver CNH Frente' : 'Documento ausente'}
+            </button>
+            <button id="btn-cnh-verso-m" ${!d.cnh_verso_base64 ? 'disabled' : ''}
+              class="text-xs ${d.cnh_verso_base64 
+                ? 'text-gray-700 border border-gray-200 hover:bg-gray-50' 
+                : 'text-gray-400 border border-gray-100 cursor-not-allowed'} rounded-lg py-2">
+              ${d.cnh_verso_base64 ? '🖼️ Ver CNH Verso' : 'Documento ausente'}
+            </button>
+            `}
+        </div>
       </div>
-    </div>
-  `
+    `
+  }
 
   const acoes = document.getElementById('modal-acoes')
-  if (d.status_cadastro === 'pendente') {
+  if (modoEdicao) {
     acoes.innerHTML = `
-      <div class="mb-3">
-        <label class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Motivo da reprovação (opcional)</label>
-        <input id="motivo-reprovacao" type="text" placeholder="Ex: Documento ilegível"
-          class="mt-2 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
-      </div>
       <div class="grid grid-cols-2 gap-3">
-        <button onclick="reprovarMotorista()" 
-          class="text-sm text-red-600 border border-red-200 rounded-xl py-3 hover:bg-red-50 font-semibold">
-          ❌ Reprovar
+        <button onclick="cancelarEdicao()" 
+          class="text-sm text-gray-600 border border-gray-300 rounded-xl py-3 hover:bg-gray-50 font-semibold">
+          Cancelar
         </button>
-        <button onclick="aprovarMotorista()" 
+        <button onclick="salvarEdicao()" 
           class="text-sm text-white bg-green-600 rounded-xl py-3 hover:bg-green-700 font-semibold">
-          ✅ Aprovar
+          ✅ Salvar
         </button>
       </div>
     `
   } else {
-    acoes.innerHTML = `
-      <div class="text-sm text-gray-500 text-center">
-        Este motorista já foi ${statusTexto}.
-      </div>
-    `
+    if (d.status_cadastro === 'pendente') {
+      acoes.innerHTML = `
+        <div class="mb-3">
+          <label class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Motivo da reprovação (opcional)</label>
+          <input id="motivo-reprovacao" type="text" placeholder="Ex: Documento ilegível"
+            class="mt-2 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+          <button onclick="toggleModoEdicao()" 
+            class="text-sm text-blue-600 border border-blue-200 rounded-xl py-3 hover:bg-blue-50 font-semibold">
+            ✏️ Editar
+          </button>
+          <button onclick="reprovarMotorista()" 
+            class="text-sm text-red-600 border border-red-200 rounded-xl py-3 hover:bg-red-50 font-semibold">
+            ❌ Reprovar
+          </button>
+          <button onclick="aprovarMotorista()" 
+            class="text-sm text-white bg-green-600 rounded-xl py-3 hover:bg-green-700 font-semibold">
+            ✅ Aprovar
+          </button>
+        </div>
+      `
+    } else {
+      acoes.innerHTML = `
+        <div class="grid grid-cols-1 gap-3">
+          <button onclick="toggleModoEdicao()" 
+            class="text-sm text-white bg-green-600 rounded-xl py-3 hover:bg-green-700 font-semibold">
+            ✏️ Editar
+          </button>
+        </div>
+      `
+    }
   }
 
-  if (d.crlv_base64) {
-    document.getElementById('btn-crlv-m').addEventListener('click', () => abrirModalDocumento('CRLV', d.crlv_base64))
-  }
-  if (d.cnh_digital_base64) {
-    document.getElementById('btn-cnh-digital-m').addEventListener('click', () => abrirModalDocumento('CNH Digital', d.cnh_digital_base64))
-  } else {
-    if (d.cnh_frente_base64) {
-      document.getElementById('btn-cnh-frente-m').addEventListener('click', () => abrirModalDocumento('CNH Frente', d.cnh_frente_base64))
+  if (!modoEdicao) {
+    if (d.crlv_base64) {
+      setTimeout(() => {
+        const btn = document.getElementById('btn-crlv-m')
+        if (btn) btn.addEventListener('click', () => abrirModalDocumento('CRLV', d.crlv_base64))
+      }, 0)
     }
-    if (d.cnh_verso_base64) {
-      document.getElementById('btn-cnh-verso-m').addEventListener('click', () => abrirModalDocumento('CNH Verso', d.cnh_verso_base64))
+    if (d.cnh_digital_base64) {
+      setTimeout(() => {
+        const btn = document.getElementById('btn-cnh-digital-m')
+        if (btn) btn.addEventListener('click', () => abrirModalDocumento('CNH Digital', d.cnh_digital_base64))
+      }, 0)
+    } else {
+      if (d.cnh_frente_base64) {
+        setTimeout(() => {
+          const btn = document.getElementById('btn-cnh-frente-m')
+          if (btn) btn.addEventListener('click', () => abrirModalDocumento('CNH Frente', d.cnh_frente_base64))
+        }, 0)
+      }
+      if (d.cnh_verso_base64) {
+        setTimeout(() => {
+          const btn = document.getElementById('btn-cnh-verso-m')
+          if (btn) btn.addEventListener('click', () => abrirModalDocumento('CNH Verso', d.cnh_verso_base64))
+        }, 0)
+      }
     }
   }
 
   document.getElementById('modal-detalhes').classList.remove('hidden')
+}
+
+function toggleModoEdicao() {
+  modoEdicao = !modoEdicao
+  renderizarModalDetalhes()
+}
+
+function cancelarEdicao() {
+  modoEdicao = false
+  renderizarModalDetalhes()
+}
+
+async function salvarEdicao() {
+  if (!motoristaAtual) return
+  
+  const dadosAtualizados = {
+    nome: document.getElementById('ed-nome').value.trim(),
+    email: document.getElementById('ed-email').value.trim(),
+    telefone: document.getElementById('ed-telefone').value.trim(),
+    cpf: document.getElementById('ed-cpf').value.trim(),
+    cep: document.getElementById('ed-cep').value.trim(),
+    logradouro: document.getElementById('ed-logradouro').value.trim(),
+    numero: document.getElementById('ed-numero').value.trim(),
+    complemento: document.getElementById('ed-complemento').value.trim(),
+    bairro: document.getElementById('ed-bairro').value.trim(),
+    cidade: document.getElementById('ed-cidade').value.trim(),
+    estado: document.getElementById('ed-estado').value.trim(),
+    tipo_chave_pix: document.getElementById('ed-tipo-chave-pix').value,
+    chave_pix: document.getElementById('ed-chave-pix').value.trim(),
+    modelo_carro: document.getElementById('ed-modelo-carro').value.trim(),
+    ano_carro: document.getElementById('ed-ano-carro').value.trim(),
+    cor_carro: document.getElementById('ed-cor-carro').value.trim(),
+    placa: document.getElementById('ed-placa').value.trim(),
+    renavam: document.getElementById('ed-renavam').value.trim(),
+    status_cadastro: document.getElementById('ed-status-cadastro').value,
+    ativo: parseInt(document.getElementById('ed-ativo').value)
+  }
+
+  try {
+    const r = await fetch(`/api/drivers/${motoristaAtual.id}`, {
+      method: 'PUT',
+      headers: headers(),
+      body: JSON.stringify(dadosAtualizados)
+    })
+
+    if (r.ok) {
+      alert('✅ Dados atualizados com sucesso!')
+      // Atualiza o motoristaAtual com os novos dados
+      Object.assign(motoristaAtual, dadosAtualizados)
+      modoEdicao = false
+      carregarMotoristas()
+      renderizarModalDetalhes()
+    } else {
+      const d = await r.json()
+      alert(d.error || 'Erro ao salvar dados')
+    }
+  } catch(e) {
+    alert('Erro de conexão')
+  }
 }
 
 function fecharModalDetalhes() {
@@ -256,6 +513,7 @@ function fecharModalDetalhes() {
   document.getElementById('modal-conteudo').innerHTML = ''
   document.getElementById('modal-acoes').innerHTML = ''
   motoristaAtual = null
+  modoEdicao = false
 }
 
 async function aprovarMotorista() {
