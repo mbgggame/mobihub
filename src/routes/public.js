@@ -1310,10 +1310,16 @@ export default async function publicRoutes(fastify) {
 
   fastify.get('/api/clients', { preHandler: requireAuth }, async () => {
     const result = await query(`
-      SELECT id, nome, telefone, total_corridas, media_avaliacao, total_avaliacoes
+      SELECT id, nome, telefone, total_corridas, media_avaliacao, total_avaliacoes, balance_due
       FROM clients ORDER BY nome
     `)
     return result.rows
+  })
+
+  fastify.post('/api/admin/clients/:id/zerar-saldo', { preHandler: requireAuth }, async (request, reply) => { 
+    const { id } = request.params 
+    await query('UPDATE clients SET balance_due = 0, balance_due_charge_id = NULL, balance_due_charge_link = NULL WHERE id = $1', [id]) 
+    return { mensagem: 'Saldo devedor zerado com sucesso!' } 
   })
 
 
