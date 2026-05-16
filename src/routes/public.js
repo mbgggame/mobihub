@@ -276,18 +276,6 @@ export default async function publicRoutes(fastify) {
     return { transacoes: transacoesComSaldo, saldo_total: saldoTotal }
   })
 
-  fastify.post('/api/temp/zerar-balance-marcia', async (request, reply) => {
-    await query('UPDATE drivers SET balance_due = 0, balance_due_blocked_at = NULL WHERE id = 6')
-    await query('DELETE FROM driver_transactions WHERE driver_id = 6')
-    const result = await query('SELECT id, nome, balance_due FROM drivers WHERE id = 6')
-    return result.rows[0]
-  })
-
-  fastify.get('/api/temp/check-transactions-marcia', async (request, reply) => {
-    const result = await query('SELECT * FROM driver_transactions WHERE driver_id = 6 ORDER BY id DESC LIMIT 5')
-    return result.rows
-  })
-
   fastify.put('/api/motorista/:token/foto', async (request, reply) => { 
     const { foto_base64 } = request.body 
     if (!foto_base64) return reply.code(400).send({ error: 'Foto é obrigatória' }) 
@@ -1384,19 +1372,6 @@ export default async function publicRoutes(fastify) {
       }
     }
     return { mensagem: 'Avaliação salva!' }
-  })
-
-  fastify.post('/api/temp/fix-feriado-vv', async (request, reply) => {
-    await query(`DELETE FROM feriados WHERE nome = 'Colonização do Solo ES (Vila Velha)'`)
-    await query(`INSERT INTO feriados (data, nome, tipo) VALUES ('2026-05-23', 'Colonização do Solo ES (Vila Velha)', 'municipal')`)
-    const result = await query(`SELECT * FROM feriados WHERE nome LIKE '%Vila Velha%'`)
-    return result.rows
-  })
-
-  // Endpoint temporário para verificar tarifa Pico tarde
-  fastify.get('/api/temp/verificar-tarifa-pico-tarde', async (request, reply) => {
-    const tarifa = (await query("SELECT * FROM tarifas WHERE nome ILIKE '%pico%tarde%'")).rows[0]
-    return { tarifa }
   })
 
 } 
