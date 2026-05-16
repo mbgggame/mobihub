@@ -270,9 +270,6 @@ export async function initDB() {
     )
   `)
 
-  // Limpar feriados existentes
-  await query('DELETE FROM feriados')
-
   // Inserir feriados de 2026
   await query(`
     INSERT INTO feriados (data, nome, tipo) VALUES
