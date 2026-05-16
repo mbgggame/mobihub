@@ -73,6 +73,10 @@
                 <th class="px-4 py-3 border-b border-gray-100">Data</th>
                 <th class="px-4 py-3 border-b border-gray-100">Nome</th>
                 <th class="px-4 py-3 border-b border-gray-100">Tipo</th>
+                <th class="px-4 py-3 border-b border-gray-100">Horário</th>
+                <th class="px-4 py-3 border-b border-gray-100">V. Mínimo</th>
+                <th class="px-4 py-3 border-b border-gray-100">R$/Km</th>
+                <th class="px-4 py-3 border-b border-gray-100">Km Mín.</th>
                 <th class="px-4 py-3 border-b border-gray-100">Ações</th>
               </tr>
             </thead>
@@ -210,6 +214,26 @@
                 <option value="municipal">Municipal</option>
               </select>
             </td>
+            <td class="px-4 py-3 border-b border-gray-100" id="horario-${f.id}">
+              <span class="normal">${f.horario_inicio || ''} - ${f.horario_fim || ''}</span>
+              <div class="flex gap-1 hidden" id="edit-horario-${f.id}">
+                <input type="time" id="edit-horario-inicio-${f.id}" value="${f.horario_inicio || ''}" class="w-1/2 bg-white border border-gray-200 rounded px-2 py-1 outline-none focus:border-green-500">
+                <span>-</span>
+                <input type="time" id="edit-horario-fim-${f.id}" value="${f.horario_fim || ''}" class="w-1/2 bg-white border border-gray-200 rounded px-2 py-1 outline-none focus:border-green-500">
+              </div>
+            </td>
+            <td class="px-4 py-3 border-b border-gray-100" id="valor-min-${f.id}">
+              <span class="normal">${f.valor_minimo ? f.valor_minimo.toFixed(2) : ''}</span>
+              <input type="number" step="0.01" id="edit-valor-min-${f.id}" value="${f.valor_minimo || ''}" class="w-full bg-white border border-gray-200 rounded px-2 py-1 outline-none focus:border-green-500 hidden">
+            </td>
+            <td class="px-4 py-3 border-b border-gray-100" id="valor-km-${f.id}">
+              <span class="normal">${f.valor_km ? f.valor_km.toFixed(1) : ''}</span>
+              <input type="number" step="0.1" id="edit-valor-km-${f.id}" value="${f.valor_km || ''}" class="w-full bg-white border border-gray-200 rounded px-2 py-1 outline-none focus:border-green-500 hidden">
+            </td>
+            <td class="px-4 py-3 border-b border-gray-100" id="km-min-${f.id}">
+              <span class="normal">${f.km_minimo ? f.km_minimo.toFixed(1) : ''}</span>
+              <input type="number" step="0.1" id="edit-km-min-${f.id}" value="${f.km_minimo || ''}" class="w-full bg-white border border-gray-200 rounded px-2 py-1 outline-none focus:border-green-500 hidden">
+            </td>
             <td class="px-4 py-3 border-b border-gray-100">
               <button id="btn-editar-${f.id}" onclick="editarFeriado(${f.id})" class="bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors mr-2">
                 Editar
@@ -241,6 +265,18 @@
       tipoSelect.value = tipoAtual
       tipoSelect.classList.remove('hidden')
 
+      document.getElementById(`horario-${id}`).querySelector('.normal').classList.add('hidden')
+      document.getElementById(`edit-horario-${id}`).classList.remove('hidden')
+
+      document.getElementById(`valor-min-${id}`).querySelector('.normal').classList.add('hidden')
+      document.getElementById(`edit-valor-min-${id}`).classList.remove('hidden')
+
+      document.getElementById(`valor-km-${id}`).querySelector('.normal').classList.add('hidden')
+      document.getElementById(`edit-valor-km-${id}`).classList.remove('hidden')
+
+      document.getElementById(`km-min-${id}`).querySelector('.normal').classList.add('hidden')
+      document.getElementById(`edit-km-min-${id}`).classList.remove('hidden')
+
       document.getElementById(`btn-editar-${id}`).classList.add('hidden')
       document.getElementById(`btn-salvar-${id}`).classList.remove('hidden')
     }
@@ -249,12 +285,17 @@
       const data = document.getElementById(`edit-data-${id}`).value
       const nome = document.getElementById(`edit-nome-${id}`).value
       const tipo = document.getElementById(`edit-tipo-${id}`).value
+      const horario_inicio = document.getElementById(`edit-horario-inicio-${id}`).value || null
+      const horario_fim = document.getElementById(`edit-horario-fim-${id}`).value || null
+      const valor_minimo = document.getElementById(`edit-valor-min-${id}`).value ? parseFloat(document.getElementById(`edit-valor-min-${id}`).value) : null
+      const valor_km = document.getElementById(`edit-valor-km-${id}`).value ? parseFloat(document.getElementById(`edit-valor-km-${id}`).value) : null
+      const km_minimo = document.getElementById(`edit-km-min-${id}`).value ? parseFloat(document.getElementById(`edit-km-min-${id}`).value) : null
 
       try {
         const r = await fetch(`/api/feriados/${id}`, {
           method: 'PUT',
           headers: headers(),
-          body: JSON.stringify({ data, nome, tipo })
+          body: JSON.stringify({ data, nome, tipo, horario_inicio, horario_fim, valor_minimo, valor_km, km_minimo })
         })
 
         if (r.ok) {
@@ -286,13 +327,21 @@
           const data = new Date(feriado.data)
           const diaSemana = data.getDay()
           if (diaSemana === 0 || diaSemana === 6) {
-            alert('Este feriado já cai em fim de semana!')
             continue
           }
-          data.setDate(data.getDate() + (0 - data.getDay() + 7) % 7)
+          await fetch(`/api/feriados/${feriado.id}`, {
+            method: 'PUT',
+            headers: headers(),
+            body: JSON.stringify({
+              valor_minimo: tarifaFimSemana.valor_minimo,
+              valor_km: tarifaFimSemana.valor_km,
+              km_minimo: tarifaFimSemana.km_minimo
+            })
+          })
         }
 
         alert('Tarifa aplicada aos feriados que não são fim de semana!')
+        await carregarFeriados()
       } catch (err) {
         alert('Erro ao aplicar tarifa!')
       }

@@ -197,23 +197,19 @@ export async function initDB() {
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS pagamento_status TEXT DEFAULT 'pendente'; 
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP; 
     ALTER TABLE tarifas ADD COLUMN IF NOT EXISTS aplicar_feriados BOOLEAN DEFAULT false;
-  `) 
+    ALTER TABLE feriados ADD COLUMN IF NOT EXISTS horario_inicio TIME;
+    ALTER TABLE feriados ADD COLUMN IF NOT EXISTS horario_fim TIME;
+    ALTER TABLE feriados ADD COLUMN IF NOT EXISTS valor_minimo DOUBLE PRECISION;
+    ALTER TABLE feriados ADD COLUMN IF NOT EXISTS valor_km DOUBLE PRECISION;
+    ALTER TABLE feriados ADD COLUMN IF NOT EXISTS km_minimo DOUBLE PRECISION;
 
-  // Remover duplicados antes de criar constraint
-  await query(` 
-    DELETE FROM feriados WHERE id NOT IN ( 
-      SELECT MIN(id) FROM feriados GROUP BY data, nome 
-    ) 
-  `)
-
-  await query(` 
     DO $$ BEGIN 
       IF NOT EXISTS ( 
         SELECT 1 FROM pg_constraint WHERE conname = 'feriados_data_nome_unique' 
       ) THEN 
         ALTER TABLE feriados ADD CONSTRAINT feriados_data_nome_unique UNIQUE (data, nome); 
       END IF; 
-    END $$ 
+    END $$;
   `)
 
   await query(` 
