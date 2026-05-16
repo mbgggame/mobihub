@@ -914,9 +914,9 @@ export default async function publicRoutes(fastify) {
         stop_extra_charge = $9, 
         total_value = $10 
       WHERE id = $11 
-    `, [ 
-      valorFinal, 
-      valorMotorista + abatimento, // Armazenar valor original no banco
+    `, [
+      valorFinal,
+      valorMotorista,
       valorPlataforma, 
       valorLider,
       valorBase, 
