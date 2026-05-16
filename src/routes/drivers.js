@@ -339,9 +339,6 @@ export default async function driversRoutes(fastify) {
       UPDATE drivers SET ativo = 1, status_cadastro = 'aprovado', token_perfil = $1, mobihub_id = $2 WHERE id = $3
     `, [token, mobihubId, id])
 
-    const driverResult = await query('SELECT * FROM drivers WHERE id = $1', [id])
-    const driver = driverResult.rows[0]
-
     // Integração Asaas: criar subconta automaticamente
     if (process.env.ASAAS_API_KEY) {
       try {
