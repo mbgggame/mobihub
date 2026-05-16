@@ -916,9 +916,21 @@
          valor = calcularValorLocal(distanciaKm, 25, 7.5, 2) 
        } 
      } 
-   } else { 
-     valor = calcularValorLocal(distanciaKm, 15, 7.5, 2) 
-   } 
+   } else {
+    try {
+      const agora = new Date().toISOString()
+      const r = await fetch(`/api/tarifas/calcular?data_hora=${encodeURIComponent(agora)}&distancia_km=${distanciaKm.toFixed(2)}`)
+      const d = await r.json()
+      if (d.valor) {
+        valor = d.valor
+        tarifaNome = d.tarifa
+      } else {
+        valor = calcularValorLocal(distanciaKm, 15, 7.5, 2)
+      }
+    } catch(e) {
+      valor = calcularValorLocal(distanciaKm, 15, 7.5, 2)
+    }
+  } 
    valorCalculado = valor 
    document.getElementById('txt-valor').textContent = `R$ ${valor.toFixed(2)}` 
    document.getElementById('txt-distancia').textContent = `${distanciaKm.toFixed(1)} km` 
