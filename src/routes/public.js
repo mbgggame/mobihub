@@ -847,6 +847,10 @@ export default async function publicRoutes(fastify) {
     }
 
     // Gerar cobrança Pix no Asaas se forma_pagamento = 2 
+    console.log('[ASAAS PIX] Iniciando geração de cobrança para corrida #' + id) 
+    console.log('[ASAAS PIX] forma_pagamento:', ride.forma_pagamento) 
+    console.log('[ASAAS PIX] driver.asaas_id:', driver.asaas_id) 
+    console.log('[ASAAS PIX] ASAAS_API_KEY existe:', !!process.env.ASAAS_API_KEY) 
     let asaasPaymentId = null, asaasPaymentLink = null, asaasPixPayload = null
     if ((ride.forma_pagamento === '2' || ride.forma_pagamento === 2) && driver.asaas_id && process.env.ASAAS_API_KEY) { 
       try { 
@@ -917,6 +921,7 @@ export default async function publicRoutes(fastify) {
           }) 
         }) 
         const asaasData = await asaasCobranca.json() 
+        console.log('[ASAAS PIX] Resposta Asaas:', JSON.stringify(asaasData))
         if (asaasData.id) { 
           // Buscar QR Code Pix 
           const qrResponse = await fetch(`https://www.asaas.com/api/v3/payments/${asaasData.id}/pixQrCode`, { 
