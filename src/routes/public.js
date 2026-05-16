@@ -615,7 +615,7 @@ export default async function publicRoutes(fastify) {
     const valorPlataforma = parseFloat((valorFinal * percentualPlataforma / 100).toFixed(2))
     const valorDebito = -valorPlataforma
 
-    const updatedDriverResult = await query('UPDATE drivers SET balance_due = balance_due + $1 WHERE id = $2 RETURNING balance_due', [valorDebito, driver.id])
+    const updatedDriverResult = await query('UPDATE drivers SET balance_due = balance_due + $1 WHERE id = $2 RETURNING balance_due', [valorPlataforma, driver.id])
     const novoBalanceDue = parseFloat(updatedDriverResult.rows[0].balance_due)
 
     await query(
