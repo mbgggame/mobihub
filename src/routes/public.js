@@ -751,8 +751,34 @@ export default async function publicRoutes(fastify) {
 
     const valorPlataforma = parseFloat((valorFinal * percentualPlataforma / 100).toFixed(2)) 
     const valorLider = parseFloat((valorFinal * percentualLider / 100).toFixed(2)) 
-    const valorMotorista = parseFloat((valorFinal - valorPlataforma - valorLider).toFixed(2)) 
-    console.log(`[BILLING] Split: Plataforma ${percentualPlataforma}% (R$${valorPlataforma}) | Líder ${percentualLider}% (R$${valorLider}) | Motorista ${percentualMotorista}% (R$${valorMotorista})`) 
+    let valorMotorista = parseFloat((valorFinal - valorPlataforma - valorLider).toFixed(2)) 
+    console.log(`[BILLING] Split inicial: Plataforma ${percentualPlataforma}% (R$${valorPlataforma}) | Líder ${percentualLider}% (R$${valorLider}) | Motorista ${percentualMotorista}% (R$${valorMotorista})`)
+
+    // Verificar e aplicar abatimento de saldo devedor (ANTES do split do Asaas!)
+    let abatimento = 0
+    let balance_due_novo = parseFloat(driver.balance_due || 0)
+    const formaPagamento = ride.forma_pagamento
+    const corridaPix = formaPagamento == 2 || formaPagamento == 3 || formaPagamento === '2' || formaPagamento === '3'
+
+    if (corridaPix && balance_due_novo > 0) {
+      abatimento = parseFloat(Math.min(balance_due_novo, valorMotorista).toFixed(2))
+      await query(
+        'INSERT INTO driver_transactions (driver_id, ride_id, tipo, descricao, valor) VALUES ($1, $2, $3, $4, $5)',
+        [driver.id, id, 'credito', `Abatimento saldo devedor - corrida #${id}`, abatimento]
+      )
+      await query(
+        'UPDATE drivers SET balance_due = GREATEST(0, balance_due - $1) WHERE id = $2',
+        [abatimento, driver.id]
+      )
+      balance_due_novo = parseFloat(Math.max(0, balance_due_novo - abatimento).toFixed(2))
+      valorMotorista = parseFloat((valorMotorista - abatimento).toFixed(2))
+      
+      if (balance_due_novo <= 0) {
+        await query('UPDATE drivers SET balance_due_blocked_at = NULL WHERE id = $1', [driver.id])
+      }
+      
+      console.log(`[ABATIMENTO] Aplicado R$${abatimento} de abatimento. Novo valor motorista: R$${valorMotorista}. Novo balance due: R$${balance_due_novo}`)
+    }
 
     // Gerar cobrança Pix no Asaas se forma_pagamento = 2 
     let asaasPaymentId = null, asaasPaymentLink = null, asaasPixPayload = null
@@ -819,7 +845,7 @@ export default async function publicRoutes(fastify) {
             split: [ 
               { 
                 walletId: driver.asaas_id, 
-                percentualValue: percentualMotorista + (temLider ? 0 : percentualLider) 
+                value: valorMotorista
               } 
             ] 
           }) 
@@ -862,7 +888,7 @@ export default async function publicRoutes(fastify) {
       WHERE id = $11 
     `, [ 
       valorFinal, 
-      valorMotorista, 
+      valorMotorista + abatimento, // Armazenar valor original no banco
       valorPlataforma, 
       valorLider,
       valorBase, 
@@ -874,7 +900,7 @@ export default async function publicRoutes(fastify) {
       id 
     ]) 
     await query('UPDATE drivers SET total_viagens = total_viagens + 1 WHERE id = $1', [driver.id]) 
-    if (ride.client_id) await query('UPDATE clients SET total_corridas = total_corridas + 1 WHERE id = $1', [ride.client_id]) 
+    if (ride.client_id) await query('UPDATE clients SET total_corridas = total_corridas + 1 WHERE id = $1', [ride.client_id])
 
     // Disparar webhook de corrida finalizada 
     try { 
@@ -882,32 +908,15 @@ export default async function publicRoutes(fastify) {
       const driverInfo = (await query( 
         'SELECT id, nome, token_perfil, lider_id, codigo_indicacao, balance_due FROM drivers WHERE id = $1', 
         [driver.id] 
-      )).rows[0] 
+      )).rows[0]
 
       const balance_due_atual = parseFloat(driverInfo?.balance_due || 0)
-      const formaPagamento = ride.forma_pagamento || '1'
-      const corridaDinheiro = formaPagamento === '1' || formaPagamento === 1
-      const corridaPix = formaPagamento === '2' || formaPagamento === 2
-      const corridaCartao = formaPagamento === '3' || formaPagamento === 3
-      
-      let balance_due_novo = balance_due_atual
+      const formaPagamentoWebhook = ride.forma_pagamento || '1'
+      const corridaDinheiro = formaPagamentoWebhook === '1' || formaPagamentoWebhook === 1
+
       if (corridaDinheiro) {
         balance_due_novo = parseFloat((balance_due_atual + valorPlataforma).toFixed(2))
         await query('UPDATE drivers SET balance_due = $1 WHERE id = $2', [balance_due_novo, driver.id])
-      } else if ((corridaPix || corridaCartao) && balance_due_atual > 0) {
-        const abatimento = Math.min(balance_due_atual, valorMotorista)
-        balance_due_novo = parseFloat((balance_due_atual - abatimento).toFixed(2))
-        
-        await query('UPDATE drivers SET balance_due = $1 WHERE id = $2', [balance_due_novo, driver.id])
-        
-        await query(`
-          INSERT INTO driver_transactions (driver_id, ride_id, tipo, descricao, valor)
-          VALUES ($1, $2, 'credito', $3, $4)
-        `, [driver.id, id, `Abatimento saldo devedor - corrida #${id}`, abatimento])
-        
-        if (balance_due_novo <= 0) {
-          await query('UPDATE drivers SET balance_due_blocked_at = NULL WHERE id = $1', [driver.id])
-        }
       }
 
       await dispararWebhook('corrida.finalizada', { 
