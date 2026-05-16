@@ -276,6 +276,13 @@ export default async function publicRoutes(fastify) {
     return { transacoes: transacoesComSaldo, saldo_total: saldoTotal }
   })
 
+  fastify.post('/api/temp/reset-marcia', async (request, reply) => {
+    await query('UPDATE drivers SET balance_due = 0, balance_due_blocked_at = NULL WHERE id = 6')
+    await query('DELETE FROM driver_transactions WHERE driver_id = 6')
+    const result = await query('SELECT id, nome, balance_due FROM drivers WHERE id = 6')
+    return result.rows[0]
+  })
+
   fastify.put('/api/motorista/:token/foto', async (request, reply) => { 
     const { foto_base64 } = request.body 
     if (!foto_base64) return reply.code(400).send({ error: 'Foto é obrigatória' }) 
