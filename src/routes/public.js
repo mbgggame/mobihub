@@ -261,10 +261,19 @@ export default async function publicRoutes(fastify) {
       SELECT id, tipo, descricao, valor, created_at, ride_id
       FROM driver_transactions
       WHERE driver_id = $1
-      ORDER BY created_at DESC
+      ORDER BY created_at ASC
     `, [driver.id])).rows
 
-    return { transacoes }
+    let saldoTotal = 0
+    const transacoesComSaldo = transacoes.map(t => {
+      saldoTotal += parseFloat(t.valor)
+      return {
+        ...t,
+        saldo_acumulado: saldoTotal
+      }
+    })
+
+    return { transacoes: transacoesComSaldo, saldo_total: saldoTotal }
   })
 
   fastify.put('/api/motorista/:token/foto', async (request, reply) => { 

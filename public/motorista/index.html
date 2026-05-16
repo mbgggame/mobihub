@@ -867,7 +867,7 @@
    try {
      const r = await fetch(`/api/motorista/${tokenMotorista}/extrato`)
      if (!r.ok) throw new Error('Erro ao carregar extrato')
-     const { transacoes } = await r.json()
+     const { transacoes, saldo_total } = await r.json()
 
      if (transacoes.length === 0) {
        lista.innerHTML = '<p class="text-center text-sm text-gray-500 py-4">Nenhuma transação encontrada</p>'
@@ -879,12 +879,20 @@
                <p class="text-sm font-semibold text-gray-900">${t.descricao}</p>
                <p class="text-xs text-gray-500">${new Date(t.created_at).toLocaleString('pt-BR')}</p>
              </div>
-             <p class="text-lg font-bold ${t.valor >= 0 ? 'text-green-600' : 'text-red-600'}">
-               ${t.valor >= 0 ? '+' : ''}${moeda(t.valor)}
-             </p>
+             <div class="text-right">
+               <p class="text-lg font-bold ${t.valor >= 0 ? 'text-green-600' : 'text-red-600'}">
+                 ${t.valor >= 0 ? '+' : ''}${moeda(t.valor)}
+               </p>
+               <p class="text-xs text-gray-400">${moeda(t.saldo_acumulado)}</p>
+             </div>
            </div>
          </div>
-       `).join('')
+       `).join('') + `
+         <div class="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
+           <p class="text-sm font-semibold text-green-700">Saldo com MobiHub</p>
+           <p class="text-2xl font-bold text-green-800">${moeda(saldo_total)}</p>
+         </div>
+       `
      }
    } catch (e) {
      lista.innerHTML = '<p class="text-center text-sm text-red-500 py-4">Erro ao carregar extrato</p>'
