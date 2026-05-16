@@ -284,8 +284,12 @@ export default async function publicRoutes(fastify) {
   })
 
   fastify.get('/api/temp/check-transactions-marcia', async (request, reply) => {
-    const result = await query('SELECT * FROM driver_transactions WHERE driver_id = 6 ORDER BY id DESC LIMIT 5')
-    return result.rows
+    const driverResult = await query('SELECT id, nome, balance_due FROM drivers WHERE id = 6')
+    const transactionsResult = await query('SELECT * FROM driver_transactions WHERE driver_id = 6 ORDER BY id DESC LIMIT 5')
+    return {
+      driver: driverResult.rows[0],
+      transactions: transactionsResult.rows
+    }
   })
 
   fastify.put('/api/motorista/:token/foto', async (request, reply) => { 
