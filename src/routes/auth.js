@@ -195,4 +195,26 @@ export default async function authRoutes(fastify) {
     const result = await query(sql, params)
     return result.rows[0]
   })
+
+  // Rotas de feriados
+  fastify.get('/api/feriados', { preHandler: requireAuth }, async (request, reply) => {
+    const feriados = (await query('SELECT * FROM feriados ORDER BY data ASC')).rows
+    return feriados
+  })
+
+  fastify.post('/api/feriados', { preHandler: requireAuth }, async (request, reply) => {
+    const { data, nome, tipo } = request.body
+    if (!data || !nome) return reply.code(400).send({ error: 'Data e nome são obrigatórios' })
+    const result = await query(
+      'INSERT INTO feriados (data, nome, tipo) VALUES ($1, $2, $3) RETURNING *',
+      [data, nome, tipo || 'nacional']
+    )
+    return result.rows[0]
+  })
+
+  fastify.delete('/api/feriados/:id', { preHandler: requireAuth }, async (request, reply) => {
+    const { id } = request.params
+    await query('DELETE FROM feriados WHERE id = $1', [id])
+    return { mensagem: 'Feriado removido com sucesso!' }
+  })
 }

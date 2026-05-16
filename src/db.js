@@ -241,7 +241,39 @@ export async function initDB() {
       descricao TEXT NOT NULL, 
       valor DOUBLE PRECISION NOT NULL, 
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
-    ) 
+    );
+
+    CREATE TABLE IF NOT EXISTS feriados (
+      id SERIAL PRIMARY KEY,
+      data DATE NOT NULL,
+      nome TEXT NOT NULL,
+      tipo TEXT DEFAULT 'nacional',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `)
+
+  // Inserir feriados de 2026
+  await query(`
+    INSERT INTO feriados (data, nome, tipo) VALUES
+      ('2026-01-01', 'Ano Novo', 'nacional'),
+      ('2026-03-02', 'Carnaval (Segunda-feira)', 'nacional'),
+      ('2026-03-03', 'Carnaval (Terça-feira)', 'nacional'),
+      ('2026-03-04', 'Quarta de Cinzas', 'nacional'),
+      ('2026-04-03', 'Sexta-Feira Santa', 'nacional'),
+      ('2026-04-05', 'Páscoa', 'nacional'),
+      ('2026-04-21', 'Tiradentes', 'nacional'),
+      ('2026-05-01', 'Dia do Trabalho', 'nacional'),
+      ('2026-06-04', 'Corpus Christi', 'nacional'),
+      ('2026-09-07', 'Independência', 'nacional'),
+      ('2026-10-12', 'Nossa Senhora Aparecida', 'nacional'),
+      ('2026-11-02', 'Finados', 'nacional'),
+      ('2026-11-15', 'Proclamação da República', 'nacional'),
+      ('2026-11-20', 'Consciência Negra', 'nacional'),
+      ('2026-12-25', 'Natal', 'nacional'),
+      ('2026-04-23', 'São Jorge', 'estadual'),
+      ('2026-10-28', 'Servidor Público', 'estadual'),
+      ('2026-09-08', 'Nossa Senhora da Penha (Vitória)', 'municipal')
+    ON CONFLICT DO NOTHING
   `) 
 
   await query(` 

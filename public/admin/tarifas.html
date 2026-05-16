@@ -40,6 +40,44 @@
         </table>
       </div>
     </div>
+
+    <!-- SEÇÃO DE FERIADOS -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mt-6">
+      <div class="px-4 py-4 border-b border-gray-100 flex items-center justify-between">
+        <h2 class="font-bold text-gray-900">🗓️ Feriados</h2>
+      </div>
+      <div class="p-4">
+        <!-- Formulário para adicionar feriado -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
+          <input type="date" id="novo-feriado-data" class="border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-green-500">
+          <input type="text" id="novo-feriado-nome" placeholder="Nome do feriado" class="border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-green-500">
+          <select id="novo-feriado-tipo" class="border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-green-500">
+            <option value="nacional">Nacional</option>
+            <option value="estadual">Estadual</option>
+            <option value="municipal">Municipal</option>
+          </select>
+          <button onclick="adicionarFeriado()" class="bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg px-4 py-2 transition-colors">
+            Adicionar
+          </button>
+        </div>
+
+        <!-- Lista de feriados -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead class="bg-gray-50 text-xs text-gray-500 font-semibold uppercase tracking-wider">
+              <tr>
+                <th class="px-4 py-3 border-b border-gray-100">Data</th>
+                <th class="px-4 py-3 border-b border-gray-100">Nome</th>
+                <th class="px-4 py-3 border-b border-gray-100">Tipo</th>
+                <th class="px-4 py-3 border-b border-gray-100">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="lista-feriados" class="text-sm">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -140,7 +178,82 @@
       }
     }
 
-    window.onload = carregarTarifas
+    async function carregarFeriados() {
+      try {
+        const r = await fetch('/api/feriados', { headers: headers() })
+        const feriados = await r.json()
+        const tbody = document.getElementById('lista-feriados')
+        
+        tbody.innerHTML = feriados.map(f => `
+          <tr class="hover:bg-gray-50 transition-colors">
+            <td class="px-4 py-3 border-b border-gray-100">${new Date(f.data).toLocaleDateString('pt-BR')}</td>
+            <td class="px-4 py-3 border-b border-gray-100">${f.nome}</td>
+            <td class="px-4 py-3 border-b border-gray-100">${f.tipo}</td>
+            <td class="px-4 py-3 border-b border-gray-100">
+              <button onclick="removerFeriado(${f.id})" class="bg-red-500 hover:bg-red-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+                Remover
+              </button>
+            </td>
+          </tr>
+        `).join('')
+      } catch (err) {
+        alert('Erro ao carregar feriados')
+      }
+    }
+
+    async function adicionarFeriado() {
+      const data = document.getElementById('novo-feriado-data').value
+      const nome = document.getElementById('novo-feriado-nome').value
+      const tipo = document.getElementById('novo-feriado-tipo').value
+
+      if (!data || !nome) {
+        alert('Data e nome são obrigatórios')
+        return
+      }
+
+      try {
+        const r = await fetch('/api/feriados', {
+          method: 'POST',
+          headers: headers(),
+          body: JSON.stringify({ data, nome, tipo })
+        })
+
+        if (r.ok) {
+          document.getElementById('novo-feriado-data').value = ''
+          document.getElementById('novo-feriado-nome').value = ''
+          await carregarFeriados()
+        } else {
+          const d = await r.json()
+          alert('Erro ao adicionar: ' + (d.error || 'Erro desconhecido'))
+        }
+      } catch (err) {
+        alert('Erro de conexão')
+      }
+    }
+
+    async function removerFeriado(id) {
+      if (!confirm('Tem certeza que deseja remover este feriado?')) return
+      try {
+        const r = await fetch(`/api/feriados/${id}`, {
+          method: 'DELETE',
+          headers: headers()
+        })
+
+        if (r.ok) {
+          await carregarFeriados()
+        } else {
+          const d = await r.json()
+          alert('Erro ao remover: ' + (d.error || 'Erro desconhecido'))
+        }
+      } catch (err) {
+        alert('Erro de conexão')
+      }
+    }
+
+    window.onload = () => {
+      carregarTarifas()
+      carregarFeriados()
+    }
   </script>
 </body>
 </html>
