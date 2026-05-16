@@ -270,6 +270,9 @@ export async function initDB() {
     )
   `)
 
+  // Limpar feriados existentes
+  await query('DELETE FROM feriados')
+
   // Inserir feriados de 2026
   await query(`
     INSERT INTO feriados (data, nome, tipo) VALUES
@@ -282,16 +285,28 @@ export async function initDB() {
       ('2026-04-21', 'Tiradentes', 'nacional'),
       ('2026-05-01', 'Dia do Trabalho', 'nacional'),
       ('2026-06-04', 'Corpus Christi', 'nacional'),
-      ('2026-09-07', 'Independência', 'nacional'),
+      ('2026-09-07', 'Independência do Brasil', 'nacional'),
       ('2026-10-12', 'Nossa Senhora Aparecida', 'nacional'),
       ('2026-11-02', 'Finados', 'nacional'),
       ('2026-11-15', 'Proclamação da República', 'nacional'),
       ('2026-11-20', 'Consciência Negra', 'nacional'),
       ('2026-12-25', 'Natal', 'nacional'),
-      ('2026-04-23', 'São Jorge', 'estadual'),
-      ('2026-10-28', 'Servidor Público', 'estadual'),
-      ('2026-09-08', 'Nossa Senhora da Penha (Vitória)', 'municipal')
-    ON CONFLICT DO NOTHING
+      ('2026-04-13', 'Nossa Senhora da Penha (Padroeira do ES)', 'estadual'),
+      ('2026-05-23', 'Colonização do Solo Espírito-Santense', 'estadual'),
+      ('2026-04-03', 'Paixão de Cristo (Vitória)', 'municipal'),
+      ('2026-06-04', 'Corpus Christi (Vitória)', 'municipal'),
+      ('2026-09-08', 'Nossa Senhora da Vitória / Aniversário de Vitória', 'municipal'),
+      ('2026-04-03', 'Paixão de Cristo (Vila Velha)', 'municipal'),
+      ('2026-05-23', 'Colonização do Solo ES (Vila Velha)', 'municipal'),
+      ('2026-06-29', 'São Pedro (Serra)', 'municipal'),
+      ('2026-12-08', 'Nossa Senhora da Conceição (Serra)', 'municipal'),
+      ('2026-12-26', 'Dia do Serrano (Serra)', 'municipal'),
+      ('2026-04-03', 'Paixão de Cristo (Cariacica)', 'municipal'),
+      ('2026-06-04', 'Corpus Christi (Cariacica)', 'municipal'),
+      ('2026-06-24', 'São João Batista (Cariacica)', 'municipal'),
+      ('2026-07-23', 'Aniversário de Viana', 'municipal'),
+      ('2026-12-08', 'Nossa Senhora da Conceição (Viana)', 'municipal')
+    ON CONFLICT (data, nome) DO NOTHING
   `) 
 
   await query(` 
