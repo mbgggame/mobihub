@@ -1322,6 +1322,14 @@ export default async function publicRoutes(fastify) {
     return { mensagem: 'Saldo devedor zerado com sucesso!' } 
   })
 
+  fastify.post('/api/temp/fix-marcia-saldo', async (request, reply) => { 
+    await query('UPDATE drivers SET balance_due = 0, balance_due_blocked_at = NULL WHERE id = 6') 
+    await query('DELETE FROM driver_transactions WHERE driver_id = 6 AND descricao = $1', ['Saldo devedor zerado pelo admin']) 
+    await query('INSERT INTO driver_transactions (driver_id, tipo, descricao, valor) VALUES ($1, $2, $3, $4)', [6, 'credito', 'Saldo devedor zerado pelo admin', 442.77]) 
+    const result = await query('SELECT balance_due FROM drivers WHERE id = 6') 
+    return result.rows[0] 
+  })
+
 
 
   fastify.put('/api/clients/:telefone', async (request, reply) => {
