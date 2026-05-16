@@ -464,8 +464,8 @@ export default async function publicRoutes(fastify) {
     const { v4: uuidv4 } = await import('uuid') 
     const token = uuidv4() 
     const statusInicial = tipo === 'agendada' ? 'agendada' : 'aberta' 
-    const valorMotorista = parseFloat((valor * 0.70).toFixed(2)) 
-    const valorMobihub = parseFloat((valor * 0.30).toFixed(2)) 
+    const valorMotorista = 0
+    const valorMobihub = 0 
     const result = await query(` 
       INSERT INTO rides (token, client_id, origem, origem_lat, origem_lng, destino, destino_lat, destino_lng, valor, valor_motorista, valor_mobihub, tipo, agendada_para, status, forma_pagamento) 
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING id 

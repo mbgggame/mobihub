@@ -222,11 +222,11 @@ function renderizar(corridas) {
       </div> 
       ` : ''} 
  
-      ${c.valor_motorista ? ` 
-      <div class="flex justify-between"><span class="text-gray-500">Motorista (70%)</span> 
-        <span class="font-medium text-green-700">R$ ${Number(c.valor_motorista).toFixed(2)}</span></div> 
-      <div class="flex justify-between"><span class="text-gray-500">MobiHub (30%)</span> 
-        <span class="font-medium text-blue-700">R$ ${Number(c.valor_mobihub).toFixed(2)}</span></div> 
+      ${c.valor_motorista ? `
+      <div class="flex justify-between"><span class="text-gray-500">Motorista</span>
+        <span class="font-medium text-green-700">R$ ${Number(c.valor_motorista).toFixed(2)}</span></div>
+      <div class="flex justify-between"><span class="text-gray-500">MobiHub</span>
+        <span class="font-medium text-blue-700">R$ ${Number(c.valor_mobihub).toFixed(2)}</span></div>
       ` : ''} 
       <div class="flex justify-between"><span class="text-gray-500">Cliente</span><span>${c.client_telefone || '—'}</span></div> 
       ${c.driver_nome ? ` 

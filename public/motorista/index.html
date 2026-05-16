@@ -1473,7 +1473,7 @@
      qrCard.classList.add('hidden')
      pagamentoConfirmadoCard.classList.remove('hidden')
      receberDinheiroCard.classList.add('hidden')
-     document.getElementById('txt-pagamento-valor').textContent = moeda(corrida.valor_final || corrida.valor)
+     document.getElementById('txt-pagamento-valor').textContent = moeda(corrida.valor_motorista || corrida.valor_final || corrida.valor)
      document.getElementById('txt-pagamento-corrida').textContent = `Corrida #${corrida.id}`
      setTimeout(() => { corridaAtualId = null }, 5000)
    } else if (corrida.status === 'concluida' && corrida.pagamento_status !== 'pago' && corrida.pagamento_status !== 'aguardando_pagamento' && (corrida.forma_pagamento === '1' || corrida.forma_pagamento === 1)) {
