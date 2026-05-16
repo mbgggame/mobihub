@@ -781,7 +781,8 @@ export default async function publicRoutes(fastify) {
     const formaPagamento = ride.forma_pagamento
     const corridaPix = formaPagamento == 2 || formaPagamento == 3 || formaPagamento === '2' || formaPagamento === '3'
 
-    if (corridaPix) {
+    if 
+    (corridaPix) {
       // 1. Ler saldo devedor ATUAL do banco (valor real)
       const driverInfo = await query('SELECT balance_due FROM drivers WHERE id = $1', [driver.id])
       const balance_due_atual = parseFloat(driverInfo.rows[0]?.balance_due || 0)
@@ -954,13 +955,7 @@ export default async function publicRoutes(fastify) {
       )).rows[0]
 
       const balance_due_atual = parseFloat(driverInfo?.balance_due || 0)
-      const formaPagamentoWebhook = ride.forma_pagamento || '1'
-      const corridaDinheiro = formaPagamentoWebhook === '1' || formaPagamentoWebhook === 1
-
-      if (corridaDinheiro) {
-        balance_due_novo = parseFloat((balance_due_atual + valorPlataforma).toFixed(2))
-        await query('UPDATE drivers SET balance_due = $1 WHERE id = $2', [balance_due_novo, driver.id])
-      }
+      balance_due_novo = balance_due_atual
 
       await dispararWebhook('corrida.finalizada', { 
         corrida_id: id, 
