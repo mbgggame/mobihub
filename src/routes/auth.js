@@ -215,18 +215,10 @@ export default async function authRoutes(fastify) {
   fastify.put('/api/feriados/:id', { preHandler: requireAuth }, async (request, reply) => {
     const { id } = request.params
     const { data, nome, tipo, horario_inicio, horario_fim, valor_minimo, valor_km, km_minimo } = request.body
-    await query(`
-      UPDATE feriados SET
-        data = COALESCE($1, data),
-        nome = COALESCE($2, nome),
-        tipo = COALESCE($3, tipo),
-        horario_inicio = COALESCE($4, horario_inicio),
-        horario_fim = COALESCE($5, horario_fim),
-        valor_minimo = COALESCE($6, valor_minimo),
-        valor_km = COALESCE($7, valor_km),
-        km_minimo = COALESCE($8, km_minimo)
-      WHERE id = $9
-    `, [data, nome, tipo, horario_inicio, horario_fim, valor_minimo, valor_km, km_minimo, id])
+    await query(
+      'UPDATE feriados SET data = $1, nome = $2, tipo = $3, horario_inicio = $4, horario_fim = $5, valor_minimo = $6, valor_km = $7, km_minimo = $8 WHERE id = $9',
+      [data, nome, tipo, horario_inicio, horario_fim, valor_minimo, valor_km, km_minimo, id]
+    )
     return { mensagem: 'Feriado atualizado com sucesso!' }
   })
 
