@@ -599,6 +599,32 @@ export default async function publicRoutes(fastify) {
     const tarifas = (await query('SELECT * FROM tarifas WHERE ativo = 1')).rows 
  
     let tarifaAtiva = null 
+
+    // Verificar se hoje é feriado
+    const hoje = agora.toISOString().split('T')[0]
+    const feriadoHoje = (await query(
+      "SELECT * FROM feriados WHERE data = $1 LIMIT 1",
+      [hoje]
+    )).rows[0]
+
+    if (feriadoHoje) {
+      // Se o feriado tem tarifa própria configurada, usar ela
+      if (feriadoHoje.valor_minimo && feriadoHoje.valor_km) {
+        tarifaAtiva = {
+          valor_minimo: feriadoHoje.valor_minimo,
+          valor_km: feriadoHoje.valor_km,
+          km_minimo: feriadoHoje.km_minimo,
+          nome: feriadoHoje.nome
+        }
+      } else {
+        // Se não tem tarifa própria, usar a tarifa marcada com aplicar_feriados = true
+        const tarifaFeriado = (await query(
+          "SELECT * FROM tarifas WHERE aplicar_feriados = true AND ativo = 1 LIMIT 1"
+        )).rows[0]
+        if (tarifaFeriado) tarifaAtiva = tarifaFeriado
+      }
+    }
+
     for (const t of tarifas) { 
       const dias = String(t.dias).split(',').map(Number) 
       if (!dias.includes(diaSemana)) continue 
