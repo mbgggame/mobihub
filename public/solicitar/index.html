@@ -1004,7 +1004,13 @@
 
      const d = await r.json() 
      if (!r.ok) { 
-       alert('Erro: ' + (d.error || 'Tente novamente')) 
+       if (d.link_pagamento) {
+         if (confirm(`Erro: ${d.error}\n\nClique OK para ir ao link de pagamento.`)) {
+           window.open(d.link_pagamento, '_blank')
+         }
+       } else {
+         alert('Erro: ' + (d.error || 'Tente novamente'))
+       }
        btn.disabled = false 
        btn.textContent = 'Solicitar corrida' 
        return 

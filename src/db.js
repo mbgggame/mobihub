@@ -332,6 +332,8 @@ export async function initDB() {
     ALTER TABLE clients ADD COLUMN IF NOT EXISTS asaas_customer_id TEXT; 
     ALTER TABLE clients ADD COLUMN IF NOT EXISTS cpf TEXT;
     ALTER TABLE clients ADD COLUMN IF NOT EXISTS telegram_id TEXT;
+    ALTER TABLE clients ADD COLUMN IF NOT EXISTS balance_due_charge_id TEXT;
+    ALTER TABLE clients ADD COLUMN IF NOT EXISTS balance_due_charge_link TEXT;
 
     DO $$ BEGIN
       IF NOT EXISTS (

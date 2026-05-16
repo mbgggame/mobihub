@@ -14,11 +14,21 @@ export default async function integracoesRoutes(fastify) {
       const paymentId = payment?.id 
       const externalReference = payment?.externalReference 
       
-      if (paymentId && externalReference) { 
-        await query( 
-          "UPDATE rides SET pagamento_status = 'pago', updated_at = CURRENT_TIMESTAMP WHERE asaas_payment_id = $1 OR id = $2", 
-          [paymentId, parseInt(externalReference)] 
-        ) 
+      if (paymentId && externalReference) {
+        if (externalReference.startsWith('client_')) {
+          // Pagamento de cliente
+          const clientResult = await query('SELECT * FROM clients WHERE balance_due_charge_id = $1', [paymentId])
+          const client = clientResult.rows[0]
+          if (client) {
+            await query('UPDATE clients SET balance_due = 0, balance_due_charge_id = NULL, balance_due_charge_link = NULL WHERE id = $1', [client.id])
+          }
+        } else {
+          // Pagamento de corrida normal
+          await query( 
+            "UPDATE rides SET pagamento_status = 'pago', updated_at = CURRENT_TIMESTAMP WHERE asaas_payment_id = $1 OR id = $2", 
+            [paymentId, parseInt(externalReference)] 
+          )
+        }
       } 
     } 
     

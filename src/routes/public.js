@@ -443,7 +443,10 @@ export default async function publicRoutes(fastify) {
     const clientResult = await query('SELECT * FROM clients WHERE telefone = $1', [celular]) 
     let client = clientResult.rows[0] 
     if (client && client.balance_due > 0) {
-      return reply.code(400).send({ error: 'Você tem um débito pendente. Por favor, regularize antes de solicitar uma nova corrida.' })
+      return reply.code(400).send({ 
+        error: 'Você tem um débito pendente. Regularize para solicitar uma nova corrida.', 
+        link_pagamento: client.balance_due_charge_link 
+      })
     }
     if (!client) { 
       const r = await query(`INSERT INTO clients (telefone, nome, email, cpf) VALUES ($1, $2, $3, $4) RETURNING id`, [celular, nome || null, email || null, cpf || null]) 
@@ -602,34 +605,58 @@ export default async function publicRoutes(fastify) {
     const ride = (await query('SELECT * FROM rides WHERE id = $1 AND driver_id = $2', [id, driver.id])).rows[0]
     if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' })
 
+    // 1. Registrar ocorrência (apenas log sem impacto financeiro no motorista)
     await query("UPDATE rides SET pagamento_status = 'nao_pago', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [id])
 
-    const temLider = !!driver.lider_id
-    const splitRule = (await query(
-      "SELECT * FROM split_rules WHERE ativo = 1 AND com_lider = $1 ORDER BY id LIMIT 1",
-      [temLider]
-    )).rows[0]
+    // 2. Bloquear passageiro somando valor da corrida ao balance_due do cliente
+    const valorCorrida = parseFloat(ride.valor_final || ride.valor)
+    await query('UPDATE clients SET balance_due = balance_due + $1 WHERE id = $2', [valorCorrida, ride.client_id])
 
-    const percentualPlataforma = splitRule?.percentual_plataforma || 15
-    const valorFinal = ride.valor_final || ride.valor
-    const valorPlataforma = parseFloat((valorFinal * percentualPlataforma / 100).toFixed(2))
-    const valorDebito = -valorPlataforma
+    // 3. Gerar cobrança no Asaas para o passageiro pagar
+    const clientResult = await query('SELECT * FROM clients WHERE id = $1', [ride.client_id])
+    const client = clientResult.rows[0]
+    let asaasCustomerId = client?.asaas_customer_id
 
-    const updatedDriverResult = await query('UPDATE drivers SET balance_due = balance_due + $1 WHERE id = $2 RETURNING balance_due', [valorPlataforma, driver.id])
-    const novoBalanceDue = parseFloat(updatedDriverResult.rows[0].balance_due)
-
-    await query(
-      'INSERT INTO driver_transactions (driver_id, ride_id, tipo, descricao, valor) VALUES ($1, $2, $3, $4, $5)',
-      [driver.id, id, 'debito', `Passageiro não pagou - corrida #${id}`, valorDebito]
-    )
-
-    let aviso = null
-    if (novoBalanceDue >= 30) {
-      await query('UPDATE drivers SET balance_due_blocked_at = CURRENT_TIMESTAMP WHERE id = $1', [driver.id])
-      aviso = 'Recebimento em dinheiro bloqueado. Use Pix ou Cartão.'
+    if (!asaasCustomerId && client) {
+      const customerResponse = await fetch('https://www.asaas.com/api/v3/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'access_token': process.env.ASAAS_API_KEY },
+        body: JSON.stringify({
+          name: client.nome || 'Passageiro',
+          mobilePhone: client.telefone?.replace(/\D/g, ''),
+          externalReference: String(client.id)
+        })
+      })
+      const customerData = await customerResponse.json()
+      if (customerData.id) {
+        asaasCustomerId = customerData.id
+        await query('UPDATE clients SET asaas_customer_id = $1 WHERE id = $2', [customerData.id, client.id])
+      }
     }
 
-    return { mensagem: 'Registro de não pagamento realizado!', valor_debito: valorDebito, aviso }
+    if (client) {
+      const cobrancaResponse = await fetch('https://www.asaas.com/api/v3/payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'access_token': process.env.ASAAS_API_KEY },
+        body: JSON.stringify({
+          billingType: 'UNDEFINED',
+          value: valorCorrida,
+          dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          description: `Corrida #${id} - MobiHub - Regularize para voltar a solicitar corridas`,
+          externalReference: `client_${ride.client_id}_ride_${id}`,
+          customer: asaasCustomerId
+        })
+      })
+      const cobrancaData = await cobrancaResponse.json()
+      if (cobrancaData.id) {
+        await query(
+          'UPDATE clients SET balance_due_charge_id = $1, balance_due_charge_link = $2 WHERE id = $3',
+          [cobrancaData.id, cobrancaData.invoiceUrl, ride.client_id]
+        )
+      }
+    }
+
+    return { mensagem: 'Registro de não pagamento realizado!' }
   })
 
   fastify.put('/api/rides/:id/finalizar-motorista', async (request, reply) => { 
