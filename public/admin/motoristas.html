@@ -433,6 +433,10 @@ function renderizarModalDetalhes() {
             📊 Ver Extrato
           </button>
         </div>
+        <button onclick="zerarSaldoMotorista()" 
+          class="w-full text-sm text-white bg-blue-600 rounded-xl py-3 hover:bg-blue-700 font-semibold mb-3">
+          🔄 Zerar saldo devedor
+        </button>
         <div class="grid grid-cols-2 gap-3">
           <button onclick="reprovarMotorista()" 
             class="text-sm text-red-600 border border-red-200 rounded-xl py-3 hover:bg-red-50 font-semibold">
@@ -446,7 +450,7 @@ function renderizarModalDetalhes() {
       `
     } else {
       acoes.innerHTML = `
-        <div class="grid grid-cols-4 gap-3">
+        <div class="grid grid-cols-4 gap-3 mb-3">
           <button onclick="toggleModoEdicao()" 
             class="text-sm text-white bg-green-600 rounded-xl py-3 hover:bg-green-700 font-semibold">
             ✏️ Editar
@@ -464,6 +468,10 @@ function renderizarModalDetalhes() {
             📊 Ver Extrato
           </button>
         </div>
+        <button onclick="zerarSaldoMotorista()" 
+          class="w-full text-sm text-white bg-blue-600 rounded-xl py-3 hover:bg-blue-700 font-semibold">
+          🔄 Zerar saldo devedor
+        </button>
       `
     }
   }
@@ -596,6 +604,32 @@ async function simularPagamento() {
     } else {
       const d = await r.json()
       alert(d.error || '❌ Erro ao simular pagamento!')
+    }
+  } catch(e) {
+    alert('Erro de conexão')
+  }
+}
+
+async function zerarSaldoMotorista() {
+  if (!motoristaAtual) return
+  if (!confirm(`Deseja realmente zerar o saldo devedor do motorista ${motoristaAtual.nome}?`)) return
+  
+  try {
+    const r = await fetch(`/api/admin/drivers/${motoristaAtual.id}/zerar-saldo`, { 
+      method: 'POST', 
+      headers: headers(),
+      body: JSON.stringify({})
+    })
+    if (r.ok) {
+      const data = await r.json()
+      alert(`✅ ${data.mensagem}`)
+      await carregarMotoristas()
+      if (motoristaAtual) {
+        await abrirModalDetalhes(motoristaAtual.id)
+      }
+    } else {
+      const d = await r.json()
+      alert(d.error || '❌ Erro ao zerar saldo!')
     }
   } catch(e) {
     alert('Erro de conexão')

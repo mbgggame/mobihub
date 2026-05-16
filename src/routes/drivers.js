@@ -472,6 +472,14 @@ export default async function driversRoutes(fastify) {
     return { mensagem: 'Pagamento simulado com sucesso', corrida_id: ride.id } 
   }) 
 
+  fastify.post('/api/admin/drivers/:id/zerar-saldo', { preHandler: requireAuth }, async (request, reply) => { 
+    const { id } = request.params 
+    await query('UPDATE drivers SET balance_due = 0, balance_due_blocked_at = NULL, balance_due_charge_id = NULL, balance_due_charge_pix = NULL WHERE id = $1', [id]) 
+    await query('INSERT INTO driver_transactions (driver_id, tipo, descricao, valor) VALUES ($1, $2, $3, $4)', 
+      [id, 'credito', 'Saldo devedor zerado pelo admin', 0]) 
+    return { mensagem: 'Saldo devedor zerado com sucesso!' } 
+  }) 
+
 
 
   // Aceitar termos de uso e LGPD
