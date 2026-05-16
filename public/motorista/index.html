@@ -1412,7 +1412,7 @@
    document.getElementById('corrida-destino').textContent = encurtarEndereco(corrida.destino) 
    document.getElementById('corrida-passageiro').textContent = corrida.client_nome || 'Novo passageiro' 
    document.getElementById('corrida-valor').textContent = moeda(corrida.valor) 
-   document.getElementById('corrida-ganho').textContent = moeda(corrida.valor_motorista || corrida.valor * 0.70) 
+   document.getElementById('corrida-ganho').textContent = moeda(corrida.valor_motorista || (corrida.valor * 0.82)) 
    document.getElementById('card-nova-corrida').classList.remove('hidden') 
    document.getElementById('card-sem-corrida').classList.add('hidden') 
    document.getElementById('badge-nova-corrida').classList.remove('hidden') 
