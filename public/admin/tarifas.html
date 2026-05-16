@@ -199,7 +199,7 @@
         tbody.innerHTML = feriados.map(f => `
           <tr id="linha-feriado-${f.id}" class="hover:bg-gray-50 transition-colors">
             <td class="px-4 py-3 border-b border-gray-100" id="data-${f.id}">
-              <span class="normal">${new Date(f.data).toLocaleDateString('pt-BR')}</span>
+              <span class="normal">${f.data.split('T')[0].split('-').reverse().join('/')}</span>
               <input type="date" id="edit-data-${f.id}" value="${f.data}" class="w-full bg-white border border-gray-200 rounded px-2 py-1 outline-none focus:border-green-500 hidden">
             </td>
             <td class="px-4 py-3 border-b border-gray-100" id="nome-${f.id}">
