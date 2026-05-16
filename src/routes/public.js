@@ -1225,4 +1225,15 @@ export default async function publicRoutes(fastify) {
     return { mensagem: 'Avaliação salva!' }
   })
 
+  // Endpoint temporário para deletar feriado duplicado
+  fastify.post('/api/temp/fix-feriado-vv', async (request, reply) => {
+    try {
+      const result = await query(`DELETE FROM feriados WHERE nome = 'Colonização do Solo ES (Vila Velha)' AND data = '2026-05-22'`)
+      return { mensagem: 'Feriado deletado com sucesso!', linhas_afetadas: result.rowCount }
+    } catch (error) {
+      console.error('[TEMP FIX ERROR]', error)
+      return reply.code(500).send({ error: 'Erro ao deletar feriado', mensagem: error.message })
+    }
+  })
+
 } 
