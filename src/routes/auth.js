@@ -217,4 +217,12 @@ export default async function authRoutes(fastify) {
     await query('DELETE FROM feriados WHERE id = $1', [id])
     return { mensagem: 'Feriado removido com sucesso!' }
   })
+
+  // Endpoint temporário para remover feriados duplicados
+  fastify.post('/api/temp/fix-feriados', { preHandler: requireAuth }, async (request, reply) => {
+    const result = await query(`
+      DELETE FROM feriados WHERE id NOT IN (SELECT MIN(id) FROM feriados GROUP BY data, nome)
+    `)
+    return { mensagem: 'Feriados duplicados removidos', count: result.rowCount }
+  })
 }

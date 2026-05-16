@@ -197,6 +197,7 @@ export async function initDB() {
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS pagamento_status TEXT DEFAULT 'pendente'; 
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP; 
     ALTER TABLE tarifas ADD COLUMN IF NOT EXISTS aplicar_feriados BOOLEAN DEFAULT false;
+    ALTER TABLE feriados ADD CONSTRAINT IF NOT EXISTS feriados_data_nome_unique UNIQUE (data, nome);
   `) 
  
   await query(` 
