@@ -771,17 +771,21 @@ export default async function publicRoutes(fastify) {
       // 1. Ler saldo devedor ATUAL do banco (valor real)
       const driverInfo = await query('SELECT balance_due FROM drivers WHERE id = $1', [driver.id])
       const balance_due_atual = parseFloat(driverInfo.rows[0]?.balance_due || 0)
+      console.log(`[DEBUG ABATIMENTO] balance_due_atual: R$${balance_due_atual}, valorMotorista: R$${valorMotorista}`)
 
       if (balance_due_atual > 0) {
         // 2. Calcular abatimento correto
         abatimento = parseFloat(Math.min(balance_due_atual, valorMotorista).toFixed(2))
+        console.log(`[DEBUG ABATIMENTO] abatimento calculado: R$${abatimento}`)
         
         // 3. Atualizar banco
         await query('UPDATE drivers SET balance_due = GREATEST(0, balance_due - $1) WHERE id = $2', [abatimento, driver.id])
+        console.log(`[DEBUG ABATIMENTO] Updated balance_due in database`)
         
         // 4. Registrar transação
         await query('INSERT INTO driver_transactions (driver_id, ride_id, tipo, descricao, valor) VALUES ($1, $2, $3, $4, $5)', 
           [driver.id, id, 'credito', `Abatimento saldo devedor - corrida #${id}`, abatimento])
+        console.log(`[DEBUG ABATIMENTO] Transaction inserted`)
         
         balance_due_novo = parseFloat(Math.max(0, balance_due_atual - abatimento).toFixed(2))
         valorMotorista = parseFloat((valorMotorista - abatimento).toFixed(2))
