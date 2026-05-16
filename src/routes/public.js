@@ -852,6 +852,8 @@ export default async function publicRoutes(fastify) {
     }
 
     // Gerar cobrança Pix no Asaas se forma_pagamento = 2 
+    console.log('[ASAAS PIX] valorMotorista antes do split:', valorMotorista) 
+    console.log('[ASAAS PIX] valorFinal:', valorFinal) 
     console.log('[ASAAS PIX] Iniciando geração de cobrança para corrida #' + id) 
     console.log('[ASAAS PIX] forma_pagamento:', ride.forma_pagamento) 
     console.log('[ASAAS PIX] driver.asaas_id:', driver.asaas_id) 
@@ -924,7 +926,8 @@ export default async function publicRoutes(fastify) {
               } 
             ] 
           }) 
-        }) 
+        })
+        console.log('[ASAAS PIX] split value enviado:', valorMotorista) 
         const asaasData = await asaasCobranca.json() 
         console.log('[ASAAS PIX] Resposta Asaas:', JSON.stringify(asaasData))
         if (asaasData.id) { 
