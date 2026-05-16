@@ -46,6 +46,9 @@
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mt-6">
       <div class="px-4 py-4 border-b border-gray-100 flex items-center justify-between">
         <h2 class="font-bold text-gray-900">🗓️ Feriados</h2>
+        <button onclick="aplicarTarifaFimSemana()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+          📅 Mesma tarifa do fim de semana
+        </button>
       </div>
       <div class="p-4">
         <!-- Formulário para adicionar feriado -->
@@ -190,12 +193,31 @@
         const tbody = document.getElementById('lista-feriados')
         
         tbody.innerHTML = feriados.map(f => `
-          <tr class="hover:bg-gray-50 transition-colors">
-            <td class="px-4 py-3 border-b border-gray-100">${new Date(f.data).toLocaleDateString('pt-BR')}</td>
-            <td class="px-4 py-3 border-b border-gray-100">${f.nome}</td>
-            <td class="px-4 py-3 border-b border-gray-100">${f.tipo}</td>
+          <tr id="linha-feriado-${f.id}" class="hover:bg-gray-50 transition-colors">
+            <td class="px-4 py-3 border-b border-gray-100" id="data-${f.id}">
+              <span class="normal">${new Date(f.data).toLocaleDateString('pt-BR')}</span>
+              <input type="date" id="edit-data-${f.id}" value="${f.data}" class="w-full bg-white border border-gray-200 rounded px-2 py-1 outline-none focus:border-green-500 hidden">
+            </td>
+            <td class="px-4 py-3 border-b border-gray-100" id="nome-${f.id}">
+              <span class="normal">${f.nome}</span>
+              <input type="text" id="edit-nome-${f.id}" value="${f.nome}" class="w-full bg-white border border-gray-200 rounded px-2 py-1 outline-none focus:border-green-500 hidden">
+            </td>
+            <td class="px-4 py-3 border-b border-gray-100" id="tipo-${f.id}">
+              <span class="normal">${f.tipo}</span>
+              <select id="edit-tipo-${f.id}" class="w-full bg-white border border-gray-200 rounded px-2 py-1 outline-none focus:border-green-500 hidden">
+                <option value="nacional">Nacional</option>
+                <option value="estadual">Estadual</option>
+                <option value="municipal">Municipal</option>
+              </select>
+            </td>
             <td class="px-4 py-3 border-b border-gray-100">
-              <button onclick="removerFeriado(${f.id})" class="bg-red-500 hover:bg-red-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+              <button id="btn-editar-${f.id}" onclick="editarFeriado(${f.id})" class="bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors mr-2">
+                Editar
+              </button>
+              <button id="btn-salvar-${f.id}" onclick="salvarFeriado(${f.id})" class="bg-green-500 hover:bg-green-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors mr-2 hidden">
+                Salvar
+              </button>
+              <button id="btn-remover-${f.id}" onclick="removerFeriado(${f.id})" class="bg-red-500 hover:bg-red-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
                 Remover
               </button>
             </td>
@@ -203,6 +225,76 @@
         `).join('')
       } catch (err) {
         alert('Erro ao carregar feriados')
+      }
+    }
+
+    function editarFeriado(id) {
+      document.getElementById(`data-${id}`).querySelector('.normal').classList.add('hidden')
+      document.getElementById(`edit-data-${id}`).classList.remove('hidden')
+      
+      document.getElementById(`nome-${id}`).querySelector('.normal').classList.add('hidden')
+      document.getElementById(`edit-nome-${id}`).classList.remove('hidden')
+      
+      document.getElementById(`tipo-${id}`).querySelector('.normal').classList.add('hidden')
+      const tipoSelect = document.getElementById(`edit-tipo-${id}`)
+      const tipoAtual = document.getElementById(`tipo-${id}`).querySelector('.normal').textContent
+      tipoSelect.value = tipoAtual
+      tipoSelect.classList.remove('hidden')
+
+      document.getElementById(`btn-editar-${id}`).classList.add('hidden')
+      document.getElementById(`btn-salvar-${id}`).classList.remove('hidden')
+    }
+
+    async function salvarFeriado(id) {
+      const data = document.getElementById(`edit-data-${id}`).value
+      const nome = document.getElementById(`edit-nome-${id}`).value
+      const tipo = document.getElementById(`edit-tipo-${id}`).value
+
+      try {
+        const r = await fetch(`/api/feriados/${id}`, {
+          method: 'PUT',
+          headers: headers(),
+          body: JSON.stringify({ data, nome, tipo })
+        })
+
+        if (r.ok) {
+          await carregarFeriados()
+        } else {
+          const d = await r.json()
+          alert('Erro ao salvar: ' + (d.error || 'Erro desconhecido'))
+        }
+      } catch (err) {
+        alert('Erro de conexão')
+      }
+    }
+
+    async function aplicarTarifaFimSemana() {
+      try {
+        const r = await fetch('/api/tarifas', { headers: headers() })
+        const tarifas = await r.json()
+        const tarifaFimSemana = tarifas.find(t => t.aplicar_feriados)
+
+        if (!tarifaFimSemana) {
+          alert('Nenhuma tarifa com "Feriados" marcada!')
+          return
+        }
+
+        const rFeriados = await fetch('/api/feriados', { headers: headers() })
+        const feriados = await rFeriados.json()
+
+        for (const feriado of feriados) {
+          const data = new Date(feriado.data)
+          const diaSemana = data.getDay()
+          if (diaSemana === 0 || diaSemana === 6) {
+            alert('Este feriado já cai em fim de semana!')
+            continue
+          }
+          data.setDate(data.getDate() + (0 - data.getDay() + 7) % 7)
+        }
+
+        alert('Tarifa aplicada aos feriados que não são fim de semana!')
+      } catch (err) {
+        alert('Erro ao aplicar tarifa!')
       }
     }
 

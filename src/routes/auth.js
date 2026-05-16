@@ -212,6 +212,19 @@ export default async function authRoutes(fastify) {
     return result.rows[0]
   })
 
+  fastify.put('/api/feriados/:id', { preHandler: requireAuth }, async (request, reply) => {
+    const { id } = request.params
+    const { data, nome, tipo } = request.body
+    await query(`
+      UPDATE feriados SET
+        data = COALESCE($1, data),
+        nome = COALESCE($2, nome),
+        tipo = COALESCE($3, tipo)
+      WHERE id = $4
+    `, [data, nome, tipo, id])
+    return { mensagem: 'Feriado atualizado com sucesso!' }
+  })
+
   fastify.delete('/api/feriados/:id', { preHandler: requireAuth }, async (request, reply) => {
     const { id } = request.params
     await query('DELETE FROM feriados WHERE id = $1', [id])
