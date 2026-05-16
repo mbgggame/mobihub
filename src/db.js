@@ -299,7 +299,7 @@ export async function initDB() {
       ('2026-06-24', 'São João Batista (Cariacica)', 'municipal'),
       ('2026-07-23', 'Aniversário de Viana', 'municipal'),
       ('2026-12-08', 'Nossa Senhora da Conceição (Viana)', 'municipal')
-    ON CONFLICT (data, nome) DO NOTHING
+    ON CONFLICT (data, nome) DO UPDATE SET data = EXCLUDED.data
   `) 
 
   await query(` 
