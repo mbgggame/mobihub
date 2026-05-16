@@ -324,10 +324,21 @@ export async function initDB() {
     -- Campo líder no cadastro do motorista 
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS lider_id TEXT; 
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS codigo_indicacao TEXT;
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS mobihub_id TEXT UNIQUE;
     ALTER TABLE clients ADD COLUMN IF NOT EXISTS asaas_customer_id TEXT; 
     ALTER TABLE clients ADD COLUMN IF NOT EXISTS cpf TEXT;
     ALTER TABLE clients ADD COLUMN IF NOT EXISTS telegram_id TEXT; 
+  `)
 
+  // Gerar IDs MobiHub para motoristas já cadastrados na ordem do id
+  const existingDrivers = (await query('SELECT id FROM drivers WHERE mobihub_id IS NULL ORDER BY id')).rows
+  for (let i = 0; i < existingDrivers.length; i++) {
+    const num = i + 1
+    const mobihubId = `ZH-VIX-${String(num).padStart(4, '0')}`
+    await query('UPDATE drivers SET mobihub_id = $1 WHERE id = $2', [mobihubId, existingDrivers[i].id])
+  }
+
+  await query(` 
     -- Tabela de configurações de webhook 
     CREATE TABLE IF NOT EXISTS webhooks ( 
       id SERIAL PRIMARY KEY, 

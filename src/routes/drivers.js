@@ -82,7 +82,7 @@ export default async function driversRoutes(fastify) {
     const result = await query(`SELECT id, nome, telefone, email, telegram_id, modelo_carro, ano_carro, cor_carro, placa, 
       total_viagens, media_avaliacao, total_avaliacoes, ativo, foto_base64, token_perfil, created_at, status_cadastro,
       cpf, renavam, crlv_base64, cnh_frente_base64, cnh_verso_base64, cnh_digital_base64,
-      tipo_chave_pix, chave_pix, asaas_id,
+      tipo_chave_pix, chave_pix, asaas_id, mobihub_id,
       cep, logradouro, numero, complemento, bairro, cidade, estado, data_nascimento
     FROM drivers ORDER BY nome`)
     return result.rows
@@ -202,9 +202,17 @@ export default async function driversRoutes(fastify) {
     const { v4: uuidv4 } = await import('uuid')
     const token = driver.token_perfil || uuidv4()
     
+    // Gerar mobihub_id se não existir
+    let mobihubId = driver.mobihub_id
+    if (!mobihubId) {
+      const lastId = (await query("SELECT mobihub_id FROM drivers WHERE mobihub_id IS NOT NULL ORDER BY mobihub_id DESC LIMIT 1")).rows[0]
+      const nextNum = lastId ? parseInt(lastId.mobihub_id.split('-')[2]) + 1 : 1
+      mobihubId = `ZH-VIX-${String(nextNum).padStart(4, '0')}`
+    }
+    
     await query(` 
-      UPDATE drivers SET status_cadastro = 'aprovado', ativo = 1, token_perfil = $1 WHERE id = $2 
-    `, [token, id]) 
+      UPDATE drivers SET status_cadastro = 'aprovado', ativo = 1, token_perfil = $1, mobihub_id = $2 WHERE id = $3 
+    `, [token, mobihubId, id]) 
 
     // Integração Asaas: criar subconta automaticamente
     if (process.env.ASAAS_API_KEY) {
@@ -312,12 +320,24 @@ export default async function driversRoutes(fastify) {
   // Ativar motorista
   fastify.put('/api/drivers/:id/ativar', { preHandler: requireAuth }, async (request, reply) => {
     const { id } = request.params
+    const driverResult = await query('SELECT * FROM drivers WHERE id = $1', [id])
+    const driver = driverResult.rows[0]
+    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' })
+    
     const { v4: uuidv4 } = await import('uuid')
-    const token = uuidv4()
+    const token = driver.token_perfil || uuidv4()
+    
+    // Gerar mobihub_id se não existir
+    let mobihubId = driver.mobihub_id
+    if (!mobihubId) {
+      const lastId = (await query("SELECT mobihub_id FROM drivers WHERE mobihub_id IS NOT NULL ORDER BY mobihub_id DESC LIMIT 1")).rows[0]
+      const nextNum = lastId ? parseInt(lastId.mobihub_id.split('-')[2]) + 1 : 1
+      mobihubId = `ZH-VIX-${String(nextNum).padStart(4, '0')}`
+    }
     
     await query(`
-      UPDATE drivers SET ativo = 1, status_cadastro = 'aprovado', token_perfil = $1 WHERE id = $2
-    `, [token, id])
+      UPDATE drivers SET ativo = 1, status_cadastro = 'aprovado', token_perfil = $1, mobihub_id = $2 WHERE id = $3
+    `, [token, mobihubId, id])
 
     const driverResult = await query('SELECT * FROM drivers WHERE id = $1', [id])
     const driver = driverResult.rows[0]

@@ -316,7 +316,7 @@ function renderizarModalDetalhes() {
           <p><span class="font-medium">Telefone:</span> ${d.telefone || '—'}</p>
           <p><span class="font-medium">CPF:</span> ${d.cpf || '—'}</p>
           <p><span class="font-medium">Data de Nascimento:</span> ${d.data_nascimento || '—'}</p>
-          <p><span class="font-medium">Telegram ID:</span> ${d.telegram_id || '—'}</p>
+          <p><span class="font-medium">ID MobiHub:</span> <span class="font-mono">${d.mobihub_id || '—'}</span></p>
           ${d.asaas_id ? `<p><span class="font-medium">ID Asaas (walletId):</span> <span class="font-mono">${d.asaas_id}</span></p>` : ''}
           <p><strong>Saldo Devedor:</strong> R$ ${parseFloat(d.balance_due || 0).toFixed(2)}</p>
         </div>
