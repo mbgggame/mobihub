@@ -759,28 +759,8 @@ export default async function publicRoutes(fastify) {
       if (ativa) { tarifaAtiva = t; break } 
     } 
  
-    // Calcular valor base pela distância e tarifa ativa 
-    let valorBase = parseFloat(ride.valor || 15) 
-    if (tarifaAtiva && ride.origem_lat && ride.destino_lat) { 
-      const lat1 = parseFloat(ride.origem_lat), lng1 = parseFloat(ride.origem_lng) 
-      const lat2 = parseFloat(ride.destino_lat), lng2 = parseFloat(ride.destino_lng) 
-      const R = 6371 
-      const dLat = (lat2 - lat1) * Math.PI / 180 
-      const dLng = (lng2 - lng1) * Math.PI / 180 
-      const a = Math.sin(dLat/2) * Math.sin(dLat/2) + 
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-        Math.sin(dLng/2) * Math.sin(dLng/2) 
-      const distKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) 
-      const kmMin = parseFloat(tarifaAtiva.km_minimo || 7.5) 
-      const valorMin = parseFloat(tarifaAtiva.valor_minimo || 15) 
-      const rsPorKm = parseFloat(tarifaAtiva.valor_km || 2) 
-      valorBase = distKm <= kmMin 
-        ? valorMin 
-        : parseFloat((valorMin + (distKm - kmMin) * rsPorKm).toFixed(2)) 
-      console.log(`[BILLING] Tarifa: ${tarifaAtiva.nome} | Dist: ${distKm.toFixed(2)}km | Base: R$${valorBase}`) 
-    } else { 
-      console.log(`[BILLING] Sem tarifa ativa — usando valor fixo: R$${valorBase}`) 
-    } 
+    let valorBase = parseFloat(ride.valor || 15)
+    console.log(`[BILLING] Usando valor aprovado pelo passageiro: R$${valorBase}`) 
 
     // Buscar regra de split ativa baseada se o motorista tem líder
     const temLider = !!driver.lider_id
