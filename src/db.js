@@ -266,55 +266,59 @@ export async function initDB() {
     )
   `)
 
-  // Limpar registros duplicados ou conflitantes antes de corrigir datas
-  await query(`DELETE FROM feriados WHERE nome ILIKE '%Coloniza%' AND data = '2026-05-22'`)
-  await query(`DELETE FROM feriados WHERE nome ILIKE '%Independ%' AND data = '2026-09-06'`)
-  await query(`DELETE FROM feriados WHERE nome ILIKE '%João Batista%' AND data = '2026-06-23'`)
-  await query(`DELETE FROM feriados WHERE nome ILIKE '%Pedro%' AND nome ILIKE '%Serra%' AND data = '2026-06-28'`)
-  await query(`DELETE FROM feriados WHERE nome ILIKE '%Viana%' AND data = '2026-07-22'`)
+  try {
+    // Limpar registros duplicados ou conflitantes antes de corrigir datas
+    await query(`DELETE FROM feriados WHERE nome ILIKE '%Coloniza%' AND data = '2026-05-22'`)
+    await query(`DELETE FROM feriados WHERE nome ILIKE '%Independ%' AND data = '2026-09-06'`)
+    await query(`DELETE FROM feriados WHERE nome ILIKE '%João Batista%' AND data = '2026-06-23'`)
+    await query(`DELETE FROM feriados WHERE nome ILIKE '%Pedro%' AND nome ILIKE '%Serra%' AND data = '2026-06-28'`)
+    await query(`DELETE FROM feriados WHERE nome ILIKE '%Viana%' AND data = '2026-07-22'`)
 
-  // Corrigir datas erradas de feriados existentes
-  await query(`UPDATE feriados SET data = '2026-05-23' WHERE nome ILIKE '%Coloniza%' AND data != '2026-05-23';`)
-  await query(`UPDATE feriados SET data = '2026-09-07' WHERE nome ILIKE '%Independ%' AND data != '2026-09-07';`)
-  await query(`UPDATE feriados SET data = '2026-06-24' WHERE nome ILIKE '%João Batista%' AND data != '2026-06-24';`)
-  await query(`UPDATE feriados SET data = '2026-06-29' WHERE nome ILIKE '%Pedro%' AND nome ILIKE '%Serra%' AND data != '2026-06-29';`)
-  await query(`UPDATE feriados SET data = '2026-07-23' WHERE nome ILIKE '%Viana%' AND data != '2026-07-23';`)
+    // Corrigir datas erradas de feriados existentes
+    await query(`UPDATE feriados SET data = '2026-05-23' WHERE nome ILIKE '%Coloniza%' AND data != '2026-05-23';`)
+    await query(`UPDATE feriados SET data = '2026-09-07' WHERE nome ILIKE '%Independ%' AND data != '2026-09-07';`)
+    await query(`UPDATE feriados SET data = '2026-06-24' WHERE nome ILIKE '%João Batista%' AND data != '2026-06-24';`)
+    await query(`UPDATE feriados SET data = '2026-06-29' WHERE nome ILIKE '%Pedro%' AND nome ILIKE '%Serra%' AND data != '2026-06-29';`)
+    await query(`UPDATE feriados SET data = '2026-07-23' WHERE nome ILIKE '%Viana%' AND data != '2026-07-23';`)
 
-  // Inserir apenas feriados que não existem ainda
-  await query(`
-    INSERT INTO feriados (data, nome, tipo) VALUES
-      ('2026-01-01', 'Ano Novo', 'nacional'),
-      ('2026-03-02', 'Carnaval (Segunda-feira)', 'nacional'),
-      ('2026-03-03', 'Carnaval (Terça-feira)', 'nacional'),
-      ('2026-03-04', 'Quarta de Cinzas', 'nacional'),
-      ('2026-04-03', 'Sexta-Feira Santa', 'nacional'),
-      ('2026-04-05', 'Páscoa', 'nacional'),
-      ('2026-04-21', 'Tiradentes', 'nacional'),
-      ('2026-05-01', 'Dia do Trabalho', 'nacional'),
-      ('2026-06-04', 'Corpus Christi', 'nacional'),
-      ('2026-09-07', 'Independência do Brasil', 'nacional'),
-      ('2026-10-12', 'Nossa Senhora Aparecida', 'nacional'),
-      ('2026-11-02', 'Finados', 'nacional'),
-      ('2026-11-15', 'Proclamação da República', 'nacional'),
-      ('2026-11-20', 'Consciência Negra', 'nacional'),
-      ('2026-12-25', 'Natal', 'nacional'),
-      ('2026-04-13', 'Nossa Senhora da Penha (Padroeira do ES)', 'estadual'),
-      ('2026-05-23', 'Colonização do Solo Espírito-Santense', 'estadual'),
-      ('2026-04-03', 'Paixão de Cristo (Vitória)', 'municipal'),
-      ('2026-06-04', 'Corpus Christi (Vitória)', 'municipal'),
-      ('2026-09-08', 'Nossa Senhora da Vitória / Aniversário de Vitória', 'municipal'),
-      ('2026-04-03', 'Paixão de Cristo (Vila Velha)', 'municipal'),
-      ('2026-05-23', 'Colonização do Solo ES (Vila Velha)', 'municipal'),
-      ('2026-06-29', 'São Pedro (Serra)', 'municipal'),
-      ('2026-12-08', 'Nossa Senhora da Conceição (Serra)', 'municipal'),
-      ('2026-12-26', 'Dia do Serrano (Serra)', 'municipal'),
-      ('2026-04-03', 'Paixão de Cristo (Cariacica)', 'municipal'),
-      ('2026-06-04', 'Corpus Christi (Cariacica)', 'municipal'),
-      ('2026-06-24', 'São João Batista (Cariacica)', 'municipal'),
-      ('2026-07-23', 'Aniversário de Viana', 'municipal'),
-      ('2026-12-08', 'Nossa Senhora da Conceição (Viana)', 'municipal')
-    ON CONFLICT (data, nome) DO NOTHING
-  `) 
+    // Inserir apenas feriados que não existem ainda
+    await query(`
+      INSERT INTO feriados (data, nome, tipo) VALUES
+        ('2026-01-01', 'Ano Novo', 'nacional'),
+        ('2026-03-02', 'Carnaval (Segunda-feira)', 'nacional'),
+        ('2026-03-03', 'Carnaval (Terça-feira)', 'nacional'),
+        ('2026-03-04', 'Quarta de Cinzas', 'nacional'),
+        ('2026-04-03', 'Sexta-Feira Santa', 'nacional'),
+        ('2026-04-05', 'Páscoa', 'nacional'),
+        ('2026-04-21', 'Tiradentes', 'nacional'),
+        ('2026-05-01', 'Dia do Trabalho', 'nacional'),
+        ('2026-06-04', 'Corpus Christi', 'nacional'),
+        ('2026-09-07', 'Independência do Brasil', 'nacional'),
+        ('2026-10-12', 'Nossa Senhora Aparecida', 'nacional'),
+        ('2026-11-02', 'Finados', 'nacional'),
+        ('2026-11-15', 'Proclamação da República', 'nacional'),
+        ('2026-11-20', 'Consciência Negra', 'nacional'),
+        ('2026-12-25', 'Natal', 'nacional'),
+        ('2026-04-13', 'Nossa Senhora da Penha (Padroeira do ES)', 'estadual'),
+        ('2026-05-23', 'Colonização do Solo Espírito-Santense', 'estadual'),
+        ('2026-04-03', 'Paixão de Cristo (Vitória)', 'municipal'),
+        ('2026-06-04', 'Corpus Christi (Vitória)', 'municipal'),
+        ('2026-09-08', 'Nossa Senhora da Vitória / Aniversário de Vitória', 'municipal'),
+        ('2026-04-03', 'Paixão de Cristo (Vila Velha)', 'municipal'),
+        ('2026-05-23', 'Colonização do Solo ES (Vila Velha)', 'municipal'),
+        ('2026-06-29', 'São Pedro (Serra)', 'municipal'),
+        ('2026-12-08', 'Nossa Senhora da Conceição (Serra)', 'municipal'),
+        ('2026-12-26', 'Dia do Serrano (Serra)', 'municipal'),
+        ('2026-04-03', 'Paixão de Cristo (Cariacica)', 'municipal'),
+        ('2026-06-04', 'Corpus Christi (Cariacica)', 'municipal'),
+        ('2026-06-24', 'São João Batista (Cariacica)', 'municipal'),
+        ('2026-07-23', 'Aniversário de Viana', 'municipal'),
+        ('2026-12-08', 'Nossa Senhora da Conceição (Viana)', 'municipal')
+      ON CONFLICT (data, nome) DO NOTHING
+    `)
+  } catch(e) {
+    console.error('[FERIADOS SEED ERROR]', e.message)
+  } 
 
   await query(` 
     -- Campo líder no cadastro do motorista 
