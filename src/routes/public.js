@@ -608,20 +608,32 @@ export default async function publicRoutes(fastify) {
     )).rows[0]
 
     if (feriadoHoje) {
-      // Se o feriado tem tarifa própria configurada, usar ela
-      if (feriadoHoje.valor_minimo && feriadoHoje.valor_km) {
-        tarifaAtiva = {
-          valor_minimo: feriadoHoje.valor_minimo,
-          valor_km: feriadoHoje.valor_km,
-          km_minimo: feriadoHoje.km_minimo,
-          nome: feriadoHoje.nome
+      // Verificar se hora atual está dentro do horário do feriado
+      let feriadoAtivo = true
+      if (feriadoHoje.horario_inicio && feriadoHoje.horario_fim) {
+        const [hIni, mIni] = feriadoHoje.horario_inicio.split(':').map(Number)
+        const [hFim, mFim] = feriadoHoje.horario_fim.split(':').map(Number)
+        const inicio = hIni * 60 + mIni
+        const fim = hFim * 60 + mFim
+        feriadoAtivo = fim < inicio
+          ? (horaAtual >= inicio || horaAtual < fim)
+          : (horaAtual >= inicio && horaAtual <= fim)
+      }
+
+      if (feriadoAtivo) {
+        if (feriadoHoje.valor_minimo && feriadoHoje.valor_km) {
+          tarifaAtiva = {
+            valor_minimo: feriadoHoje.valor_minimo,
+            valor_km: feriadoHoje.valor_km,
+            km_minimo: feriadoHoje.km_minimo || 7.5,
+            nome: feriadoHoje.nome
+          }
+        } else {
+          const tarifaFeriado = (await query(
+            "SELECT * FROM tarifas WHERE aplicar_feriados = true AND ativo = 1 LIMIT 1"
+          )).rows[0]
+          if (tarifaFeriado) tarifaAtiva = tarifaFeriado
         }
-      } else {
-        // Se não tem tarifa própria, usar a tarifa marcada com aplicar_feriados = true
-        const tarifaFeriado = (await query(
-          "SELECT * FROM tarifas WHERE aplicar_feriados = true AND ativo = 1 LIMIT 1"
-        )).rows[0]
-        if (tarifaFeriado) tarifaAtiva = tarifaFeriado
       }
     }
 
@@ -1256,6 +1268,12 @@ export default async function publicRoutes(fastify) {
     await query(`INSERT INTO feriados (data, nome, tipo) VALUES ('2026-05-23', 'Colonização do Solo ES (Vila Velha)', 'municipal')`)
     const result = await query(`SELECT * FROM feriados WHERE nome LIKE '%Vila Velha%'`)
     return result.rows
+  })
+
+  // Endpoint temporário para verificar tarifa Pico tarde
+  fastify.get('/api/temp/verificar-tarifa-pico-tarde', async (request, reply) => {
+    const tarifa = (await query("SELECT * FROM tarifas WHERE nome ILIKE '%pico%tarde%'")).rows[0]
+    return { tarifa }
   })
 
 } 
