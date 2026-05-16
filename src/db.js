@@ -254,7 +254,8 @@ export async function initDB() {
       tipo TEXT NOT NULL, 
       descricao TEXT NOT NULL, 
       valor DOUBLE PRECISION NOT NULL, 
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT unique_driver_ride_tipo UNIQUE (driver_id, ride_id, tipo)
     );
 
     CREATE TABLE IF NOT EXISTS feriados (
@@ -330,7 +331,15 @@ export async function initDB() {
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS balance_due_charge_pix TEXT;
     ALTER TABLE clients ADD COLUMN IF NOT EXISTS asaas_customer_id TEXT; 
     ALTER TABLE clients ADD COLUMN IF NOT EXISTS cpf TEXT;
-    ALTER TABLE clients ADD COLUMN IF NOT EXISTS telegram_id TEXT; 
+    ALTER TABLE clients ADD COLUMN IF NOT EXISTS telegram_id TEXT;
+
+    DO $$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'unique_driver_ride_tipo'
+      ) THEN
+        ALTER TABLE driver_transactions ADD CONSTRAINT unique_driver_ride_tipo UNIQUE (driver_id, ride_id, tipo);
+      END IF;
+    END $$;
   `)
 
   // Gerar IDs MobiHub para motoristas já cadastrados na ordem do id
