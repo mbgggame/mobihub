@@ -778,23 +778,30 @@ export default async function publicRoutes(fastify) {
         abatimento = parseFloat(Math.min(balance_due_atual, valorMotorista).toFixed(2))
         console.log(`[DEBUG ABATIMENTO] abatimento calculado: R$${abatimento}`)
         
-        // 3. Atualizar banco
-        await query('UPDATE drivers SET balance_due = GREATEST(0, balance_due - $1) WHERE id = $2', [abatimento, driver.id])
-        console.log(`[DEBUG ABATIMENTO] Updated balance_due in database`)
+        // Verificar se transação já existe
+        const existingTransacao = await query('SELECT id FROM driver_transactions WHERE driver_id = $1 AND ride_id = $2 AND descricao LIKE $3', [driver.id, id, `Abatimento saldo devedor - corrida #${id}`])
         
-        // 4. Registrar transação
-        await query('INSERT INTO driver_transactions (driver_id, ride_id, tipo, descricao, valor) VALUES ($1, $2, $3, $4, $5)', 
-          [driver.id, id, 'credito', `Abatimento saldo devedor - corrida #${id}`, abatimento])
-        console.log(`[DEBUG ABATIMENTO] Transaction inserted`)
-        
-        balance_due_novo = parseFloat(Math.max(0, balance_due_atual - abatimento).toFixed(2))
-        valorMotorista = parseFloat((valorMotorista - abatimento).toFixed(2))
-        
-        if (balance_due_novo <= 0) {
-          await query('UPDATE drivers SET balance_due_blocked_at = NULL WHERE id = $1', [driver.id])
+        if (existingTransacao.rows.length === 0) {
+          // 3. Atualizar banco
+          await query('UPDATE drivers SET balance_due = GREATEST(0, balance_due - $1) WHERE id = $2', [abatimento, driver.id])
+          console.log(`[DEBUG ABATIMENTO] Updated balance_due in database`)
+          
+          // 4. Registrar transação
+          await query('INSERT INTO driver_transactions (driver_id, ride_id, tipo, descricao, valor) VALUES ($1, $2, $3, $4, $5)', 
+            [driver.id, id, 'credito', `Abatimento saldo devedor - corrida #${id}`, abatimento])
+          console.log(`[DEBUG ABATIMENTO] Transaction inserted`)
+          
+          balance_due_novo = parseFloat(Math.max(0, balance_due_atual - abatimento).toFixed(2))
+          valorMotorista = parseFloat((valorMotorista - abatimento).toFixed(2))
+          
+          if (balance_due_novo <= 0) {
+            await query('UPDATE drivers SET balance_due_blocked_at = NULL WHERE id = $1', [driver.id])
+          }
+          
+          console.log(`[ABATIMENTO] Aplicado R$${abatimento} de abatimento. Novo valor motorista: R$${valorMotorista}. Novo balance due: R$${balance_due_novo}`)
+        } else {
+          console.log(`[DEBUG ABATIMENTO] Transaction already exists for ride #${id}`)
         }
-        
-        console.log(`[ABATIMENTO] Aplicado R$${abatimento} de abatimento. Novo valor motorista: R$${valorMotorista}. Novo balance due: R$${balance_due_novo}`)
       }
     }
 
