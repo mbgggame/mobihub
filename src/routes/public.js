@@ -283,6 +283,11 @@ export default async function publicRoutes(fastify) {
     return result.rows[0]
   })
 
+  fastify.get('/api/temp/check-transactions-marcia', async (request, reply) => {
+    const result = await query('SELECT * FROM driver_transactions WHERE driver_id = 6 ORDER BY id DESC LIMIT 5')
+    return result.rows
+  })
+
   fastify.put('/api/motorista/:token/foto', async (request, reply) => { 
     const { foto_base64 } = request.body 
     if (!foto_base64) return reply.code(400).send({ error: 'Foto é obrigatória' }) 
