@@ -803,6 +803,7 @@ export default async function publicRoutes(fastify) {
           await query('UPDATE drivers SET balance_due = GREATEST(0, balance_due - $1) WHERE id = $2', [abatimento, driver.id])
           console.log(`[DEBUG ABATIMENTO] Updated balance_due in database`)
           
+          console.log('[VALOR INSERIDO]', abatimento, typeof abatimento)
           // 4. Registrar transação
           await query('INSERT INTO driver_transactions (driver_id, ride_id, tipo, descricao, valor) VALUES ($1, $2, $3, $4, $5)', 
             [driver.id, id, 'credito', `Abatimento saldo devedor - corrida #${id}`, abatimento])
