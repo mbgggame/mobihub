@@ -778,8 +778,11 @@ export default async function publicRoutes(fastify) {
         abatimento = parseFloat(Math.min(balance_due_atual, valorMotorista).toFixed(2))
         console.log(`[DEBUG ABATIMENTO] abatimento calculado: R$${abatimento}`)
         
-        // Verificar se transação já existe
-        const existingTransacao = await query('SELECT id FROM driver_transactions WHERE driver_id = $1 AND ride_id = $2 AND descricao LIKE $3', [driver.id, id, `Abatimento saldo devedor - corrida #${id}`])
+        console.log(`[DEBUG] Verificando transação existente: driver_id=${driver.id}, ride_id=${id}`)
+        const existingTransacao = await query(
+          'SELECT id FROM driver_transactions WHERE driver_id = $1 AND ride_id = $2 AND tipo = $3',
+          [driver.id, id, 'credito']
+        )
         
         if (existingTransacao.rows.length === 0) {
           // 3. Atualizar banco
