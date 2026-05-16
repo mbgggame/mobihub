@@ -325,6 +325,9 @@ export async function initDB() {
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS lider_id TEXT; 
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS codigo_indicacao TEXT;
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS mobihub_id TEXT UNIQUE;
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS balance_due_blocked_at TIMESTAMP;
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS balance_due_charge_id TEXT;
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS balance_due_charge_pix TEXT;
     ALTER TABLE clients ADD COLUMN IF NOT EXISTS asaas_customer_id TEXT; 
     ALTER TABLE clients ADD COLUMN IF NOT EXISTS cpf TEXT;
     ALTER TABLE clients ADD COLUMN IF NOT EXISTS telegram_id TEXT; 

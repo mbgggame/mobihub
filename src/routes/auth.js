@@ -235,4 +235,82 @@ export default async function authRoutes(fastify) {
     `)
     return { mensagem: 'Feriados duplicados removidos', count: result.rowCount }
   })
+
+  // Job de cobrança automática
+  fastify.post('/api/admin/verificar-inadimplentes', { preHandler: requireAuth }, async (request, reply) => {
+    const motoristasInadimplentes = (await query(`
+      SELECT * FROM drivers 
+      WHERE balance_due >= 30 
+        AND balance_due_blocked_at <= NOW() - INTERVAL '2 days'
+        AND balance_due_charge_id IS NULL
+    `)).rows
+
+    const resultados = []
+
+    for (const driver of motoristasInadimplentes) {
+      if (process.env.ASAAS_API_KEY) {
+        try {
+          const dueDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+          const asaasResponse = await fetch('https://www.asaas.com/api/v3/payments', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'access_token': process.env.ASAAS_API_KEY
+            },
+            body: JSON.stringify({
+              billingType: 'PIX',
+              value: parseFloat(driver.balance_due),
+              dueDate,
+              description: `Regularização saldo MobiHub - ${driver.nome}`,
+              externalReference: `driver_${driver.id}`
+            })
+          })
+
+          const asaasData = await asaasResponse.json()
+          if (asaasData.id) {
+            let pixPayload = null
+            try {
+              const qrResponse = await fetch(`https://www.asaas.com/api/v3/payments/${asaasData.id}/pixQrCode`, {
+                headers: { 'access_token': process.env.ASAAS_API_KEY }
+              })
+              const qrData = await qrResponse.json()
+              pixPayload = qrData.payload
+            } catch (err) {
+              console.error('[ASAAS QR CODE] Erro:', err)
+            }
+
+            await query(
+              'UPDATE drivers SET balance_due_charge_id = $1, balance_due_charge_pix = $2 WHERE id = $3',
+              [asaasData.id, pixPayload, driver.id]
+            )
+
+            resultados.push({
+              motorista_id: driver.id,
+              nome: driver.nome,
+              cobranca_id: asaasData.id,
+              pix_payload: pixPayload,
+              status: 'sucesso'
+            })
+          } else {
+            resultados.push({
+              motorista_id: driver.id,
+              nome: driver.nome,
+              erro: asaasData.errors?.[0]?.description || 'Erro ao criar cobrança',
+              status: 'falha'
+            })
+          }
+        } catch (err) {
+          console.error('[ASAAS] Erro ao criar cobrança:', err)
+          resultados.push({
+            motorista_id: driver.id,
+            nome: driver.nome,
+            erro: err.message,
+            status: 'falha'
+          })
+        }
+      }
+    }
+
+    return { mensagem: 'Processamento concluído', total: motoristasInadimplentes.length, resultados }
+  })
 }

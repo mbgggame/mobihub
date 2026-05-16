@@ -198,7 +198,8 @@ export default async function publicRoutes(fastify) {
     const result = await query(` 
       SELECT id, nome, modelo_carro, ano_carro, cor_carro, placa, 
         total_viagens, media_avaliacao, total_avaliacoes, 
-        foto_base64, ativo, created_at, aceitou_termos 
+        foto_base64, ativo, created_at, aceitou_termos,
+        balance_due, balance_due_blocked_at, balance_due_charge_pix
       FROM drivers WHERE token_perfil = $1 
     `, [request.params.token]) 
     const driver = result.rows[0] 
@@ -238,7 +239,32 @@ export default async function publicRoutes(fastify) {
     `, [driver.id]) 
     const financeiro = financeiroResult.rows[0] 
 
-    return { driver, corridas, comentarios, financeiro } 
+    const balance_due_bloqueado = parseFloat(driver.balance_due || 0) >= 30
+
+    return { 
+      driver, 
+      corridas, 
+      comentarios, 
+      financeiro, 
+      balance_due: parseFloat(driver.balance_due || 0),
+      balance_due_bloqueado,
+      balance_due_charge_pix: driver.balance_due_charge_pix,
+      balance_due_blocked_at: driver.balance_due_blocked_at
+    } 
+  })
+
+  fastify.get('/api/motorista/:token/extrato', async (request, reply) => {
+    const driver = (await query('SELECT id FROM drivers WHERE token_perfil = $1', [request.params.token])).rows[0]
+    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' })
+
+    const transacoes = (await query(`
+      SELECT id, tipo, descricao, valor, created_at, ride_id
+      FROM driver_transactions
+      WHERE driver_id = $1
+      ORDER BY created_at DESC
+    `, [driver.id])).rows
+
+    return { transacoes }
   })
 
   fastify.put('/api/motorista/:token/foto', async (request, reply) => { 
@@ -446,6 +472,17 @@ export default async function publicRoutes(fastify) {
     const { id } = request.params 
     const driver = (await query("SELECT * FROM drivers WHERE token_perfil = $1 AND ativo = 1 AND status_cadastro = 'aprovado'", [token_motorista])).rows[0] 
     if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
+    
+    // Verificar bloqueio total por inadimplência
+    if (driver.balance_due_blocked_at) {
+      const blockedAt = new Date(driver.balance_due_blocked_at)
+      const now = new Date()
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      if (blockedAt <= sevenDaysAgo) {
+        return reply.code(403).send({ error: 'Seu acesso está bloqueado por inadimplência. Regularize seu saldo no painel.' })
+      }
+    }
+
     const ride = (await query("SELECT * FROM rides WHERE id = $1 AND status = 'aberta'", [id])).rows[0] 
     if (!ride) return reply.code(400).send({ error: 'Corrida não disponível' }) 
     await query("UPDATE rides SET status = 'aceita', driver_id = $1, aceita_at = CURRENT_TIMESTAMP WHERE id = $2", [driver.id, id]) 
@@ -531,14 +568,21 @@ export default async function publicRoutes(fastify) {
     const valorFinal = ride.valor_final || ride.valor
     const valorPlataforma = parseFloat((valorFinal * percentualPlataforma / 100).toFixed(2))
 
-    await query('UPDATE drivers SET balance_due = balance_due + $1 WHERE id = $2', [valorPlataforma, driver.id])
+    const updatedDriverResult = await query('UPDATE drivers SET balance_due = balance_due + $1 WHERE id = $2 RETURNING balance_due', [valorPlataforma, driver.id])
+    const novoBalanceDue = parseFloat(updatedDriverResult.rows[0].balance_due)
 
     await query(
       'INSERT INTO driver_transactions (driver_id, ride_id, tipo, descricao, valor) VALUES ($1, $2, $3, $4, $5)',
       [driver.id, id, 'debito', `Comissão plataforma - corrida #${id} recebida em dinheiro`, -valorPlataforma]
     )
 
-    return { mensagem: 'Pagamento recebido com sucesso!', valor_plataforma: valorPlataforma }
+    let aviso = null
+    if (novoBalanceDue >= 30) {
+      await query('UPDATE drivers SET balance_due_blocked_at = CURRENT_TIMESTAMP WHERE id = $1', [driver.id])
+      aviso = 'Recebimento em dinheiro bloqueado. Use Pix ou Cartão.'
+    }
+
+    return { mensagem: 'Pagamento recebido com sucesso!', valor_plataforma: valorPlataforma, aviso }
   })
 
   fastify.put('/api/rides/:id/passageiro-nao-pagou', async (request, reply) => {
@@ -562,14 +606,21 @@ export default async function publicRoutes(fastify) {
     const valorPlataforma = parseFloat((valorFinal * percentualPlataforma / 100).toFixed(2))
     const valorDebito = -valorPlataforma
 
-    await query('UPDATE drivers SET balance_due = balance_due + $1 WHERE id = $2', [valorDebito, driver.id])
+    const updatedDriverResult = await query('UPDATE drivers SET balance_due = balance_due + $1 WHERE id = $2 RETURNING balance_due', [valorDebito, driver.id])
+    const novoBalanceDue = parseFloat(updatedDriverResult.rows[0].balance_due)
 
     await query(
       'INSERT INTO driver_transactions (driver_id, ride_id, tipo, descricao, valor) VALUES ($1, $2, $3, $4, $5)',
       [driver.id, id, 'debito', `Passageiro não pagou - corrida #${id}`, valorDebito]
     )
 
-    return { mensagem: 'Registro de não pagamento realizado!', valor_debito: valorDebito }
+    let aviso = null
+    if (novoBalanceDue >= 30) {
+      await query('UPDATE drivers SET balance_due_blocked_at = CURRENT_TIMESTAMP WHERE id = $1', [driver.id])
+      aviso = 'Recebimento em dinheiro bloqueado. Use Pix ou Cartão.'
+    }
+
+    return { mensagem: 'Registro de não pagamento realizado!', valor_debito: valorDebito, aviso }
   })
 
   fastify.put('/api/rides/:id/finalizar-motorista', async (request, reply) => { 
@@ -827,11 +878,27 @@ export default async function publicRoutes(fastify) {
       const balance_due_atual = parseFloat(driverInfo?.balance_due || 0)
       const formaPagamento = ride.forma_pagamento || '1'
       const corridaDinheiro = formaPagamento === '1' || formaPagamento === 1
+      const corridaPix = formaPagamento === '2' || formaPagamento === 2
+      const corridaCartao = formaPagamento === '3' || formaPagamento === 3
       
       let balance_due_novo = balance_due_atual
       if (corridaDinheiro) {
         balance_due_novo = parseFloat((balance_due_atual + valorPlataforma).toFixed(2))
         await query('UPDATE drivers SET balance_due = $1 WHERE id = $2', [balance_due_novo, driver.id])
+      } else if ((corridaPix || corridaCartao) && balance_due_atual > 0) {
+        const abatimento = Math.min(balance_due_atual, valorMotorista)
+        balance_due_novo = parseFloat((balance_due_atual - abatimento).toFixed(2))
+        
+        await query('UPDATE drivers SET balance_due = $1 WHERE id = $2', [balance_due_novo, driver.id])
+        
+        await query(`
+          INSERT INTO driver_transactions (driver_id, ride_id, tipo, descricao, valor)
+          VALUES ($1, $2, 'credito', $3, $4)
+        `, [driver.id, id, `Abatimento saldo devedor - corrida #${id}`, abatimento])
+        
+        if (balance_due_novo <= 0) {
+          await query('UPDATE drivers SET balance_due_blocked_at = NULL WHERE id = $1', [driver.id])
+        }
       }
 
       await dispararWebhook('corrida.finalizada', { 

@@ -153,6 +153,19 @@
   </div>
 </div>
 
+<!-- MODAL EXTRATO -->
+<div id="modal-extrato" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4 py-6 hidden">
+  <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+    <div class="p-6 space-y-4">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-xl font-bold text-gray-900">📊 Meu Extrato</h2>
+        <button onclick="fecharModalExtrato()" class="text-gray-500 hover:text-gray-700 text-xl font-bold">✕</button>
+      </div>
+      <div id="lista-extrato" class="space-y-3"></div>
+    </div>
+  </div>
+</div>
+
 <!-- CONTEÚDO PRINCIPAL (HIDDEN ATÉ ACEITE DOS TERMOS) -->
 <div id="conteudo-principal" class="hidden">
   <!-- HEADER --> 
@@ -292,6 +305,26 @@
        <p class="text-xs text-gray-400 mt-2">Valores líquidos (75% repassados ao motorista)</p> 
      </div> 
    </div> 
+
+  <!-- SALDO DEVEDOR -->
+  <div id="card-saldo-devedor" class="hidden bg-white border border-gray-200 rounded-xl p-4">
+    <p class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-3">Saldo devedor</p>
+    <div id="conteudo-saldo-devedor"></div>
+  </div>
+
+  <!-- BOTÃO MEU EXTRATO -->
+  <button onclick="abrirModalExtrato()" class="w-full bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between hover:bg-gray-50">
+    <div class="flex items-center gap-3">
+      <span class="text-xl">📊</span>
+      <div>
+        <p class="text-sm font-semibold text-gray-900">Meu Extrato</p>
+        <p class="text-xs text-gray-500">Ver todas as transações</p>
+      </div>
+    </div>
+    <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+    </svg>
+  </button>
 
   <!-- VEÍCULOS --> 
   <div class="bg-white border border-gray-200 rounded-xl p-4"> 
@@ -727,7 +760,7 @@
        document.body.innerHTML = `<div class="flex items-center justify-center min-h-screen px-4 text-center"><div><p class="text-4xl mb-4">🚗</p><p class="text-gray-600 font-medium">Perfil não encontrado</p></div></div>` 
        return 
      } 
-     const { driver, financeiro } = await r.json() 
+     const { driver, financeiro, balance_due, balance_due_bloqueado, balance_due_charge_pix, balance_due_blocked_at } = await r.json() 
      dadosAtuaisDriver = driver 
      
      console.log('[DIAGNÓSTICO] aceitou_termos:', driver.aceitou_termos)
@@ -749,6 +782,7 @@
      renderizarPerfil(driver) 
      renderizarFinanceiro(financeiro) 
      renderizarStatusOnline(driver) 
+     renderizarSaldoDevedor(balance_due, balance_due_bloqueado, balance_due_charge_pix, balance_due_blocked_at)
      carregarVeiculos() 
 
      // Inicia rastreamento de posição se online 
@@ -758,6 +792,107 @@
      localStorage.clear()
      location.href = '/'
    } 
+ } 
+
+ function renderizarSaldoDevedor(balance_due, balance_due_bloqueado, balance_due_charge_pix, balance_due_blocked_at) {
+   const card = document.getElementById('card-saldo-devedor')
+   const conteudo = document.getElementById('conteudo-saldo-devedor')
+
+   if (balance_due > 0) {
+     card.classList.remove('hidden')
+     
+     let html = `
+       <p class="text-2xl font-bold text-red-600 mb-3">${moeda(balance_due)}</p>
+     `
+
+     // Verificar bloqueio total (7 dias)
+     let bloqueioTotal = false
+     if (balance_due_blocked_at) {
+       const blockedAt = new Date(balance_due_blocked_at)
+       const now = new Date()
+       const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+       if (blockedAt <= sevenDaysAgo) {
+         bloqueioTotal = true
+       }
+     }
+
+     if (bloqueioTotal) {
+       html += `
+         <div class="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
+           <p class="text-sm font-semibold text-red-700">🚫 Acesso bloqueado - Regularize seu saldo</p>
+         </div>
+       `
+     } else if (balance_due_bloqueado) {
+       html += `
+         <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
+           <p class="text-sm font-semibold text-yellow-700">⚠️ Recebimento em dinheiro bloqueado</p>
+         </div>
+       `
+     }
+
+     if (balance_due_charge_pix) {
+       html += `
+         <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+           <p class="text-xs text-gray-600 mb-2">Código Pix para pagamento:</p>
+           <div class="flex gap-2">
+             <input readonly id="pix-codigo-devedor" value="${balance_due_charge_pix}" class="flex-1 text-xs bg-white border border-gray-200 rounded px-2 py-1.5 font-mono">
+             <button onclick="copiarPixDevedor()" class="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-blue-700">
+               📋 Copiar
+             </button>
+           </div>
+         </div>
+       `
+     }
+
+     conteudo.innerHTML = html
+   } else {
+     card.classList.add('hidden')
+   }
+ }
+
+ function copiarPixDevedor() {
+   const payload = document.getElementById('pix-codigo-devedor').value
+   navigator.clipboard.writeText(payload).then(() => {
+     alert('✅ Código Pix copiado!')
+   }).catch(() => {
+     alert('Erro ao copiar')
+   })
+ }
+
+ async function abrirModalExtrato() {
+   const modal = document.getElementById('modal-extrato')
+   const lista = document.getElementById('lista-extrato')
+   modal.classList.remove('hidden')
+
+   try {
+     const r = await fetch(`/api/motorista/${tokenMotorista}/extrato`)
+     if (!r.ok) throw new Error('Erro ao carregar extrato')
+     const { transacoes } = await r.json()
+
+     if (transacoes.length === 0) {
+       lista.innerHTML = '<p class="text-center text-sm text-gray-500 py-4">Nenhuma transação encontrada</p>'
+     } else {
+       lista.innerHTML = transacoes.map(t => `
+         <div class="border border-gray-200 rounded-lg p-3">
+           <div class="flex items-center justify-between">
+             <div>
+               <p class="text-sm font-semibold text-gray-900">${t.descricao}</p>
+               <p class="text-xs text-gray-500">${new Date(t.created_at).toLocaleString('pt-BR')}</p>
+             </div>
+             <p class="text-lg font-bold ${t.valor >= 0 ? 'text-green-600' : 'text-red-600'}">
+               ${t.valor >= 0 ? '+' : ''}${moeda(t.valor)}
+             </p>
+           </div>
+         </div>
+       `).join('')
+     }
+   } catch (e) {
+     lista.innerHTML = '<p class="text-center text-sm text-red-500 py-4">Erro ao carregar extrato</p>'
+   }
+ }
+
+ function fecharModalExtrato() {
+   document.getElementById('modal-extrato').classList.add('hidden')
  }
  
  async function aceitarTermos() { 
