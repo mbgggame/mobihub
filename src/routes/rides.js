@@ -255,7 +255,7 @@ export default async function ridesRoutes(fastify) {
  
   // Atualizar tarifa 
   fastify.put('/api/tarifas/:id', { preHandler: requireAuth }, async (request, reply) => { 
-    const { nome, dias, hora_inicio, hora_fim, valor_minimo, valor_km, km_minimo, ativo } = request.body 
+    const { nome, dias, hora_inicio, hora_fim, valor_minimo, valor_km, km_minimo, ativo, aplicar_feriados } = request.body 
     const { id } = request.params 
     await dbQuery(` 
       UPDATE tarifas SET 
@@ -266,9 +266,10 @@ export default async function ridesRoutes(fastify) {
         valor_minimo = COALESCE($5, valor_minimo), 
         valor_km = COALESCE($6, valor_km), 
         km_minimo = COALESCE($7, km_minimo), 
-        ativo = COALESCE($8, ativo) 
-      WHERE id = $9 
-    `, [nome, dias, hora_inicio, hora_fim, valor_minimo, valor_km, km_minimo, ativo, id]) 
+        ativo = COALESCE($8, ativo),
+        aplicar_feriados = COALESCE($9, aplicar_feriados)
+      WHERE id = $10 
+    `, [nome, dias, hora_inicio, hora_fim, valor_minimo, valor_km, km_minimo, ativo, aplicar_feriados, id]) 
     return { mensagem: 'Tarifa atualizada' } 
   }) 
  

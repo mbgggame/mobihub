@@ -196,6 +196,7 @@ export async function initDB() {
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS asaas_pix_payload TEXT; 
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS pagamento_status TEXT DEFAULT 'pendente'; 
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP; 
+    ALTER TABLE tarifas ADD COLUMN IF NOT EXISTS aplicar_feriados BOOLEAN DEFAULT false;
   `) 
  
   await query(` 

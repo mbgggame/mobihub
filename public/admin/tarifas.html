@@ -31,6 +31,7 @@
               <th class="px-4 py-3 border-b border-gray-100">V. Mínimo</th>
               <th class="px-4 py-3 border-b border-gray-100">R$/Km</th>
               <th class="px-4 py-3 border-b border-gray-100">Km Mín.</th>
+              <th class="px-4 py-3 border-b border-gray-100">Feriados</th>
               <th class="px-4 py-3 border-b border-gray-100">Ações</th>
             </tr>
           </thead>
@@ -131,6 +132,9 @@
               <input id="km-min-${t.id}" type="number" step="0.5" value="${t.km_minimo}" class="w-16 bg-transparent border border-transparent hover:border-gray-200 focus:border-green-500 focus:bg-white rounded px-2 py-1 outline-none">
             </td>
             <td class="px-4 py-3 border-b border-gray-100">
+              <input id="feriados-${t.id}" type="checkbox" ${t.aplicar_feriados ? 'checked' : ''} class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+            </td>
+            <td class="px-4 py-3 border-b border-gray-100">
               <button onclick="salvarTarifa(${t.id}, this)" class="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
                 Salvar
               </button>
@@ -151,7 +155,8 @@
         hora_fim: document.getElementById(`fim-${id}`).value,
         valor_minimo: parseFloat(document.getElementById(`valor-min-${id}`).value),
         valor_km: parseFloat(document.getElementById(`valor-km-${id}`).value),
-        km_minimo: parseFloat(document.getElementById(`km-min-${id}`).value)
+        km_minimo: parseFloat(document.getElementById(`km-min-${id}`).value),
+        aplicar_feriados: document.getElementById(`feriados-${id}`).checked
       }
 
       btn.textContent = '...'
