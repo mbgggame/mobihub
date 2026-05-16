@@ -268,6 +268,14 @@ export async function initDB() {
 
   // Inserir feriados de 2026
   await query(`
+    UPDATE feriados SET data = '2026-05-23' WHERE nome LIKE '%Colonização%' AND data = '2026-05-22';
+    UPDATE feriados SET data = '2026-09-07' WHERE nome LIKE '%Independência%' AND data = '2026-09-06';
+    UPDATE feriados SET data = '2026-06-24' WHERE nome LIKE '%João Batista%' AND data = '2026-06-23';
+    UPDATE feriados SET data = '2026-06-29' WHERE nome LIKE '%Pedro%' AND data = '2026-06-28';
+    UPDATE feriados SET data = '2026-07-23' WHERE nome LIKE '%Viana%' AND data = '2026-07-22';
+  `)
+
+  await query(`
     INSERT INTO feriados (data, nome, tipo) VALUES
       ('2026-01-01', 'Ano Novo', 'nacional'),
       ('2026-03-02', 'Carnaval (Segunda-feira)', 'nacional'),
@@ -299,7 +307,7 @@ export async function initDB() {
       ('2026-06-24', 'São João Batista (Cariacica)', 'municipal'),
       ('2026-07-23', 'Aniversário de Viana', 'municipal'),
       ('2026-12-08', 'Nossa Senhora da Conceição (Viana)', 'municipal')
-    ON CONFLICT (data, nome) DO UPDATE SET data = EXCLUDED.data
+    ON CONFLICT (data, nome) DO NOTHING
   `) 
 
   await query(` 
