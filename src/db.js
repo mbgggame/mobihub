@@ -266,6 +266,13 @@ export async function initDB() {
     )
   `)
 
+  // Limpar registros duplicados ou conflitantes antes de corrigir datas
+  await query(`DELETE FROM feriados WHERE nome ILIKE '%Coloniza%' AND data = '2026-05-22'`)
+  await query(`DELETE FROM feriados WHERE nome ILIKE '%Independ%' AND data = '2026-09-06'`)
+  await query(`DELETE FROM feriados WHERE nome ILIKE '%João Batista%' AND data = '2026-06-23'`)
+  await query(`DELETE FROM feriados WHERE nome ILIKE '%Pedro%' AND nome ILIKE '%Serra%' AND data = '2026-06-28'`)
+  await query(`DELETE FROM feriados WHERE nome ILIKE '%Viana%' AND data = '2026-07-22'`)
+
   // Corrigir datas erradas de feriados existentes
   await query(`UPDATE feriados SET data = '2026-05-23' WHERE nome ILIKE '%Coloniza%' AND data != '2026-05-23';`)
   await query(`UPDATE feriados SET data = '2026-09-07' WHERE nome ILIKE '%Independ%' AND data != '2026-09-07';`)
