@@ -284,12 +284,8 @@ export default async function publicRoutes(fastify) {
   })
 
   fastify.get('/api/temp/check-transactions-marcia', async (request, reply) => {
-    const driverResult = await query('SELECT id, nome, balance_due FROM drivers WHERE id = 6')
-    const transactionsResult = await query('SELECT * FROM driver_transactions WHERE driver_id = 6 ORDER BY id DESC LIMIT 5')
-    return {
-      driver: driverResult.rows[0],
-      transactions: transactionsResult.rows
-    }
+    const result = await query('SELECT * FROM driver_transactions WHERE driver_id = 6 ORDER BY id DESC LIMIT 5')
+    return result.rows
   })
 
   fastify.put('/api/motorista/:token/foto', async (request, reply) => { 
@@ -657,11 +653,20 @@ export default async function publicRoutes(fastify) {
       SELECT id, valor, valor_motorista, custo_espera_inicial, custo_paradas, 
         num_paradas, tempo_espera_inicial_min, tempo_paradas_total_min, 
         origem, destino, telegram_message_id, client_id, token, forma_pagamento,
-        origem_lat, origem_lng, destino_lat, destino_lng 
+        origem_lat, origem_lng, destino_lat, destino_lng, status
       FROM rides 
-      WHERE id = $1 AND driver_id = $2 AND status IN ('aceita', 'em_viagem') 
+      WHERE id = $1 AND driver_id = $2 
     `, [id, driver.id])).rows[0] 
-    if (!ride) return reply.code(400).send({ error: 'Corrida não encontrada' }) 
+    if (!ride) return reply.code(400).send({ error: 'Corrida não encontrada' })
+    
+    // Verificar se corrida já foi finalizada 
+    if (ride.status === 'concluida') { 
+      return reply.code(400).send({ error: 'Corrida já foi finalizada' }) 
+    }
+    
+    if (ride.status !== 'aceita' && ride.status !== 'em_viagem') {
+      return reply.code(400).send({ error: 'Corrida não está em andamento' }) 
+    } 
     const { calculateTotalRideCost, calculateInitialWaitCost } = await import('../billing.js') 
     const configs = (await query('SELECT chave, valor FROM configuracoes')).rows 
     const config = {} 
