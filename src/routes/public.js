@@ -441,7 +441,10 @@ export default async function publicRoutes(fastify) {
       valor, tipo, agendada_para, 
       forma_pagamento 
     } = request.body 
-    if (!origem || !destino || !valor || !celular) return reply.code(400).send({ error: 'Dados incompletos' }) 
+    if (!origem || !destino || !valor || !celular) return reply.code(400).send({ error: 'Dados incompletos' })
+    if (!cpf) { 
+      return reply.code(400).send({ error: 'CPF é obrigatório para solicitar uma corrida.' }) 
+    } 
     const clientResult = await query('SELECT * FROM clients WHERE telefone = $1', [celular]) 
     let client = clientResult.rows[0] 
     if (client && client.balance_due > 0) {

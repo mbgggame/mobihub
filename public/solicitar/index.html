@@ -200,7 +200,7 @@
             class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
         </div> 
         <div> 
-          <label class="text-xs text-gray-500 font-medium">CPF (opcional)</label> 
+          <label class="text-xs text-gray-500 font-medium">CPF <span class="text-red-500">*</span></label> 
           <input id="cad-cpf" type="text" placeholder="000.000.000-00" 
             class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
         </div> 
@@ -514,11 +514,12 @@
    const erro = document.getElementById('erro-cadastro') 
    if (!nome) { erro.textContent = 'Nome é obrigatório'; erro.classList.remove('hidden'); return } 
    if (!celular) { erro.textContent = 'Celular é obrigatório'; erro.classList.remove('hidden'); return } 
+   if (!cpf) { erro.textContent = 'CPF é obrigatório'; erro.classList.remove('hidden'); return } 
    erro.classList.add('hidden') 
    localStorage.setItem('cliente_nome', nome)
    localStorage.setItem('cliente_telefone', celular)
    if (email) localStorage.setItem('cliente_email', email)
-   if (cpf) localStorage.setItem('cliente_cpf', cpf)
+   localStorage.setItem('cliente_cpf', cpf)
    localStorage.setItem(STORAGE_CLIENTE, JSON.stringify({ nome, celular, email, cpf })) 
    verificarCadastro() 
  } 
@@ -1007,6 +1008,13 @@
    const cliente_telefone = localStorage.getItem('cliente_telefone')
    const cliente_email = localStorage.getItem('cliente_email')
    const cliente_cpf = localStorage.getItem('cliente_cpf')
+   
+   if (!cliente_cpf || cliente_cpf.trim() === '') { 
+     alert('⚠️ Seus dados estão incompletos. Por favor, cadastre seu CPF antes de solicitar uma corrida.') 
+     abrirModalEditarDados() 
+     return 
+   } 
+   
    const cliente = { nome: cliente_nome, celular: cliente_telefone, email: cliente_email, cpf: cliente_cpf } 
 
    if (!origem || !origemLat) { 
