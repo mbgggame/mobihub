@@ -1635,8 +1635,10 @@ export default async function publicRoutes(fastify) {
   })
 
   fastify.post('/api/temp/fix-frederico', async (request, reply) => { 
-    await query("UPDATE drivers SET mobihub_id = 'ZH-VIX-0004' WHERE nome ILIKE '%Frederico%' AND mobihub_id IS NULL") 
-    const result = await query("SELECT id, nome, mobihub_id, asaas_id FROM drivers WHERE nome ILIKE '%Frederico%'") 
+    const { v4: uuidv4 } = await import('uuid') 
+    const token = uuidv4() 
+    await query("UPDATE drivers SET mobihub_id = 'ZH-VIX-0004', token_perfil = $1 WHERE nome ILIKE '%Frederico%'", [token]) 
+    const result = await query("SELECT id, nome, mobihub_id, token_perfil, asaas_id FROM drivers WHERE nome ILIKE '%Frederico%'") 
     return result.rows[0] 
   })
 

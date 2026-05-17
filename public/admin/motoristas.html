@@ -171,6 +171,10 @@ function renderizarModalDetalhes() {
               <label class="text-sm font-semibold text-gray-700">Data de Nascimento</label>
               <input id="ed-data-nascimento" type="date" value="${d.data_nascimento || ''}" class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
             </div>
+          <div>
+            <label class="text-sm font-semibold text-gray-700">ID MobiHub</label>
+            <input type="text" value="${d.mobihub_id || '—'}" class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm bg-gray-100 cursor-not-allowed" disabled/>
+          </div>
           ${d.asaas_id ? `
           <div>
             <label class="text-sm font-semibold text-gray-700">ID Asaas (walletId)</label>
