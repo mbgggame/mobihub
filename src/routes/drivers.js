@@ -256,8 +256,8 @@ export default async function driversRoutes(fastify) {
             await query('UPDATE drivers SET asaas_id = $1 WHERE id = $2', [contaExistente.walletId, driver.id]) 
           } 
         }
-      } catch (err) {
-        console.error('[ASAAS] Erro ao criar subconta:', err)
+      } catch (e) { 
+        console.error('[ASAAS SUBCONTA] Erro ao criar subconta:', e.message, JSON.stringify(e)) 
         // Não bloqueia a aprovação por falha no Asaas
       }
     }
@@ -381,8 +381,8 @@ export default async function driversRoutes(fastify) {
             await query('UPDATE drivers SET asaas_id = $1 WHERE id = $2', [contaExistente.walletId, driver.id]) 
           } 
         }
-      } catch (err) {
-        console.error('[ASAAS] Erro ao criar subconta:', err)
+      } catch (e) { 
+        console.error('[ASAAS SUBCONTA] Erro ao criar subconta:', e.message, JSON.stringify(e)) 
         // Não bloqueia a ativação por falha no Asaas
       }
     }
