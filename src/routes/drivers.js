@@ -46,28 +46,29 @@ export default async function driversRoutes(fastify) {
       }
 
       const result = await query(` 
-        INSERT INTO drivers 
-          (nome, telefone, email, status_cadastro, ativo, 
-           modelo_carro, ano_carro, cor_carro, placa, 
-           cpf, renavam, crlv_base64, 
-           cnh_frente_base64, cnh_verso_base64, cnh_digital_base64, foto_base64,
-           tipo_chave_pix, chave_pix, cep, logradouro, numero, complemento, bairro, cidade, estado,
-           data_nascimento) 
-        VALUES ($1, $2, $3, 'pendente', 0, 
-                 $4, $5, $6, $7, 
-                 $8, $9, $10,
-                 $11, $12, $13, $14, $15, $16, $17, $18,
-                 $19, $20, $21, $22, $23, $24, $25)
-        RETURNING id
-      `, [
-        nome, telefone, email || null, 
-        modelo_carro, ano_carro, cor_carro || 'Não informado', placa,
-        cpf, renavam, crlv_base64 || null,
-        cnh_frente_base64 || null, cnh_verso_base64 || null, cnh_digital_base64 || null, foto_base64 || null,
-        tipo_chave_pix || null, chave_pix || null,
-        cep || null, logradouro || null, numero, complemento || null, bairro || null, cidade || null, estado || null,
-        data_nascimento || null
-      ]) 
+   INSERT INTO drivers 
+     (nome, telefone, email, status_cadastro, ativo, 
+      modelo_carro, ano_carro, cor_carro, placa, 
+      cpf, renavam, crlv_base64, 
+      cnh_frente_base64, cnh_verso_base64, cnh_digital_base64, foto_base64, 
+      tipo_chave_pix, chave_pix, cep, logradouro, numero, complemento, bairro, cidade, estado, 
+      data_nascimento) 
+   VALUES ($1, $2, $3, 'pendente', 0, 
+            $4, $5, $6, $7, 
+            $8, $9, $10, 
+            $11, $12, $13, $14, 
+            $15, $16, $17, $18, $19, $20, $21, $22, $23, 
+            $24) 
+   RETURNING id 
+ `, [ 
+   nome, telefone, email || null, 
+   modelo_carro, ano_carro, cor_carro || 'Não informado', placa, 
+   cpf, renavam, crlv_base64 || null, 
+   cnh_frente_base64 || null, cnh_verso_base64 || null, cnh_digital_base64 || null, foto_base64 || null, 
+   tipo_chave_pix || null, chave_pix || null, 
+   cep || null, logradouro || null, numero || null, complemento || null, bairro || null, cidade || null, estado || null, 
+   data_nascimento || null 
+ ]) 
 
       return { id: result.rows[0].id, mensagem: 'Cadastro enviado para aprovação' } 
     } catch (err) { 
