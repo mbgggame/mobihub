@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
   <title>MobiHub — Painel</title> 
   <script src="https://cdn.tailwindcss.com"></script> 
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet"> 
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script> 
 </head> 
 <body class="bg-gray-50 min-h-screen"> 
  
@@ -227,7 +229,13 @@ function renderizar(corridas) {
         <span class="font-medium text-green-700">R$ ${Number(c.valor_motorista).toFixed(2)}</span></div>
       <div class="flex justify-between"><span class="text-gray-500">MobiHub</span>
         <span class="font-medium text-blue-700">R$ ${Number(c.valor_mobihub).toFixed(2)}</span></div>
-      ` : ''} 
+      ` : ''}
+      
+      <div id="info-km-corrida" class="hidden bg-blue-50 border border-blue-200 rounded-xl px-4 py-3"> 
+        <p class="text-xs text-blue-600 font-medium">📍 Distância percorrida</p> 
+        <p id="txt-km-corrida" class="text-sm font-bold text-blue-800"></p> 
+      </div> 
+      <div id="mapa-corrida" class="hidden rounded-xl overflow-hidden" style="height:250px"></div> 
       <div class="flex justify-between"><span class="text-gray-500">Cliente</span><span>${c.client_telefone || '—'}</span></div> 
       ${c.driver_nome ? ` 
       <hr class="border-gray-100"/> 
@@ -274,6 +282,64 @@ function renderizar(corridas) {
   document.getElementById('modal-forma-pagamento').textContent = 
     c.forma_pagamento == '2' ? '📱 Pix' : 
     c.forma_pagamento == '3' ? '💳 Cartão' : '💵 Dinheiro'
+  
+  // Mapa do trajeto 
+  if (c.origem_lat && c.destino_lat) { 
+    // Calcular distância via Mapbox 
+    const tokenResp = await fetch('/api/config/mapbox') 
+    const { token } = await tokenResp.json() 
+    
+    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${c.origem_lng},${c.origem_lat};${c.destino_lng},${c.destino_lat}?access_token=${token}&geometries=geojson&overview=full` 
+    const resp = await fetch(url) 
+    const data = await resp.json() 
+    
+    const distKm = data.routes?.[0]?.distance / 1000 
+    const duracaoMin = Math.round(data.routes?.[0]?.duration / 60) 
+    const geometry = data.routes?.[0]?.geometry 
+    
+    // Mostrar no modal 
+    const infoKmDiv = document.getElementById('info-km-corrida')
+    const txtKm = document.getElementById('txt-km-corrida')
+    const mapaDiv = document.getElementById('mapa-corrida')
+    
+    if (distKm && duracaoMin) {
+      txtKm.textContent = `${distKm?.toFixed(1)} km • ~${duracaoMin} min` 
+      infoKmDiv.classList.remove('hidden')
+      mapaDiv.classList.remove('hidden')
+      
+      // Renderizar mapa 
+      const map = new mapboxgl.Map({ 
+        container: 'mapa-corrida', 
+        style: 'mapbox://styles/mapbox/streets-v12', 
+        accessToken: token, 
+        center: [c.origem_lng, c.origem_lat], 
+        zoom: 11 
+      }) 
+      
+      map.on('load', () => { 
+        // Marcador origem 
+        new mapboxgl.Marker({ color: '#16a34a' }) 
+          .setLngLat([c.origem_lng, c.origem_lat]) 
+          .addTo(map) 
+        
+        // Marcador destino 
+        new mapboxgl.Marker({ color: '#dc2626' }) 
+          .setLngLat([c.destino_lng, c.destino_lat]) 
+          .addTo(map) 
+        
+        // Linha da rota 
+        if (geometry) { 
+          map.addSource('rota', { type: 'geojson', data: { type: 'Feature', geometry } }) 
+          map.addLayer({ id: 'rota', type: 'line', source: 'rota', paint: { 'line-color': '#2563eb', 'line-width': 3 } }) 
+          
+          const bounds = new mapboxgl.LngLatBounds() 
+          geometry.coordinates.forEach(c => bounds.extend(c)) 
+          map.fitBounds(bounds, { padding: 40 }) 
+        } 
+      }) 
+    }
+  } 
+  
   document.getElementById('modal').classList.remove('hidden') 
   window._msgCliente = msgCliente 
 } 
