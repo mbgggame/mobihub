@@ -947,9 +947,9 @@
    return valorMin + ((distanciaKm - kmMin) * valorKm) 
  } 
 
- function recalcularValor() { 
-   if (pontos.origem && pontos.destino) calcularDistancia() 
- } 
+ async function recalcularValor() { 
+  if (pontos.origem && pontos.destino) await calcularDistancia() 
+} 
 
  async function solicitar() { 
    const termosAceitos = localStorage.getItem(STORAGE_TERMOS_PASSAGEIRO)
