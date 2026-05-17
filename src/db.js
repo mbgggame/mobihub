@@ -345,12 +345,16 @@ export async function initDB() {
     END $$;
   `)
 
-  // Gerar IDs MobiHub para motoristas já cadastrados na ordem do id
-  const existingDrivers = (await query('SELECT id FROM drivers WHERE mobihub_id IS NULL ORDER BY id')).rows
-  for (let i = 0; i < existingDrivers.length; i++) {
-    const num = i + 1
-    const mobihubId = `ZH-VIX-${String(num).padStart(4, '0')}`
-    await query('UPDATE drivers SET mobihub_id = $1 WHERE id = $2', [mobihubId, existingDrivers[i].id])
+  try { 
+    // Gerar IDs MobiHub para motoristas já cadastrados na ordem do id
+    const existingDrivers = (await query('SELECT id FROM drivers WHERE mobihub_id IS NULL ORDER BY id')).rows
+    for (let i = 0; i < existingDrivers.length; i++) {
+      const num = i + 1
+      const mobihubId = `ZH-VIX-${String(num).padStart(4, '0')}`
+      await query('UPDATE drivers SET mobihub_id = $1 WHERE id = $2', [mobihubId, existingDrivers[i].id])
+    }
+  } catch(e) { 
+    console.log('[MOBIHUB_ID] Já existem IDs gerados:', e.message) 
   }
 
   await query(` 
