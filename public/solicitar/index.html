@@ -89,6 +89,39 @@
             class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
         </div>
       </div>
+      <div id="secao-cartao" class="border-t pt-3">
+        <p class="text-sm font-semibold text-gray-700 mb-2">💳 Meu Cartão</p>
+        <div id="cartao-cadastrado" class="hidden bg-gray-50 rounded-lg p-3 flex items-center justify-between">
+          <span id="txt-cartao-info" class="text-sm text-gray-700"></span>
+          <button onclick="removerCartao()" class="text-xs text-red-500">Remover</button>
+        </div>
+        <div id="form-cartao" class="space-y-2">
+          <input id="cartao-nome" type="text" placeholder="Nome no cartão" class="w-full border rounded-lg px-3 py-2 text-sm"/>
+          <input id="cartao-numero" type="text" placeholder="Número do cartão" maxlength="19" class="w-full border rounded-lg px-3 py-2 text-sm"/>
+          <div class="grid grid-cols-2 gap-2">
+            <input id="cartao-validade" type="text" placeholder="MM/AA" maxlength="5" class="border rounded-lg px-3 py-2 text-sm"/>
+            <input id="cartao-cvv" type="text" placeholder="CVV" maxlength="4" class="border rounded-lg px-3 py-2 text-sm"/>
+          </div>
+          <button onclick="cadastrarCartao()" class="w-full bg-blue-600 text-white rounded-lg py-2 text-sm font-semibold">Salvar cartão</button>
+        </div>
+      </div>
+      <div class="border-t pt-3">
+        <p class="text-sm font-semibold text-gray-700 mb-2">💰 Meus Créditos</p>
+        <div class="bg-green-50 rounded-lg p-3 flex items-center justify-between mb-2">
+          <span class="text-sm text-gray-700">Saldo disponível:</span>
+          <span id="txt-saldo-modal" class="font-bold text-green-700">R$ 0,00</span>
+        </div>
+        <div class="space-y-2">
+          <input id="valor-recarga" type="number" min="50" step="10" placeholder="Valor (mín. R$ 50,00)" class="w-full border rounded-lg px-3 py-2 text-sm"/>
+          <button onclick="recarregarCreditos()" class="w-full bg-green-600 text-white rounded-lg py-2 text-sm font-semibold">Gerar QR Code Pix</button>
+        </div>
+        <div id="qrcode-recarga" class="hidden mt-3 text-center">
+          <img id="img-qrcode-recarga" class="mx-auto w-40 h-40"/>
+          <p class="text-xs text-gray-500 mt-2">Escaneie para recarregar</p>
+          <input id="payload-recarga" type="text" readonly class="mt-2 w-full border rounded-lg px-3 py-2 text-xs"/>
+          <button onclick="copiarPayloadRecarga()" class="mt-1 text-xs text-green-600">📋 Copiar código</button>
+        </div>
+      </div>
       <div class="flex gap-3 pt-2">
         <button onclick="fecharModalEditarDados()"
           class="flex-1 border border-gray-200 text-gray-600 rounded-xl py-3 font-semibold text-sm hover:bg-gray-50">
@@ -281,7 +314,7 @@
 
     <div class="bg-white border border-gray-200 rounded-xl p-4">
       <label class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-3 block">💳 Forma de Pagamento</label>
-      <div class="grid grid-cols-3 gap-2">
+      <div class="grid grid-cols-2 gap-2">
         <button type="button" onclick="selecionarFormaPagamento('1')" data-valor="1"
           class="forma-pagamento-btn border border-gray-200 rounded-lg py-3 text-sm font-semibold hover:border-blue-300 hover:bg-blue-50 transition-all">
           💵 Dinheiro
@@ -293,6 +326,10 @@
         <button type="button" onclick="selecionarFormaPagamento('3')" data-valor="3"
           class="forma-pagamento-btn border border-gray-200 rounded-lg py-3 text-sm font-semibold hover:border-blue-300 hover:bg-blue-50 transition-all">
           💳 Cartão
+        </button>
+        <button id="btn-creditos" type="button" onclick="selecionarFormaPagamento('4')" data-valor="4"
+          class="forma-pagamento-btn border border-gray-200 rounded-lg py-3 text-sm font-semibold hover:border-blue-300 hover:bg-blue-50 transition-all hidden">
+          💰 Créditos <span id="txt-saldo-creditos" class="text-xs"></span>
         </button>
       </div>
     </div>
@@ -464,6 +501,7 @@
      renderizarAtalhos() 
      renderizarHistorico() 
      initSocket()
+     carregarDadosCartaoECreditos()
    } 
  } 
 
@@ -1355,7 +1393,91 @@ async function carregarPolitica() {
   } catch(e) {} 
 }
 
- window.onload = () => { 
+let dadosCartao = null
+let saldoCreditos = 0
+
+async function carregarDadosCartaoECreditos() {
+  const telefone = localStorage.getItem('cliente_telefone')
+  if (!telefone) return
+  try {
+    const r = await fetch(`/api/client/cartao?telefone=${encodeURIComponent(telefone)}`)
+    const d = await r.json()
+    saldoCreditos = parseFloat(d.creditos || 0)
+    dadosCartao = d.tem_cartao ? d : null
+
+    const btnCreditos = document.getElementById('btn-creditos')
+    const txtSaldo = document.getElementById('txt-saldo-creditos')
+    if (saldoCreditos > 0) {
+      btnCreditos?.classList.remove('hidden')
+      if (txtSaldo) txtSaldo.textContent = `R$ ${saldoCreditos.toFixed(2)}`
+    }
+
+    if (d.tem_cartao) {
+      document.getElementById('cartao-cadastrado')?.classList.remove('hidden')
+      document.getElementById('form-cartao')?.classList.add('hidden')
+      const info = document.getElementById('txt-cartao-info')
+      if (info) info.textContent = `${d.brand} •••• ${d.last_digits}`
+    }
+
+    const txtSaldoModal = document.getElementById('txt-saldo-modal')
+    if (txtSaldoModal) txtSaldoModal.textContent = `R$ ${saldoCreditos.toFixed(2)}`
+  } catch(e) { console.error('[CARTAO/CREDITOS]', e) }
+}
+
+async function cadastrarCartao() {
+  const telefone = localStorage.getItem('cliente_telefone')
+  const nome = document.getElementById('cartao-nome')?.value.trim()
+  const numero = document.getElementById('cartao-numero')?.value.replace(/\s/g, '')
+  const validade = document.getElementById('cartao-validade')?.value
+  const cvv = document.getElementById('cartao-cvv')?.value
+  if (!nome || !numero || !validade || !cvv) { alert('Preencha todos os campos'); return }
+  const [mes, ano] = validade.split('/')
+  try {
+    const r = await fetch('/api/client/cartao', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telefone, holderName: nome, number: numero, expiryMonth: mes, expiryYear: `20${ano}`, ccv: cvv })
+    })
+    const d = await r.json()
+    if (r.ok) { alert('✅ Cartão cadastrado!'); carregarDadosCartaoECreditos() }
+    else alert('Erro: ' + (d.error || 'Tente novamente'))
+  } catch(e) { alert('Erro de conexão') }
+}
+
+async function removerCartao() {
+  const telefone = localStorage.getItem('cliente_telefone')
+  if (!confirm('Remover cartão cadastrado?')) return
+  await fetch('/api/client/cartao', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ telefone }) })
+  document.getElementById('cartao-cadastrado')?.classList.add('hidden')
+  document.getElementById('form-cartao')?.classList.remove('hidden')
+  dadosCartao = null
+}
+
+async function recarregarCreditos() {
+  const telefone = localStorage.getItem('cliente_telefone')
+  const valor = parseFloat(document.getElementById('valor-recarga')?.value)
+  if (!valor || valor < 50) { alert('Valor mínimo R$ 50,00'); return }
+  try {
+    const r = await fetch('/api/client/creditos/recarregar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telefone, valor })
+    })
+    const d = await r.json()
+    if (r.ok && d.qrcode) {
+      document.getElementById('qrcode-recarga')?.classList.remove('hidden')
+      document.getElementById('img-qrcode-recarga').src = `data:image/png;base64,${d.qrcode}`
+      document.getElementById('payload-recarga').value = d.payload
+    } else alert('Erro: ' + (d.error || 'Tente novamente'))
+  } catch(e) { alert('Erro de conexão') }
+}
+
+function copiarPayloadRecarga() {
+  const payload = document.getElementById('payload-recarga')?.value
+  if (payload) { navigator.clipboard.writeText(payload); alert('Código copiado!') }
+}
+
+window.onload = () => { 
    verificarTermosPassageiro()
    
    const cliente_nome = localStorage.getItem('cliente_nome')
@@ -1379,6 +1501,7 @@ async function carregarPolitica() {
    }
    initMap() 
    carregarPolitica()
+   carregarDadosCartaoECreditos()
    // Recupera dados de repetir viagem se vier do painel do passageiro 
    const repOrigem = localStorage.getItem('mobi_repetir_origem'); 
    const repDestino = localStorage.getItem('mobi_repetir_destino'); 
