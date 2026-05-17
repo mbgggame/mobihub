@@ -499,15 +499,17 @@ export default async function driversRoutes(fastify) {
       console.log('[DEBUG] Token recebido:', token); 
       if (!token) return reply.code(400).send({ error: 'Token ausente no body' }); 
 
-      await query(` 
+      const result = await query(` 
         UPDATE drivers 
         SET aceitou_termos = true, 
             data_aceite_termos = CURRENT_TIMESTAMP, 
             ip_aceite_termos = $1, 
             versao_termos = '2.0', 
             aceite_arbitragem = $2 
-        WHERE token_perfil = $3 OR telegram_id = $3 
+        WHERE token_perfil = $3 
       `, [request.ip, aceite_arbitragem ? true : false, token]); 
+ 
+      console.log('[ACEITE TERMOS] Token:', token, '| Rows updated:', result.rowCount); 
 
       return { success: true }; 
     } catch (err) { 
