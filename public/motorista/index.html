@@ -7,7 +7,9 @@
   <script src="https://cdn.tailwindcss.com"></script> 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" /> 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script> 
-  <script src="/socket.io/socket.io.js"></script> 
+  <script src="/socket.io/socket.io.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet">
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script> 
   <style> 
     #video-camera { width:100%; max-height:220px; object-fit:cover; background:#000; border-radius:12px; } 
     #canvas-hidden { display:none; } 
@@ -191,6 +193,20 @@
         class="flex-1 bg-green-600 text-white rounded-xl py-2.5 text-sm font-semibold opacity-40 cursor-not-allowed"> 
         Enviar 
       </button> 
+    </div> 
+  </div> 
+</div>
+
+<!-- MODAL DETALHES CORRIDA -->
+<div id="modal-detalhe-corrida" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4 py-6 hidden"> 
+  <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto"> 
+    <div class="p-6 space-y-3"> 
+      <div class="flex items-center justify-between"> 
+        <h2 class="text-xl font-bold text-gray-900">📋 Detalhes da Corrida</h2> 
+        <button onclick="fecharModalDetalheCorrida()" class="text-gray-400 hover:text-gray-600 text-2xl">✕</button> 
+      </div> 
+      <div id="detalhe-corrida-conteudo" class="space-y-3"></div> 
+      <div id="mapa-detalhe-motorista" class="rounded-xl overflow-hidden hidden" style="height:200px"></div> 
     </div> 
   </div> 
 </div>
@@ -1238,6 +1254,83 @@ let corridasJaAvaliadas = new Set()
      }) 
    } catch(e) {} 
    fecharModalAvaliarPassageiro() 
+ } 
+
+ function fecharModalDetalheCorrida() { 
+   document.getElementById('modal-detalhe-corrida')?.classList.add('hidden') 
+ } 
+
+ async function abrirDetalheCorrida(token) { 
+   document.getElementById('modal-detalhe-corrida')?.classList.remove('hidden') 
+   const conteudo = document.getElementById('detalhe-corrida-conteudo') 
+   conteudo.innerHTML = '<p class="text-center text-gray-400 py-4">Carregando...</p>' 
+
+   try { 
+     const r = await fetch(`/api/rides/token/${token}`) 
+     const c = await r.json() 
+
+     const formaPag = { '1': '💵 Dinheiro', '2': '📱 Pix', '3': '💳 Cartão', '4': '💰 Créditos' } 
+
+     conteudo.innerHTML = ` 
+       <div class="bg-gray-50 rounded-xl p-4 space-y-2 text-sm"> 
+         <div class="flex justify-between"><span class="text-gray-500">Status</span><span class="font-medium">${c.status}</span></div> 
+         <div class="flex justify-between"><span class="text-gray-500">Pagamento</span><span>${formaPag[c.forma_pagamento] || '—'}</span></div> 
+         <div class="flex justify-between"><span class="text-gray-500">Origem</span><span class="text-right max-w-[60%]">${c.origem}</span></div> 
+         <div class="flex justify-between"><span class="text-gray-500">Destino</span><span class="text-right max-w-[60%]">${c.destino}</span></div> 
+       </div> 
+
+       <div class="bg-green-50 rounded-xl p-4 space-y-2 text-sm"> 
+         <p class="font-semibold text-gray-700">💰 Financeiro</p> 
+         <div class="flex justify-between"><span class="text-gray-500">Valor base</span><span>R$ ${Number(c.valor || 0).toFixed(2)}</span></div> 
+         ${c.custo_espera_inicial > 0 ? `<div class="flex justify-between"><span class="text-gray-500">Espera (${Number(c.tempo_espera_inicial_min||0).toFixed(1)} min)</span><span class="text-orange-600">+ R$ ${Number(c.custo_espera_inicial).toFixed(2)}</span></div>` : ''} 
+         ${c.custo_paradas > 0 ? `<div class="flex justify-between"><span class="text-gray-500">Paradas (${c.num_paradas||0}x — ${Number(c.tempo_paradas_total_min||0).toFixed(1)} min)</span><span class="text-orange-600">+ R$ ${Number(c.custo_paradas).toFixed(2)}</span></div>` : ''} 
+         <div class="flex justify-between font-semibold border-t border-green-200 pt-1"><span>Total final</span><span class="text-green-700">R$ ${Number(c.valor_final||c.valor||0).toFixed(2)}</span></div> 
+         <div class="flex justify-between border-t border-green-200 pt-1"><span class="text-gray-500">Seu ganho</span><span class="font-bold text-green-700">R$ ${Number(c.valor_motorista||0).toFixed(2)}</span></div> 
+         ${c.km_reais ? `<div class="flex justify-between"><span class="text-gray-500">Km real</span><span class="text-blue-700">${Number(c.km_reais).toFixed(1)} km</span></div>` : ''} 
+       </div> 
+
+       <div class="bg-gray-50 rounded-xl p-4 space-y-1 text-sm"> 
+         <p class="font-semibold text-gray-700">🕒 Timeline</p> 
+         ${c.created_at ? `<p class="text-gray-500">Solicitada: ${new Date(c.created_at).toLocaleString('pt-BR')}</p>` : ''} 
+         ${c.passageiro_embarcou_at ? `<p class="text-gray-500">Embarque: ${new Date(c.passageiro_embarcou_at).toLocaleString('pt-BR')}</p>` : ''} 
+         ${c.concluida_at ? `<p class="text-gray-500">Finalizada: ${new Date(c.concluida_at).toLocaleString('pt-BR')}</p>` : ''} 
+       </div> 
+     ` 
+
+     // Mapa do trajeto 
+     if (c.origem_lat && c.destino_lat) { 
+       const mapaDiv = document.getElementById('mapa-detalhe-motorista') 
+       mapaDiv.classList.remove('hidden') 
+       const tokenResp = await fetch('/api/config/mapbox') 
+       const { token: mapToken } = await tokenResp.json() 
+       const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${c.origem_lng},${c.origem_lat};${c.destino_lng},${c.destino_lat}?access_token=${mapToken}&geometries=geojson&overview=full` 
+       const resp = await fetch(url) 
+       const data = await resp.json() 
+       const geometry = data.routes?.[0]?.geometry 
+       const distKm = (data.routes?.[0]?.distance / 1000).toFixed(1) 
+
+       mapboxgl.accessToken = mapToken 
+       const map = new mapboxgl.Map({ 
+         container: 'mapa-detalhe-motorista', 
+         style: 'mapbox://styles/mapbox/streets-v12', 
+         center: [c.origem_lng, c.origem_lat], 
+         zoom: 11 
+       }) 
+       map.on('load', () => { 
+         new mapboxgl.Marker({ color: '#16a34a' }).setLngLat([c.origem_lng, c.origem_lat]).addTo(map) 
+         new mapboxgl.Marker({ color: '#dc2626' }).setLngLat([c.destino_lng, c.destino_lat]).addTo(map) 
+         if (geometry) { 
+           map.addSource('rota', { type: 'geojson', data: { type: 'Feature', geometry } }) 
+           map.addLayer({ id: 'rota', type: 'line', source: 'rota', paint: { 'line-color': '#2563eb', 'line-width': 3 } }) 
+           const bounds = new mapboxgl.LngLatBounds() 
+           geometry.coordinates.forEach(coord => bounds.extend(coord)) 
+           map.fitBounds(bounds, { padding: 40 }) 
+         } 
+       }) 
+     } 
+   } catch(e) { 
+     document.getElementById('detalhe-corrida-conteudo').innerHTML = '<p class="text-center text-red-500 py-4">Erro ao carregar detalhes</p>' 
+   } 
  } 
 
  async function salvarFoto() { 

@@ -8,6 +8,8 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" /> 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script> 
   <script src="/socket.io/socket.io.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet">
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
   <style>
     #map { height: 280px; } 
     .autocomplete-list { position: absolute; z-index: 1000; background: white; width: 100%; border: 1px solid #e5e7eb; border-radius: 0.5rem; margin-top: 0.25rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); max-height: 200px; overflow-y: auto; }
@@ -166,6 +168,20 @@
       </button>
     </div>
   </div>
+</div>
+
+<!-- MODAL DETALHES PASSAGEIRO -->
+<div id="modal-detalhe-passageiro" class="fixed inset-0 bg-black bg-opacity-50 z-[999] flex items-center justify-center px-4 py-6 hidden"> 
+  <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto"> 
+    <div class="p-6 space-y-3"> 
+      <div class="flex items-center justify-between"> 
+        <h2 class="text-xl font-bold text-gray-900">📋 Detalhes da Corrida</h2> 
+        <button onclick="fecharDetalhePassageiro()" class="text-gray-400 hover:text-gray-600 text-2xl">✕</button> 
+      </div> 
+      <div id="detalhe-passageiro-conteudo" class="space-y-3"></div> 
+      <div id="mapa-detalhe-passageiro" class="rounded-xl overflow-hidden hidden" style="height:200px"></div> 
+    </div> 
+  </div> 
 </div>
 
 <div class="bg-green-600 text-white px-4 py-3 flex items-center justify-between shadow sticky top-0 z-20"> 
@@ -1220,44 +1236,124 @@
    return d.rides || []
  }
 
- async function abrirModalHistorico() {
-   const modal = document.getElementById('modal-historico')
-   const lista = document.getElementById('lista-historico')
-   modal.classList.remove('hidden')
-   modal.style.display = 'flex'
-   
-   const rides = await carregarHistoricoCorridas()
-   if (!rides.length) {
-     lista.innerHTML = '<p class="text-sm text-gray-500 text-center py-8">Nenhuma corrida encontrada.</p>'
-     return
-   }
-   lista.innerHTML = rides.map((ride, i) => { 
-     const origemTexto = typeof ride.origem === 'string' 
-       ? (ride.origem.startsWith('{') ? JSON.parse(ride.origem)?.display_name || ride.origem : ride.origem) 
-       : ride.origem 
-     const destinoTexto = typeof ride.destino === 'string' 
-       ? (ride.destino.startsWith('{') ? JSON.parse(ride.destino)?.display_name || ride.destino : ride.destino) 
-       : ride.destino 
-     return ` 
-     <div class="bg-gray-50 border border-gray-200 rounded-xl p-4"> 
-       <div class="flex items-center justify-between"> 
-         <div class="flex-1"> 
-           <p class="text-sm font-semibold text-gray-800">${encurtarEndereco(origemTexto)} → ${encurtarEndereco(destinoTexto)}</p> 
-           <p class="text-xs text-gray-500 mt-1">${new Date(ride.created_at).toLocaleDateString('pt-BR')} • ${ride.status}</p> 
-         </div> 
-         <button onclick="repetirCorridaFromHistorico('${origemTexto}', '${destinoTexto}', ${ride.origem_lat}, ${ride.origem_lng}, ${ride.destino_lat}, ${ride.destino_lng})" 
-           class="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700"> 
-           Repetir 
-         </button> 
-       </div> 
-     </div> 
-   `}).join('')
- }
+ async function abrirModalHistorico() { 
+  const modal = document.getElementById('modal-historico')
+  const lista = document.getElementById('lista-historico')
+  modal.classList.remove('hidden')
+  modal.style.display = 'flex'
+  
+  const rides = await carregarHistoricoCorridas()
+  if (!rides.length) {
+    lista.innerHTML = '<p class="text-sm text-gray-500 text-center py-8">Nenhuma corrida encontrada.</p>'
+    return
+  }
+  lista.innerHTML = rides.map((ride, i) => { 
+    const origemTexto = typeof ride.origem === 'string' 
+      ? (ride.origem.startsWith('{') ? JSON.parse(ride.origem)?.display_name || ride.origem : ride.origem) 
+      : ride.origem 
+    const destinoTexto = typeof ride.destino === 'string' 
+      ? (ride.destino.startsWith('{') ? JSON.parse(ride.destino)?.display_name || ride.destino : ride.destino) 
+      : ride.destino 
+    return ` 
+    <div class="bg-gray-50 border border-gray-200 rounded-xl p-4"> 
+      <div class="flex items-center justify-between"> 
+        <div class="flex-1"> 
+          <p class="text-sm font-semibold text-gray-800">${encurtarEndereco(origemTexto)} → ${encurtarEndereco(destinoTexto)}</p> 
+          <p class="text-xs text-gray-500 mt-1">${new Date(ride.created_at).toLocaleDateString('pt-BR')} • ${ride.status}</p> 
+        </div> 
+        <div class="flex gap-2">
+          <button onclick="verDetalhesCorrida('${ride.token}')" 
+            class="text-xs border border-gray-300 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50"> 
+            Ver detalhes 
+          </button> 
+          <button onclick="repetirCorridaFromHistorico('${origemTexto}', '${destinoTexto}', ${ride.origem_lat}, ${ride.origem_lng}, ${ride.destino_lat}, ${ride.destino_lng})" 
+            class="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700"> 
+            Repetir 
+          </button> 
+        </div>
+      </div> 
+    </div> 
+  `}).join('')
+}
 
- function fecharModalHistorico() {
+ function fecharModalHistorico() { 
    const modal = document.getElementById('modal-historico')
    modal.classList.add('hidden')
    modal.style.display = 'none'
+ } 
+
+ function fecharDetalhePassageiro() { 
+   document.getElementById('modal-detalhe-passageiro')?.classList.add('hidden') 
+ } 
+
+ async function verDetalhesCorrida(token) { 
+   document.getElementById('modal-detalhe-passageiro')?.classList.remove('hidden') 
+   const conteudo = document.getElementById('detalhe-passageiro-conteudo') 
+   conteudo.innerHTML = '<p class="text-center text-gray-400 py-4">Carregando...</p>' 
+
+   try { 
+     const r = await fetch(`/api/rides/token/${token}`) 
+     const c = await r.json() 
+     const formaPag = { '1': '💵 Dinheiro', '2': '📱 Pix', '3': '💳 Cartão', '4': '💰 Créditos' } 
+
+     conteudo.innerHTML = ` 
+       <div class="bg-gray-50 rounded-xl p-4 space-y-2 text-sm"> 
+         <div class="flex justify-between"><span class="text-gray-500">Status</span><span class="font-medium">${c.status}</span></div> 
+         <div class="flex justify-between"><span class="text-gray-500">Pagamento</span><span>${formaPag[c.forma_pagamento] || '—'}</span></div> 
+         <div class="flex justify-between"><span class="text-gray-500">Origem</span><span class="text-right max-w-[60%]">${c.origem}</span></div> 
+         <div class="flex justify-between"><span class="text-gray-500">Destino</span><span class="text-right max-w-[60%]">${c.destino}</span></div> 
+         ${c.driver_nome ? `<div class="flex justify-between"><span class="text-gray-500">Motorista</span><span>${c.driver_nome}</span></div>` : ''} 
+       </div> 
+
+       <div class="bg-green-50 rounded-xl p-4 space-y-2 text-sm"> 
+         <p class="font-semibold text-gray-700">💰 O que você pagou</p> 
+         <div class="flex justify-between"><span class="text-gray-500">Valor base</span><span>R$ ${Number(c.valor||0).toFixed(2)}</span></div> 
+         ${c.custo_espera_inicial > 0 ? `<div class="flex justify-between"><span class="text-gray-500">Espera (${Number(c.tempo_espera_inicial_min||0).toFixed(1)} min)</span><span class="text-orange-600">+ R$ ${Number(c.custo_espera_inicial).toFixed(2)}</span></div>` : ''} 
+         ${c.custo_paradas > 0 ? `<div class="flex justify-between"><span class="text-gray-500">Paradas (${c.num_paradas||0}x — ${Number(c.tempo_paradas_total_min||0).toFixed(1)} min)</span><span class="text-orange-600">+ R$ ${Number(c.custo_paradas).toFixed(2)}</span></div>` : ''} 
+         <div class="flex justify-between font-semibold border-t border-green-200 pt-1"><span>Total pago</span><span class="text-green-700">R$ ${Number(c.valor_final||c.valor||0).toFixed(2)}</span></div> 
+         ${c.km_reais ? `<div class="flex justify-between"><span class="text-gray-500">Km percorrido</span><span class="text-blue-700">${Number(c.km_reais).toFixed(1)} km</span></div>` : ''} 
+       </div> 
+
+       <div class="bg-gray-50 rounded-xl p-4 space-y-1 text-sm"> 
+         <p class="font-semibold text-gray-700">🕒 Timeline</p> 
+         ${c.created_at ? `<p class="text-gray-500">Solicitada: ${new Date(c.created_at).toLocaleString('pt-BR')}</p>` : ''} 
+         ${c.passageiro_embarcou_at ? `<p class="text-gray-500">Embarque: ${new Date(c.passageiro_embarcou_at).toLocaleString('pt-BR')}</p>` : ''} 
+         ${c.concluida_at ? `<p class="text-gray-500">Finalizada: ${new Date(c.concluida_at).toLocaleString('pt-BR')}</p>` : ''} 
+       </div> 
+     ` 
+
+     // Mapa 
+     if (c.origem_lat && c.destino_lat) { 
+       const mapaDiv = document.getElementById('mapa-detalhe-passageiro') 
+       mapaDiv.classList.remove('hidden') 
+       const tokenResp = await fetch('/api/config/mapbox') 
+       const { token: mapToken } = await tokenResp.json() 
+       const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${c.origem_lng},${c.origem_lat};${c.destino_lng},${c.destino_lat}?access_token=${mapToken}&geometries=geojson&overview=full` 
+       const resp = await fetch(url) 
+       const data = await resp.json() 
+       const geometry = data.routes?.[0]?.geometry 
+       mapboxgl.accessToken = mapToken 
+       const map = new mapboxgl.Map({ 
+         container: 'mapa-detalhe-passageiro', 
+         style: 'mapbox://styles/mapbox/streets-v12', 
+         center: [c.origem_lng, c.origem_lat], 
+         zoom: 11 
+       }) 
+       map.on('load', () => { 
+         new mapboxgl.Marker({ color: '#16a34a' }).setLngLat([c.origem_lng, c.origem_lat]).addTo(map) 
+         new mapboxgl.Marker({ color: '#dc2626' }).setLngLat([c.destino_lng, c.destino_lat]).addTo(map) 
+         if (geometry) { 
+           map.addSource('rota', { type: 'geojson', data: { type: 'Feature', geometry } }) 
+           map.addLayer({ id: 'rota', type: 'line', source: 'rota', paint: { 'line-color': '#2563eb', 'line-width': 3 } }) 
+           const bounds = new mapboxgl.LngLatBounds() 
+           geometry.coordinates.forEach(coord => bounds.extend(coord)) 
+           map.fitBounds(bounds, { padding: 40 }) 
+         } 
+       }) 
+     } 
+   } catch(e) { 
+     document.getElementById('detalhe-passageiro-conteudo').innerHTML = '<p class="text-center text-red-500 py-4">Erro ao carregar detalhes</p>' 
+   } 
  }
 
  function repetirCorridaFromHistorico(origem, destino, origLat, origLng, destLat, destLng) {
