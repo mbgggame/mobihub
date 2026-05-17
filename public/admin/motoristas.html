@@ -323,6 +323,17 @@ function renderizarModalDetalhes() {
           <p><span class="font-medium">ID MobiHub:</span> <span class="font-mono">${d.mobihub_id || '—'}</span></p>
           ${d.asaas_id ? `<p><span class="font-medium">ID Asaas (walletId):</span> <span class="font-mono">${d.asaas_id}</span></p>` : ''}
           <p><strong>Saldo Devedor:</strong> R$ ${parseFloat(d.balance_due || 0).toFixed(2)}</p>
+          <div class="bg-blue-50 border border-blue-200 rounded-xl p-3">
+            <p class="text-xs text-blue-600 font-medium mb-1">🔗 Link do Painel do Motorista</p>
+            <a href="${window.location.origin}/motorista/${d.token_perfil}" target="_blank"
+              class="text-xs text-blue-700 font-mono break-all hover:underline">
+              ${window.location.origin}/motorista/${d.token_perfil || 'sem token'}
+            </a>
+            <button onclick="navigator.clipboard.writeText('${window.location.origin}/motorista/${d.token_perfil}').then(()=>alert('Link copiado!'))"
+              class="mt-2 w-full text-xs border border-blue-300 text-blue-600 rounded-lg py-1.5 hover:bg-blue-100">
+              📋 Copiar link
+            </button>
+          </div>
         </div>
       </div>
 
