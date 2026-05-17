@@ -906,6 +906,51 @@ export default async function publicRoutes(fastify) {
       } 
     }
 
+    // Gerar cobrança cartão de crédito se forma_pagamento = 3
+    if ((ride.forma_pagamento === '3' || ride.forma_pagamento === 3) && process.env.ASAAS_API_KEY) {
+      const clientResult = await query('SELECT * FROM clients WHERE id = $1', [ride.client_id])
+      const client = clientResult.rows[0]
+
+      if (client?.asaas_credit_card_token && client?.asaas_customer_id) {
+        try {
+          const cobranca = await fetch('https://www.asaas.com/api/v3/payments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'access_token': process.env.ASAAS_API_KEY },
+            body: JSON.stringify({
+              billingType: 'CREDIT_CARD',
+              value: valorFinal,
+              dueDate: new Date().toISOString().split('T')[0],
+              description: `Corrida #${id} - MobiHub`,
+              externalReference: String(id),
+              customer: client.asaas_customer_id,
+              creditCardToken: client.asaas_credit_card_token,
+              split: [{ walletId: driver.asaas_id, fixedValue: valorMotorista }]
+            })
+          })
+          const cobrancaData = await cobranca.json()
+          if (cobrancaData.id) {
+            await query("UPDATE rides SET asaas_payment_id = $1, pagamento_status = 'aguardando_pagamento' WHERE id = $2", [cobrancaData.id, id])
+          }
+        } catch (err) {
+          console.error('[CARTAO] Erro:', err)
+        }
+      }
+    }
+
+    // Pagamento por créditos se forma_pagamento = 4
+    if ((ride.forma_pagamento === '4' || ride.forma_pagamento === 4)) {
+      const clientResult = await query('SELECT * FROM clients WHERE id = $1', [ride.client_id])
+      const client = clientResult.rows[0]
+      const creditos = parseFloat(client?.creditos || 0)
+
+      if (creditos >= valorFinal) {
+        await query('UPDATE clients SET creditos = creditos - $1 WHERE id = $2', [valorFinal, ride.client_id])
+        await query("UPDATE rides SET pagamento_status = 'pago' WHERE id = $1", [id])
+      } else {
+        await query("UPDATE rides SET pagamento_status = 'aguardando_pagamento' WHERE id = $1", [id])
+      }
+    }
+
     await query(` 
       UPDATE rides SET 
         status = 'concluida', 
@@ -1391,6 +1436,195 @@ export default async function publicRoutes(fastify) {
     const transacoes = await query('SELECT * FROM driver_transactions WHERE driver_id = 6 ORDER BY id DESC LIMIT 5') 
     const driver = await query('SELECT balance_due FROM drivers WHERE id = 6') 
     return { ride: ride.rows, transacoes: transacoes.rows, driver: driver.rows } 
+  })
+
+  // Endpoints de cartão
+  fastify.post('/api/client/cartao', async (request, reply) => {
+    const { telefone, holderName, number, expiryMonth, expiryYear, ccv } = request.body
+
+    if (!telefone || !holderName || !number || !expiryMonth || !expiryYear || !ccv) {
+      return reply.code(400).send({ error: 'Dados incompletos' })
+    }
+
+    // Buscar cliente por telefone
+    const clientResult = await query('SELECT * FROM clients WHERE telefone = $1', [telefone])
+    let client = clientResult.rows[0]
+    if (!client) {
+      return reply.code(404).send({ error: 'Cliente não encontrado' })
+    }
+
+    // Garantir asaas_customer_id
+    let asaasCustomerId = client.asaas_customer_id
+    if (!asaasCustomerId && process.env.ASAAS_API_KEY) {
+      const customerResponse = await fetch('https://www.asaas.com/api/v3/customers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'access_token': process.env.ASAAS_API_KEY
+        },
+        body: JSON.stringify({
+          name: client.nome,
+          phone: client.telefone?.replace(/\D/g, ''),
+          mobilePhone: client.telefone?.replace(/\D/g, ''),
+          ...(client.cpf ? { cpfCnpj: client.cpf.replace(/\D/g, '') } : {}),
+          externalReference: String(client.id)
+        })
+      })
+      const customerData = await customerResponse.json()
+      if (customerData.id) {
+        asaasCustomerId = customerData.id
+        await query('UPDATE clients SET asaas_customer_id = $1 WHERE id = $2', [customerData.id, client.id])
+      }
+    }
+
+    // Tokenizar cartão
+    if (!process.env.ASAAS_API_KEY) {
+      return reply.code(500).send({ error: 'Configuração Asaas não encontrada' })
+    }
+
+    const tokenizeResponse = await fetch('https://www.asaas.com/api/v3/creditCard/tokenize', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'access_token': process.env.ASAAS_API_KEY
+      },
+      body: JSON.stringify({
+        customer: asaasCustomerId,
+        holderName,
+        number,
+        expiryMonth: String(expiryMonth),
+        expiryYear: String(expiryYear),
+        ccv
+      })
+    })
+
+    const tokenizeData = await tokenizeResponse.json()
+    if (tokenizeData.creditCardToken) {
+      await query(
+        'UPDATE clients SET asaas_credit_card_token = $1, asaas_credit_card_brand = $2, asaas_credit_card_last_digits = $3 WHERE id = $4',
+        [tokenizeData.creditCardToken, tokenizeData.brand, tokenizeData.number.slice(-4), client.id]
+      )
+      return {
+        tem_cartao: true,
+        brand: tokenizeData.brand,
+        last_digits: tokenizeData.number.slice(-4),
+        creditos: parseFloat(client.creditos || 0)
+      }
+    } else {
+      return reply.code(400).send({ error: 'Erro ao tokenizar cartão' })
+    }
+  })
+
+  fastify.delete('/api/client/cartao', async (request, reply) => {
+    const { telefone } = request.body
+    if (!telefone) {
+      return reply.code(400).send({ error: 'Telefone não fornecido' })
+    }
+    await query(
+      'UPDATE clients SET asaas_credit_card_token = NULL, asaas_credit_card_brand = NULL, asaas_credit_card_last_digits = NULL WHERE telefone = $1',
+      [telefone]
+    )
+    return { ok: true }
+  })
+
+  fastify.get('/api/client/cartao', async (request, reply) => {
+    const { telefone } = request.query
+    if (!telefone) {
+      return reply.code(400).send({ error: 'Telefone não fornecido' })
+    }
+    const clientResult = await query('SELECT * FROM clients WHERE telefone = $1', [telefone])
+    const client = clientResult.rows[0]
+    if (!client) {
+      return { tem_cartao: false, creditos: 0 }
+    }
+    return {
+      tem_cartao: !!client.asaas_credit_card_token,
+      brand: client.asaas_credit_card_brand,
+      last_digits: client.asaas_credit_card_last_digits,
+      creditos: parseFloat(client.creditos || 0)
+    }
+  })
+
+  // Endpoint de créditos
+  fastify.post('/api/client/creditos/recarregar', async (request, reply) => {
+    const { telefone, valor } = request.body
+
+    if (!telefone || !valor) {
+      return reply.code(400).send({ error: 'Dados incompletos' })
+    }
+
+    const valorNum = parseFloat(valor)
+    if (valorNum < 50) {
+      return reply.code(400).send({ error: 'Valor mínimo de recarga: R$50,00' })
+    }
+
+    // Buscar cliente
+    const clientResult = await query('SELECT * FROM clients WHERE telefone = $1', [telefone])
+    let client = clientResult.rows[0]
+    if (!client) {
+      return reply.code(404).send({ error: 'Cliente não encontrado' })
+    }
+
+    // Garantir asaas_customer_id
+    let asaasCustomerId = client.asaas_customer_id
+    if (!asaasCustomerId && process.env.ASAAS_API_KEY) {
+      const customerResponse = await fetch('https://www.asaas.com/api/v3/customers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'access_token': process.env.ASAAS_API_KEY
+        },
+        body: JSON.stringify({
+          name: client.nome,
+          phone: client.telefone?.replace(/\D/g, ''),
+          mobilePhone: client.telefone?.replace(/\D/g, ''),
+          ...(client.cpf ? { cpfCnpj: client.cpf.replace(/\D/g, '') } : {}),
+          externalReference: String(client.id)
+        })
+      })
+      const customerData = await customerResponse.json()
+      if (customerData.id) {
+        asaasCustomerId = customerData.id
+        await query('UPDATE clients SET asaas_customer_id = $1 WHERE id = $2', [customerData.id, client.id])
+      }
+    }
+
+    // Gerar cobrança Pix
+    if (!process.env.ASAAS_API_KEY) {
+      return reply.code(500).send({ error: 'Configuração Asaas não encontrada' })
+    }
+
+    const externalReference = `creditos_${client.id}_${Date.now()}`
+    const asaasCobranca = await fetch('https://www.asaas.com/api/v3/payments', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'access_token': process.env.ASAAS_API_KEY
+      },
+      body: JSON.stringify({
+        billingType: 'PIX',
+        value: valorNum,
+        dueDate: new Date(Date.now() + 30 * 60000).toISOString().split('T')[0],
+        description: `Recarga de créditos - ${client.nome}`,
+        externalReference,
+        customer: asaasCustomerId
+      })
+    })
+
+    const asaasData = await asaasCobranca.json()
+    if (asaasData.id) {
+      const qrResponse = await fetch(`https://www.asaas.com/api/v3/payments/${asaasData.id}/pixQrCode`, {
+        headers: { 'access_token': process.env.ASAAS_API_KEY }
+      })
+      const qrData = await qrResponse.json()
+      return {
+        qrcode: qrData.encodedImage,
+        payload: qrData.payload,
+        valor: valorNum
+      }
+    } else {
+      return reply.code(400).send({ error: 'Erro ao gerar cobrança' })
+    }
   })
 
 } 

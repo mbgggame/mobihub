@@ -417,6 +417,12 @@ export async function initDB() {
 
   // Adicionar coluna com_lider se não existir
   await query(`ALTER TABLE split_rules ADD COLUMN IF NOT EXISTS com_lider BOOLEAN DEFAULT false`)
+  
+  // Adicionar colunas para cartão de crédito e créditos
+  await query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS asaas_credit_card_token TEXT`)
+  await query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS asaas_credit_card_brand TEXT`)
+  await query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS asaas_credit_card_last_digits TEXT`)
+  await query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS creditos DOUBLE PRECISION DEFAULT 0`)
 
   // Seed das regras de split padrão
   const splitExisting = await query('SELECT COUNT(*) as total FROM split_rules') 

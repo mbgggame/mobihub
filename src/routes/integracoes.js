@@ -15,7 +15,11 @@ export default async function integracoesRoutes(fastify) {
       const externalReference = payment?.externalReference 
       
       if (paymentId && externalReference) {
-        if (externalReference.startsWith('client_')) {
+        if (externalReference.startsWith('creditos_')) {
+          const clientId = externalReference.split('_')[1]
+          await query('UPDATE clients SET creditos = creditos + $1 WHERE id = $2', [payment.value, clientId])
+          return reply.send({ ok: true })
+        } else if (externalReference.startsWith('client_')) {
           // Pagamento de cliente
           const clientResult = await query('SELECT * FROM clients WHERE balance_due_charge_id = $1', [paymentId])
           const client = clientResult.rows[0]
