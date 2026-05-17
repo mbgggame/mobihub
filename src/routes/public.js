@@ -221,7 +221,7 @@ export default async function publicRoutes(fastify) {
     if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
 
     const corridasResult = await query(` 
-      SELECT r.id, r.origem, r.destino, r.valor, r.valor_motorista, 
+      SELECT r.id, r.token, r.origem, r.destino, r.valor, r.valor_motorista, 
         r.status, r.created_at, r.concluida_at, r.tipo, 
         r.agendada_para 
       FROM rides r 
