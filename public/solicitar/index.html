@@ -884,6 +884,9 @@
  } 
 
  async function calcularDistancia() { 
+  console.log('[MAPBOX] Calculando distância...') 
+  console.log('[MAPBOX] Origem:', pontos.origem) 
+  console.log('[MAPBOX] Destino:', pontos.destino) 
   if (!pontos.origem || !pontos.destino) return 
   try { 
     const tokenResp = await fetch('/api/mapbox/token') 
@@ -891,6 +894,7 @@
     const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${pontos.origem.lng},${pontos.origem.lat};${pontos.destino.lng},${pontos.destino.lat}?access_token=${token}&overview=false` 
     const resp = await fetch(url) 
     const data = await resp.json() 
+    console.log('[MAPBOX] Resposta:', JSON.stringify(data)) 
     if (data.routes && data.routes[0]) { 
       const distanciaKm = data.routes[0].distance / 1000 
       const duracaoMin = Math.round(data.routes[0].duration / 60) 
@@ -1167,20 +1171,27 @@
      lista.innerHTML = '<p class="text-sm text-gray-500 text-center py-8">Nenhuma corrida encontrada.</p>'
      return
    }
-   lista.innerHTML = rides.map((ride, i) => `
-     <div class="bg-gray-50 border border-gray-200 rounded-xl p-4">
-       <div class="flex items-center justify-between">
-         <div class="flex-1">
-           <p class="text-sm font-semibold text-gray-800">${encurtarEndereco(ride.origem)} → ${encurtarEndereco(ride.destino)}</p>
-           <p class="text-xs text-gray-500 mt-1">${new Date(ride.created_at).toLocaleDateString('pt-BR')} • ${ride.status}</p>
-         </div>
-         <button onclick="repetirCorridaFromHistorico('${ride.origem}', '${ride.destino}', ${ride.origem_lat}, ${ride.origem_lng}, ${ride.destino_lat}, ${ride.destino_lng})"
-           class="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700">
-           Repetir
-         </button>
-       </div>
-     </div>
-   `).join('')
+   lista.innerHTML = rides.map((ride, i) => { 
+     const origemTexto = typeof ride.origem === 'string' 
+       ? (ride.origem.startsWith('{') ? JSON.parse(ride.origem)?.display_name || ride.origem : ride.origem) 
+       : ride.origem 
+     const destinoTexto = typeof ride.destino === 'string' 
+       ? (ride.destino.startsWith('{') ? JSON.parse(ride.destino)?.display_name || ride.destino : ride.destino) 
+       : ride.destino 
+     return ` 
+     <div class="bg-gray-50 border border-gray-200 rounded-xl p-4"> 
+       <div class="flex items-center justify-between"> 
+         <div class="flex-1"> 
+           <p class="text-sm font-semibold text-gray-800">${encurtarEndereco(origemTexto)} → ${encurtarEndereco(destinoTexto)}</p> 
+           <p class="text-xs text-gray-500 mt-1">${new Date(ride.created_at).toLocaleDateString('pt-BR')} • ${ride.status}</p> 
+         </div> 
+         <button onclick="repetirCorridaFromHistorico('${origemTexto}', '${destinoTexto}', ${ride.origem_lat}, ${ride.origem_lng}, ${ride.destino_lat}, ${ride.destino_lng})" 
+           class="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700"> 
+           Repetir 
+         </button> 
+       </div> 
+     </div> 
+   `}).join('')
  }
 
  function fecharModalHistorico() {
