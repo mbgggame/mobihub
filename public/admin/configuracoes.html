@@ -87,6 +87,13 @@
           </div> 
         </div>
 
+        <div> 
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Limite de Saldo Devedor do Motorista (R$)</label> 
+          <input id="motorista_balance_due_limite" type="number" step="0.01" min="0" 
+            class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"> 
+          <p class="text-xs text-gray-400 mt-1">Ao atingir este valor, o motorista fica bloqueado de receber em dinheiro</p> 
+        </div>
+
         <button id="btn-salvar-config" onclick="salvarConfiguracoes()"
           class="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl py-3 font-bold text-base transition-colors">
           ✅ Salvar Configurações
@@ -122,6 +129,7 @@
         document.getElementById('parada_valor_minuto').value = configAtual.parada_valor_minuto || '0.60'
         document.getElementById('parada_auto_metros').value = configAtual.parada_auto_metros || '50'
         document.getElementById('parada_auto_segundos').value = configAtual.parada_auto_segundos || '60'
+        document.getElementById('motorista_balance_due_limite').value = configAtual.motorista_balance_due_limite || 30
       } catch (err) {
         alert('Erro ao carregar configurações')
       }
@@ -134,15 +142,16 @@
 
       try {
         const body = {
-          espera_taxa_cancelamento: parseFloat(document.getElementById('espera_taxa_cancelamento').value),
-          espera_minutos_gratis: parseInt(document.getElementById('espera_minutos_gratis').value),
-          espera_valor_minuto: parseFloat(document.getElementById('espera_valor_minuto').value),
-          espera_max_cancelamento: document.getElementById('espera_max_cancelamento').value,
-          parada_minutos_gratis: document.getElementById('parada_minutos_gratis').value,
-          parada_valor_minuto: document.getElementById('parada_valor_minuto').value,
-          parada_auto_metros: document.getElementById('parada_auto_metros').value,
-          parada_auto_segundos: document.getElementById('parada_auto_segundos').value
-        }
+        espera_taxa_cancelamento: parseFloat(document.getElementById('espera_taxa_cancelamento').value),
+        espera_minutos_gratis: parseInt(document.getElementById('espera_minutos_gratis').value),
+        espera_valor_minuto: parseFloat(document.getElementById('espera_valor_minuto').value),
+        espera_max_cancelamento: document.getElementById('espera_max_cancelamento').value,
+        parada_minutos_gratis: document.getElementById('parada_minutos_gratis').value,
+        parada_valor_minuto: document.getElementById('parada_valor_minuto').value,
+        parada_auto_metros: document.getElementById('parada_auto_metros').value,
+        parada_auto_segundos: document.getElementById('parada_auto_segundos').value,
+        motorista_balance_due_limite: parseFloat(document.getElementById('motorista_balance_due_limite').value)
+      }
 
         console.log('[CONFIG] Body:', JSON.stringify(body))
         const r = await fetch('/api/configuracoes', {

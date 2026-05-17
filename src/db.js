@@ -407,7 +407,8 @@ export async function initDB() {
       ('parada_minutos_gratis', '5'), 
       ('parada_valor_minuto', '0.60'), 
       ('parada_auto_metros', '50'), 
-      ('parada_auto_segundos', '60') 
+      ('parada_auto_segundos', '60'),
+      ('motorista_balance_due_limite', '30.00') 
       ON CONFLICT (chave) DO NOTHING 
   `) 
  

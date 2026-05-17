@@ -575,6 +575,9 @@ export default async function publicRoutes(fastify) {
     const ride = (await query('SELECT * FROM rides WHERE id = $1 AND driver_id = $2', [id, driver.id])).rows[0]
     if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' })
 
+    const configLimite = (await query("SELECT valor FROM configuracoes WHERE chave = 'motorista_balance_due_limite'")).rows[0] 
+    const limiteSaldoDevedor = parseFloat(configLimite?.valor || 30)
+
     await query("UPDATE rides SET pagamento_status = 'pago', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [id])
 
     const temLider = !!driver.lider_id
@@ -596,7 +599,7 @@ export default async function publicRoutes(fastify) {
     )
 
     let aviso = null
-    if (novoBalanceDue >= 30) {
+    if (novoBalanceDue >= limiteSaldoDevedor) {
       await query('UPDATE drivers SET balance_due_blocked_at = CURRENT_TIMESTAMP WHERE id = $1', [driver.id])
       aviso = 'Recebimento em dinheiro bloqueado. Use Pix ou Cartão.'
     }
