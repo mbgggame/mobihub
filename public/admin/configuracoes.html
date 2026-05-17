@@ -144,17 +144,19 @@
           parada_auto_segundos: document.getElementById('parada_auto_segundos').value
         }
 
+        console.log('[CONFIG] Body:', JSON.stringify(body))
         const r = await fetch('/api/configuracoes', {
           method: 'PUT',
           headers: headers(),
           body: JSON.stringify(body)
         })
-
+        console.log('[CONFIG] Response status:', r.status)
         if (r.ok) {
           alert('Configurações salvas com sucesso!')
         } else {
-          const d = await r.json()
-          alert('Erro ao salvar: ' + (d.error || 'Erro desconhecido'))
+          const responseText = await r.text()
+          console.log('[CONFIG] Response body:', responseText)
+          alert('Erro ao salvar: ' + responseText)
         }
       } catch (err) {
         alert('Erro de conexão')
