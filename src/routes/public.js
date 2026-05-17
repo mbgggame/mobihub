@@ -276,12 +276,7 @@ export default async function publicRoutes(fastify) {
     return { transacoes: transacoesComSaldo, saldo_total: saldoTotal }
   })
 
-  fastify.post('/api/temp/reset-marcia', async (request, reply) => {
-    await query('UPDATE drivers SET balance_due = 0, balance_due_blocked_at = NULL WHERE id = 6')
-    await query('DELETE FROM driver_transactions WHERE driver_id = 6')
-    const result = await query('SELECT id, nome, balance_due FROM drivers WHERE id = 6')
-    return result.rows[0]
-  })
+
 
   fastify.put('/api/motorista/:token/foto', async (request, reply) => { 
     const { foto_base64 } = request.body 
@@ -793,14 +788,11 @@ export default async function publicRoutes(fastify) {
       // 1. Ler saldo devedor ATUAL do banco (valor real)
       const driverInfo = await query('SELECT balance_due FROM drivers WHERE id = $1', [driver.id])
       const balance_due_atual = parseFloat(driverInfo.rows[0]?.balance_due || 0)
-      console.log(`[DEBUG ABATIMENTO] balance_due_atual: R$${balance_due_atual}, valorMotorista: R$${valorMotorista}`)
 
       if (balance_due_atual > 0) {
         // 2. Calcular abatimento correto
         abatimento = parseFloat(Math.min(balance_due_atual, valorMotorista).toFixed(2))
-        console.log(`[DEBUG ABATIMENTO] abatimento calculado: R$${abatimento}`)
         
-        console.log(`[DEBUG] Verificando transação existente: driver_id=${driver.id}, ride_id=${id}`)
         const existingTransacao = await query(
           'SELECT id FROM driver_transactions WHERE driver_id = $1 AND ride_id = $2 AND tipo = $3',
           [driver.id, id, 'credito']
@@ -809,13 +801,10 @@ export default async function publicRoutes(fastify) {
         if (existingTransacao.rows.length === 0) {
           // 3. Atualizar banco
           await query('UPDATE drivers SET balance_due = GREATEST(0, balance_due - $1) WHERE id = $2', [abatimento, driver.id])
-          console.log(`[DEBUG ABATIMENTO] Updated balance_due in database`)
           
-          console.log('[VALOR INSERIDO]', abatimento, typeof abatimento)
           // 4. Registrar transação
           await query('INSERT INTO driver_transactions (driver_id, ride_id, tipo, descricao, valor) VALUES ($1, $2, $3, $4, $5)', 
             [driver.id, id, 'credito', `Abatimento saldo devedor - corrida #${id}`, abatimento])
-          console.log(`[DEBUG ABATIMENTO] Transaction inserted`)
           
           balance_due_novo = parseFloat(Math.max(0, balance_due_atual - abatimento).toFixed(2))
           valorMotorista = parseFloat((valorMotorista - abatimento).toFixed(2))
@@ -823,21 +812,11 @@ export default async function publicRoutes(fastify) {
           if (balance_due_novo <= 0) {
             await query('UPDATE drivers SET balance_due_blocked_at = NULL WHERE id = $1', [driver.id])
           }
-          
-          console.log(`[ABATIMENTO] Aplicado R$${abatimento} de abatimento. Novo valor motorista: R$${valorMotorista}. Novo balance due: R$${balance_due_novo}`)
-        } else {
-          console.log(`[DEBUG ABATIMENTO] Transaction already exists for ride #${id}`)
         }
       }
     }
 
     // Gerar cobrança Pix no Asaas se forma_pagamento = 2 
-    console.log('[ASAAS PIX] valorMotorista antes do split:', valorMotorista) 
-    console.log('[ASAAS PIX] valorFinal:', valorFinal) 
-    console.log('[ASAAS PIX] Iniciando geração de cobrança para corrida #' + id) 
-    console.log('[ASAAS PIX] forma_pagamento:', ride.forma_pagamento) 
-    console.log('[ASAAS PIX] driver.asaas_id:', driver.asaas_id) 
-    console.log('[ASAAS PIX] ASAAS_API_KEY existe:', !!process.env.ASAAS_API_KEY) 
     let asaasPaymentId = null, asaasPaymentLink = null, asaasPixPayload = null
     if ((ride.forma_pagamento === '2' || ride.forma_pagamento === 2) && driver.asaas_id && process.env.ASAAS_API_KEY) { 
       try { 
@@ -902,14 +881,12 @@ export default async function publicRoutes(fastify) {
             split: [ 
               { 
                 walletId: driver.asaas_id, 
-                value: valorMotorista
+                fixedValue: valorMotorista
               } 
             ] 
           }) 
         })
-        console.log('[ASAAS PIX] split value enviado:', valorMotorista) 
-        const asaasData = await asaasCobranca.json() 
-        console.log('[ASAAS PIX] Resposta Asaas:', JSON.stringify(asaasData))
+        const asaasData = await asaasCobranca.json()
         if (asaasData.id) { 
           // Buscar QR Code Pix 
           const qrResponse = await fetch(`https://www.asaas.com/api/v3/payments/${asaasData.id}/pixQrCode`, { 
@@ -1315,13 +1292,7 @@ export default async function publicRoutes(fastify) {
     return { mensagem: 'Saldo devedor zerado com sucesso!' } 
   })
 
-  fastify.post('/api/temp/fix-marcia-saldo', async (request, reply) => { 
-    await query('UPDATE drivers SET balance_due = 0, balance_due_blocked_at = NULL WHERE id = 6') 
-    await query('DELETE FROM driver_transactions WHERE driver_id = 6 AND descricao = $1', ['Saldo devedor zerado pelo admin']) 
-    await query('INSERT INTO driver_transactions (driver_id, tipo, descricao, valor) VALUES ($1, $2, $3, $4)', [6, 'credito', 'Saldo devedor zerado pelo admin', 442.77]) 
-    const result = await query('SELECT balance_due FROM drivers WHERE id = 6') 
-    return result.rows[0] 
-  })
+
 
 
 
@@ -1415,9 +1386,6 @@ export default async function publicRoutes(fastify) {
     return { mensagem: 'Avaliação salva!' }
   })
 
-  fastify.get('/api/temp/check-configs', async (request, reply) => { 
-    const result = await query('SELECT * FROM configuracoes') 
-    return { count: result.rows.length, rows: result.rows } 
-  })
+
 
 } 
