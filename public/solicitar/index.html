@@ -67,7 +67,7 @@
 <!-- MODAL DE EDIÇÃO DE DADOS -->
 <div id="modal-editar-dados" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4 py-6 hidden">
   <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl">
-    <div class="p-6 space-y-4">
+    <div class="p-6 space-y-4 overflow-y-auto max-h-[90vh]">
       <div class="flex items-center justify-between">
         <h2 class="text-xl font-bold text-gray-900">✏️ Editar meus dados</h2>
         <button onclick="fecharModalEditarDados()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
@@ -98,6 +98,7 @@
         <div id="form-cartao" class="space-y-2">
           <input id="cartao-nome" type="text" placeholder="Nome no cartão" class="w-full border rounded-lg px-3 py-2 text-sm"/>
           <input id="cartao-numero" type="text" placeholder="Número do cartão" maxlength="19" class="w-full border rounded-lg px-3 py-2 text-sm"/>
+          <span id="cartao-bandeira" class="text-sm text-blue-600 font-medium mt-1 block"></span>
           <div class="grid grid-cols-2 gap-2">
             <input id="cartao-validade" type="text" placeholder="MM/AA" maxlength="5" class="border rounded-lg px-3 py-2 text-sm"/>
             <input id="cartao-cvv" type="text" placeholder="CVV" maxlength="4" class="border rounded-lg px-3 py-2 text-sm"/>
@@ -112,7 +113,7 @@
           <span id="txt-saldo-modal" class="font-bold text-green-700">R$ 0,00</span>
         </div>
         <div class="space-y-2">
-          <input id="valor-recarga" type="number" min="50" step="10" placeholder="Valor (mín. R$ 50,00)" class="w-full border rounded-lg px-3 py-2 text-sm"/>
+          <input id="valor-recarga" type="text" placeholder="Valor (mín. R$ 50,00)" class="w-full border rounded-lg px-3 py-2 text-sm"/>
           <button onclick="recarregarCreditos()" class="w-full bg-green-600 text-white rounded-lg py-2 text-sm font-semibold">Gerar QR Code Pix</button>
         </div>
         <div id="qrcode-recarga" class="hidden mt-3 text-center">
@@ -1476,6 +1477,35 @@ function copiarPayloadRecarga() {
   const payload = document.getElementById('payload-recarga')?.value
   if (payload) { navigator.clipboard.writeText(payload); alert('Código copiado!') }
 }
+
+document.getElementById('cartao-numero')?.addEventListener('input', function(e) {
+  let v = e.target.value.replace(/\D/g, '').substring(0, 16)
+  e.target.value = v.replace(/(.{4})/g, '$1 ').trim()
+  
+  const bandeira = document.getElementById('cartao-bandeira')
+  if (!bandeira) return
+  if (/^4/.test(v)) bandeira.textContent = '💳 Visa'
+  else if (/^5[1-5]/.test(v)) bandeira.textContent = '💳 Mastercard'
+  else if (/^3[47]/.test(v)) bandeira.textContent = '💳 Amex'
+  else if (/^6(?:011|5)/.test(v)) bandeira.textContent = '💳 Discover'
+  else if (/^(?:636368|438935|504175|451416|636297)/.test(v)) bandeira.textContent = '💳 Elo'
+  else bandeira.textContent = ''
+})
+
+document.getElementById('cartao-validade')?.addEventListener('input', function(e) {
+  let v = e.target.value.replace(/\D/g, '').substring(0, 4)
+  if (v.length >= 2) v = v.substring(0,2) + '/' + v.substring(2)
+  e.target.value = v
+})
+
+document.getElementById('cartao-cvv')?.addEventListener('input', function(e) {
+  e.target.value = e.target.value.replace(/\D/g, '').substring(0, 4)
+})
+
+document.getElementById('valor-recarga')?.addEventListener('input', function(e) {
+  let v = e.target.value.replace(/\D/g, '')
+  e.target.value = (parseInt(v || 0) / 100).toFixed(2)
+})
 
 window.onload = () => { 
    verificarTermosPassageiro()

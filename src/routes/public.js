@@ -1499,6 +1499,7 @@ export default async function publicRoutes(fastify) {
     })
 
     const tokenizeData = await tokenizeResponse.json()
+    console.log('[CARTAO] Resposta Asaas tokenize:', JSON.stringify(tokenizeData))
     if (tokenizeData.creditCardToken) {
       await query(
         'UPDATE clients SET asaas_credit_card_token = $1, asaas_credit_card_brand = $2, asaas_credit_card_last_digits = $3 WHERE id = $4',
