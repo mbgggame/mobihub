@@ -658,6 +658,7 @@ let corridasIgnoradas = []
 let rideIdParaAvaliar = null 
 let estrelasPassageiro = 0
 let corridaAvaliadaId = null
+let corridasJaAvaliadas = new Set()
 
  // Wake Lock — mantém tela acesa enquanto online 
  let wakeLock = null 
@@ -1203,9 +1204,9 @@ let corridaAvaliadaId = null
  
  function fecharModalAvaliarPassageiro() { 
    document.getElementById('modal-avaliar-passageiro')?.classList.add('hidden') 
+   if (rideIdParaAvaliar) corridasJaAvaliadas.add(rideIdParaAvaliar) 
    rideIdParaAvaliar = null 
    corridaAvaliadaId = null 
-   corridaAtualId = null 
  } 
  
  function selecionarEstrelasPassageiro(n) { 
@@ -1557,7 +1558,7 @@ let corridaAvaliadaId = null
      document.getElementById('txt-pagamento-valor').textContent = moeda(corrida.valor_motorista || corrida.valor_final || corrida.valor)
      document.getElementById('txt-pagamento-corrida').textContent = `Corrida #${corrida.id}`
      setTimeout(() => { corridaAtualId = null }, 5000)
-     if (corrida.id && !corridaAvaliadaId) { 
+     if (corrida.id && !corridaAvaliadaId && !corridasJaAvaliadas.has(corrida.id)) { 
        corridaAvaliadaId = corrida.id 
        setTimeout(() => abrirModalAvaliarPassageiro(corrida.id), 2000) 
      }
