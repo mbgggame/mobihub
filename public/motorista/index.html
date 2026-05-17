@@ -1447,9 +1447,12 @@ let corridaAvaliadaId = null
      const { corrida } = await r.json() 
  
      if (corrida) { 
-       corridaAtualId = corrida.id 
-       corridaAtualToken = corrida.token 
-       mostrarCorridaAtiva(corrida) 
+      if (corrida.id !== corridaAtualId) { 
+        corridaAvaliadaId = null 
+      }
+      corridaAtualId = corrida.id 
+      corridaAtualToken = corrida.token 
+      mostrarCorridaAtiva(corrida) 
        socket.emit('entrar:corrida', corrida.id); 
  
        // Gerenciamento de Timers 
