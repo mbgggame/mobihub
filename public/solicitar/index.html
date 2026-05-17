@@ -883,23 +883,23 @@
    btn.classList.add('opacity-40', 'cursor-not-allowed') 
  } 
 
- function calcularDistancia() { 
-   if (!pontos.origem || !pontos.destino) return 
-   // Usando Haversine para cálculo de distância gratuito 
-   const lat1 = pontos.origem.lat, lon1 = pontos.origem.lng 
-   const lat2 = pontos.destino.lat, lon2 = pontos.destino.lng 
-   const R = 6371; // km 
-   const dLat = (lat2 - lat1) * Math.PI / 180 
-   const dLon = (lon2 - lon1) * Math.PI / 180 
-   const a = Math.sin(dLat/2) * Math.sin(dLat/2) + 
-             Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-             Math.sin(dLon/2) * Math.sin(dLon/2) 
-   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) 
-   const distanciaKm = R * c 
-   // Duração estimada simples (30km/h média urbana) 
-   const duracaoMin = Math.round((distanciaKm / 30) * 60) 
-   exibirValor(distanciaKm, duracaoMin) 
- } 
+ async function calcularDistancia() { 
+  if (!pontos.origem || !pontos.destino) return 
+  try { 
+    const tokenResp = await fetch('/api/mapbox/token') 
+    const { token } = await tokenResp.json() 
+    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${pontos.origem.lng},${pontos.origem.lat};${pontos.destino.lng},${pontos.destino.lat}?access_token=${token}&overview=false` 
+    const resp = await fetch(url) 
+    const data = await resp.json() 
+    if (data.routes && data.routes[0]) { 
+      const distanciaKm = data.routes[0].distance / 1000 
+      const duracaoMin = Math.round(data.routes[0].duration / 60) 
+      exibirValor(distanciaKm, duracaoMin) 
+    } 
+  } catch(e) { 
+    console.error('[MAPBOX] Erro:', e) 
+  } 
+} 
 
  async function exibirValor(distanciaKm, duracaoMin) { 
    let valor = 0 

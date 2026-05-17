@@ -5,6 +5,20 @@ import { v4 as uuidv4 } from 'uuid'
 import { calculateInitialWaitCost, calculateStopCost, calculateTotalRideCost, calcularTempoMinutos, podeMotoristaCancel } from '../billing.js'
 import { getIo } from '../server.js' 
 
+async function calcularDistanciaMapbox(lat1, lng1, lat2, lng2) { 
+  try { 
+    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${lng1},${lat1};${lng2},${lat2}?access_token=${process.env.MAPBOX_TOKEN}&overview=false` 
+    const response = await fetch(url) 
+    const data = await response.json() 
+    if (data.routes && data.routes[0]) { 
+      return data.routes[0].distance / 1000 
+    } 
+  } catch(e) { 
+    console.error('[MAPBOX DIRECTIONS] Erro:', e.message) 
+  } 
+  return null 
+} 
+
 async function getConfig() { 
   const configs = (await query('SELECT chave, valor FROM configuracoes')).rows 
   const obj = {} 
