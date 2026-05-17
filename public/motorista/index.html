@@ -850,7 +850,8 @@ let corridasJaAvaliadas = new Set()
      const modal = document.getElementById('modal-termos')
      const conteudoPrincipal = document.getElementById('conteudo-principal')
      
-     if (!driver.aceitou_termos) {
+     // Mostrar modal se não aceitou ou se versão antiga
+     if (!driver.aceitou_termos || driver.versao_termos !== '2.0') {
        modal.style.display = 'flex'
        modal.classList.remove('hidden')
        conteudoPrincipal.classList.add('hidden')
@@ -1006,6 +1007,10 @@ let corridasJaAvaliadas = new Set()
  } 
 
  async function aceitarTermos() { 
+     const check1 = document.getElementById('check-termos-gerais')?.checked 
+     const check2 = document.getElementById('check-arbitragem')?.checked 
+     if (!check1 || !check2) return 
+     
      const btn = document.getElementById('btn-aceitar-termos')
      btn.textContent = 'Aguarde...'
      btn.disabled = true
@@ -1025,7 +1030,10 @@ let corridasJaAvaliadas = new Set()
          method: 'POST', 
          mode: 'cors',
          headers: { 'Content-Type': 'application/json' }, 
-         body: JSON.stringify({ token: tokenParaEnviar }) 
+         body: JSON.stringify({ 
+           token: tokenParaEnviar, 
+           aceite_arbitragem: check2 
+         }) 
        }); 
 
        clearTimeout(timeoutId)
