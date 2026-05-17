@@ -121,6 +121,20 @@ export default async function publicRoutes(fastify) {
       ) 
     }
 
+    // Salvar no histórico de rastreamento se passageiro embarcou 
+    if (ride_id) { 
+      const rideInfo = await query( 
+        'SELECT id, passageiro_embarcou_at FROM rides WHERE id = $1 AND passageiro_embarcou_at IS NOT NULL', 
+        [ride_id] 
+      ) 
+      if (rideInfo.rows.length > 0) { 
+        await query( 
+          'INSERT INTO ride_track (ride_id, lat, lng) VALUES ($1, $2, $3)', 
+          [ride_id, lat, lng] 
+        ) 
+      } 
+    }
+
     console.log('[LOCATION] Salvo com sucesso') 
     return { ok: true } 
   })
@@ -761,7 +775,46 @@ export default async function publicRoutes(fastify) {
     } 
  
     let valorBase = parseFloat(ride.valor || 15)
-    console.log(`[BILLING] Usando valor aprovado pelo passageiro: R$${valorBase}`) 
+    console.log(`[BILLING] Usando valor aprovado pelo passageiro: R$${valorBase}`)
+
+    // Calcular km reais percorridos com passageiro embarcado 
+    const trackPoints = (await query( 
+      'SELECT lat, lng FROM ride_track WHERE ride_id = $1 ORDER BY created_at ASC', 
+      [id] 
+    )).rows 
+    
+    let kmReais = 0 
+    if (trackPoints.length >= 2) { 
+      for (let i = 1; i < trackPoints.length; i++) { 
+        const p1 = trackPoints[i - 1] 
+        const p2 = trackPoints[i] 
+        const R = 6371 
+        const dLat = (p2.lat - p1.lat) * Math.PI / 180 
+        const dLng = (p2.lng - p1.lng) * Math.PI / 180 
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + 
+          Math.cos(p1.lat * Math.PI / 180) * Math.cos(p2.lat * Math.PI / 180) * 
+          Math.sin(dLng/2) * Math.sin(dLng/2) 
+        kmReais += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) 
+      } 
+      kmReais = parseFloat(kmReais.toFixed(2)) 
+      console.log(`[TAXIMETRO] Km reais percorridos: ${kmReais}km`) 
+    } 
+    
+    // Se tiver km reais, recalcular valor base pela tarifa 
+    if (kmReais > 0 && tarifaAtiva) { 
+      const kmMin = parseFloat(tarifaAtiva.km_minimo || 7.5) 
+      const valorMin = parseFloat(tarifaAtiva.valor_minimo || 15) 
+      const valorKm = parseFloat(tarifaAtiva.valor_km || 2) 
+      const novoValorBase = kmReais <= kmMin 
+        ? valorMin 
+        : parseFloat((valorMin + (kmReais - kmMin) * valorKm).toFixed(2)) 
+      
+      console.log(`[TAXIMETRO] Valor base recalculado: R$${novoValorBase} (${kmReais}km × tarifa ${tarifaAtiva.nome || 'atual'})`) 
+      valorBase = novoValorBase 
+    } 
+    
+    // Salvar km_reais na corrida 
+    await query('UPDATE rides SET km_reais = $1 WHERE id = $2', [kmReais || null, id]) 
 
     // Buscar regra de split ativa baseada se o motorista tem líder
     const temLider = !!driver.lider_id

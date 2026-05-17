@@ -99,7 +99,16 @@ export async function initDB() {
       lng DOUBLE PRECISION NOT NULL, 
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
     ); 
- 
+
+    CREATE TABLE IF NOT EXISTS ride_track ( 
+      id SERIAL PRIMARY KEY, 
+      ride_id INTEGER REFERENCES rides(id), 
+      lat DOUBLE PRECISION NOT NULL, 
+      lng DOUBLE PRECISION NOT NULL, 
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
+    ); 
+    CREATE INDEX IF NOT EXISTS idx_ride_track_ride_id ON ride_track(ride_id); 
+
     CREATE TABLE IF NOT EXISTS configuracoes ( 
       chave TEXT PRIMARY KEY, 
       valor TEXT NOT NULL 
@@ -196,7 +205,8 @@ export async function initDB() {
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS asaas_pix_qrcode TEXT; 
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS asaas_pix_payload TEXT; 
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS pagamento_status TEXT DEFAULT 'pendente'; 
-    ALTER TABLE rides ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP; 
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS km_reais DOUBLE PRECISION; 
     ALTER TABLE tarifas ADD COLUMN IF NOT EXISTS aplicar_feriados BOOLEAN DEFAULT false;
     ALTER TABLE feriados ADD COLUMN IF NOT EXISTS horario_inicio TIME;
     ALTER TABLE feriados ADD COLUMN IF NOT EXISTS horario_fim TIME;
