@@ -765,7 +765,7 @@ export default async function publicRoutes(fastify) {
     )).rows[0] 
 
     const percentualPlataforma = splitRule?.percentual_plataforma || 15 
-    const percentualLider = splitRule?.percentual_lider || 2 
+    const percentualLider = temLider ? (splitRule?.percentual_lider ?? 0) : 0 
     const percentualMotorista = splitRule?.percentual_motorista || 83 
 
     // Cálculo detalhado para memória de cálculo 
