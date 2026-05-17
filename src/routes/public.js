@@ -1415,4 +1415,9 @@ export default async function publicRoutes(fastify) {
     return { mensagem: 'Avaliação salva!' }
   })
 
+  fastify.get('/api/temp/check-configs', async (request, reply) => { 
+    const result = await query('SELECT * FROM configuracoes') 
+    return { count: result.rows.length, rows: result.rows } 
+  })
+
 } 
