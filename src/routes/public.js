@@ -1498,6 +1498,11 @@ export default async function publicRoutes(fastify) {
     return { ride: ride.rows, transacoes: transacoes.rows, driver: driver.rows } 
   })
 
+  fastify.get('/api/temp/check-termos', async (request, reply) => { 
+    const result = await query('SELECT id, nome, aceitou_termos, versao_termos, aceite_arbitragem FROM drivers') 
+    return result.rows 
+  })
+
   // Endpoints de cartão
   fastify.post('/api/client/cartao', async (request, reply) => {
     const { telefone, holderName, number, expiryMonth, expiryYear, ccv } = request.body
