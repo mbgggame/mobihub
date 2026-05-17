@@ -1386,6 +1386,11 @@ export default async function publicRoutes(fastify) {
     return { mensagem: 'Avaliação salva!' }
   })
 
-
+  fastify.get('/api/temp/check-ride-200', async (request, reply) => { 
+    const ride = await query('SELECT id, valor, valor_final, valor_motorista, valor_mobihub, pagamento_status, forma_pagamento FROM rides WHERE id = 200') 
+    const transacoes = await query('SELECT * FROM driver_transactions WHERE driver_id = 6 ORDER BY id DESC LIMIT 5') 
+    const driver = await query('SELECT balance_due FROM drivers WHERE id = 6') 
+    return { ride: ride.rows, transacoes: transacoes.rows, driver: driver.rows } 
+  })
 
 } 
