@@ -889,7 +889,7 @@
   console.log('[MAPBOX] Destino:', pontos.destino) 
   if (!pontos.origem || !pontos.destino) return 
   try { 
-    const tokenResp = await fetch('/api/mapbox/token') 
+    const tokenResp = await fetch('/api/config/mapbox') 
     const { token } = await tokenResp.json() 
     const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${pontos.origem.lng},${pontos.origem.lat};${pontos.destino.lng},${pontos.destino.lat}?access_token=${token}&overview=false` 
     const resp = await fetch(url) 
