@@ -295,8 +295,6 @@ export function initBot() {
        try { 
          if (ride.telegram_message_id) await editGroupMessage(ride.telegram_message_id, 
            `✅ *Corrida concluída!*\n\n📍 ${ride.origem}\n🏁 ${ride.destino}\n💰 R$ ${valorFinal.toFixed(2)}`) 
-         const driver = (await dbQuery('SELECT * FROM drivers WHERE id = $1', [ride.driver_id])).rows[0] 
-         if (driver) await notifyDriverRateClient(driver, ride) 
        } catch(e) {} 
        bot.answerCallbackQuery(query.id, { text: '✅ Corrida finalizada!' }) 
        bot.sendMessage(from.id, `✅ *Corrida finalizada!*\n\n💰 Valor final: R$ ${valorFinal.toFixed(2)}\n👨‍✈️ Seu ganho: R$ ${valorMotorista.toFixed(2)}`, 
@@ -426,25 +424,7 @@ ${infoOnline}
   return msg.message_id 
 } 
  
-export async function notifyDriverRateClient(driver, ride) { 
-  const keyboard = { 
-    inline_keyboard: [[ 
-      { text: '⭐ 1', callback_data: `rate_client:${ride.id}:1` }, 
-      { text: '⭐ 2', callback_data: `rate_client:${ride.id}:2` }, 
-      { text: '⭐ 3', callback_data: `rate_client:${ride.id}:3` }, 
-      { text: '⭐ 4', callback_data: `rate_client:${ride.id}:4` }, 
-      { text: '⭐ 5', callback_data: `rate_client:${ride.id}:5` } 
-    ]] 
-  } 
  
-  bot.sendMessage( 
-    driver.telegram_id, 
-    `✅ Corrida concluída!\n\nComo foi o passageiro? Avalie de 1 a 5 estrelas:`, 
-    { reply_markup: keyboard } 
-  ).catch(() => { 
-    console.warn(`[BOT] Não foi possível enviar avaliação para ${driver.telegram_id}`) 
-  }) 
-} 
  
 export async function editGroupMessage(messageId, texto) { 
   bot.editMessageText(texto, { 

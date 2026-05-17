@@ -166,6 +166,35 @@
   </div>
 </div>
 
+<!-- MODAL AVALIAR PASSAGEIRO -->
+<div id="modal-avaliar-passageiro" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4 hidden"> 
+  <div class="bg-white rounded-2xl w-full max-w-sm p-6 space-y-4"> 
+    <div class="text-center"> 
+      <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3"> 
+        <span class="text-3xl">⭐</span> 
+      </div> 
+      <h2 class="text-xl font-bold text-gray-900">Avalie o passageiro</h2> 
+      <p class="text-sm text-gray-500 mt-1">Como foi a corrida?</p> 
+    </div> 
+    <div class="flex justify-center gap-2" id="estrelas-passageiro"> 
+      <button onclick="selecionarEstrelasPassageiro(1)" class="text-4xl text-gray-300 hover:text-yellow-400" data-estrela="1">★</button> 
+      <button onclick="selecionarEstrelasPassageiro(2)" class="text-4xl text-gray-300 hover:text-yellow-400" data-estrela="2">★</button> 
+      <button onclick="selecionarEstrelasPassageiro(3)" class="text-4xl text-gray-300 hover:text-yellow-400" data-estrela="3">★</button> 
+      <button onclick="selecionarEstrelasPassageiro(4)" class="text-4xl text-gray-300 hover:text-yellow-400" data-estrela="4">★</button> 
+      <button onclick="selecionarEstrelasPassageiro(5)" class="text-4xl text-gray-300 hover:text-yellow-400" data-estrela="5">★</button> 
+    </div> 
+    <textarea id="comentario-passageiro" rows="2" placeholder="Comentário (opcional)" 
+      class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></textarea> 
+    <div class="flex gap-2"> 
+      <button onclick="fecharModalAvaliarPassageiro()" class="flex-1 border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm">Pular</button> 
+      <button id="btn-enviar-avaliacao-passageiro" onclick="enviarAvaliacaoPassageiro()" disabled 
+        class="flex-1 bg-green-600 text-white rounded-xl py-2.5 text-sm font-semibold opacity-40 cursor-not-allowed"> 
+        Enviar 
+      </button> 
+    </div> 
+  </div> 
+</div>
+
 <!-- CONTEÚDO PRINCIPAL (HIDDEN ATÉ ACEITE DOS TERMOS) -->
 <div id="conteudo-principal" class="hidden">
   <!-- HEADER --> 
@@ -624,8 +653,11 @@
  let streamCamera = null 
  let motoristOnline = false 
  let corridaAtualId = null 
- let corridaAtualToken = null 
- let corridasIgnoradas = []
+let corridaAtualToken = null 
+let corridasIgnoradas = []
+let rideIdParaAvaliar = null 
+let estrelasPassageiro = 0
+let corridaAvaliadaId = null
 
  // Wake Lock — mantém tela acesa enquanto online 
  let wakeLock = null 
@@ -1160,7 +1192,51 @@
  } 
  
  function descartarFoto() { novaFotoBase64 = null; document.getElementById('area-preview').classList.add('hidden') } 
+
+ function abrirModalAvaliarPassageiro(rideId) { 
+   rideIdParaAvaliar = rideId 
+   estrelasPassageiro = 0 
+   document.getElementById('modal-avaliar-passageiro')?.classList.remove('hidden') 
+   document.getElementById('comentario-passageiro').value = '' 
+   selecionarEstrelasPassageiro(0) 
+ } 
  
+ function fecharModalAvaliarPassageiro() { 
+   document.getElementById('modal-avaliar-passageiro')?.classList.add('hidden') 
+   rideIdParaAvaliar = null 
+ } 
+ 
+ function selecionarEstrelasPassageiro(n) { 
+   estrelasPassageiro = n 
+   const buttons = document.querySelectorAll('#estrelas-passageiro button') 
+   buttons.forEach((btn, i) => { 
+     btn.className = i < n ? 'text-4xl text-yellow-400' : 'text-4xl text-gray-300 hover:text-yellow-400' 
+   }) 
+   const btn = document.getElementById('btn-enviar-avaliacao-passageiro') 
+   if (n > 0) { 
+     btn.disabled = false 
+     btn.classList.remove('opacity-40', 'cursor-not-allowed') 
+   } 
+ } 
+ 
+ async function enviarAvaliacaoPassageiro() { 
+   if (!rideIdParaAvaliar || !estrelasPassageiro) return 
+   const comentario = document.getElementById('comentario-passageiro').value 
+   try { 
+     await fetch('/api/rate', { 
+       method: 'POST', 
+       headers: { 'Content-Type': 'application/json' }, 
+       body: JSON.stringify({ 
+         ride_id: rideIdParaAvaliar, 
+         tipo: 'cliente', 
+         estrelas: estrelasPassageiro, 
+         comentario: comentario || null 
+       }) 
+     }) 
+   } catch(e) {} 
+   fecharModalAvaliarPassageiro() 
+ } 
+
  async function salvarFoto() { 
    if (!novaFotoBase64) return 
    try { 
@@ -1476,6 +1552,10 @@
      document.getElementById('txt-pagamento-valor').textContent = moeda(corrida.valor_motorista || corrida.valor_final || corrida.valor)
      document.getElementById('txt-pagamento-corrida').textContent = `Corrida #${corrida.id}`
      setTimeout(() => { corridaAtualId = null }, 5000)
+     if (corrida.id && !corridaAvaliadaId) { 
+       corridaAvaliadaId = corrida.id 
+       setTimeout(() => abrirModalAvaliarPassageiro(corrida.id), 2000) 
+     }
    } else if (corrida.status === 'concluida' && corrida.pagamento_status !== 'pago' && corrida.pagamento_status !== 'aguardando_pagamento' && (corrida.forma_pagamento === '1' || corrida.forma_pagamento === 1)) {
       qrCard.classList.add('hidden')
       pagamentoConfirmadoCard.classList.add('hidden')
