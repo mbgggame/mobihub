@@ -1284,12 +1284,20 @@
 
  function fecharDetalhePassageiro() { 
    document.getElementById('modal-detalhe-passageiro')?.classList.add('hidden') 
+   const mapaDiv = document.getElementById('mapa-detalhe-passageiro') 
+   if (mapaDiv) { 
+     mapaDiv.classList.add('hidden') 
+     mapaDiv.innerHTML = '' 
+   } 
  } 
 
  async function verDetalhesCorrida(token) { 
    document.getElementById('modal-detalhe-passageiro')?.classList.remove('hidden') 
    const conteudo = document.getElementById('detalhe-passageiro-conteudo') 
    conteudo.innerHTML = '<p class="text-center text-gray-400 py-4">Carregando...</p>' 
+   const mapaDiv = document.getElementById('mapa-detalhe-passageiro') 
+   mapaDiv.classList.add('hidden') 
+   mapaDiv.innerHTML = '' 
 
    try { 
      const r = await fetch(`/api/rides/token/${token}`) 

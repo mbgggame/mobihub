@@ -1266,12 +1266,20 @@ let corridasJaAvaliadas = new Set()
 
  function fecharModalDetalheCorrida() { 
    document.getElementById('modal-detalhe-corrida')?.classList.add('hidden') 
+   const mapaDiv = document.getElementById('mapa-detalhe-motorista') 
+   if (mapaDiv) { 
+     mapaDiv.classList.add('hidden') 
+     mapaDiv.innerHTML = '' 
+   } 
  } 
 
  async function abrirDetalheCorrida(token) { 
    document.getElementById('modal-detalhe-corrida')?.classList.remove('hidden') 
    const conteudo = document.getElementById('detalhe-corrida-conteudo') 
    conteudo.innerHTML = '<p class="text-center text-gray-400 py-4">Carregando...</p>' 
+   const mapaDiv = document.getElementById('mapa-detalhe-motorista') 
+   mapaDiv.classList.add('hidden') 
+   mapaDiv.innerHTML = '' 
 
    try { 
      const r = await fetch(`/api/rides/token/${token}`) 
