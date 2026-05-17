@@ -851,13 +851,14 @@
    }).addTo(map) 
     
    pontos[tipo] = { lat, lng, endereco } 
+   const enderecoTexto = typeof endereco === 'object' ? endereco.endereco : encurtarEndereco(String(endereco)) 
    if (tipo === 'origem') { 
-     origem = endereco 
-     document.getElementById('txt-origem').textContent = endereco 
+     origem = enderecoTexto 
+     document.getElementById('txt-origem').textContent = enderecoTexto 
      document.getElementById('ponto-origem').classList.remove('hidden') 
    } else { 
-     destino = endereco 
-     document.getElementById('txt-destino').textContent = endereco 
+     destino = enderecoTexto 
+     document.getElementById('txt-destino').textContent = enderecoTexto 
      document.getElementById('ponto-destino').classList.remove('hidden') 
    } 
    if (pontos.origem && pontos.destino) { 
