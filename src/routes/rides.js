@@ -1,6 +1,6 @@
 import { query as dbQuery, pool, query } from '../db.js' 
 import { requireAuth } from '../middleware/auth.js' 
-import { sendRideToGroup, notifyDriverRateClient, editGroupMessage } from '../telegram.js' 
+import { sendRideToGroup, editGroupMessage } from '../telegram.js' 
 import { v4 as uuidv4 } from 'uuid' 
 import { calculateInitialWaitCost, calculateStopCost, calculateTotalRideCost, calcularTempoMinutos, podeMotoristaCancel } from '../billing.js'
 import { getIo } from '../server.js' 
@@ -218,13 +218,6 @@ export default async function ridesRoutes(fastify) {
         const driverResult = await dbQuery('SELECT * FROM drivers WHERE id = $1', [ride.driver_id]) 
         const driver = driverResult.rows[0]
         if (driver) { 
-          console.log('[DEBUG] Enviando avaliação para motorista:', driver.telegram_id) 
-          try { 
-            await notifyDriverRateClient(driver, ride) 
-            console.log('[DEBUG] Avaliação enviada com sucesso') 
-          } catch(err) { 
-            console.error('[DEBUG] Erro ao enviar avaliação:', err.message) 
-          } 
           await dbQuery('UPDATE drivers SET total_viagens = total_viagens + 1 WHERE id = $1', [driver.id]) 
         } 
       } 
