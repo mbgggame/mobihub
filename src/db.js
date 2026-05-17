@@ -400,14 +400,15 @@ export async function initDB() {
  
   await query(` 
     INSERT INTO configuracoes (chave, valor) VALUES 
+      ('espera_taxa_cancelamento', '10.00'), 
       ('espera_minutos_gratis', '3'), 
       ('espera_valor_minuto', '0.60'), 
       ('espera_max_cancelamento', '10'), 
-      ('espera_taxa_cancelamento', '10.00'), 
       ('parada_minutos_gratis', '5'), 
       ('parada_valor_minuto', '0.60'), 
-      ('valor_minimo_corrida', '15.00')
-    ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor
+      ('parada_auto_metros', '50'), 
+      ('parada_auto_segundos', '60') 
+      ON CONFLICT (chave) DO NOTHING 
   `) 
  
   await seedAdmin() 
