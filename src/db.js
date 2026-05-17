@@ -25,7 +25,7 @@ export async function initDB() {
       id SERIAL PRIMARY KEY, 
       nome TEXT NOT NULL, 
       telefone TEXT, 
-      telegram_id TEXT UNIQUE NOT NULL, 
+      telegram_id TEXT, 
       modelo_carro TEXT NOT NULL, 
       ano_carro TEXT NOT NULL, 
       cor_carro TEXT NOT NULL, 
@@ -150,6 +150,7 @@ export async function initDB() {
     
     -- Remove unique constraint on telegram_id (allow same ID for client -> driver)
     ALTER TABLE drivers DROP CONSTRAINT IF EXISTS drivers_telegram_id_key;
+    ALTER TABLE drivers ALTER COLUMN telegram_id DROP NOT NULL;
   `) 
  
   await query(` 
