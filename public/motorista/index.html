@@ -924,15 +924,23 @@ let corridasJaAvaliadas = new Set()
        lista.innerHTML = transacoes.map(t => `
          <div class="border border-gray-200 rounded-lg p-3">
            <div class="flex items-center justify-between">
-             <div>
+             <div class="flex-1">
                <p class="text-sm font-semibold text-gray-900">${t.descricao}</p>
                <p class="text-xs text-gray-500">${new Date(t.created_at).toLocaleString('pt-BR')}</p>
              </div>
-             <div class="text-right">
-               <p class="text-lg font-bold ${t.valor >= 0 ? 'text-green-600' : 'text-red-600'}">
-                 ${t.valor >= 0 ? '+' : ''}${moeda(t.valor)}
-               </p>
-               <p class="text-xs text-gray-400">${moeda(t.saldo_acumulado)}</p>
+             <div class="flex items-center gap-3">
+               ${t.ride_token ? `
+                 <button onclick="abrirDetalheCorrida('${t.ride_token}')" 
+                   class="text-xs border border-gray-300 text-gray-600 px-2 py-1 rounded-lg hover:bg-gray-50 whitespace-nowrap"> 
+                   Ver detalhes 
+                 </button>
+               ` : ''}
+               <div class="text-right">
+                 <p class="text-lg font-bold ${t.valor >= 0 ? 'text-green-600' : 'text-red-600'}">
+                   ${t.valor >= 0 ? '+' : ''}${moeda(t.valor)}
+                 </p>
+                 <p class="text-xs text-gray-400">${moeda(t.saldo_acumulado)}</p>
+               </div>
              </div>
            </div>
          </div>

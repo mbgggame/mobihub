@@ -272,10 +272,11 @@ export default async function publicRoutes(fastify) {
     if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' })
 
     const transacoes = (await query(`
-      SELECT id, tipo, descricao, valor, created_at, ride_id
-      FROM driver_transactions
-      WHERE driver_id = $1
-      ORDER BY created_at ASC
+      SELECT dt.id, dt.tipo, dt.descricao, dt.valor, dt.created_at, dt.ride_id, r.token as ride_token
+      FROM driver_transactions dt
+      LEFT JOIN rides r ON dt.ride_id = r.id
+      WHERE dt.driver_id = $1
+      ORDER BY dt.created_at ASC
     `, [driver.id])).rows
 
     let saldoTotal = 0
@@ -1373,7 +1374,7 @@ export default async function publicRoutes(fastify) {
     const client = (await query('SELECT id FROM clients WHERE telefone = $1', [telefone])).rows[0]
     if (!client) return { rides: [] }
     const rides = (await query(`
-      SELECT id, origem, destino, origem_lat, origem_lng, destino_lat, destino_lng, created_at, status
+      SELECT id, token, origem, destino, origem_lat, origem_lng, destino_lat, destino_lng, created_at, status, valor, forma_pagamento
       FROM rides
       WHERE client_id = $1
       ORDER BY created_at DESC
