@@ -465,13 +465,15 @@ export default async function publicRoutes(fastify) {
         return reply.code(400).send({ error: 'Data/hora do agendamento é obrigatória' }) 
       } 
       const agendadaParaDate = new Date(agendada_para) 
-      const minimo2horas = new Date(Date.now() + 2 * 60 * 60 * 1000) 
-      const maximo15dias = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000) 
+      const agora = new Date() 
       
-      if (agendadaParaDate < minimo2horas) { 
+      // Diferença em horas 
+      const diferencaHoras = (agendadaParaDate - agora) / (1000 * 60 * 60) 
+      
+      if (diferencaHoras < 2) { 
         return reply.code(400).send({ error: 'Agendamento deve ser com mínimo 2 horas de antecedência' }) 
       } 
-      if (agendadaParaDate > maximo15dias) { 
+      if (diferencaHoras > 15 * 24) { 
         return reply.code(400).send({ error: 'Agendamento deve ser com máximo 15 dias de antecedência' }) 
       } 
     } 
