@@ -439,12 +439,22 @@ export async function initDB() {
 
   // Adicionar coluna com_lider se não existir
   await query(`ALTER TABLE split_rules ADD COLUMN IF NOT EXISTS com_lider BOOLEAN DEFAULT false`)
-  
+
   // Adicionar colunas para cartão de crédito e créditos
   await query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS asaas_credit_card_token TEXT`)
   await query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS asaas_credit_card_brand TEXT`)
   await query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS asaas_credit_card_last_digits TEXT`)
   await query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS creditos DOUBLE PRECISION DEFAULT 0`)
+
+  // Agendamento com sinal (30%)
+  await query(`
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS sinal_valor DOUBLE PRECISION DEFAULT 0;
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS sinal_charge_id TEXT;
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS sinal_pix_payload TEXT;
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS sinal_pago BOOLEAN DEFAULT FALSE;
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS sinal_estornado BOOLEAN DEFAULT FALSE;
+    ALTER TABLE drivers ADD COLUMN IF NOT EXISTS bloqueado_agendamento_ate TIMESTAMP;
+  `)
 
   // Seed das regras de split padrão
   const splitExisting = await query('SELECT COUNT(*) as total FROM split_rules') 

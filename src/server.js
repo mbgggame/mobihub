@@ -11,11 +11,12 @@ import { Server } from 'socket.io'
 import { initDB } from './db.js' 
 import { initBot } from './telegram.js' 
 import { initScheduler } from './scheduler.js' 
-import authRoutes from './routes/auth.js' 
-import driversRoutes from './routes/drivers.js' 
-import ridesRoutes from './routes/rides.js' 
-import publicRoutes from './routes/public.js' 
-import integracoesRoutes from './routes/integracoes.js' 
+import authRoutes from './routes/auth.js'
+import driversRoutes from './routes/drivers.js'
+import ridesRoutes from './routes/rides.js'
+import publicRoutes from './routes/public.js'
+import integracoesRoutes from './routes/integracoes.js'
+import agendamentosRoutes from './routes/agendamentos.js' 
 
 const __dirname = dirname(fileURLToPath(import.meta.url)) 
 
@@ -42,11 +43,12 @@ fastify.setErrorHandler((error, request, reply) => {
 }) 
 
 // Rotas API 
-await fastify.register(authRoutes) 
-await fastify.register(driversRoutes) 
-await fastify.register(ridesRoutes) 
-await fastify.register(publicRoutes) 
-await fastify.register(integracoesRoutes) 
+await fastify.register(authRoutes)
+await fastify.register(driversRoutes)
+await fastify.register(ridesRoutes)
+await fastify.register(publicRoutes)
+await fastify.register(integracoesRoutes)
+await fastify.register(agendamentosRoutes) 
 
 await fastify.register(fastifyStatic, { 
   root: join(__dirname, '..', 'public'), 
@@ -90,11 +92,14 @@ initScheduler()
 // Inicializa Socket.IO (antes de listen!) 
 ioInstance = new Server(fastify.server, { cors: { origin: '*' } }); 
 ioInstance.on('connection', (socket) => { 
-  socket.on('motorista:posicao', (data) => { 
-    socket.broadcast.to(`ride:${data.rideId}`).emit('motorista:posicao', data); 
-  }); 
-  socket.on('entrar:corrida', (rideId) => { 
-    socket.join(`ride:${rideId}`); 
+  socket.on('motorista:posicao', (data) => {
+    socket.broadcast.to(`ride:${data.rideId}`).emit('motorista:posicao', data);
+  });
+  socket.on('entrar:corrida', (rideId) => {
+    socket.join(`ride:${rideId}`);
+  });
+  socket.on('entrar:motorista', (driverId) => {
+    socket.join(`motorista:${driverId}`);
   }); 
 }); 
 

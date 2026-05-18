@@ -8,14 +8,15 @@ async function getConfig(chave) {
   } catch { return null } 
 } 
  
-export function initScheduler() { 
-  setInterval(async () => { 
-    await verificarAgendamentos() 
-    await verificarChegada() 
-    await limparCorridasPresas() 
-  }, 30 * 1000) // verifica a cada 30 segundos 
- 
-  console.log('[SCHEDULER] Iniciado — verifica a cada 30 segundos') 
+export function initScheduler() {
+  setInterval(async () => {
+    await verificarAgendamentos()
+    await verificarNaoComparecimento()
+    await verificarChegada()
+    await limparCorridasPresas()
+  }, 30 * 1000) // verifica a cada 30 segundos
+
+  console.log('[SCHEDULER] Iniciado — verifica a cada 30 segundos')
 }
 
 async function limparCorridasPresas() {
@@ -41,24 +42,26 @@ async function verificarAgendamentos() {
     const agora = new Date() 
     let corridas = [] 
  
-    if (disparoImediato) { 
-      const result = await query(` 
-        SELECT * FROM rides 
-        WHERE tipo = 'agendada' 
-        AND status = 'agendada' 
-        AND disparada_at IS NULL 
-      `) 
-      corridas = result.rows 
-    } else { 
-      const limite = new Date(agora.getTime() + minAntes * 60 * 1000) 
-      const result = await query(` 
-        SELECT * FROM rides 
-        WHERE tipo = 'agendada' 
-        AND status = 'agendada' 
-        AND disparada_at IS NULL 
-        AND agendada_para <= $1 
-      `, [limite.toISOString()]) 
-      corridas = result.rows 
+    if (disparoImediato) {
+      const result = await query(`
+        SELECT * FROM rides
+        WHERE tipo = 'agendada'
+        AND status = 'agendada'
+        AND disparada_at IS NULL
+        AND (sinal_pago = true OR sinal_valor IS NULL OR sinal_valor = 0)
+      `)
+      corridas = result.rows
+    } else {
+      const limite = new Date(agora.getTime() + minAntes * 60 * 1000)
+      const result = await query(`
+        SELECT * FROM rides
+        WHERE tipo = 'agendada'
+        AND status = 'agendada'
+        AND disparada_at IS NULL
+        AND agendada_para <= $1
+        AND (sinal_pago = true OR sinal_valor IS NULL OR sinal_valor = 0)
+      `, [limite.toISOString()])
+      corridas = result.rows
     } 
  
     for (const ride of corridas) { 
@@ -83,6 +86,52 @@ async function verificarAgendamentos() {
   } 
 } 
  
+// Detecta automaticamente motoristas que não confirmaram presença 30min após o horário agendado
+async function verificarNaoComparecimento() {
+  try {
+    const result = await query(`
+      SELECT r.*, d.telegram_id as driver_telegram, c.telegram_id as client_telegram, c.id as client_id_val
+      FROM rides r
+      LEFT JOIN drivers d ON r.driver_id = d.id
+      LEFT JOIN clients c ON r.client_id = c.id
+      WHERE r.tipo = 'agendada'
+        AND r.status = 'agendada_aceita'
+        AND r.agendada_para < NOW() - INTERVAL '30 minutes'
+    `)
+
+    for (const ride of result.rows) {
+      console.log(`[SCHEDULER] Não comparecimento detectado: motorista da corrida agendada #${ride.id}`)
+
+      if (ride.driver_id) {
+        await query(
+          "UPDATE drivers SET bloqueado_agendamento_ate = NOW() + INTERVAL '1 month' WHERE id = $1",
+          [ride.driver_id]
+        )
+      }
+
+      await query(
+        "UPDATE rides SET status = 'cancelada', cancelada_at = CURRENT_TIMESTAMP, cancelado_por = 'driver_nao_compareceu' WHERE id = $1",
+        [ride.id]
+      )
+
+      // Reembolsa passageiro em créditos automaticamente
+      if (ride.client_id && ride.sinal_pago && parseFloat(ride.sinal_valor || 0) > 0) {
+        await query('UPDATE clients SET creditos = creditos + $1 WHERE id = $2', [ride.sinal_valor, ride.client_id])
+      }
+      const io = getIo()
+      if (io) {
+        io.to(`ride:${ride.id}`).emit('agendamento:cancelado', {
+          rideId: ride.id,
+          motivo: 'driver_nao_compareceu',
+          creditos_restituidos: parseFloat(ride.sinal_valor || 0)
+        })
+      }
+    }
+  } catch (err) {
+    console.error('[SCHEDULER] Erro verificarNaoComparecimento:', err.message)
+  }
+}
+
 // Verifica chegada automática do motorista ao destino 
 async function verificarChegada() { 
   try { 
