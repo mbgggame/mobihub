@@ -1526,7 +1526,9 @@ export default async function publicRoutes(fastify) {
       const { telefone, aceite_responsabilidade } = request.body 
       if (!telefone) return reply.code(400).send({ error: 'Telefone obrigatório' }) 
       
-      await query(` 
+      console.log('[ACEITE PASSAGEIRO] telefone:', telefone, '| aceite_responsabilidade:', aceite_responsabilidade) 
+      
+      const result = await query(` 
         UPDATE clients SET 
           aceitou_termos = true, 
           data_aceite_termos = CURRENT_TIMESTAMP, 
@@ -1535,6 +1537,8 @@ export default async function publicRoutes(fastify) {
           aceite_responsabilidade = $2 
         WHERE telefone = $3 
       `, [request.ip, aceite_responsabilidade ? true : false, telefone]) 
+      
+      console.log('[ACEITE PASSAGEIRO] Rows updated:', result.rowCount) 
       
       return { success: true } 
     } catch(err) { 
