@@ -573,6 +573,9 @@ export default async function publicRoutes(fastify) {
       response.pix_payload = pixPayload
       response.agendada_para = agendada_para
     }
+    if (tipo === 'agendada') { 
+      console.log('[SOLICITAR AGENDADA] sinal_valor:', sinalValor, '| pix_payload:', pixPayload, '| response:', JSON.stringify(response)) 
+    }
     return response 
   })
 
