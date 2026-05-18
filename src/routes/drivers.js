@@ -753,4 +753,38 @@ export default async function driversRoutes(fastify) {
 
     return { transactions: transactionsWithBalance, saldo_final: saldoAcumulado }
   })
+
+  fastify.put('/api/admin/drivers/:id/toggle', { preHandler: requireAuth }, async (request, reply) => {
+    const { id } = request.params
+    const { ativo } = request.body
+    await query('UPDATE drivers SET ativo = $1 WHERE id = $2', [ativo, id])
+    return { mensagem: 'Status atualizado' }
+  })
+
+  fastify.get('/api/admin/motoristas/realtime', { preHandler: requireAuth }, async () => { 
+    const result = await query(` 
+      SELECT 
+        d.id, d.nome, d.modelo_carro, d.cor_carro, d.placa, 
+        d.online, d.ativo, d.status_cadastro, d.token_perfil, 
+        d.media_avaliacao, d.total_viagens, d.total_avaliacoes, 
+        d.balance_due, 
+        dl.lat, dl.lng, dl.updated_at as location_at, 
+        r.id as corrida_id, r.status as corrida_status, 
+        r.origem, r.destino, r.valor, r.aceita_at, r.created_at as corrida_criada_at, 
+        c.nome as passageiro_nome, 
+        EXTRACT(EPOCH FROM (NOW() - dl.updated_at)) as segundos_sem_update, 
+        (SELECT COUNT(*) FROM rides r2 WHERE r2.driver_id = d.id AND r2.status = 'concluida' AND DATE(r2.concluida_at) = CURRENT_DATE) as corridas_hoje, 
+        (SELECT COALESCE(SUM(r2.valor_motorista), 0) FROM rides r2 WHERE r2.driver_id = d.id AND r2.status = 'concluida' AND DATE(r2.concluida_at) = CURRENT_DATE) as ganhos_hoje 
+      FROM drivers d 
+      LEFT JOIN LATERAL ( 
+        SELECT lat, lng, updated_at FROM driver_locations 
+        WHERE driver_id = d.id ORDER BY updated_at DESC LIMIT 1 
+      ) dl ON true 
+      LEFT JOIN rides r ON r.driver_id = d.id AND r.status IN ('aceita', 'em_viagem', 'aberta') 
+      LEFT JOIN clients c ON r.client_id = c.id 
+      WHERE d.status_cadastro IN ('aprovado', 'pendente', 'reprovado') 
+      ORDER BY d.online DESC, d.nome ASC 
+    `) 
+    return result.rows 
+  })
 }
