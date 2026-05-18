@@ -467,8 +467,14 @@ export default async function publicRoutes(fastify) {
       const agendadaParaDate = new Date(agendada_para) 
       const agora = new Date() 
       
+      console.log('[AGENDAMENTO] agendada_para recebido:', agendada_para) 
+      console.log('[AGENDAMENTO] agendadaParaDate:', agendadaParaDate.toISOString()) 
+      console.log('[AGENDAMENTO] agora:', agora.toISOString()) 
+      
       // Diferença em horas 
       const diferencaHoras = (agendadaParaDate - agora) / (1000 * 60 * 60) 
+      
+      console.log('[AGENDAMENTO] diferencaHoras:', diferencaHoras)
       
       if (diferencaHoras < 2) { 
         return reply.code(400).send({ error: 'Agendamento deve ser com mínimo 2 horas de antecedência' }) 
