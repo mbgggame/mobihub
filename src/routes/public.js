@@ -1516,6 +1516,11 @@ export default async function publicRoutes(fastify) {
     return result.rows 
   })
 
+  fastify.get('/api/temp/check-termos-passageiro', async (request, reply) => { 
+    const result = await query('SELECT id, nome, telefone, aceitou_termos, versao_termos, aceite_responsabilidade FROM clients ORDER BY id DESC LIMIT 10') 
+    return result.rows 
+  })
+
   fastify.post('/api/client/aceitar-termos', async (request, reply) => { 
     try { 
       const { telefone, aceite_responsabilidade } = request.body 
