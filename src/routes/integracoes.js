@@ -41,6 +41,13 @@ export default async function integracoesRoutes(fastify) {
               io.to(`ride:${rideId}`).emit('agendamento:sinal_confirmado', { rideId })
               // Notifica todos os motoristas conectados sobre novo agendamento disponível
               io.emit('nova_corrida', ride)
+              // Atualizar badge para todos motoristas 
+              const disponiveis = (await query(` 
+                SELECT COUNT(*) as total FROM rides 
+                WHERE tipo = 'agendada' AND status = 'agendada' 
+                AND sinal_pago = true AND driver_id IS NULL AND agendada_para > NOW() 
+              `)).rows[0] 
+              io.emit('agendamentos:atualizar', { count: parseInt(disponiveis.total) }) 
             }
           }
         } else if (externalReference.startsWith('restante_')) {

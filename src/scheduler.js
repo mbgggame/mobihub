@@ -38,59 +38,64 @@ async function limparCorridasPresas() {
  
 async function verificarAgendamentos() { 
   try { 
-    const disparoImediato = await getConfig('agendamento_disparo_imediato') === 'true' 
-    const minAntes = parseInt(await getConfig('agendamento_minutos_antes') || '30') 
-    console.log('[SCHEDULER] disparoImediato:', disparoImediato, '| minAntes:', minAntes)
     const agora = new Date() 
-    let corridas = [] 
- 
-    if (disparoImediato) {
-      const result = await query(`
-        SELECT * FROM rides
-        WHERE tipo = 'agendada'
-        AND status = 'agendada'
-        AND disparada_at IS NULL
-        AND (sinal_pago = true OR sinal_valor IS NULL OR sinal_valor = 0)
-      `)
-      corridas = result.rows
-    } else {
-      const limite = new Date(agora.getTime() + minAntes * 60 * 1000)
-      const result = await query(`
-        SELECT * FROM rides
-        WHERE tipo = 'agendada'
-        AND status = 'agendada'
-        AND disparada_at IS NULL
-        AND agendada_para > NOW()
-        AND agendada_para <= $1
-        AND (sinal_pago = true OR sinal_valor IS NULL OR sinal_valor = 0)
-      `, [limite.toISOString()])
-      corridas = result.rows
+    const io = getIo() 
+
+    // 1. Notificar motoristas via socket sobre novos agendamentos disponíveis (sinal pago, sem motorista) 
+    const disponiveis = (await query(` 
+      SELECT COUNT(*) as total FROM rides 
+      WHERE tipo = 'agendada' 
+      AND status = 'agendada' 
+      AND sinal_pago = true 
+      AND driver_id IS NULL 
+      AND agendada_para > NOW() 
+    `)).rows[0] 
+
+    if (parseInt(disponiveis.total) > 0 && io) { 
+      io.emit('agendamentos:atualizar', { count: parseInt(disponiveis.total) }) 
     } 
- 
-    for (const ride of corridas) { 
-      console.log(`[SCHEDULER] Disparando corrida agendada #${ride.id}`) 
-      try { 
-        // Em vez de Telegram, emite via socket e atualiza status 
-        await query(` 
-          UPDATE rides SET 
-            status = 'aberta', 
-            disparada_at = CURRENT_TIMESTAMP 
-          WHERE id = $1 
-        `, [ride.id]) 
- 
-        const io = getIo() 
-        if (io) { 
-          io.emit('nova_corrida_agendada', { 
-            ...ride, 
-            tipo: 'agendada', 
-            agendada_para: ride.agendada_para 
-          }) 
-        } 
-        console.log(`[SCHEDULER] Corrida agendada #${ride.id} disparada via socket`) 
-      } catch(err) { 
-        console.error(`[SCHEDULER] Erro ao disparar corrida #${ride.id}:`, err.message) 
+
+    // 2. Alertar 30 minutos antes para corridas aceitas 
+    const limite31min = new Date(agora.getTime() + 31 * 60 * 1000) 
+    const limite29min = new Date(agora.getTime() + 29 * 60 * 1000) 
+
+    const proximasCorreidas = (await query(` 
+      SELECT r.*, d.nome as driver_nome, d.id as driver_id_val, 
+             c.nome as client_nome 
+      FROM rides r 
+      LEFT JOIN drivers d ON r.driver_id = d.id 
+      LEFT JOIN clients c ON r.client_id = c.id 
+      WHERE r.tipo = 'agendada' 
+      AND r.status = 'agendada_aceita' 
+      AND r.alerta_30min_enviado IS NULL 
+      AND r.agendada_para <= $1 
+      AND r.agendada_para >= $2 
+    `, [limite31min.toISOString(), limite29min.toISOString()])).rows 
+
+    for (const ride of proximasCorreidas) { 
+      console.log(`[SCHEDULER] Alerta 30min corrida agendada #${ride.id}`) 
+      
+      if (io) { 
+        io.to(`motorista:${ride.driver_id_val}`).emit('agendamento:alerta_30min', { 
+          rideId: ride.id, 
+          token: ride.token, 
+          mensagem: '⏰ Sua corrida agendada começa em 30 minutos! Confirme sua presença.', 
+          origem: ride.origem, 
+          destino: ride.destino, 
+          agendada_para: ride.agendada_para 
+        }) 
+        
+        io.to(`ride:${ride.id}`).emit('agendamento:alerta_30min', { 
+          rideId: ride.id, 
+          mensagem: '⏰ Seu motorista chega em 30 minutos!', 
+          driver_nome: ride.driver_nome, 
+          agendada_para: ride.agendada_para 
+        }) 
       } 
+
+      await query('UPDATE rides SET alerta_30min_enviado = CURRENT_TIMESTAMP WHERE id = $1', [ride.id]) 
     } 
+
   } catch(err) { 
     console.error('[SCHEDULER] Erro verificarAgendamentos:', err.message) 
   } 

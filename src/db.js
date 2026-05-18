@@ -454,6 +454,7 @@ export async function initDB() {
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS sinal_pago BOOLEAN DEFAULT FALSE;
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS sinal_estornado BOOLEAN DEFAULT FALSE;
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS bloqueado_agendamento_ate TIMESTAMP;
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS alerta_30min_enviado TIMESTAMP;
   `)
 
   // Seed das regras de split padrão

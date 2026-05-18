@@ -1617,13 +1617,17 @@
      location.href = '/r/' + data.token
    })
    socket.on('corrida:status_atualizado', (data) => {
-     console.log('[SOCKET] corrida:status_atualizado', data)
-    if (data.status === 'aceita' && data.token) {
-      location.href = '/r/' + data.token
-    } else if (data.status === 'cancelada') {
-      alert('Corrida cancelada!')
-      location.reload()
-    }
+    console.log('[SOCKET] corrida:status_atualizado', data)
+   if (data.status === 'aceita' && data.token) {
+     location.href = '/r/' + data.token
+   } else if (data.status === 'cancelada') {
+     alert('Corrida cancelada!')
+     location.reload()
+   }
+  })
+  
+  socket.on('agendamento:alerta_30min', (data) => { 
+    alert(`⏰ ${data.mensagem}\n\n🚗 Motorista: ${data.driver_nome || 'confirmado'}`) 
   })
  }
 

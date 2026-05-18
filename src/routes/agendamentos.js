@@ -268,6 +268,13 @@ export default async function agendamentosRoutes(fastify) {
         cor_carro: driver.cor_carro,
         placa: driver.placa
       })
+      // Atualizar badge para todos motoristas 
+      const disponiveis = (await query(` 
+        SELECT COUNT(*) as total FROM rides 
+        WHERE tipo = 'agendada' AND status = 'agendada' 
+        AND sinal_pago = true AND driver_id IS NULL AND agendada_para > NOW() 
+      `)).rows[0] 
+      io.emit('agendamentos:atualizar', { count: parseInt(disponiveis.total) }) 
     }
 
     return { mensagem: 'Agendamento aceito com sucesso!' }
@@ -291,6 +298,17 @@ export default async function agendamentosRoutes(fastify) {
       "UPDATE rides SET status = 'agendada', driver_id = NULL, aceita_at = NULL WHERE id = $1",
       [ride.id]
     )
+
+    const io = getIo()
+    if (io) {
+      // Atualizar badge para todos motoristas 
+      const disponiveis = (await query(` 
+        SELECT COUNT(*) as total FROM rides 
+        WHERE tipo = 'agendada' AND status = 'agendada' 
+        AND sinal_pago = true AND driver_id IS NULL AND agendada_para > NOW() 
+      `)).rows[0] 
+      io.emit('agendamentos:atualizar', { count: parseInt(disponiveis.total) }) 
+    }
 
     return { mensagem: 'Agendamento recusado. A corrida voltou para a fila.' }
   })
@@ -492,8 +510,15 @@ export default async function agendamentosRoutes(fastify) {
         rideId: ride.id, 
         sinal_valor: ride.sinal_valor 
       }) 
+      // Atualizar badge para todos motoristas 
+      const disponiveis = (await query(` 
+        SELECT COUNT(*) as total FROM rides 
+        WHERE tipo = 'agendada' AND status = 'agendada' 
+        AND sinal_pago = true AND driver_id IS NULL AND agendada_para > NOW() 
+      `)).rows[0] 
+      io.emit('agendamentos:atualizar', { count: parseInt(disponiveis.total) }) 
     } 
- 
+
     return { mensagem: 'Sinal simulado com sucesso!', corrida_id: id, sinal_valor: ride.sinal_valor } 
   })
 }

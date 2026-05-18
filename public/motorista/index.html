@@ -805,6 +805,21 @@ socket.on('nova_corrida_agendada', (corrida) => {
   if (motoristOnline && !corridasIgnoradas.includes(corrida.id) && !corridaAtualId) {
     mostrarNovaCorrida(corrida)
   }
+})
+
+socket.on('agendamentos:atualizar', (data) => { 
+  const badge = document.getElementById('badge-agendamentos') 
+  if (badge && data.count > 0) { 
+    badge.textContent = data.count 
+    badge.classList.remove('hidden') 
+  } 
+})
+
+socket.on('agendamento:alerta_30min', (data) => { 
+  tocarAlerta() 
+  if (confirm(`⏰ ${data.mensagem}\n\n📍 ${data.origem || ''}\n🏁 ${data.destino || ''}\n\nConfirmar presença agora?`)) { 
+    abrirModalAgendamentos() 
+  } 
 }) 
  
  // BUG FIX 1: Áudio Motorista 
