@@ -255,6 +255,27 @@
   </div> 
 </div>
 
+<!-- MODAL AGENDAMENTOS -->
+<div id="modal-agendamentos" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4 py-6 hidden"> 
+  <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto"> 
+    <div class="p-6 space-y-4"> 
+      <div class="flex items-center justify-between"> 
+        <h2 class="text-xl font-bold text-gray-900">🗓️ Agendamentos</h2> 
+        <button onclick="fecharModalAgendamentos()" class="text-gray-400 hover:text-gray-600 text-2xl">✕</button> 
+      </div> 
+      <div id="aviso-bloqueio-agendamento" class="hidden bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700"></div> 
+      <div> 
+        <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Disponíveis para aceitar</p> 
+        <div id="lista-agendamentos-disponiveis" class="space-y-2"></div> 
+      </div> 
+      <div> 
+        <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Meus agendamentos aceitos</p> 
+        <div id="lista-meus-agendamentos" class="space-y-2"></div> 
+      </div> 
+    </div> 
+  </div> 
+</div>
+
 <!-- CONTEÚDO PRINCIPAL (HIDDEN ATÉ ACEITE DOS TERMOS) -->
 <div id="conteudo-principal" class="hidden">
   <!-- HEADER --> 
@@ -412,6 +433,20 @@
     </div>
     <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+    </svg>
+  </button>
+
+  <!-- BOTÃO MEUS AGENDAMENTOS -->
+  <button onclick="abrirModalAgendamentos()" class="w-full bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between hover:bg-gray-50">
+    <div class="flex items-center gap-3">
+      <span class="text-xl">🗓️</span>
+      <div>
+        <p class="text-sm font-semibold text-gray-900">Meus Agendamentos</p>
+        <p class="text-xs text-gray-500">Ver corridas agendadas</p>
+      </div>
+    </div>
+    <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linecap="round" stroke-width="2" d="M9 5l7 7-7 7"/>
     </svg>
   </button>
 
@@ -2173,9 +2208,73 @@ let corridasJaAvaliadas = new Set()
  function pararLocalizacao() { if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null } } 
  function desbloquearAudio() { const a = document.getElementById('audio-corrida'); a.volume = 0; a.play().then(() => { a.pause(); a.currentTime = 0; a.volume = 1; document.getElementById('card-audio-bloqueado').classList.add('hidden') }) } 
  
+ function fecharModalAgendamentos() { 
+  document.getElementById('modal-agendamentos')?.classList.add('hidden') 
+} 
+
+async function abrirModalAgendamentos() { 
+  document.getElementById('modal-agendamentos')?.classList.remove('hidden') 
+  const r = await fetch(`/api/motorista/${tokenMotorista}/agendamentos`) 
+  const d = await r.json() 
+
+  const avisoEl = document.getElementById('aviso-bloqueio-agendamento') 
+  if (d.bloqueado) { 
+    avisoEl.textContent = `⚠️ Você está bloqueado de aceitar agendamentos até ${new Date(d.bloqueado_ate).toLocaleDateString('pt-BR')}` 
+    avisoEl.classList.remove('hidden') 
+  } else { 
+    avisoEl.classList.add('hidden') 
+  } 
+
+  const listaDisp = document.getElementById('lista-agendamentos-disponiveis') 
+  listaDisp.innerHTML = d.disponiveis?.length ? d.disponiveis.map(ag => ` 
+    <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-2"> 
+      <p class="text-sm font-semibold">${ag.origem} → ${ag.destino}</p> 
+      <p class="text-xs text-gray-500">📅 ${new Date(ag.agendada_para).toLocaleString('pt-BR')}</p> 
+      <p class="text-xs text-green-700">💰 R$ ${Number(ag.valor).toFixed(2)} • Sinal pago: R$ ${Number(ag.sinal_valor).toFixed(2)}</p> 
+      <p class="text-xs text-gray-500">👤 ${ag.client_nome || 'Passageiro'}</p> 
+      <button onclick="aceitarAgendamento(${ag.id})" class="w-full bg-green-600 text-white rounded-lg py-2 text-sm font-semibold">✅ Aceitar</button> 
+    </div> 
+  `).join('') : '<p class="text-sm text-gray-400 text-center py-4">Nenhum agendamento disponível</p>' 
+
+  const listaMeus = document.getElementById('lista-meus-agendamentos') 
+  listaMeus.innerHTML = d.meus_agendamentos?.length ? d.meus_agendamentos.map(ag => ` 
+    <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-2"> 
+      <p class="text-sm font-semibold">${ag.origem} → ${ag.destino}</p> 
+      <p class="text-xs text-gray-500">📅 ${new Date(ag.agendada_para).toLocaleString('pt-BR')}</p> 
+      <p class="text-xs text-green-700">💰 R$ ${Number(ag.valor).toFixed(2)}</p> 
+      <div class="flex gap-2"> 
+        <button onclick="confirmarPresenca(${ag.id})" class="flex-1 bg-blue-600 text-white rounded-lg py-1.5 text-xs font-semibold">✅ Confirmar presença</button> 
+        <button onclick="recusarAgendamento(${ag.id})" class="flex-1 border border-red-300 text-red-600 rounded-lg py-1.5 text-xs">Desistir</button> 
+      </div> 
+    </div> 
+  `).join('') : '<p class="text-sm text-gray-400 text-center py-4">Nenhum agendamento aceito</p>' 
+} 
+
+async function aceitarAgendamento(id) { 
+  const r = await fetch(`/api/motorista/${tokenMotorista}/agendamentos/${id}/aceitar`, { method: 'POST' }) 
+  const d = await r.json() 
+  alert(d.mensagem || d.error) 
+  abrirModalAgendamentos() 
+} 
+
+async function recusarAgendamento(id) { 
+  if (!confirm('Deseja desistir deste agendamento?')) return 
+  const r = await fetch(`/api/motorista/${tokenMotorista}/agendamentos/${id}/recusar`, { method: 'POST' }) 
+  const d = await r.json() 
+  alert(d.mensagem || d.error) 
+  abrirModalAgendamentos() 
+} 
+
+async function confirmarPresenca(id) { 
+  const r = await fetch(`/api/motorista/${tokenMotorista}/agendamentos/${id}/confirmar-presenca`, { method: 'POST' }) 
+  const d = await r.json() 
+  alert(d.mensagem || d.error) 
+  abrirModalAgendamentos() 
+} 
+
  carregar() 
  setTimeout(polling, 3000) 
- </script> 
+</script> 
 </div>
 </body> 
 </html>

@@ -2,12 +2,15 @@ import { query } from '../db.js'
 import { requireAuth } from '../middleware/auth.js'
 import { getIo } from '../server.js'
 
-async function criarCobrancaAsaas(valor, descricao, externalRef, dueDate) {
+async function criarCobrancaAsaas(valor, descricao, externalRef, dueDate, billingType = 'PIX', customerId = null, creditCardToken = null) {
   if (!process.env.ASAAS_API_KEY) return null
+  const body = { billingType, value: valor, dueDate, description: descricao, externalReference: externalRef }
+  if (customerId) body.customer = customerId
+  if (billingType === 'CREDIT_CARD' && creditCardToken) body.creditCardToken = creditCardToken
   const response = await fetch('https://www.asaas.com/api/v3/payments', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'access_token': process.env.ASAAS_API_KEY },
-    body: JSON.stringify({ billingType: 'PIX', value: valor, dueDate, description: descricao, externalReference: externalRef })
+    body: JSON.stringify(body)
   })
   return response.json()
 }
@@ -74,7 +77,8 @@ export default async function agendamentosRoutes(fastify) {
       origem, origem_lat, origem_lng,
       destino, destino_lat, destino_lng,
       valor_estimado, agendada_para,
-      nome_cliente, telefone_cliente, client_id
+      nome_cliente, telefone_cliente, client_id,
+      forma_pagamento
     } = request.body
 
     if (!origem || !destino || !agendada_para || !valor_estimado) {
@@ -111,11 +115,11 @@ export default async function agendamentosRoutes(fastify) {
          destino, destino_lat, destino_lng,
          valor, tipo, agendada_para, status, forma_pagamento,
          sinal_valor, sinal_pago)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'agendada', $10, 'agendada', 'PIX', $11, false)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'agendada', $10, 'agendada', $11, $12, false)
       RETURNING id
     `, [token, clientId || null, origem, origem_lat || null, origem_lng || null,
         destino, destino_lat || null, destino_lng || null,
-        valorEstimado, agendadaParaDate.toISOString(), sinalValor])
+        valorEstimado, agendadaParaDate.toISOString(), forma_pagamento || 'PIX', sinalValor])
 
     const rideId = result.rows[0].id
     let pixPayload = null
@@ -124,11 +128,29 @@ export default async function agendamentosRoutes(fastify) {
     if (process.env.ASAAS_API_KEY) {
       try {
         const dueDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        
+        // Se forma_pagamento = '3' e cliente tem cartão, cobrar no cartão
+        let billingType = 'PIX'
+        let creditCardToken = null
+        let asaasCustomerId = null
+        
+        if (forma_pagamento === '3' && clientId) {
+          const clientInfo = (await query('SELECT asaas_credit_card_token, asaas_customer_id FROM clients WHERE id = $1', [clientId])).rows[0]
+          if (clientInfo?.asaas_credit_card_token) {
+            billingType = 'CREDIT_CARD'
+            creditCardToken = clientInfo.asaas_credit_card_token
+            asaasCustomerId = clientInfo.asaas_customer_id
+          }
+        }
+        
         const charge = await criarCobrancaAsaas(
           sinalValor,
           `Sinal agendamento MobiHub #${rideId} - ${origem} → ${destino}`,
           `sinal_${rideId}`,
-          dueDate
+          dueDate,
+          billingType,
+          asaasCustomerId,
+          creditCardToken
         )
         if (charge?.id) {
           chargeId = charge.id

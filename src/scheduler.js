@@ -67,16 +67,19 @@ async function verificarAgendamentos() {
     for (const ride of corridas) { 
       console.log(`[SCHEDULER] Disparando corrida agendada #${ride.id}`) 
       try { 
-        const { sendRideToGroup } = await import('./telegram.js') 
-        const messageId = await sendRideToGroup(ride) 
+        // Em vez de Telegram, emite via socket e atualiza status 
         await query(` 
           UPDATE rides SET 
             status = 'aberta', 
-            disparada_at = CURRENT_TIMESTAMP, 
-            telegram_message_id = $1 
-          WHERE id = $2 
-        `, [messageId, ride.id]) 
-        console.log(`[SCHEDULER] Corrida #${ride.id} disparada`) 
+            disparada_at = CURRENT_TIMESTAMP 
+          WHERE id = $1 
+        `, [ride.id]) 
+ 
+        const io = getIo() 
+        if (io) { 
+          io.emit('nova_corrida', ride) 
+        } 
+        console.log(`[SCHEDULER] Corrida #${ride.id} disparada via socket`) 
       } catch(err) { 
         console.error(`[SCHEDULER] Erro ao disparar corrida #${ride.id}:`, err.message) 
       } 
@@ -183,12 +186,9 @@ async function verificarChegada() {
           await query('UPDATE clients SET total_corridas = total_corridas + 1 WHERE id = $1', [ride.client_id]) 
         } 
 
-        // Notifica motorista para avaliar 
+        // Notifica motorista para avaliar (sem Telegram)
         try { 
-          const { notifyDriverRateClient, editGroupMessage } = await import('./telegram.js') 
-          const driverResult = await query('SELECT * FROM drivers WHERE id = $1', [ride.driver_id]) 
-          const driver = driverResult.rows[0] 
-          if (driver) await notifyDriverRateClient(driver, ride) 
+          const { editGroupMessage } = await import('./telegram.js') 
           if (ride.telegram_message_id) { 
             await editGroupMessage( 
               ride.telegram_message_id, 

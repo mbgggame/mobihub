@@ -1,6 +1,7 @@
 import { query, pool } from '../db.js' 
 import { requireAuth } from '../middleware/auth.js'
-import { getIo } from '../server.js' 
+import { getIo } from '../server.js'
+import { criarCobrancaAsaas, buscarPixPayload } from './agendamentos.js' 
 
 export default async function publicRoutes(fastify) { 
 
@@ -497,11 +498,61 @@ export default async function publicRoutes(fastify) {
     const percentualMotoristaDefault = splitRuleDefault?.percentual_motorista || 82 
     const valorMotorista = parseFloat((valor * percentualMotoristaDefault / 100).toFixed(2)) 
     const valorMobihub = parseFloat((valor - valorMotorista).toFixed(2)) 
+    
+    let sinalValor = null
+    let pixPayload = null
+    let chargeId = null
+
+    if (tipo === 'agendada') {
+      sinalValor = parseFloat((valor * 0.30).toFixed(2))
+    }
+
     const result = await query(` 
-      INSERT INTO rides (token, client_id, origem, origem_lat, origem_lng, destino, destino_lat, destino_lng, valor, valor_motorista, valor_mobihub, tipo, agendada_para, status, forma_pagamento) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING id 
-    `, [token, client.id, origem, origem_lat, origem_lng, destino, destino_lat, destino_lng, valor, valorMotorista, valorMobihub, tipo || 'normal', agendada_para || null, statusInicial, forma_pagamento || '1']) 
+      INSERT INTO rides (token, client_id, origem, origem_lat, origem_lng, destino, destino_lat, destino_lng, valor, valor_motorista, valor_mobihub, tipo, agendada_para, status, forma_pagamento, sinal_valor, sinal_pago) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING id 
+    `, [token, client.id, origem, origem_lat, origem_lng, destino, destino_lat, destino_lng, valor, valorMotorista, valorMobihub, tipo || 'normal', agendada_para || null, statusInicial, forma_pagamento || '1', sinalValor, false]) 
     const ride = (await query('SELECT * FROM rides WHERE id = $1', [result.rows[0].id])).rows[0] 
+
+    if (tipo === 'agendada' && process.env.ASAAS_API_KEY) {
+      try {
+        const dueDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        
+        // Se forma_pagamento = '3' e cliente tem cartão, cobrar no cartão
+        let billingType = 'PIX'
+        let creditCardToken = null
+        let asaasCustomerId = null
+        
+        if (forma_pagamento === '3' && client.id) {
+          const clientInfo = (await query('SELECT asaas_credit_card_token, asaas_customer_id FROM clients WHERE id = $1', [client.id])).rows[0]
+          if (clientInfo?.asaas_credit_card_token) {
+            billingType = 'CREDIT_CARD'
+            creditCardToken = clientInfo.asaas_credit_card_token
+            asaasCustomerId = clientInfo.asaas_customer_id
+          }
+        }
+        
+        const charge = await criarCobrancaAsaas(
+          sinalValor,
+          `Sinal agendamento MobiHub #${ride.id} - ${origem} → ${destino}`,
+          `sinal_${ride.id}`,
+          dueDate,
+          billingType,
+          asaasCustomerId,
+          creditCardToken
+        )
+        if (charge?.id) {
+          chargeId = charge.id
+          pixPayload = await buscarPixPayload(chargeId)
+          await query(
+            'UPDATE rides SET sinal_charge_id = $1, sinal_pix_payload = $2 WHERE id = $3',
+            [chargeId, pixPayload, ride.id]
+          )
+        }
+      } catch (err) {
+        console.error('[SOLICITAR] Erro Asaas:', err.message)
+      }
+    }
+
     if (!tipo || tipo === 'normal') { 
       try { 
         const { sendRideToGroup } = await import('../telegram.js') 
@@ -509,12 +560,20 @@ export default async function publicRoutes(fastify) {
         if (messageId) await query('UPDATE rides SET telegram_message_id = $1 WHERE id = $2', [messageId, ride.id]) 
       } catch(err) { console.error('[SOLICITAR] Erro Telegram:', err.message) } 
     }
-    // Emite nova corrida para todos os motoristas
+
+    // Emite nova corrida para todos os motoristas (apenas se normal)
     const io = getIo()
-    if (io) {
+    if (io && (!tipo || tipo === 'normal')) {
       io.emit('nova_corrida', ride)
     }
-    return { token, link: `${process.env.BASE_URL}/r/${token}`, mensagem: 'Corrida solicitada!' } 
+
+    const response = { token, link: `${process.env.BASE_URL}/r/${token}`, mensagem: 'Corrida solicitada!' }
+    if (tipo === 'agendada') {
+      response.sinal_valor = sinalValor
+      response.pix_payload = pixPayload
+      response.agendada_para = agendada_para
+    }
+    return response 
   })
 
   fastify.put('/api/rides/:id/aceitar-motorista', async (request, reply) => { 

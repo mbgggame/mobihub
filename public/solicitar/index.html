@@ -1209,8 +1209,35 @@
        socket.emit('entrar:corrida', rideId)
      }
 
-     // Redireciona IMEDIATAMENTE para a página de acompanhamento
-     window.location.href = '/r/' + d.token 
+     if (tipoCorreida === 'agendada' && d.sinal_valor) { 
+       // Mostrar tela de pagamento do sinal 
+       document.getElementById('tela-solicitar').classList.add('hidden') 
+       document.getElementById('tela-confirmacao').classList.remove('hidden') 
+       document.getElementById('card-confirmacao').innerHTML = ` 
+         <div class="text-center space-y-4"> 
+           <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto"> 
+             <span class="text-3xl">🗓️</span> 
+           </div> 
+           <h2 class="text-xl font-bold">Agendamento criado!</h2> 
+           <p class="text-sm text-gray-500">Pague o sinal para confirmar sua corrida agendada</p> 
+           <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4"> 
+             <p class="text-sm font-semibold text-yellow-800">💰 Sinal: R$ ${Number(d.sinal_valor).toFixed(2)}</p> 
+             <p class="text-xs text-yellow-600 mt-1">30% do valor total • Restante pago após a corrida</p> 
+           </div> 
+           ${d.pix_payload ? ` 
+             <div class="bg-gray-50 border rounded-xl p-3"> 
+               <p class="text-xs text-gray-500 mb-2">Código Pix (copia e cola)</p> 
+               <p class="text-xs font-mono break-all text-gray-700">${d.pix_payload}</p> 
+               <button onclick="navigator.clipboard.writeText('${d.pix_payload}').then(()=>alert('Copiado!'))" class="mt-2 w-full border border-gray-300 rounded-lg py-2 text-xs">📋 Copiar código</button> 
+             </div> 
+           ` : ''} 
+           <p class="text-xs text-gray-400">📅 Corrida: ${new Date(d.agendada_para).toLocaleString('pt-BR')}</p> 
+           <a href="/r/${d.token}" class="block w-full bg-green-600 text-white rounded-xl py-3 text-sm font-semibold">🔍 Acompanhar agendamento</a> 
+         </div> 
+       ` 
+     } else { 
+       window.location.href = '/r/' + d.token 
+     } 
    } catch(e) { 
      alert('Erro de conexão') 
      btn.disabled = false 
