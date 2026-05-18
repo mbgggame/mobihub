@@ -2,7 +2,7 @@ import { query } from '../db.js'
 import { requireAuth } from '../middleware/auth.js'
 import { getIo } from '../server.js'
 
-async function criarCobrancaAsaas(valor, descricao, externalRef, dueDate, billingType = 'PIX', customerId = null, creditCardToken = null) {
+export async function criarCobrancaAsaas(valor, descricao, externalRef, dueDate, billingType = 'PIX', customerId = null, creditCardToken = null) {
   if (!process.env.ASAAS_API_KEY) return null
   const body = { billingType, value: valor, dueDate, description: descricao, externalReference: externalRef }
   if (customerId) body.customer = customerId
