@@ -128,6 +128,7 @@ let todosMotoristas = []
 let filtroStatus = 'todos' 
 let contadorRefresh = 15
 let intervaloContador = null
+let primeiraRenderizacao = true
 const token = localStorage.getItem('mobihub_token') 
 if (!token) location.href = '/admin/login' 
 const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }) 
@@ -148,6 +149,7 @@ function setFiltroStatus(status) {
   }) 
   const btn = document.getElementById(`filtro-${status}`) 
   if (btn) btn.classList.add('bg-gray-800', 'text-white') 
+  primeiraRenderizacao = true
   aplicarFiltros() 
 } 
  
@@ -194,124 +196,166 @@ function atualizarContadores() {
   document.getElementById('total-disponiveis').textContent = disponiveis 
   document.getElementById('total-offline').textContent = offline 
 } 
+
+function hashMotorista(m) { 
+  return `${m.online}-${m.corrida_status}-${m.corridas_hoje}-${m.ganhos_hoje}-${m.segundos_sem_update}-${m.balance_due}` 
+} 
+
+function gerarRowMotorista(m) { 
+  const emCorrida = m.corrida_id && ['aceita','em_viagem'].includes(m.corrida_status) 
+  const disponivel = m.online === 1 && !emCorrida 
+  
+  let statusBadge = '' 
+  let statusCor = ''
+  
+  if (emCorrida) { 
+    statusBadge = '🚗 Em corrida'
+    statusCor = 'bg-yellow-100 text-yellow-700 border-yellow-200'
+  } else if (disponivel) { 
+    statusBadge = '🟢 Disponível'
+    statusCor = 'bg-green-100 text-green-700 border-green-200'
+  } else { 
+    statusBadge = '⚫ Offline'
+    statusCor = 'bg-gray-100 text-gray-700 border-gray-200'
+  } 
+
+  const aprovado = m.status_cadastro === 'aprovado'
+  const veiculoTexto = [m.modelo_carro, m.cor_carro].filter(Boolean).join(' • ') || '—'
+  const localizacaoTexto = m.location_at && m.segundos_sem_update < 300 
+    ? `${tempoDecorrido(m.location_at)} atrás` 
+    : m.online === 1 
+    ? '⚠️ Sem localização' 
+    : '—'
+  const corridaTexto = emCorrida 
+    ? `${m.origem || '—'} → ${m.destino || '—'}` 
+    : '—'
+
+  return ` 
+    <tr id="row-motorista-${m.id}" data-hash="${hashMotorista(m)}" class="hover:bg-gray-50 transition-colors"> 
+      <td class="px-6 py-4"> 
+        <div class="flex items-center gap-3"> 
+          <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold text-lg overflow-hidden"> 
+            ${m.nome?.charAt(0).toUpperCase() || '?'}
+          </div> 
+          <div> 
+            <p class="font-medium text-gray-900">${m.nome}</p> 
+            ${m.balance_due > 0 ? `<p class="text-xs text-red-600">💸 R$ ${Number(m.balance_due).toFixed(2)}</p>` : ''} 
+          </div> 
+        </div> 
+      </td> 
+      <td class="px-6 py-4"> 
+        <div> 
+          <p class="text-sm text-gray-900">${veiculoTexto}</p> 
+          <p class="text-xs text-gray-500 font-mono">${m.placa || '—'}</p> 
+        </div> 
+      </td> 
+      <td class="px-6 py-4"> 
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${statusCor}"> 
+          ${statusBadge} 
+        </span> 
+      </td> 
+      <td class="px-6 py-4"> 
+        <p class="text-sm text-gray-600">${localizacaoTexto}</p> 
+      </td> 
+      <td class="px-6 py-4"> 
+        <div class="max-w-xs">
+          <p class="text-sm text-gray-900 truncate">${corridaTexto}</p>
+          ${emCorrida && m.passageiro_nome ? `<p class="text-xs text-gray-500">👤 ${m.passageiro_nome}</p>` : ''}
+        </div>
+      </td> 
+      <td class="px-6 py-4 text-right"> 
+        <p class="text-sm font-semibold text-green-700">R$ ${Number(m.ganhos_hoje || 0).toFixed(2)}</p> 
+      </td> 
+      <td class="px-6 py-4 text-center"> 
+        <p class="text-sm font-medium text-gray-900">${m.corridas_hoje || 0}</p> 
+      </td> 
+      <td class="px-6 py-4 text-center"> 
+        <div class="flex items-center justify-center gap-1"> 
+          <span class="text-yellow-400 text-sm">⭐</span> 
+          <span class="text-sm font-medium text-gray-900">${Number(m.media_avaliacao || 0).toFixed(1)}</span> 
+        </div> 
+      </td> 
+      <td class="px-6 py-4 text-center"> 
+        <div class="flex items-center justify-center gap-2"> 
+          ${aprovado ? ` 
+            <button onclick="toggleAtivo(${m.id}, ${m.ativo})" 
+              class="text-sm px-3 py-1.5 rounded-lg border ${m.ativo ? 'border-red-200 text-red-600 hover:bg-red-50' : 'border-green-200 text-green-600 hover:bg-green-50'} transition-colors"> 
+              ${m.ativo ? '⛔ Desativar' : '✅ Ativar'} 
+            </button> 
+          ` : ''} 
+          ${m.token_perfil ? ` 
+            <a href="/motorista/${m.token_perfil}" target="_blank" 
+              class="text-sm px-3 py-1.5 rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 transition-colors"> 
+              🚗 Painel 
+            </a> 
+          ` : ''}
+          <button onclick="analisarMotorista(${m.id})" 
+            class="text-sm px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"> 
+            🔍 Analisar 
+          </button> 
+        </div> 
+      </td> 
+    </tr> 
+  ` 
+} 
  
 function renderizarTabela(lista) { 
   const tbody = document.getElementById('tabela-motoristas') 
   const semMotoristas = document.getElementById('sem-motoristas') 
   
   if (!lista.length) { 
-    tbody.innerHTML = '' 
-    semMotoristas.classList.remove('hidden') 
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center text-gray-400 py-8">Nenhum motorista encontrado</td></tr>' 
+    semMotoristas.classList.add('hidden')
     return 
   } 
   
   semMotoristas.classList.add('hidden')
-  tbody.innerHTML = lista.map(m => { 
-    const emCorrida = m.corrida_id && ['aceita','em_viagem'].includes(m.corrida_status) 
-    const disponivel = m.online === 1 && !emCorrida 
-    
-    let statusBadge = '' 
-    let statusCor = ''
-    
-    if (emCorrida) { 
-      statusBadge = '🚗 Em corrida'
-      statusCor = 'bg-yellow-100 text-yellow-700 border-yellow-200'
-    } else if (disponivel) { 
-      statusBadge = '🟢 Disponível'
-      statusCor = 'bg-green-100 text-green-700 border-green-200'
-    } else { 
-      statusBadge = '⚫ Offline'
-      statusCor = 'bg-gray-100 text-gray-700 border-gray-200'
-    } 
- 
-    const aprovado = m.status_cadastro === 'aprovado'
-    const veiculoTexto = [m.modelo_carro, m.cor_carro].filter(Boolean).join(' • ') || '—'
-    const localizacaoTexto = m.location_at && m.segundos_sem_update < 300 
-      ? `${tempoDecorrido(m.location_at)} atrás` 
-      : m.online === 1 
-      ? '⚠️ Sem localização' 
-      : '—'
-    const corridaTexto = emCorrida 
-      ? `${m.origem || '—'} → ${m.destino || '—'}` 
-      : '—'
- 
-    return ` 
-      <tr class="hover:bg-gray-50 transition-colors"> 
-        <td class="px-6 py-4"> 
-          <div class="flex items-center gap-3"> 
-            <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold text-lg overflow-hidden"> 
-              ${m.nome?.charAt(0).toUpperCase() || '?'}
-            </div> 
-            <div> 
-              <p class="font-medium text-gray-900">${m.nome}</p> 
-              ${m.balance_due > 0 ? `<p class="text-xs text-red-600">💸 R$ ${Number(m.balance_due).toFixed(2)}</p>` : ''} 
-            </div> 
-          </div> 
-        </td> 
-        <td class="px-6 py-4"> 
-          <div> 
-            <p class="text-sm text-gray-900">${veiculoTexto}</p> 
-            <p class="text-xs text-gray-500 font-mono">${m.placa || '—'}</p> 
-          </div> 
-        </td> 
-        <td class="px-6 py-4"> 
-          <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${statusCor}"> 
-            ${statusBadge} 
-          </span> 
-        </td> 
-        <td class="px-6 py-4"> 
-          <p class="text-sm text-gray-600">${localizacaoTexto}</p> 
-        </td> 
-        <td class="px-6 py-4"> 
-          <div class="max-w-xs">
-            <p class="text-sm text-gray-900 truncate">${corridaTexto}</p>
-            ${emCorrida && m.passageiro_nome ? `<p class="text-xs text-gray-500">👤 ${m.passageiro_nome}</p>` : ''}
-          </div>
-        </td> 
-        <td class="px-6 py-4 text-right"> 
-          <p class="text-sm font-semibold text-green-700">R$ ${Number(m.ganhos_hoje || 0).toFixed(2)}</p> 
-        </td> 
-        <td class="px-6 py-4 text-center"> 
-          <p class="text-sm font-medium text-gray-900">${m.corridas_hoje || 0}</p> 
-        </td> 
-        <td class="px-6 py-4 text-center"> 
-          <div class="flex items-center justify-center gap-1"> 
-            <span class="text-yellow-400 text-sm">⭐</span> 
-            <span class="text-sm font-medium text-gray-900">${Number(m.media_avaliacao || 0).toFixed(1)}</span> 
-          </div> 
-        </td> 
-        <td class="px-6 py-4 text-center"> 
-          <div class="flex items-center justify-center gap-2"> 
-            ${aprovado ? ` 
-              <button onclick="toggleAtivo(${m.id}, ${m.ativo})" 
-                class="text-sm px-3 py-1.5 rounded-lg border ${m.ativo ? 'border-red-200 text-red-600 hover:bg-red-50' : 'border-green-200 text-green-600 hover:bg-green-50'} transition-colors"> 
-                ${m.ativo ? '⛔ Desativar' : '✅ Ativar'} 
-              </button> 
-            ` : ''} 
-            ${m.token_perfil ? ` 
-              <a href="/motorista/${m.token_perfil}" target="_blank" 
-                class="text-sm px-3 py-1.5 rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 transition-colors"> 
-                🚗 Painel 
-              </a> 
-            ` : ''}
-            <button onclick="analisarMotorista(${m.id})" 
-              class="text-sm px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"> 
-              🔍 Analisar 
-            </button> 
-          </div> 
-        </td> 
-      </tr> 
-    ` 
-  }).join('') 
+
+  if (primeiraRenderizacao) {
+    tbody.innerHTML = lista.map(gerarRowMotorista).join('')
+    primeiraRenderizacao = false
+    return
+  }
+
+  // Atualizar apenas rows existentes ou adicionar novas
+  lista.forEach(m => {
+    const rowId = `row-motorista-${m.id}`
+    const novoHtml = gerarRowMotorista(m)
+    const rowExistente = document.getElementById(rowId)
+
+    if (rowExistente) {
+      if (rowExistente.dataset.hash !== hashMotorista(m)) {
+        rowExistente.outerHTML = novoHtml
+      }
+    } else {
+      tbody.insertAdjacentHTML('beforeend', novoHtml)
+    }
+  })
+
+  // Remover rows que não estão mais na lista
+  tbody.querySelectorAll('tr[id^="row-motorista-"]').forEach(row => {
+    const id = parseInt(row.id.replace('row-motorista-', ''))
+    if (!lista.find(m => m.id === id)) {
+      row.remove()
+    }
+  })
 } 
  
 async function carregarMotoristas() { 
   try { 
     const r = await fetch('/api/admin/motoristas/realtime', { headers: headers() }) 
     if (!r.ok) { location.href = '/admin/login'; return } 
-    todosMotoristas = await r.json() 
-    aplicarFiltros()
-    reiniciarContador()
+    const novosMotoristas = await r.json() 
+    
+    if (JSON.stringify(novosMotoristas) !== JSON.stringify(todosMotoristas)) { 
+      todosMotoristas = novosMotoristas 
+      requestAnimationFrame(() => {
+        aplicarFiltros()
+        reiniciarContador()
+      })
+    } else {
+      reiniciarContador()
+    }
   } catch(e) { 
     console.error(e) 
   } 
