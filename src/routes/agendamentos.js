@@ -15,7 +15,7 @@ async function criarCobrancaAsaas(valor, descricao, externalRef, dueDate, billin
   return response.json()
 }
 
-async function buscarPixPayload(chargeId) {
+export async function buscarPixPayload(chargeId) {
   if (!process.env.ASAAS_API_KEY || !chargeId) return null
   try {
     const r = await fetch(`https://www.asaas.com/api/v3/payments/${chargeId}/pixQrCode`, {
