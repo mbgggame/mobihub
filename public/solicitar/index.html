@@ -303,7 +303,7 @@
       <label class="text-sm font-medium text-gray-700">Data e hora da corrida</label> 
       <input id="data-agendamento" type="datetime-local" 
         class="mt-2 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-      <p class="text-xs text-gray-400 mt-1">Mínimo 2 horas de antecedência • Máximo 10 dias</p> 
+      <p class="text-xs text-gray-400 mt-1">Mínimo 2 horas de antecedência • Máximo 15 dias</p> 
     </div> 
 
     <div class="bg-white border border-gray-200 rounded-xl p-4 space-y-3"> 
@@ -760,9 +760,9 @@
      // Mínimo: 2 horas a partir de agora 
      const min = new Date(agora.getTime() + 2 * 60 * 60 * 1000) 
 
-     // Máximo: exatamente 10 dias corridos a partir de hoje 
+     // Máximo: exatamente 15 dias corridos a partir de hoje 
      const max = new Date(agora) 
-     max.setDate(max.getDate() + 10) 
+     max.setDate(max.getDate() + 15) 
      max.setHours(23, 59, 0, 0) 
 
      const input = document.getElementById('data-agendamento') 

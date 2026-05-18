@@ -460,6 +460,21 @@ export default async function publicRoutes(fastify) {
     if (!cpf) { 
       return reply.code(400).send({ error: 'CPF é obrigatório para solicitar uma corrida.' }) 
     } 
+    if (tipo === 'agendada') { 
+      if (!agendada_para) { 
+        return reply.code(400).send({ error: 'Data/hora do agendamento é obrigatória' }) 
+      } 
+      const agendadaParaDate = new Date(agendada_para) 
+      const minimo2horas = new Date(Date.now() + 2 * 60 * 60 * 1000) 
+      const maximo15dias = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000) 
+      
+      if (agendadaParaDate < minimo2horas) { 
+        return reply.code(400).send({ error: 'Agendamento deve ser com mínimo 2 horas de antecedência' }) 
+      } 
+      if (agendadaParaDate > maximo15dias) { 
+        return reply.code(400).send({ error: 'Agendamento deve ser com máximo 15 dias de antecedência' }) 
+      } 
+    } 
     const clientResult = await query('SELECT * FROM clients WHERE telefone = $1', [celular]) 
     let client = clientResult.rows[0] 
     if (client && client.balance_due > 0) {
