@@ -117,16 +117,14 @@ async function verificarNaoComparecimento() {
       // Reembolsa passageiro em créditos automaticamente
       if (ride.client_id && ride.sinal_pago && parseFloat(ride.sinal_valor || 0) > 0) {
         await query('UPDATE clients SET creditos = creditos + $1 WHERE id = $2', [ride.sinal_valor, ride.client_id])
-        try {
-          const { getBot } = await import('./telegram.js')
-          const bot = getBot()
-          if (bot && ride.client_telegram) {
-            bot.sendMessage(ride.client_telegram,
-              `⚠️ *Seu motorista não compareceu ao agendamento.*\n\nR$ ${parseFloat(ride.sinal_valor).toFixed(2)} foram adicionados à sua carteira MobiHub.\n\nPedimos desculpas pelo inconveniente!`,
-              { parse_mode: 'Markdown' }
-            ).catch(() => {})
-          }
-        } catch (e) { /* silently ignore */ }
+      }
+      const io = getIo()
+      if (io) {
+        io.to(`ride:${ride.id}`).emit('agendamento:cancelado', {
+          rideId: ride.id,
+          motivo: 'driver_nao_compareceu',
+          creditos_restituidos: parseFloat(ride.sinal_valor || 0)
+        })
       }
     }
   } catch (err) {

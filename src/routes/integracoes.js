@@ -1,5 +1,7 @@
-export default async function integracoesRoutes(fastify) { 
-  const { query } = await import('../db.js') 
+import { getIo } from '../server.js'
+
+export default async function integracoesRoutes(fastify) {
+  const { query } = await import('../db.js')
   const { requireAuth } = await import('./auth.js') 
 
   fastify.post('/webhook/asaas', async (request, reply) => { 
@@ -31,23 +33,15 @@ export default async function integracoesRoutes(fastify) {
           const rideId = parseInt(externalReference.split('_')[1])
           await query('UPDATE rides SET sinal_pago = true WHERE id = $1', [rideId])
           console.log(`[WEBHOOK ASAAS] Sinal pago para agendamento #${rideId}`)
-          try {
-            const rideResult = await query('SELECT * FROM rides WHERE id = $1', [rideId])
-            const ride = rideResult.rows[0]
-            if (ride && ride.client_id) {
-              const { getBot } = await import('../telegram.js')
-              const bot = getBot()
-              const client = (await query('SELECT telegram_id FROM clients WHERE id = $1', [ride.client_id])).rows[0]
-              if (bot && client?.telegram_id) {
-                const dataHora = new Date(ride.agendada_para).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
-                bot.sendMessage(client.telegram_id,
-                  `✅ *Sinal recebido! Agendamento confirmado.*\n\n📅 ${dataHora}\n📍 ${ride.origem} → ${ride.destino}\n\nEstamos buscando um motorista disponível.`,
-                  { parse_mode: 'Markdown' }
-                ).catch(() => {})
-              }
+          const io = getIo()
+          if (io) {
+            const ride = (await query('SELECT * FROM rides WHERE id = $1', [rideId])).rows[0]
+            if (ride) {
+              // Notifica o passageiro na sala da corrida
+              io.to(`ride:${rideId}`).emit('agendamento:sinal_confirmado', { rideId })
+              // Notifica todos os motoristas conectados sobre novo agendamento disponível
+              io.emit('nova_corrida', ride)
             }
-          } catch (e) {
-            console.error('[WEBHOOK ASAAS] Erro notificação sinal:', e.message)
           }
         } else if (externalReference.startsWith('restante_')) {
           // 70% restante da corrida agendada pago → registra split do motorista

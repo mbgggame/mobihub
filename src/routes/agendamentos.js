@@ -1,5 +1,6 @@
 import { query } from '../db.js'
 import { requireAuth } from '../middleware/auth.js'
+import { getIo } from '../server.js'
 
 async function criarCobrancaAsaas(valor, descricao, externalRef, dueDate) {
   if (!process.env.ASAAS_API_KEY) return null
@@ -52,6 +53,16 @@ export async function gerarCobrancaRestante(ride) {
     'UPDATE rides SET asaas_payment_id = $1, asaas_pix_payload = $2, pagamento_status = $3 WHERE id = $4',
     [charge.id, pixPayload, 'aguardando_pagamento', ride.id]
   )
+
+  const io = getIo()
+  if (io) {
+    io.to(`ride:${ride.id}`).emit('agendamento:cobranca_restante', {
+      rideId: ride.id,
+      valor_restante: restante,
+      pix_payload: pixPayload
+    })
+  }
+
   return { charge_id: charge.id, pix_payload: pixPayload, valor_restante: restante }
 }
 
@@ -162,7 +173,7 @@ export default async function agendamentosRoutes(fastify) {
     return ride
   })
 
-  // Motorista lista agendamentos disponíveis (sinal pago, sem driver)
+  // Motorista lista agendamentos disponíveis (sinal pago, sem driver) e os seus
   fastify.get('/api/motorista/:token/agendamentos', async (request, reply) => {
     const driver = (await query(
       'SELECT id, bloqueado_agendamento_ate FROM drivers WHERE token_perfil = $1 AND ativo = 1',
@@ -173,9 +184,9 @@ export default async function agendamentosRoutes(fastify) {
     const bloqueadoAte = driver.bloqueado_agendamento_ate
     const bloqueado = bloqueadoAte && new Date(bloqueadoAte) > new Date()
 
-    const agendamentos = (await query(`
+    const disponiveis = (await query(`
       SELECT r.id, r.token, r.origem, r.destino, r.valor, r.sinal_valor,
-             r.agendada_para, r.status, r.driver_id,
+             r.agendada_para, r.status,
              c.nome as client_nome
       FROM rides r
       LEFT JOIN clients c ON r.client_id = c.id
@@ -186,11 +197,12 @@ export default async function agendamentosRoutes(fastify) {
       ORDER BY r.agendada_para ASC
     `)).rows
 
-    // Agendamentos aceitos por ESTE motorista
     const meus = (await query(`
       SELECT r.id, r.token, r.origem, r.destino, r.valor, r.sinal_valor,
-             r.agendada_para, r.status
+             r.agendada_para, r.status,
+             c.nome as client_nome
       FROM rides r
+      LEFT JOIN clients c ON r.client_id = c.id
       WHERE r.tipo = 'agendada'
         AND r.driver_id = $1
         AND r.status = 'agendada_aceita'
@@ -198,25 +210,20 @@ export default async function agendamentosRoutes(fastify) {
       ORDER BY r.agendada_para ASC
     `, [driver.id])).rows
 
-    return {
-      disponiveis: agendamentos,
-      meus_agendamentos: meus,
-      bloqueado,
-      bloqueado_ate: bloqueadoAte
-    }
+    return { disponiveis, meus_agendamentos: meus, bloqueado, bloqueado_ate: bloqueadoAte }
   })
 
   // Motorista aceita agendamento
   fastify.post('/api/motorista/:token/agendamentos/:id/aceitar', async (request, reply) => {
     const driver = (await query(
-      'SELECT id, bloqueado_agendamento_ate FROM drivers WHERE token_perfil = $1 AND ativo = 1',
+      'SELECT id, nome, modelo_carro, cor_carro, placa, bloqueado_agendamento_ate FROM drivers WHERE token_perfil = $1 AND ativo = 1',
       [request.params.token]
     )).rows[0]
     if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' })
 
     if (driver.bloqueado_agendamento_ate && new Date(driver.bloqueado_agendamento_ate) > new Date()) {
       const ate = new Date(driver.bloqueado_agendamento_ate).toLocaleDateString('pt-BR')
-      return reply.code(403).send({ error: `Você está bloqueado de aceitar agendamentos até ${ate} por não comparecimento anterior.` })
+      return reply.code(403).send({ error: `Você está bloqueado de aceitar agendamentos até ${ate}.` })
     }
 
     const ride = (await query(
@@ -230,22 +237,15 @@ export default async function agendamentosRoutes(fastify) {
       [driver.id, ride.id]
     )
 
-    try {
-      const { getBot } = await import('../telegram.js')
-      const bot = getBot()
-      if (bot && ride.client_id) {
-        const client = (await query('SELECT telegram_id FROM clients WHERE id = $1', [ride.client_id])).rows[0]
-        const driverInfo = (await query('SELECT nome, modelo_carro, cor_carro, placa FROM drivers WHERE id = $1', [driver.id])).rows[0]
-        if (client?.telegram_id && driverInfo) {
-          const dataHora = new Date(ride.agendada_para).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
-          bot.sendMessage(client.telegram_id,
-            `✅ *Agendamento confirmado!*\n\n📅 ${dataHora}\n🚗 Motorista: ${driverInfo.nome}\n🚙 ${driverInfo.modelo_carro} ${driverInfo.cor_carro} - ${driverInfo.placa}`,
-            { parse_mode: 'Markdown' }
-          ).catch(() => {})
-        }
-      }
-    } catch (e) {
-      console.error('[AGENDAMENTO ACEITAR] Notificação:', e.message)
+    const io = getIo()
+    if (io) {
+      io.to(`ride:${ride.id}`).emit('agendamento:aceito', {
+        rideId: ride.id,
+        driver_nome: driver.nome,
+        modelo_carro: driver.modelo_carro,
+        cor_carro: driver.cor_carro,
+        placa: driver.placa
+      })
     }
 
     return { mensagem: 'Agendamento aceito com sucesso!' }
@@ -260,7 +260,7 @@ export default async function agendamentosRoutes(fastify) {
     if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' })
 
     const ride = (await query(
-      "SELECT * FROM rides WHERE id = $1 AND driver_id = $2 AND status = 'agendada_aceita'",
+      "SELECT id FROM rides WHERE id = $1 AND driver_id = $2 AND status = 'agendada_aceita'",
       [request.params.id, driver.id]
     )).rows[0]
     if (!ride) return reply.code(404).send({ error: 'Agendamento não encontrado' })
@@ -276,7 +276,7 @@ export default async function agendamentosRoutes(fastify) {
   // Motorista confirma presença no dia → ride vira aberta
   fastify.post('/api/motorista/:token/agendamentos/:id/confirmar-presenca', async (request, reply) => {
     const driver = (await query(
-      'SELECT id FROM drivers WHERE token_perfil = $1 AND ativo = 1',
+      'SELECT id, nome, modelo_carro, cor_carro, placa, telefone FROM drivers WHERE token_perfil = $1 AND ativo = 1',
       [request.params.token]
     )).rows[0]
     if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' })
@@ -292,30 +292,22 @@ export default async function agendamentosRoutes(fastify) {
       [ride.id]
     )
 
-    try {
-      const { getBot } = await import('../telegram.js')
-      const bot = getBot()
-      if (bot && ride.client_id) {
-        const client = (await query('SELECT telegram_id FROM clients WHERE id = $1', [ride.client_id])).rows[0]
-        const driverInfo = (await query(
-          'SELECT nome, modelo_carro, cor_carro, placa, telefone FROM drivers WHERE id = $1',
-          [driver.id]
-        )).rows[0]
-        if (client?.telegram_id && driverInfo) {
-          bot.sendMessage(client.telegram_id,
-            `🚗 *Seu motorista confirmou presença e está a caminho!*\n\n👤 ${driverInfo.nome}\n🚙 ${driverInfo.modelo_carro} ${driverInfo.cor_carro} - ${driverInfo.placa}\n📞 ${driverInfo.telefone || ''}`,
-            { parse_mode: 'Markdown' }
-          ).catch(() => {})
-        }
-      }
-    } catch (e) {
-      console.error('[CONFIRMAR PRESENÇA] Notificação:', e.message)
+    const io = getIo()
+    if (io) {
+      io.to(`ride:${ride.id}`).emit('agendamento:presenca_confirmada', {
+        rideId: ride.id,
+        driver_nome: driver.nome,
+        modelo_carro: driver.modelo_carro,
+        cor_carro: driver.cor_carro,
+        placa: driver.placa,
+        telefone: driver.telefone
+      })
     }
 
     return { mensagem: 'Presença confirmada! Corrida aberta para o passageiro.' }
   })
 
-  // Passageiro cancela agendamento
+  // Passageiro cancela agendamento (>2h antes = reembolso disponível)
   fastify.post('/api/ride/:token/cancelar-agendamento', async (request, reply) => {
     const { opcao_reembolso } = request.body // 'estorno' | 'creditos'
 
@@ -326,44 +318,39 @@ export default async function agendamentosRoutes(fastify) {
     if (!ride) return reply.code(404).send({ error: 'Agendamento não encontrado ou não pode ser cancelado' })
 
     const horasRestantes = (new Date(ride.agendada_para) - new Date()) / (1000 * 60 * 60)
-    const temDireitoReembolso = horasRestantes > 2 && ride.sinal_pago && parseFloat(ride.sinal_valor) > 0
+    const sinalValor = parseFloat(ride.sinal_valor || 0)
+    const temDireitoReembolso = horasRestantes > 2 && ride.sinal_pago && sinalValor > 0
 
     let reembolsoFeito = false
     let mensagemReembolso = ''
 
-    if (temDireitoReembolso) {
-      const sinalValor = parseFloat(ride.sinal_valor)
+    if (temDireitoReembolso && !opcao_reembolso) {
+      return reply.send({
+        tem_direito_reembolso: true,
+        sinal_valor: sinalValor,
+        opcoes: ['estorno', 'creditos'],
+        mensagem: 'Escolha: "estorno" (bancário, até 5 dias úteis) ou "creditos" (imediato na carteira MobiHub).'
+      })
+    }
 
+    if (temDireitoReembolso) {
       if (opcao_reembolso === 'estorno') {
         if (!ride.sinal_charge_id) {
           return reply.code(400).send({ error: 'ID da cobrança não encontrado para estorno' })
         }
-        try {
-          const estorno = await estornarCobranca(ride.sinal_charge_id, sinalValor)
-          if (estorno?.id || estorno?.refunds?.length > 0) {
-            await query('UPDATE rides SET sinal_estornado = true WHERE id = $1', [ride.id])
-            reembolsoFeito = true
-            mensagemReembolso = `Estorno de R$ ${sinalValor.toFixed(2)} solicitado. Prazo: até 5 dias úteis.`
-          } else {
-            return reply.code(500).send({ error: 'Erro ao processar estorno bancário. Tente créditos MobiHub.' })
-          }
-        } catch (e) {
-          console.error('[CANCELAR AGENDAMENTO] Erro estorno:', e.message)
-          return reply.code(500).send({ error: 'Erro ao processar estorno.' })
+        const estorno = await estornarCobranca(ride.sinal_charge_id, sinalValor)
+        if (estorno?.id || estorno?.refunds?.length > 0) {
+          await query('UPDATE rides SET sinal_estornado = true WHERE id = $1', [ride.id])
+          reembolsoFeito = true
+          mensagemReembolso = `Estorno de R$ ${sinalValor.toFixed(2)} solicitado. Prazo: até 5 dias úteis.`
+        } else {
+          return reply.code(500).send({ error: 'Erro ao processar estorno. Tente a opção créditos.' })
         }
       } else if (opcao_reembolso === 'creditos') {
         if (!ride.client_id) return reply.code(400).send({ error: 'Cliente não identificado' })
         await query('UPDATE clients SET creditos = creditos + $1 WHERE id = $2', [sinalValor, ride.client_id])
         reembolsoFeito = true
-        mensagemReembolso = `R$ ${sinalValor.toFixed(2)} adicionados como créditos MobiHub.`
-      } else {
-        // Sem opcao_reembolso: informa as opções disponíveis
-        return reply.send({
-          tem_direito_reembolso: true,
-          sinal_valor: sinalValor,
-          opcoes: ['estorno', 'creditos'],
-          mensagem: 'Escolha a opção de reembolso: "estorno" (bancário, até 5 dias) ou "creditos" (imediato na carteira MobiHub).'
-        })
+        mensagemReembolso = `R$ ${sinalValor.toFixed(2)} adicionados na sua carteira MobiHub.`
       }
     }
 
@@ -372,24 +359,24 @@ export default async function agendamentosRoutes(fastify) {
       [ride.id]
     )
 
-    // Notifica motorista se já havia aceito
-    if (ride.driver_id) {
-      try {
-        const { getBot } = await import('../telegram.js')
-        const bot = getBot()
-        const driver = (await query('SELECT telegram_id FROM drivers WHERE id = $1', [ride.driver_id])).rows[0]
-        if (bot && driver?.telegram_id) {
-          const dataHora = new Date(ride.agendada_para).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
-          bot.sendMessage(driver.telegram_id,
-            `❌ *Agendamento cancelado pelo passageiro*\n\n📍 ${ride.origem} → ${ride.destino}\n📅 ${dataHora}`,
-            { parse_mode: 'Markdown' }
-          ).catch(() => {})
-        }
-      } catch (e) { /* silently ignore */ }
+    const io = getIo()
+    if (io) {
+      io.to(`ride:${ride.id}`).emit('agendamento:cancelado', {
+        rideId: ride.id,
+        motivo: 'passageiro_cancelou',
+        reembolso: mensagemReembolso
+      })
+      // Notifica motorista na sala dele, se havia aceito
+      if (ride.driver_id) {
+        io.to(`motorista:${ride.driver_id}`).emit('agendamento:cancelado', {
+          rideId: ride.id,
+          motivo: 'passageiro_cancelou'
+        })
+      }
     }
 
     return {
-      mensagem: 'Agendamento cancelado com sucesso.',
+      mensagem: 'Agendamento cancelado.',
       reembolso: reembolsoFeito
         ? mensagemReembolso
         : (horasRestantes <= 2 ? 'Cancelamento com menos de 2h — sinal não reembolsável.' : 'Sinal ainda não havia sido pago.'),
@@ -436,32 +423,30 @@ export default async function agendamentosRoutes(fastify) {
       [ride.id]
     )
 
-    // Reembolsa passageiro automaticamente em créditos
-    if (ride.client_id && ride.sinal_pago && parseFloat(ride.sinal_valor) > 0) {
+    let creditosRestituidos = 0
+    if (ride.client_id && ride.sinal_pago && parseFloat(ride.sinal_valor || 0) > 0) {
       await query('UPDATE clients SET creditos = creditos + $1 WHERE id = $2', [ride.sinal_valor, ride.client_id])
-      try {
-        const { getBot } = await import('../telegram.js')
-        const bot = getBot()
-        const client = (await query('SELECT telegram_id FROM clients WHERE id = $1', [ride.client_id])).rows[0]
-        if (bot && client?.telegram_id) {
-          bot.sendMessage(client.telegram_id,
-            `⚠️ *Infelizmente o motorista não compareceu ao seu agendamento.*\n\nR$ ${parseFloat(ride.sinal_valor).toFixed(2)} foram creditados na sua carteira MobiHub.\n\nDesculpe o transtorno!`,
-            { parse_mode: 'Markdown' }
-          ).catch(() => {})
-        }
-      } catch (e) { /* silently ignore */ }
+      creditosRestituidos = parseFloat(ride.sinal_valor)
+    }
+
+    const io = getIo()
+    if (io) {
+      io.to(`ride:${ride.id}`).emit('agendamento:cancelado', {
+        rideId: ride.id,
+        motivo: 'driver_nao_compareceu',
+        creditos_restituidos: creditosRestituidos
+      })
     }
 
     return {
-      mensagem: 'Motorista marcado como não comparecido. Corrida cancelada, motorista bloqueado por 1 mês.',
-      creditos_restituidos: ride.sinal_pago ? parseFloat(ride.sinal_valor) : 0
+      mensagem: 'Motorista marcado como não comparecido. Corrida cancelada e motorista bloqueado por 1 mês.',
+      creditos_restituidos: creditosRestituidos
     }
   })
 
   // Admin: desbloquear motorista manualmente
   fastify.post('/api/admin/drivers/:id/desbloquear-agendamento', { preHandler: requireAuth }, async (request, reply) => {
-    const { id } = request.params
-    await query('UPDATE drivers SET bloqueado_agendamento_ate = NULL WHERE id = $1', [id])
+    await query('UPDATE drivers SET bloqueado_agendamento_ate = NULL WHERE id = $1', [request.params.id])
     return { mensagem: 'Motorista desbloqueado para agendamentos.' }
   })
 }

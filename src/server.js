@@ -92,11 +92,14 @@ initScheduler()
 // Inicializa Socket.IO (antes de listen!) 
 ioInstance = new Server(fastify.server, { cors: { origin: '*' } }); 
 ioInstance.on('connection', (socket) => { 
-  socket.on('motorista:posicao', (data) => { 
-    socket.broadcast.to(`ride:${data.rideId}`).emit('motorista:posicao', data); 
-  }); 
-  socket.on('entrar:corrida', (rideId) => { 
-    socket.join(`ride:${rideId}`); 
+  socket.on('motorista:posicao', (data) => {
+    socket.broadcast.to(`ride:${data.rideId}`).emit('motorista:posicao', data);
+  });
+  socket.on('entrar:corrida', (rideId) => {
+    socket.join(`ride:${rideId}`);
+  });
+  socket.on('entrar:motorista', (driverId) => {
+    socket.join(`motorista:${driverId}`);
   }); 
 }); 
 
