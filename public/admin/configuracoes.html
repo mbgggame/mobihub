@@ -94,6 +94,26 @@
           <p class="text-xs text-gray-400 mt-1">Ao atingir este valor, o motorista fica bloqueado de receber em dinheiro</p> 
         </div>
 
+        <div class="border-t border-gray-200 pt-4"> 
+          <p class="text-sm font-semibold text-gray-700 mb-3">🗓️ Configurações de Agendamento</p> 
+          
+          <div class="mb-4"> 
+            <label class="block text-sm font-medium text-gray-700 mb-1">Disparo imediato ao pagar sinal</label> 
+            <select id="agendamento_disparo_imediato" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"> 
+              <option value="false">Não — disparar X minutos antes do horário</option> 
+              <option value="true">Sim — disparar imediatamente ao pagar sinal</option> 
+            </select> 
+            <p class="text-xs text-gray-400 mt-1">Se "Não", dispara automaticamente com antecedência configurada abaixo</p> 
+          </div> 
+
+          <div> 
+            <label class="block text-sm font-medium text-gray-700 mb-1">Minutos de antecedência para disparar</label> 
+            <input id="agendamento_minutos_antes" type="number" min="10" max="120" step="5" 
+              class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+            <p class="text-xs text-gray-400 mt-1">Quantos minutos antes do horário agendado a corrida é disparada para os motoristas</p> 
+          </div> 
+        </div>
+
         <button id="btn-salvar-config" onclick="salvarConfiguracoes()"
           class="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl py-3 font-bold text-base transition-colors">
           ✅ Salvar Configurações
@@ -130,6 +150,8 @@
         document.getElementById('parada_auto_metros').value = configAtual.parada_auto_metros || '50'
         document.getElementById('parada_auto_segundos').value = configAtual.parada_auto_segundos || '60'
         document.getElementById('motorista_balance_due_limite').value = configAtual.motorista_balance_due_limite || 30
+        document.getElementById('agendamento_disparo_imediato').value = configAtual.agendamento_disparo_imediato || 'false'
+        document.getElementById('agendamento_minutos_antes').value = configAtual.agendamento_minutos_antes || '30'
       } catch (err) {
         alert('Erro ao carregar configurações')
       }
@@ -150,7 +172,9 @@
         parada_valor_minuto: document.getElementById('parada_valor_minuto').value,
         parada_auto_metros: document.getElementById('parada_auto_metros').value,
         parada_auto_segundos: document.getElementById('parada_auto_segundos').value,
-        motorista_balance_due_limite: parseFloat(document.getElementById('motorista_balance_due_limite').value)
+        motorista_balance_due_limite: parseFloat(document.getElementById('motorista_balance_due_limite').value),
+        agendamento_disparo_imediato: document.getElementById('agendamento_disparo_imediato').value,
+        agendamento_minutos_antes: document.getElementById('agendamento_minutos_antes').value
       }
 
         console.log('[CONFIG] Body:', JSON.stringify(body))
