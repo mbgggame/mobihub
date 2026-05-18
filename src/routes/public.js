@@ -517,17 +517,37 @@ export default async function publicRoutes(fastify) {
         const { criarCobrancaAsaas, buscarPixPayload } = await import('./agendamentos.js')
         const dueDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
         
+        // Garante que o cliente tem asaas_customer_id
+        const clientData = (await query('SELECT * FROM clients WHERE id = $1', [client.id])).rows[0] 
+        let asaasCustomerId = clientData?.asaas_customer_id 
+        
+        if (!asaasCustomerId) { 
+          const customerResponse = await fetch('https://www.asaas.com/api/v3/customers', { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json', 'access_token': process.env.ASAAS_API_KEY }, 
+            body: JSON.stringify({ 
+              name: clientData.nome || 'Passageiro', 
+              mobilePhone: clientData.telefone?.replace(/\D/g, ''), 
+              ...(clientData.cpf ? { cpfCnpj: clientData.cpf.replace(/\D/g, '') } : {}), 
+              externalReference: String(clientData.id) 
+            }) 
+          }) 
+          const customerData = await customerResponse.json() 
+          if (customerData.id) { 
+            asaasCustomerId = customerData.id 
+            await query('UPDATE clients SET asaas_customer_id = $1 WHERE id = $2', [customerData.id, clientData.id]) 
+          } 
+        }
+        
         // Se forma_pagamento = '3' e cliente tem cartão, cobrar no cartão
         let billingType = 'PIX'
         let creditCardToken = null
-        let asaasCustomerId = null
         
         if (forma_pagamento === '3' && client.id) {
-          const clientInfo = (await query('SELECT asaas_credit_card_token, asaas_customer_id FROM clients WHERE id = $1', [client.id])).rows[0]
+          const clientInfo = (await query('SELECT asaas_credit_card_token FROM clients WHERE id = $1', [client.id])).rows[0]
           if (clientInfo?.asaas_credit_card_token) {
             billingType = 'CREDIT_CARD'
             creditCardToken = clientInfo.asaas_credit_card_token
-            asaasCustomerId = clientInfo.asaas_customer_id
           }
         }
         
@@ -572,9 +592,6 @@ export default async function publicRoutes(fastify) {
       response.sinal_valor = sinalValor
       response.pix_payload = pixPayload
       response.agendada_para = agendada_para
-    }
-    if (tipo === 'agendada') { 
-      console.log('[SOLICITAR AGENDADA] sinal_valor:', sinalValor, '| pix_payload:', pixPayload, '| response:', JSON.stringify(response)) 
     }
     return response 
   })
@@ -1564,13 +1581,6 @@ export default async function publicRoutes(fastify) {
       }
     }
     return { mensagem: 'Avaliação salva!' }
-  })
-
-  fastify.get('/api/temp/check-ride-200', async (request, reply) => { 
-    const ride = await query('SELECT id, valor, valor_final, valor_motorista, valor_mobihub, pagamento_status, forma_pagamento FROM rides WHERE id = 200') 
-    const transacoes = await query('SELECT * FROM driver_transactions WHERE driver_id = 6 ORDER BY id DESC LIMIT 5') 
-    const driver = await query('SELECT balance_due FROM drivers WHERE id = 6') 
-    return { ride: ride.rows, transacoes: transacoes.rows, driver: driver.rows } 
   })
 
   fastify.post('/api/client/aceitar-termos', async (request, reply) => { 
