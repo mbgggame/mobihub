@@ -859,6 +859,7 @@ let corridasJaAvaliadas = new Set()
      console.log('[DIAGNÓSTICO] aceitou_termos:', driver.aceitou_termos)
      
      // Verifica se precisa aceitar termos (força exibição e bloqueia conteúdo)
+     window.driverData = driver
      const modal = document.getElementById('modal-termos')
      const conteudoPrincipal = document.getElementById('conteudo-principal')
      
@@ -1051,7 +1052,14 @@ let corridasJaAvaliadas = new Set()
        clearTimeout(timeoutId)
        
        if (res.ok) { 
-         location.reload(); 
+         document.getElementById('modal-termos').classList.add('hidden') 
+         document.getElementById('modal-termos').style.display = 'none' 
+         document.getElementById('conteudo-principal').classList.remove('hidden') 
+         // Atualiza os dados do driver em memória para evitar reload com cache 
+         if (window.driverData) { 
+           window.driverData.aceitou_termos = true 
+           window.driverData.versao_termos = '2.0' 
+         } 
        } else { 
          const textoErro = await res.text(); 
          console.error('Erro MobiHub:', textoErro); 
