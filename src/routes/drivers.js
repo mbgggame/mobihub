@@ -504,7 +504,7 @@ export default async function driversRoutes(fastify) {
         SET aceitou_termos = true, 
             data_aceite_termos = CURRENT_TIMESTAMP, 
             ip_aceite_termos = $1, 
-            versao_termos = '2.0', 
+            versao_termos = '2.1', 
             aceite_arbitragem = $2 
         WHERE token_perfil = $3 
       `, [request.ip, aceite_arbitragem ? true : false, token]); 
