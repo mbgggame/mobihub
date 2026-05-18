@@ -431,13 +431,16 @@
         <p class="text-xs text-gray-500">Ver todas as transações</p>
       </div>
     </div>
-    <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-    </svg>
+    <div class="flex items-center gap-2">
+      <span id="badge-agendamentos" class="hidden bg-red-500 text-white text-xs rounded-full px-2 py-0.5"></span>
+      <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+      </svg>
+    </div>
   </button>
 
   <!-- BOTÃO MEUS AGENDAMENTOS -->
-  <button onclick="abrirModalAgendamentos()" class="w-full bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between hover:bg-gray-50">
+  <button id="btn-agendamentos" onclick="abrirModalAgendamentos()" class="w-full bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between hover:bg-gray-50">
     <div class="flex items-center gap-3">
       <span class="text-xl">🗓️</span>
       <div>
@@ -445,11 +448,13 @@
         <p class="text-xs text-gray-500">Ver corridas agendadas</p>
       </div>
     </div>
-    <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linecap="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-    </svg>
+    <div class="flex items-center gap-2">
+      <span id="badge-agendamentos" class="hidden bg-red-500 text-white text-xs rounded-full px-2 py-0.5"></span>
+      <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+      </svg>
+    </div>
   </button>
-
   <!-- VEÍCULOS --> 
   <div class="bg-white border border-gray-200 rounded-xl p-4"> 
     <div class="flex items-center justify-between mb-3"> 
@@ -2255,6 +2260,12 @@ async function abrirModalAgendamentos() {
       </div> 
     </div> 
   `).join('') : '<p class="text-sm text-gray-400 text-center py-4">Nenhum agendamento aceito</p>' 
+
+  const badge = document.getElementById('badge-agendamentos') 
+  if (badge) { 
+    badge.textContent = d.disponiveis?.length || 0 
+    badge.classList.toggle('hidden', !d.disponiveis?.length) 
+  } 
 } 
 
 async function aceitarAgendamento(id) { 
@@ -2279,7 +2290,23 @@ async function confirmarPresenca(id) {
   abrirModalAgendamentos() 
 } 
 
+async function verificarAgendamentosDisponiveis() {
+  try { 
+    const r = await fetch(`/api/motorista/${tokenMotorista}/agendamentos`) 
+    const d = await r.json() 
+    const badge = document.getElementById('badge-agendamentos') 
+    if (badge) { 
+      badge.textContent = d.disponiveis?.length || 0 
+      badge.classList.toggle('hidden', !d.disponiveis?.length) 
+    } 
+  } catch(e) {} 
+}
+
+// Verificar agendamentos disponíveis a cada 60 segundos 
+setInterval(verificarAgendamentosDisponiveis, 60000) 
+
  carregar() 
+ verificarAgendamentosDisponiveis()
  setTimeout(polling, 3000) 
 </script> 
 </div>

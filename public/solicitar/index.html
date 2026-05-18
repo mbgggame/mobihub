@@ -1233,6 +1233,8 @@
                <button onclick="navigator.clipboard.writeText('${d.pix_payload}').then(()=>alert('Copiado!'))" class="mt-2 w-full border border-gray-300 rounded-lg py-2 text-xs">📋 Copiar código</button> 
              </div> 
            ` : ''} 
+           <p class="text-xs text-gray-500 mt-2">✅ Após pagar, seu agendamento será confirmado automaticamente</p> 
+           <p class="text-xs text-gray-500">🗓️ Motoristas poderão aceitar seu agendamento em breve</p> 
            <p class="text-xs text-gray-400">📅 Corrida: ${new Date(d.agendada_para).toLocaleString('pt-BR')}</p> 
            <a href="/r/${d.token}" class="block w-full bg-green-600 text-white rounded-xl py-3 text-sm font-semibold">🔍 Acompanhar agendamento</a> 
          </div> 
