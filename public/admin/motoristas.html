@@ -198,7 +198,7 @@ function atualizarContadores() {
 } 
 
 function hashMotorista(m) { 
-  return `${m.online}-${m.corrida_status}-${m.corridas_hoje}-${m.ganhos_hoje}-${m.segundos_sem_update}-${m.balance_due}` 
+  return `${m.online}-${m.corrida_status}-${m.corridas_hoje}-${m.ganhos_hoje}-${m.balance_due}-${m.corrida_id}` 
 } 
 
 function gerarRowMotorista(m) { 
@@ -255,7 +255,7 @@ function gerarRowMotorista(m) {
         </span> 
       </td> 
       <td class="px-6 py-4"> 
-        <p class="text-sm text-gray-600">${localizacaoTexto}</p> 
+        <p class="text-sm text-gray-600 loc-time">${localizacaoTexto}</p> 
       </td> 
       <td class="px-6 py-4"> 
         <div class="max-w-xs">
@@ -391,6 +391,19 @@ function sair() {
   localStorage.removeItem('mobihub_token'); 
   location.href = '/admin/login' 
 } 
+
+// Atualizar texto de localização a cada 30 segundos
+setInterval(() => { 
+  document.querySelectorAll('tr[id^="row-motorista-"]').forEach(row => { 
+    const id = parseInt(row.id.replace('row-motorista-', '')) 
+    const m = todosMotoristas.find(m => m.id === id) 
+    if (!m) return 
+    const locCell = row.querySelector('.loc-time') 
+    if (locCell && m.location_at && m.segundos_sem_update < 300) { 
+      locCell.textContent = `${tempoDecorrido(m.location_at)} atrás` 
+    } 
+  }) 
+}, 30000) 
  
 // Inicializar
 carregarMotoristas() 
