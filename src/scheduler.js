@@ -77,9 +77,13 @@ async function verificarAgendamentos() {
  
         const io = getIo() 
         if (io) { 
-          io.emit('nova_corrida', ride) 
+          io.emit('nova_corrida_agendada', { 
+            ...ride, 
+            tipo: 'agendada', 
+            agendada_para: ride.agendada_para 
+          }) 
         } 
-        console.log(`[SCHEDULER] Corrida #${ride.id} disparada via socket`) 
+        console.log(`[SCHEDULER] Corrida agendada #${ride.id} disparada via socket`) 
       } catch(err) { 
         console.error(`[SCHEDULER] Erro ao disparar corrida #${ride.id}:`, err.message) 
       } 
