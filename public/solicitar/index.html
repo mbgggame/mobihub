@@ -754,6 +754,7 @@
      : 'flex-1 bg-white border border-green-600 text-green-600 rounded-xl py-3 font-semibold text-sm' 
    if (tipo === 'agendada') { 
      campo.classList.remove('hidden') 
+     document.getElementById('btn-solicitar').textContent = '🗓️ Agendar corrida' 
      const agora = new Date() 
 
      // Mínimo: 2 horas a partir de agora 
@@ -773,6 +774,7 @@
      input.onchange = recalcularValor 
    } else { 
      campo.classList.add('hidden') 
+     document.getElementById('btn-solicitar').textContent = 'Solicitar corrida' 
    } 
    recalcularValor() 
  } 
