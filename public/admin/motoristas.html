@@ -6,69 +6,86 @@
   <title>MobiHub Admin | Motoristas</title> 
   <script src="https://cdn.tailwindcss.com"></script> 
 </head> 
-<body class="bg-gray-50 min-h-screen pb-10"> 
+<body class="bg-gray-50 min-h-screen"> 
 
-<div class="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10"> 
-  <div class="flex items-center gap-3"> 
-    <a href="/admin/dashboard" class="text-gray-500 hover:text-gray-700 text-sm">← Dashboard</a> 
-    <span class="text-gray-300">|</span> 
-    <span class="font-semibold text-gray-900">Motoristas</span> 
+<div class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm"> 
+  <div class="flex items-center gap-4"> 
+    <a href="/admin/dashboard" class="text-gray-500 hover:text-gray-700 text-sm font-medium flex items-center gap-2"> 
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+      </svg>
+      Dashboard
+    </a> 
+    <div class="h-6 w-px bg-gray-200"></div>
+    <h1 class="text-lg font-bold text-gray-900">Motoristas</h1> 
   </div> 
-  <button onclick="sair()" class="text-sm text-gray-500 border border-gray-200 px-3 py-1.5 rounded-lg">Sair</button> 
+  <div class="flex items-center gap-4"> 
+    <div class="flex items-center gap-2 text-sm">
+      <span class="text-gray-500">Próxima atualização em</span>
+      <span id="contador-refresh" class="font-bold text-green-600">15s</span>
+    </div>
+    <button onclick="carregarMotoristas()" class="text-sm text-gray-600 hover:text-gray-800 border border-gray-200 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+      </svg>
+      Atualizar agora
+    </button>
+    <button onclick="sair()" class="text-sm text-gray-600 border border-gray-200 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">Sair</button> 
+  </div> 
 </div> 
 
-<div class="max-w-lg mx-auto px-4 py-6 space-y-4"> 
+<div class="max-w-7xl mx-auto px-6 py-6 space-y-6"> 
 
   <!-- RESUMO --> 
-  <div class="grid grid-cols-2 gap-3 mb-4 md:grid-cols-4"> 
-    <div class="bg-green-50 border border-green-200 rounded-xl p-3 text-center"> 
-      <p id="total-online" class="text-2xl font-bold text-green-700">0</p> 
-      <p class="text-xs text-green-600">Online agora</p> 
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4"> 
+    <div class="bg-green-50 border border-green-200 rounded-xl p-5 text-center"> 
+      <p id="total-online" class="text-3xl font-bold text-green-700">0</p> 
+      <p class="text-xs text-green-600 uppercase tracking-wide mt-1">Online agora</p> 
     </div> 
-    <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-center"> 
-      <p id="total-em-corrida" class="text-2xl font-bold text-yellow-700">0</p> 
-      <p class="text-xs text-yellow-600">Em corrida</p> 
+    <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-5 text-center"> 
+      <p id="total-em-corrida" class="text-3xl font-bold text-yellow-700">0</p> 
+      <p class="text-xs text-yellow-600 uppercase tracking-wide mt-1">Em corrida</p> 
     </div> 
-    <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center"> 
-      <p id="total-disponiveis" class="text-2xl font-bold text-blue-700">0</p> 
-      <p class="text-xs text-blue-600">Disponíveis</p> 
+    <div class="bg-blue-50 border border-blue-200 rounded-xl p-5 text-center"> 
+      <p id="total-disponiveis" class="text-3xl font-bold text-blue-700">0</p> 
+      <p class="text-xs text-blue-600 uppercase tracking-wide mt-1">Disponíveis</p> 
     </div> 
-    <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center"> 
-      <p id="total-offline" class="text-2xl font-bold text-gray-600">0</p> 
-      <p class="text-xs text-gray-500">Offline</p> 
+    <div class="bg-gray-50 border border-gray-200 rounded-xl p-5 text-center"> 
+      <p id="total-offline" class="text-3xl font-bold text-gray-600">0</p> 
+      <p class="text-xs text-gray-500 uppercase tracking-wide mt-1">Offline</p> 
     </div> 
   </div> 
 
   <!-- FILTROS --> 
-  <div class="bg-white border border-gray-200 rounded-xl p-3 mb-4 space-y-3"> 
-    <input id="filtro-busca" type="text" placeholder="🔍 Buscar por nome ou placa..." 
-      oninput="aplicarFiltros()" 
-      class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-    <div class="flex gap-2 flex-wrap"> 
-      <button onclick="setFiltroStatus('todos')" id="filtro-todos" 
-        class="filtro-btn ativo text-xs px-3 py-1.5 rounded-full border border-gray-300 bg-gray-800 text-white"> 
-        Todos 
-      </button> 
-      <button onclick="setFiltroStatus('online')" id="filtro-online" 
-        class="filtro-btn text-xs px-3 py-1.5 rounded-full border border-green-300 text-green-700"> 
-        🟢 Online 
-      </button> 
-      <button onclick="setFiltroStatus('em_corrida')" id="filtro-em_corrida" 
-        class="filtro-btn text-xs px-3 py-1.5 rounded-full border border-yellow-300 text-yellow-700"> 
-        🚗 Em corrida 
-      </button> 
-      <button onclick="setFiltroStatus('disponivel')" id="filtro-disponivel" 
-        class="filtro-btn text-xs px-3 py-1.5 rounded-full border border-blue-300 text-blue-700"> 
-        ✅ Disponível 
-      </button> 
-      <button onclick="setFiltroStatus('offline')" id="filtro-offline" 
-        class="filtro-btn text-xs px-3 py-1.5 rounded-full border border-gray-300 text-gray-600"> 
-        ⚫ Offline 
-      </button> 
-    </div> 
-    <div class="flex gap-2"> 
+  <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm"> 
+    <div class="flex flex-wrap items-center gap-4"> 
+      <input id="filtro-busca" type="text" placeholder="🔍 Buscar por nome ou placa..." 
+        oninput="aplicarFiltros()" 
+        class="w-full md:w-72 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/> 
+      <div class="flex gap-2"> 
+        <button onclick="setFiltroStatus('todos')" id="filtro-todos" 
+          class="filtro-btn ativo text-sm px-4 py-2 rounded-full border border-gray-300 bg-gray-800 text-white transition-all"> 
+          Todos 
+        </button> 
+        <button onclick="setFiltroStatus('online')" id="filtro-online" 
+          class="filtro-btn text-sm px-4 py-2 rounded-full border border-green-300 text-green-700 hover:bg-green-50 transition-all"> 
+          🟢 Online 
+        </button> 
+        <button onclick="setFiltroStatus('em_corrida')" id="filtro-em_corrida" 
+          class="filtro-btn text-sm px-4 py-2 rounded-full border border-yellow-300 text-yellow-700 hover:bg-yellow-50 transition-all"> 
+          🚗 Em corrida 
+        </button> 
+        <button onclick="setFiltroStatus('disponivel')" id="filtro-disponivel" 
+          class="filtro-btn text-sm px-4 py-2 rounded-full border border-blue-300 text-blue-700 hover:bg-blue-50 transition-all"> 
+          ✅ Disponível 
+        </button> 
+        <button onclick="setFiltroStatus('offline')" id="filtro-offline" 
+          class="filtro-btn text-sm px-4 py-2 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-50 transition-all"> 
+          ⚫ Offline 
+        </button> 
+      </div> 
       <select id="filtro-ordenar" onchange="aplicarFiltros()" 
-        class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"> 
+        class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"> 
         <option value="nome">Ordenar por nome</option> 
         <option value="online">Ordenar por status</option> 
         <option value="corridas">Ordenar por corridas hoje</option> 
@@ -78,14 +95,39 @@
     </div> 
   </div> 
 
-  <!-- LISTA DE MOTORISTAS --> 
-  <div id="lista-motoristas-realtime" class="space-y-3"></div> 
+  <!-- TABELA DE MOTORISTAS --> 
+  <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden"> 
+    <div class="overflow-x-auto"> 
+      <table class="w-full"> 
+        <thead class="bg-gray-50 border-b border-gray-200"> 
+          <tr> 
+            <th class="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider px-6 py-4">Nome</th> 
+            <th class="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider px-6 py-4">Veículo</th> 
+            <th class="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider px-6 py-4">Status</th> 
+            <th class="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider px-6 py-4">Localização</th> 
+            <th class="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider px-6 py-4">Corrida Atual</th> 
+            <th class="text-right text-xs font-semibold text-gray-600 uppercase tracking-wider px-6 py-4">Ganhos Hoje</th> 
+            <th class="text-center text-xs font-semibold text-gray-600 uppercase tracking-wider px-6 py-4">Corridas</th> 
+            <th class="text-center text-xs font-semibold text-gray-600 uppercase tracking-wider px-6 py-4">Avaliação</th> 
+            <th class="text-center text-xs font-semibold text-gray-600 uppercase tracking-wider px-6 py-4">Ações</th> 
+          </tr> 
+        </thead> 
+        <tbody id="tabela-motoristas" class="divide-y divide-gray-100"> 
+        </tbody> 
+      </table> 
+    </div> 
+    <div id="sem-motoristas" class="hidden py-12 text-center"> 
+      <p class="text-gray-400">Nenhum motorista encontrado</p> 
+    </div> 
+  </div> 
 
 </div> 
 
 <script> 
 let todosMotoristas = [] 
 let filtroStatus = 'todos' 
+let contadorRefresh = 15
+let intervaloContador = null
 const token = localStorage.getItem('mobihub_token') 
 if (!token) location.href = '/admin/login' 
 const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }) 
@@ -137,7 +179,7 @@ function aplicarFiltros() {
     return (a.nome || '').localeCompare(b.nome || '') 
   }) 
  
-  renderizarLista(lista) 
+  renderizarTabela(lista) 
   atualizarContadores() 
 } 
  
@@ -153,93 +195,112 @@ function atualizarContadores() {
   document.getElementById('total-offline').textContent = offline 
 } 
  
-function renderizarLista(lista) { 
-  const div = document.getElementById('lista-motoristas-realtime') 
+function renderizarTabela(lista) { 
+  const tbody = document.getElementById('tabela-motoristas') 
+  const semMotoristas = document.getElementById('sem-motoristas') 
+  
   if (!lista.length) { 
-    div.innerHTML = '<p class="text-center text-gray-400 py-8">Nenhum motorista encontrado</p>' 
+    tbody.innerHTML = '' 
+    semMotoristas.classList.remove('hidden') 
     return 
   } 
- 
-  div.innerHTML = lista.map(m => { 
+  
+  semMotoristas.classList.add('hidden')
+  tbody.innerHTML = lista.map(m => { 
     const emCorrida = m.corrida_id && ['aceita','em_viagem'].includes(m.corrida_status) 
     const disponivel = m.online === 1 && !emCorrida 
     
     let statusBadge = '' 
-    let cardBorder = 'border-gray-200' 
+    let statusCor = ''
     
     if (emCorrida) { 
-      statusBadge = '<span class="bg-yellow-500 text-white text-xs px-2 py-0.5 rounded-full">🚗 Em corrida</span>' 
-      cardBorder = 'border-yellow-300' 
+      statusBadge = '🚗 Em corrida'
+      statusCor = 'bg-yellow-100 text-yellow-700 border-yellow-200'
     } else if (disponivel) { 
-      statusBadge = '<span class="bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">🟢 Disponível</span>' 
-      cardBorder = 'border-green-300' 
+      statusBadge = '🟢 Disponível'
+      statusCor = 'bg-green-100 text-green-700 border-green-200'
     } else { 
-      statusBadge = '<span class="bg-gray-400 text-white text-xs px-2 py-0.5 rounded-full">⚫ Offline</span>' 
+      statusBadge = '⚫ Offline'
+      statusCor = 'bg-gray-100 text-gray-700 border-gray-200'
     } 
  
-    const aprovado = m.status_cadastro === 'aprovado' 
+    const aprovado = m.status_cadastro === 'aprovado'
+    const veiculoTexto = [m.modelo_carro, m.cor_carro].filter(Boolean).join(' • ') || '—'
+    const localizacaoTexto = m.location_at && m.segundos_sem_update < 300 
+      ? `${tempoDecorrido(m.location_at)} atrás` 
+      : m.online === 1 
+      ? '⚠️ Sem localização' 
+      : '—'
+    const corridaTexto = emCorrida 
+      ? `${m.origem || '—'} → ${m.destino || '—'}` 
+      : '—'
  
     return ` 
-      <div class="bg-white border ${cardBorder} rounded-xl p-4 space-y-3"> 
-        <div class="flex items-start justify-between"> 
-          <div class="flex-1"> 
-            <div class="flex items-center gap-2 flex-wrap"> 
-              <p class="font-semibold text-gray-900">${m.nome}</p> 
-              ${statusBadge} 
-              ${m.balance_due > 0 ? `<span class="bg-red-100 text-red-600 text-xs px-2 py-0.5 rounded-full">💸 R$ ${Number(m.balance_due).toFixed(2)}</span>` : ''} 
+      <tr class="hover:bg-gray-50 transition-colors"> 
+        <td class="px-6 py-4"> 
+          <div class="flex items-center gap-3"> 
+            <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold text-lg overflow-hidden"> 
+              ${m.nome?.charAt(0).toUpperCase() || '?'}
             </div> 
-            <p class="text-xs text-gray-500 mt-0.5">${m.modelo_carro || ''} ${m.cor_carro || ''} • ${m.placa || '—'}</p> 
+            <div> 
+              <p class="font-medium text-gray-900">${m.nome}</p> 
+              ${m.balance_due > 0 ? `<p class="text-xs text-red-600">💸 R$ ${Number(m.balance_due).toFixed(2)}</p>` : ''} 
+            </div> 
           </div> 
-          <div class="text-right text-xs text-gray-400"> 
-            <p>⭐ ${Number(m.media_avaliacao || 0).toFixed(1)} (${m.total_avaliacoes || 0})</p> 
-            <p>${m.total_viagens || 0} viagens</p> 
+        </td> 
+        <td class="px-6 py-4"> 
+          <div> 
+            <p class="text-sm text-gray-900">${veiculoTexto}</p> 
+            <p class="text-xs text-gray-500 font-mono">${m.placa || '—'}</p> 
           </div> 
-        </div> 
- 
-        <div class="grid grid-cols-2 gap-2 text-xs"> 
-          <div class="bg-gray-50 rounded-lg p-2 text-center"> 
-            <p class="font-bold text-green-700">R$ ${Number(m.ganhos_hoje || 0).toFixed(2)}</p> 
-            <p class="text-gray-500">Ganhos hoje</p> 
+        </td> 
+        <td class="px-6 py-4"> 
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${statusCor}"> 
+            ${statusBadge} 
+          </span> 
+        </td> 
+        <td class="px-6 py-4"> 
+          <p class="text-sm text-gray-600">${localizacaoTexto}</p> 
+        </td> 
+        <td class="px-6 py-4"> 
+          <div class="max-w-xs">
+            <p class="text-sm text-gray-900 truncate">${corridaTexto}</p>
+            ${emCorrida && m.passageiro_nome ? `<p class="text-xs text-gray-500">👤 ${m.passageiro_nome}</p>` : ''}
+          </div>
+        </td> 
+        <td class="px-6 py-4 text-right"> 
+          <p class="text-sm font-semibold text-green-700">R$ ${Number(m.ganhos_hoje || 0).toFixed(2)}</p> 
+        </td> 
+        <td class="px-6 py-4 text-center"> 
+          <p class="text-sm font-medium text-gray-900">${m.corridas_hoje || 0}</p> 
+        </td> 
+        <td class="px-6 py-4 text-center"> 
+          <div class="flex items-center justify-center gap-1"> 
+            <span class="text-yellow-400 text-sm">⭐</span> 
+            <span class="text-sm font-medium text-gray-900">${Number(m.media_avaliacao || 0).toFixed(1)}</span> 
           </div> 
-          <div class="bg-gray-50 rounded-lg p-2 text-center"> 
-            <p class="font-bold text-blue-700">${m.corridas_hoje || 0}</p> 
-            <p class="text-gray-500">Corridas hoje</p> 
-          </div> 
-        </div> 
- 
-        ${emCorrida ? ` 
-          <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs space-y-1"> 
-            <p class="font-semibold text-yellow-800">🚗 Corrida em andamento</p> 
-            <p class="text-yellow-700">📍 ${m.origem || '—'}</p> 
-            <p class="text-yellow-700">🏁 ${m.destino || '—'}</p> 
-            <p class="text-yellow-600">💰 R$ ${Number(m.valor || 0).toFixed(2)} • 👤 ${m.passageiro_nome || '—'}</p> 
-            <p class="text-yellow-500">⏱️ Iniciada há ${tempoDecorrido(m.aceita_at)}</p> 
-          </div> 
-        ` : ''} 
- 
-        ${m.location_at && m.segundos_sem_update < 300 ? ` 
-          <p class="text-xs text-gray-400">📡 Última posição: ${tempoDecorrido(m.location_at)} atrás</p> 
-        ` : m.online === 1 ? ` 
-          <p class="text-xs text-orange-400">⚠️ Sem localização recente</p> 
-        ` : ''} 
- 
-        <div class="flex gap-2 flex-wrap"> 
-          ${aprovado ? ` 
-            <button onclick="toggleAtivo(${m.id}, ${m.ativo})" 
-              class="text-xs px-3 py-1.5 rounded-lg border ${m.ativo ? 'border-red-200 text-red-600 hover:bg-red-50' : 'border-green-200 text-green-600 hover:bg-green-50'}"> 
-              ${m.ativo ? '⛔ Desativar' : '✅ Ativar'} 
+        </td> 
+        <td class="px-6 py-4 text-center"> 
+          <div class="flex items-center justify-center gap-2"> 
+            ${aprovado ? ` 
+              <button onclick="toggleAtivo(${m.id}, ${m.ativo})" 
+                class="text-sm px-3 py-1.5 rounded-lg border ${m.ativo ? 'border-red-200 text-red-600 hover:bg-red-50' : 'border-green-200 text-green-600 hover:bg-green-50'} transition-colors"> 
+                ${m.ativo ? '⛔ Desativar' : '✅ Ativar'} 
+              </button> 
+            ` : ''} 
+            ${m.token_perfil ? ` 
+              <a href="/motorista/${m.token_perfil}" target="_blank" 
+                class="text-sm px-3 py-1.5 rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 transition-colors"> 
+                🚗 Painel 
+              </a> 
+            ` : ''}
+            <button onclick="analisarMotorista(${m.id})" 
+              class="text-sm px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"> 
+              🔍 Analisar 
             </button> 
-          ` : ''} 
-          <a href="/motorista/${m.token_perfil}" target="_blank" 
-            class="text-xs px-3 py-1.5 rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50"> 
-            🚗 Painel 
-          </a> 
-          <button onclick="analisarMotorista(${m.id})" 
-            class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"> 
-            🔍 Analisar 
-          </button> 
-        </div> 
-      </div> 
+          </div> 
+        </td> 
+      </tr> 
     ` 
   }).join('') 
 } 
@@ -249,11 +310,25 @@ async function carregarMotoristas() {
     const r = await fetch('/api/admin/motoristas/realtime', { headers: headers() }) 
     if (!r.ok) { location.href = '/admin/login'; return } 
     todosMotoristas = await r.json() 
-    aplicarFiltros() 
+    aplicarFiltros()
+    reiniciarContador()
   } catch(e) { 
     console.error(e) 
   } 
 } 
+ 
+function reiniciarContador() {
+  contadorRefresh = 15
+  document.getElementById('contador-refresh').textContent = '15s'
+  if (intervaloContador) clearInterval(intervaloContador)
+  intervaloContador = setInterval(() => {
+    contadorRefresh--
+    document.getElementById('contador-refresh').textContent = `${contadorRefresh}s`
+    if (contadorRefresh <= 0) {
+      carregarMotoristas()
+    }
+  }, 1000)
+}
  
 async function toggleAtivo(id, ativo) { 
   const r = await fetch(`/api/admin/drivers/${id}/toggle`, { 
@@ -273,9 +348,8 @@ function sair() {
   location.href = '/admin/login' 
 } 
  
-// Atualizar a cada 15 segundos automaticamente 
+// Inicializar
 carregarMotoristas() 
-setInterval(carregarMotoristas, 15000) 
 </script> 
 </body> 
 </html>

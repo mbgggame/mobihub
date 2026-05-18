@@ -2319,16 +2319,12 @@ async function verificarAgendamentosDisponiveis() {
   try { 
     const r = await fetch(`/api/motorista/${tokenMotorista}/agendamentos`) 
     const d = await r.json() 
-    console.log('[AGENDAMENTOS] disponiveis:', d.disponiveis?.length, '| data:', JSON.stringify(d.disponiveis)) 
     const badge = document.getElementById('badge-agendamentos') 
-    console.log('[AGENDAMENTOS] badge element:', badge) 
     if (badge) { 
       badge.textContent = d.disponiveis?.length || 0 
       badge.classList.toggle('hidden', !d.disponiveis?.length) 
     } 
-  } catch(e) { 
-    console.error('[AGENDAMENTOS] erro:', e) 
-  } 
+  } catch(e) {} 
 }
 
 // Verificar agendamentos disponíveis a cada 60 segundos 
