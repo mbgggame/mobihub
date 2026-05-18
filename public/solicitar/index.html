@@ -1239,6 +1239,18 @@
            <a href="/r/${d.token}" class="block w-full bg-green-600 text-white rounded-xl py-3 text-sm font-semibold">🔍 Acompanhar agendamento</a> 
          </div> 
        ` 
+       // Polling para verificar pagamento do sinal 
+       const tokenAgendamento = d.token 
+       const pollingPagamento = setInterval(async () => { 
+         try { 
+           const r = await fetch(`/api/agendar/${tokenAgendamento}/status`) 
+           const status = await r.json() 
+           if (status.sinal_pago) { 
+             clearInterval(pollingPagamento) 
+             window.location.href = `/r/${tokenAgendamento}` 
+           } 
+         } catch(e) {} 
+       }, 5000) 
      } else { 
        window.location.href = '/r/' + d.token 
      } 

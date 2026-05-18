@@ -2261,17 +2261,30 @@ async function abrirModalAgendamentos() {
   `).join('') : '<p class="text-sm text-gray-400 text-center py-4">Nenhum agendamento disponível</p>' 
 
   const listaMeus = document.getElementById('lista-meus-agendamentos') 
-  listaMeus.innerHTML = d.meus_agendamentos?.length ? d.meus_agendamentos.map(ag => ` 
-    <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-2"> 
-      <p class="text-sm font-semibold">${ag.origem} → ${ag.destino}</p> 
-      <p class="text-xs text-gray-500">📅 ${new Date(ag.agendada_para).toLocaleString('pt-BR')}</p> 
-      <p class="text-xs text-green-700">💰 R$ ${Number(ag.valor).toFixed(2)}</p> 
-      <div class="flex gap-2"> 
-        <button onclick="confirmarPresenca(${ag.id})" class="flex-1 bg-blue-600 text-white rounded-lg py-1.5 text-xs font-semibold">✅ Confirmar presença</button> 
-        <button onclick="recusarAgendamento(${ag.id})" class="flex-1 border border-red-300 text-red-600 rounded-lg py-1.5 text-xs">Desistir</button> 
+  listaMeus.innerHTML = d.meus_agendamentos?.length ? d.meus_agendamentos.map(ag => { 
+    const agora = new Date() 
+    const agendadaPara = new Date(ag.agendada_para) 
+    const minutosRestantes = (agendadaPara - agora) / (1000 * 60) 
+    const podeConfirmar = minutosRestantes <= 30 
+    return ` 
+      <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-2"> 
+        <p class="text-sm font-semibold">${ag.origem} → ${ag.destino}</p> 
+        <p class="text-xs text-gray-500">📅 ${new Date(ag.agendada_para).toLocaleString('pt-BR')}</p> 
+        <p class="text-xs text-green-700">💰 R$ ${Number(ag.valor).toFixed(2)}</p> 
+        ${podeConfirmar ? ` 
+          <div class="flex gap-2"> 
+            <button onclick="confirmarPresenca(${ag.id})" class="flex-1 bg-blue-600 text-white rounded-lg py-1.5 text-xs font-semibold">✅ Confirmar presença</button> 
+            <button onclick="recusarAgendamento(${ag.id})" class="flex-1 border border-red-300 text-red-600 rounded-lg py-1.5 text-xs">Desistir</button> 
+          </div> 
+        ` : ` 
+          <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-2"> 
+            <p class="text-xs text-yellow-700 text-center">⏰ Confirmar presença disponível 30 min antes</p> 
+            <button onclick="recusarAgendamento(${ag.id})" class="w-full mt-1 border border-red-300 text-red-600 rounded-lg py-1.5 text-xs">Desistir do agendamento</button> 
+          </div> 
+        `} 
       </div> 
-    </div> 
-  `).join('') : '<p class="text-sm text-gray-400 text-center py-4">Nenhum agendamento aceito</p>' 
+    ` 
+  }).join('') : '<p class="text-sm text-gray-400 text-center py-4">Nenhum agendamento aceito</p>' 
 
   const badge = document.getElementById('badge-agendamentos') 
   if (badge) { 

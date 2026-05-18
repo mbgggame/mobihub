@@ -72,6 +72,13 @@
          </svg> 
        </div> 
      </div>
+     
+     <!-- AGENDAMENTO -->
+     <div id="card-agendamento" class="hidden mt-4 bg-purple-50 border border-purple-200 rounded-xl p-4">
+       <p class="text-xs text-purple-500 font-medium uppercase tracking-wide mb-2">Agendamento</p>
+       <p class="text-sm text-purple-900 font-semibold">📅 <span id="txt-agendada-para"></span></p>
+     </div>
+     
      <!-- Radar and rotating messages for waiting state -->
      <div id="waiting-section" class="hidden mt-4 text-center">
        <div class="radar">
@@ -607,6 +614,17 @@
    if (badge) { 
      badge.textContent = cfgStatus.label 
      badge.className = `inline-block mt-1 px-3 py-1 rounded-full text-sm font-semibold ${cfgStatus.cls}` 
+   }
+
+   // Mostrar data/hora agendada quando for agendada ou agendada_aceita
+   const cardAgendamento = document.getElementById('card-agendamento')
+   if (cardAgendamento) {
+     if (ride.status === 'agendada' || ride.status === 'agendada_aceita') {
+       cardAgendamento.classList.remove('hidden')
+       document.getElementById('txt-agendada-para').textContent = new Date(ride.agendada_para).toLocaleString('pt-BR')
+     } else {
+       cardAgendamento.classList.add('hidden')
+     }
    } 
  
    if (ride.status === 'cancelada') { 
