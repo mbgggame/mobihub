@@ -471,4 +471,29 @@ export default async function agendamentosRoutes(fastify) {
     await query('UPDATE drivers SET bloqueado_agendamento_ate = NULL WHERE id = $1', [request.params.id])
     return { mensagem: 'Motorista desbloqueado para agendamentos.' }
   })
+
+  // Admin: simular pagamento do sinal de agendamento
+  fastify.post('/api/admin/agendamentos/:id/simular-sinal', { preHandler: requireAuth }, async (request, reply) => { 
+    const { id } = request.params 
+    const ride = (await query( 
+      "SELECT * FROM rides WHERE id = $1 AND tipo = 'agendada' AND sinal_pago = false", 
+      [id] 
+    )).rows[0] 
+    if (!ride) return reply.code(404).send({ error: 'Agendamento não encontrado ou sinal já pago' }) 
+ 
+    await query( 
+      "UPDATE rides SET sinal_pago = true, updated_at = CURRENT_TIMESTAMP WHERE id = $1", 
+      [id] 
+    ) 
+ 
+    const io = getIo() 
+    if (io) { 
+      io.to(`ride:${ride.id}`).emit('agendamento:sinal_confirmado', { 
+        rideId: ride.id, 
+        sinal_valor: ride.sinal_valor 
+      }) 
+    } 
+ 
+    return { mensagem: 'Sinal simulado com sucesso!', corrida_id: id, sinal_valor: ride.sinal_valor } 
+  })
 }

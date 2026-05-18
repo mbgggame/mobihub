@@ -131,6 +131,12 @@ function renderizar(corridas) {
            class="text-xs text-blue-600 font-medium hover:text-blue-700">
            🔁 Repetir
          </button>
+         ${c.tipo === 'agendada' && !c.sinal_pago ? ` 
+           <button onclick="event.stopPropagation(); simularSinal(${c.id})" 
+             class="text-xs bg-yellow-500 text-white px-3 py-1.5 rounded-lg hover:bg-yellow-600"> 
+             💰 Simular sinal 
+           </button> 
+         ` : ''}
        </div>
      </div> 
    `}).join('') 
@@ -384,7 +390,17 @@ async function confirmarCancelamento(id) {
     alert('Erro de conexão') 
   } 
 }
- 
+
+async function simularSinal(id) { 
+  const r = await fetch(`/api/admin/agendamentos/${id}/simular-sinal`, { 
+    method: 'POST', 
+    headers: headers() 
+  }) 
+  const d = await r.json() 
+  alert(d.mensagem || d.error) 
+  carregar() 
+}
+
 async function controlarCorrida(id, acao, method = 'PUT') { 
   const r = await fetch(`/api/rides/${id}/${acao}`, { 
     method, 
