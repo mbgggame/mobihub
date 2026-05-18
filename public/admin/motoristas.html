@@ -346,15 +346,9 @@ async function carregarMotoristas() {
     if (!r.ok) { location.href = '/admin/login'; return } 
     const novosMotoristas = await r.json() 
     
-    if (JSON.stringify(novosMotoristas) !== JSON.stringify(todosMotoristas)) { 
-      todosMotoristas = novosMotoristas 
-      requestAnimationFrame(() => {
-        aplicarFiltros()
-        reiniciarContador()
-      })
-    } else {
-      reiniciarContador()
-    }
+    todosMotoristas = novosMotoristas 
+    aplicarFiltros() 
+    reiniciarContador() 
   } catch(e) { 
     console.error(e) 
   } 
