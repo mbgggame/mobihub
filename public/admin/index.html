@@ -394,7 +394,8 @@ async function confirmarCancelamento(id) {
 async function simularSinal(id) { 
   const r = await fetch(`/api/admin/agendamentos/${id}/simular-sinal`, { 
     method: 'POST', 
-    headers: headers() 
+    headers: headers(), 
+    body: JSON.stringify({}) 
   }) 
   const d = await r.json() 
   alert(d.mensagem || d.error) 
