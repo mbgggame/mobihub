@@ -20,9 +20,10 @@
     <h1 class="text-lg font-bold text-gray-900">Motoristas</h1> 
   </div> 
   <div class="flex items-center gap-4"> 
-    <div class="flex items-center gap-2 text-sm">
-      <span class="text-gray-500">Próxima atualização em</span>
-      <span id="contador-refresh" class="font-bold text-green-600">15s</span>
+    <div class="flex items-center gap-2 text-sm"> 
+      <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse inline-block"></span> 
+      <span class="text-gray-500">Auto-refresh ativo</span> 
+      <span id="ultima-atualizacao" class="text-gray-400 text-xs"></span> 
     </div>
     <button onclick="carregarMotoristas()" class="text-sm text-gray-600 hover:text-gray-800 border border-gray-200 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -126,8 +127,6 @@
 <script> 
 let todosMotoristas = [] 
 let filtroStatus = 'todos' 
-let contadorRefresh = 15
-let intervaloContador = null
 let primeiraRenderizacao = true
 const token = localStorage.getItem('mobihub_token') 
 if (!token) location.href = '/admin/login' 
@@ -361,18 +360,10 @@ async function carregarMotoristas() {
   } 
 } 
  
-function reiniciarContador() {
-  contadorRefresh = 15
-  document.getElementById('contador-refresh').textContent = '15s'
-  if (intervaloContador) clearInterval(intervaloContador)
-  intervaloContador = setInterval(() => {
-    contadorRefresh--
-    document.getElementById('contador-refresh').textContent = `${contadorRefresh}s`
-    if (contadorRefresh <= 0) {
-      carregarMotoristas()
-    }
-  }, 1000)
-}
+function reiniciarContador() { 
+  const el = document.getElementById('ultima-atualizacao') 
+  if (el) el.textContent = `• ${new Date().toLocaleTimeString('pt-BR')}`
+} 
  
 async function toggleAtivo(id, ativo) { 
   const r = await fetch(`/api/admin/drivers/${id}/toggle`, { 
@@ -407,6 +398,7 @@ setInterval(() => {
  
 // Inicializar
 carregarMotoristas() 
+setInterval(carregarMotoristas, 15000) 
 </script> 
 </body> 
 </html>
