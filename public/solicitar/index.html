@@ -531,7 +531,19 @@
    const check1 = document.getElementById('check-termos-passageiro-geral')?.checked
    const check2 = document.getElementById('check-termos-passageiro-responsabilidade')?.checked
    if (!check1 || !check2) return
+   
    localStorage.setItem(STORAGE_TERMOS_PASSAGEIRO, 'true')
+   
+   // Gravar no banco se tiver telefone cadastrado 
+   const telefone = localStorage.getItem('cliente_telefone') 
+   if (telefone) { 
+     fetch('/api/client/aceitar-termos', { 
+       method: 'POST', 
+       headers: { 'Content-Type': 'application/json' }, 
+       body: JSON.stringify({ telefone, aceite_responsabilidade: check2 }) 
+     }).catch(e => console.error('[ACEITE TERMOS]', e)) 
+   } 
+   
    verificarTermosPassageiro()
  }
 

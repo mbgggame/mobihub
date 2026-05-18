@@ -473,6 +473,19 @@ export default async function publicRoutes(fastify) {
       client = { id: r.rows[0].id } 
     } else { 
       await query(`UPDATE clients SET nome = COALESCE($1, nome), email = COALESCE($2, email), cpf = COALESCE($3, cpf) WHERE id = $4`, [nome || null, email || null, cpf || null, client.id]) 
+    }
+
+    // Gravar aceite de termos automaticamente se não tiver no banco
+    if (client && !client.versao_termos) {
+      await query(`
+        UPDATE clients SET 
+          aceitou_termos = true, 
+          data_aceite_termos = CURRENT_TIMESTAMP, 
+          ip_aceite_termos = $1, 
+          versao_termos = '1.0', 
+          aceite_responsabilidade = true 
+        WHERE id = $2
+      `, [request.ip, client.id])
     } 
     const { v4: uuidv4 } = await import('uuid') 
     const token = uuidv4() 
@@ -1501,6 +1514,28 @@ export default async function publicRoutes(fastify) {
   fastify.get('/api/temp/check-termos', async (request, reply) => { 
     const result = await query('SELECT id, nome, aceitou_termos, versao_termos, aceite_arbitragem FROM drivers') 
     return result.rows 
+  })
+
+  fastify.post('/api/client/aceitar-termos', async (request, reply) => { 
+    try { 
+      const { telefone, aceite_responsabilidade } = request.body 
+      if (!telefone) return reply.code(400).send({ error: 'Telefone obrigatório' }) 
+      
+      await query(` 
+        UPDATE clients SET 
+          aceitou_termos = true, 
+          data_aceite_termos = CURRENT_TIMESTAMP, 
+          ip_aceite_termos = $1, 
+          versao_termos = '1.0', 
+          aceite_responsabilidade = $2 
+        WHERE telefone = $3 
+      `, [request.ip, aceite_responsabilidade ? true : false, telefone]) 
+      
+      return { success: true } 
+    } catch(err) { 
+      console.error('[ACEITE PASSAGEIRO]:', err) 
+      return reply.code(500).send({ error: err.message }) 
+    } 
   })
 
   // Endpoints de cartão
