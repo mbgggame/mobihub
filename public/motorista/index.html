@@ -809,9 +809,9 @@ socket.on('nova_corrida_agendada', (corrida) => {
 
 socket.on('agendamentos:atualizar', (data) => { 
   const badge = document.getElementById('badge-agendamentos') 
-  if (badge && data.count > 0) { 
-    badge.textContent = data.count 
-    badge.classList.remove('hidden') 
+  if (badge) { 
+    badge.textContent = data.count || 0 
+    badge.classList.toggle('hidden', !data.count) 
   } 
 })
 
