@@ -1,7 +1,6 @@
 import { query, pool } from '../db.js' 
 import { requireAuth } from '../middleware/auth.js'
-import { getIo } from '../server.js'
-import { criarCobrancaAsaas, buscarPixPayload } from './agendamentos.js' 
+import { getIo } from '../server.js' 
 
 export default async function publicRoutes(fastify) { 
 
@@ -515,6 +514,7 @@ export default async function publicRoutes(fastify) {
 
     if (tipo === 'agendada' && process.env.ASAAS_API_KEY) {
       try {
+        const { criarCobrancaAsaas, buscarPixPayload } = await import('./agendamentos.js')
         const dueDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
         
         // Se forma_pagamento = '3' e cliente tem cartão, cobrar no cartão
