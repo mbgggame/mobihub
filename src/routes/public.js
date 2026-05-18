@@ -1538,6 +1538,17 @@ export default async function publicRoutes(fastify) {
     } 
   })
 
+  fastify.get('/api/client/termos-status', async (request, reply) => { 
+    const { telefone } = request.query 
+    if (!telefone) return reply.code(400).send({ error: 'Telefone obrigatório' }) 
+    const client = (await query( 
+      'SELECT aceitou_termos, versao_termos, aceite_responsabilidade FROM clients WHERE telefone = $1', 
+      [telefone] 
+    )).rows[0] 
+    if (!client) return { aceitou_termos: false, versao_termos: null } 
+    return client 
+  })
+
   // Endpoints de cartão
   fastify.post('/api/client/cartao', async (request, reply) => {
     const { telefone, holderName, number, expiryMonth, expiryYear, ccv } = request.body

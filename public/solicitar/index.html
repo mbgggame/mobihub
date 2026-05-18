@@ -496,21 +496,44 @@
  let socket = null
  let formaPagamentoSelecionada = null
 
- function verificarTermosPassageiro() {
-   const termosAceitos = localStorage.getItem(STORAGE_TERMOS_PASSAGEIRO)
+ async function verificarTermosPassageiro() {
    const modal = document.getElementById('modal-termos-passageiro')
    const conteudo = document.getElementById('conteudo-solicitar')
    
-   console.log('[DIAGNÓSTICO PASSAGEIRO] termosAceitos:', termosAceitos)
+   const telefone = localStorage.getItem('cliente_telefone')
    
-   if (termosAceitos === 'true') {
+   // Se tem telefone, verificar no banco
+   if (telefone) {
+     try {
+       const r = await fetch(`/api/client/termos-status?telefone=${encodeURIComponent(telefone)}`)
+       const d = await r.json()
+       if (d.versao_termos === '1.0' && d.aceitou_termos) {
+         // Já aceitou no banco — esconder modal
+         localStorage.setItem(STORAGE_TERMOS_PASSAGEIRO, 'true')
+         modal.style.display = 'none'
+         modal.classList.add('hidden')
+         conteudo.classList.remove('hidden')
+         return
+       }
+     } catch(e) {}
+   }
+   
+   // Fallback: verificar localStorage
+   const termosAceitos = localStorage.getItem(STORAGE_TERMOS_PASSAGEIRO)
+   if (termosAceitos === 'true' && !telefone) {
      modal.style.display = 'none'
      modal.classList.add('hidden')
      conteudo.classList.remove('hidden')
-   } else {
+   } else if (termosAceitos !== 'true') {
+     // Forçar reaceite
+     localStorage.removeItem(STORAGE_TERMOS_PASSAGEIRO)
      modal.style.display = 'flex'
      modal.classList.remove('hidden')
      conteudo.classList.add('hidden')
+   } else {
+     modal.style.display = 'none'
+     modal.classList.add('hidden')
+     conteudo.classList.remove('hidden')
    }
  }
 
@@ -1690,8 +1713,8 @@ document.getElementById('valor-recarga')?.addEventListener('input', function(e) 
   e.target.value = (parseInt(v || 0) / 100).toFixed(2)
 })
 
-window.onload = () => { 
-   verificarTermosPassageiro()
+window.onload = async () => { 
+   await verificarTermosPassageiro()
    
    const cliente_nome = localStorage.getItem('cliente_nome')
    const cliente_telefone = localStorage.getItem('cliente_telefone')
