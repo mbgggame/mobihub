@@ -442,12 +442,13 @@
  ] 
  
  const statusConfig = { 
-   aberta:    { label: 'Aguardando motorista...', cls: 'bg-blue-100 text-blue-700' }, 
-   aceita:    { label: '🚗 Motorista a caminho!', cls: 'bg-yellow-100 text-yellow-700' }, 
-   agendada:  { label: '🗓️ Corrida agendada',    cls: 'bg-purple-100 text-purple-700' }, 
-   concluida: { label: '✅ Corrida concluída',    cls: 'bg-green-100 text-green-700' }, 
-   cancelada: { label: '❌ Corrida cancelada',    cls: 'bg-red-100 text-red-700' } 
- } 
+  aberta:          { label: 'Aguardando motorista...', cls: 'bg-blue-100 text-blue-700' }, 
+  aceita:          { label: '🚗 Motorista a caminho!', cls: 'bg-yellow-100 text-yellow-700' }, 
+  agendada:        { label: '🗓️ Aguardando motorista aceitar...', cls: 'bg-purple-100 text-purple-700' }, 
+  agendada_aceita: { label: '✅ Motorista confirmado! Aguarde o dia agendado.', cls: 'bg-green-100 text-green-700' }, 
+  concluida:       { label: '✅ Corrida concluída',    cls: 'bg-green-100 text-green-700' }, 
+  cancelada:       { label: '❌ Corrida cancelada',    cls: 'bg-red-100 text-red-700' } 
+} 
  
  const statusDetalheConfig = { 
    aguardando_passageiro: { label: '📍 Motorista chegou! Dirija-se ao veículo', cls: 'bg-orange-100 text-orange-700' }, 
@@ -1244,6 +1245,21 @@ function iniciarPollingAutomatico() {
      console.log('[SOCKET] Status atualizado:', data);
      carregar();
    });
+
+   socket.on('agendamento:aceito', (data) => { 
+     console.log('[SOCKET] Agendamento aceito:', data) 
+     carregar() 
+   }) 
+ 
+   socket.on('agendamento:cancelado', (data) => { 
+     console.log('[SOCKET] Agendamento cancelado:', data) 
+     carregar() 
+   }) 
+ 
+   socket.on('agendamento:alerta_30min', (data) => { 
+     alert(`⏰ ${data.mensagem}`) 
+     carregar() 
+   })
  } 
 
  iniciarPollingAutomatico(); 
