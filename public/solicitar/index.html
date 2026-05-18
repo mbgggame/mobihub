@@ -514,6 +514,12 @@
          modal.classList.add('hidden')
          conteudo.classList.remove('hidden')
          return
+       } else if (!d.aceitou_termos || d.versao_termos !== '1.0') {
+         localStorage.removeItem(STORAGE_TERMOS_PASSAGEIRO)
+         modal.style.display = 'flex'
+         modal.classList.remove('hidden')
+         conteudo.classList.add('hidden')
+         return
        }
      } catch(e) {}
    }
@@ -557,17 +563,21 @@
    
    localStorage.setItem(STORAGE_TERMOS_PASSAGEIRO, 'true')
    
-   // Gravar no banco se tiver telefone cadastrado 
-   const telefone = localStorage.getItem('cliente_telefone') 
-   if (telefone) { 
-     fetch('/api/client/aceitar-termos', { 
-       method: 'POST', 
-       headers: { 'Content-Type': 'application/json' }, 
-       body: JSON.stringify({ telefone, aceite_responsabilidade: check2 }) 
-     }).catch(e => console.error('[ACEITE TERMOS]', e)) 
-   } 
-   
-   verificarTermosPassageiro()
+   const telefone = localStorage.getItem('cliente_telefone')
+   if (telefone) {
+     fetch('/api/client/aceitar-termos', {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({ telefone, aceite_responsabilidade: check2 })
+     }).then(r => r.json()).then(d => console.log('[ACEITE PASSAGEIRO]', d)).catch(e => console.error('[ACEITE PASSAGEIRO]', e))
+   }
+
+   // Esconder modal imediatamente
+   const modal = document.getElementById('modal-termos-passageiro')
+   const conteudo = document.getElementById('conteudo-solicitar')
+   modal.style.display = 'none'
+   modal.classList.add('hidden')
+   conteudo.classList.remove('hidden')
  }
 
  // BUG FIX: Ícones do Leaflet 
