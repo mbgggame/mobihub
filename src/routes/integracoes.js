@@ -26,11 +26,58 @@ export default async function integracoesRoutes(fastify) {
           if (client) {
             await query('UPDATE clients SET balance_due = 0, balance_due_charge_id = NULL, balance_due_charge_link = NULL WHERE id = $1', [client.id])
           }
+        } else if (externalReference.startsWith('sinal_')) {
+          // Sinal de agendamento pago → libera corrida para motoristas
+          const rideId = parseInt(externalReference.split('_')[1])
+          await query('UPDATE rides SET sinal_pago = true WHERE id = $1', [rideId])
+          console.log(`[WEBHOOK ASAAS] Sinal pago para agendamento #${rideId}`)
+          try {
+            const rideResult = await query('SELECT * FROM rides WHERE id = $1', [rideId])
+            const ride = rideResult.rows[0]
+            if (ride && ride.client_id) {
+              const { getBot } = await import('../telegram.js')
+              const bot = getBot()
+              const client = (await query('SELECT telegram_id FROM clients WHERE id = $1', [ride.client_id])).rows[0]
+              if (bot && client?.telegram_id) {
+                const dataHora = new Date(ride.agendada_para).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+                bot.sendMessage(client.telegram_id,
+                  `✅ *Sinal recebido! Agendamento confirmado.*\n\n📅 ${dataHora}\n📍 ${ride.origem} → ${ride.destino}\n\nEstamos buscando um motorista disponível.`,
+                  { parse_mode: 'Markdown' }
+                ).catch(() => {})
+              }
+            }
+          } catch (e) {
+            console.error('[WEBHOOK ASAAS] Erro notificação sinal:', e.message)
+          }
+        } else if (externalReference.startsWith('restante_')) {
+          // 70% restante da corrida agendada pago → registra split do motorista
+          const rideId = parseInt(externalReference.split('_')[1])
+          await query(
+            "UPDATE rides SET pagamento_status = 'pago', updated_at = CURRENT_TIMESTAMP WHERE id = $1",
+            [rideId]
+          )
+          console.log(`[WEBHOOK ASAAS] Restante pago para corrida agendada #${rideId}`)
+          try {
+            const rideResult = await query('SELECT * FROM rides WHERE id = $1', [rideId])
+            const ride = rideResult.rows[0]
+            if (ride?.driver_id) {
+              const splitRule = (await query("SELECT * FROM split_rules WHERE ativo = 1 ORDER BY id LIMIT 1")).rows[0]
+              const percentualMotorista = splitRule?.percentual_motorista || 82
+              const valorTotal = parseFloat(ride.valor_final || ride.valor || 0)
+              const valorMotorista = parseFloat((valorTotal * percentualMotorista / 100).toFixed(2))
+              await query(
+                'INSERT INTO driver_transactions (driver_id, ride_id, tipo, descricao, valor) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING',
+                [ride.driver_id, ride.id, 'credito', `Corrida agendada #${ride.id} concluída`, valorMotorista]
+              )
+            }
+          } catch (e) {
+            console.error('[WEBHOOK ASAAS] Erro split restante:', e.message)
+          }
         } else {
           // Pagamento de corrida normal
-          await query( 
-            "UPDATE rides SET pagamento_status = 'pago', updated_at = CURRENT_TIMESTAMP WHERE asaas_payment_id = $1 OR id = $2", 
-            [paymentId, parseInt(externalReference)] 
+          await query(
+            "UPDATE rides SET pagamento_status = 'pago', updated_at = CURRENT_TIMESTAMP WHERE asaas_payment_id = $1 OR id = $2",
+            [paymentId, parseInt(externalReference)]
           )
         }
       } 

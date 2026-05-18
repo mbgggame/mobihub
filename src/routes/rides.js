@@ -209,27 +209,38 @@ export default async function ridesRoutes(fastify) {
       await dbQuery("UPDATE rides SET cancelado_por = 'admin' WHERE id = $1", [id])
     }
 
-    if (status === 'concluida') { 
+    if (status === 'concluida') {
       const io = getIo()
       if (io) {
         io.to(`ride:${id}`).emit('corrida:concluida', { rideId: id, driver_id: ride.driver_id })
       }
-      if (ride.driver_id) { 
-        const driverResult = await dbQuery('SELECT * FROM drivers WHERE id = $1', [ride.driver_id]) 
+      if (ride.driver_id) {
+        const driverResult = await dbQuery('SELECT * FROM drivers WHERE id = $1', [ride.driver_id])
         const driver = driverResult.rows[0]
-        if (driver) { 
-          await dbQuery('UPDATE drivers SET total_viagens = total_viagens + 1 WHERE id = $1', [driver.id]) 
-        } 
-      } 
-      if (ride.client_id) { 
-        await dbQuery('UPDATE clients SET total_corridas = total_corridas + 1 WHERE id = $1', [ride.client_id]) 
-      } 
-      if (ride.telegram_message_id) { 
-        await editGroupMessage( 
-          ride.telegram_message_id, 
-          `✅ *Corrida concluída!*\n\n📍 ${ride.origem}\n🏁 ${ride.destino}\n💰 R$ ${Number(ride.valor).toFixed(2)}` 
-        ) 
-      } 
+        if (driver) {
+          await dbQuery('UPDATE drivers SET total_viagens = total_viagens + 1 WHERE id = $1', [driver.id])
+        }
+      }
+      if (ride.client_id) {
+        await dbQuery('UPDATE clients SET total_corridas = total_corridas + 1 WHERE id = $1', [ride.client_id])
+      }
+      if (ride.telegram_message_id) {
+        await editGroupMessage(
+          ride.telegram_message_id,
+          `✅ *Corrida concluída!*\n\n📍 ${ride.origem}\n🏁 ${ride.destino}\n💰 R$ ${Number(ride.valor).toFixed(2)}`
+        )
+      }
+
+      // Corrida agendada com sinal pago: cobrar 70% restante
+      if (ride.tipo === 'agendada' && ride.sinal_pago) {
+        try {
+          const { gerarCobrancaRestante } = await import('./agendamentos.js')
+          const rideAtualizado = (await dbQuery('SELECT * FROM rides WHERE id = $1', [id])).rows[0]
+          await gerarCobrancaRestante(rideAtualizado)
+        } catch (e) {
+          console.error('[RIDES] Erro ao gerar cobrança restante:', e.message)
+        }
+      }
     } 
  
     if (status === 'cancelada' && ride.telegram_message_id) { 
