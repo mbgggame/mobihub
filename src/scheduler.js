@@ -25,6 +25,7 @@ async function limparCorridasPresas() {
       UPDATE rides
       SET status = 'concluida', concluida_at = CURRENT_TIMESTAMP
       WHERE status IN ('aberta', 'aceita', 'em_andamento')
+        AND tipo != 'agendada'
         AND created_at < NOW() - INTERVAL '4 hours'
     `);
     if (result.rowCount > 0) {
@@ -39,6 +40,7 @@ async function verificarAgendamentos() {
   try { 
     const disparoImediato = await getConfig('agendamento_disparo_imediato') === 'true' 
     const minAntes = parseInt(await getConfig('agendamento_minutos_antes') || '30') 
+    console.log('[SCHEDULER] disparoImediato:', disparoImediato, '| minAntes:', minAntes)
     const agora = new Date() 
     let corridas = [] 
  
@@ -58,6 +60,7 @@ async function verificarAgendamentos() {
         WHERE tipo = 'agendada'
         AND status = 'agendada'
         AND disparada_at IS NULL
+        AND agendada_para > NOW()
         AND agendada_para <= $1
         AND (sinal_pago = true OR sinal_valor IS NULL OR sinal_valor = 0)
       `, [limite.toISOString()])
