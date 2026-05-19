@@ -906,35 +906,32 @@
    const input = document.getElementById(tipo === 'origem' ? 'busca-orig' : 'busca-dest') 
    const list = document.getElementById(tipo === 'origem' ? 'lista-orig' : 'lista-dest') 
  
-   // Captura o número digitado ANTES de qualquer alteração no input 
-   const textoAntes = input.value.trim() 
-   const numeroDigitado = textoAntes.match(/\b(\d+[A-Za-z]?)\b/)?.[1] 
+   // Texto que o usuário digitou antes de selecionar a sugestão 
+   const textoUsuario = input.value.trim() 
  
-   let enderecoCurto = encurtarEndereco(endereco) 
+   // Se o usuário digitou número, usa o texto dele (mais preciso) 
+   // Senão, usa o endereço encurtado da sugestão 
+   const temNumero = /\d/.test(textoUsuario) 
+   const enderecoFinal = temNumero 
+     ? textoUsuario.split(',').slice(0, 2).join(',').trim() 
+     : encurtarEndereco(endereco) 
  
-   // Se digitou número e o endereço sugerido não tem número, adiciona 
-   if (numeroDigitado && !enderecoCurto.match(/\b\d+\b/)) { 
-     const partes = enderecoCurto.split(',') 
-     partes[0] = partes[0].trim() + ', ' + numeroDigitado 
-     enderecoCurto = partes.join(',').trim() 
-   } 
- 
-   input.value = enderecoCurto 
+   input.value = enderecoFinal 
    list.classList.add('hidden') 
  
    if (tipo === 'origem') { 
      origemLat = lat 
      origemLng = lon 
-     origemEndereco = enderecoCurto 
-     origem = enderecoCurto 
-     mostrarOrigemNoMapa(lat, lon, enderecoCurto) 
+     origemEndereco = enderecoFinal 
+     origem = enderecoFinal 
+     mostrarOrigemNoMapa(lat, lon, enderecoFinal) 
    } else { 
      destinoLat = lat 
      destinoLng = lon 
-     destino = enderecoCurto 
+     destino = enderecoFinal 
    } 
  
-   marcarPonto(lat, lon, enderecoCurto, tipo) 
+   marcarPonto(lat, lon, enderecoFinal, tipo) 
    map.setView([lat, lon], 15) 
    verificarBotaoSolicitar() 
  } 
