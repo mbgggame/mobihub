@@ -48,8 +48,11 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify({ email, senha }) 
       }) 
       const d = await r.json() 
+      console.log('STATUS:', r.status) 
+      console.log('RESPOSTA:', JSON.stringify(d)) 
       if (!r.ok) throw new Error(d.error || 'Credenciais inválidas') 
       localStorage.setItem('mobihub_token', d.token) 
+      console.log('TOKEN SALVO:', localStorage.getItem('mobihub_token')) 
       window.location.href = '/admin' 
     } catch (err) { 
       document.getElementById('erro-login').textContent = err.message 
