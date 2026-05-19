@@ -32,13 +32,10 @@ export default async function authRoutes(fastify) {
   }) 
   
   fastify.post('/api/login/verify', async (request, reply) => {
-    console.log('[DEBUG /api/login/verify] Headers:', request.headers)
     try {
       await request.jwtVerify()
-      console.log('[DEBUG /api/login/verify] Token válido!')
       return reply.code(200).send({ ok: true })
     } catch(e) {
-      console.log('[DEBUG /api/login/verify] Token inválido:', e)
       return reply.code(401).send({ error: 'Invalid token' })
     }
   })

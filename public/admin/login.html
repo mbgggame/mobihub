@@ -31,36 +31,30 @@
 const isLoginPage = window.location.pathname === '/admin/login';
 const token = localStorage.getItem('mobihub_token');
 
-console.log('[DEBUG login.html] token:', token ? 'existe' : 'não existe', token);
-console.log('[DEBUG login.html] isLoginPage:', isLoginPage);
+const acabouDeLogar = sessionStorage.getItem('acabou_de_logar');
+if (acabouDeLogar) {
+  sessionStorage.removeItem('acabou_de_logar');
+  location.href = '/admin';
+}
 
 async function verifyToken() {
-  if (!token) {
-    console.log('[DEBUG login.html verifyToken] token não existe');
-    return false;
-  }
+  if (!token) return false;
   try {
-    console.log('[DEBUG login.html verifyToken] chamando /api/login/verify com token:', token.substring(0, 20) + '...');
     const r = await fetch('/api/login/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
     });
-    console.log('[DEBUG login.html verifyToken] resposta:', r.status, r.ok);
     return r.ok;
-  } catch(e) {
-    console.log('[DEBUG login.html verifyToken] erro:', e);
+  } catch {
     return false;
   }
 }
 
 async function init() {
   const isValid = await verifyToken();
-  console.log('[DEBUG login.html init] isValid:', isValid);
   if (isValid && isLoginPage) {
-    console.log('[DEBUG login.html init] redirecionando para /admin');
     location.href = '/admin';
   } else if (!isValid && !isLoginPage) {
-    console.log('[DEBUG login.html init] redirecionando para /admin/login');
     localStorage.removeItem('mobihub_token');
     location.href = '/admin/login';
   }
@@ -82,6 +76,7 @@ async function login() {
     const d = await r.json() 
     if (!r.ok) { erro.textContent = d.error; erro.classList.remove('hidden'); return } 
     localStorage.setItem('mobihub_token', d.token) 
+    sessionStorage.setItem('acabou_de_logar', '1') 
     location.href = '/admin' 
   } catch { erro.textContent = 'Erro de conexão.'; erro.classList.remove('hidden') } 
 } 
