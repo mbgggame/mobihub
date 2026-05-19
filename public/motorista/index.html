@@ -1352,6 +1352,10 @@ socket.on('agendamento:alerta_30min', (data) => {
  function descartarFoto() { novaFotoBase64 = null; document.getElementById('area-preview').classList.add('hidden') } 
 
  function abrirModalAvaliarPassageiro(rideId) { 
+   // Se o modal já está aberto para essa corrida, não reseta 
+   if (rideIdParaAvaliar === rideId && !document.getElementById('modal-avaliar-passageiro')?.classList.contains('hidden')) { 
+     return 
+   } 
    rideIdParaAvaliar = rideId 
    estrelasPassageiro = 0 
    document.getElementById('modal-avaliar-passageiro')?.classList.remove('hidden') 
