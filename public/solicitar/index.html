@@ -905,20 +905,20 @@
  function selecionarSugestao(tipo, endereco, lat, lon) { 
    const input = document.getElementById(tipo === 'origem' ? 'busca-orig' : 'busca-dest') 
    const list = document.getElementById(tipo === 'origem' ? 'lista-orig' : 'lista-dest') 
-   
-   // Preserva o número digitado pelo usuário se não estiver no endereço sugerido 
-   const textoDigitado = input.value.trim() 
-   const numeroDigitado = textoDigitado.match(/,?\s*(\d+[A-Za-z]?)\s*(?:,|$)/)?.[1] 
-   
+ 
+   // Captura o número digitado ANTES de qualquer alteração no input 
+   const textoAntes = input.value.trim() 
+   const numeroDigitado = textoAntes.match(/\b(\d+[A-Za-z]?)\b/)?.[1] 
+ 
    let enderecoCurto = encurtarEndereco(endereco) 
-   
-   // Se o usuário digitou um número e o endereço sugerido não tem número, adiciona 
-   if (numeroDigitado && !enderecoCurto.match(/\d+/)) { 
+ 
+   // Se digitou número e o endereço sugerido não tem número, adiciona 
+   if (numeroDigitado && !enderecoCurto.match(/\b\d+\b/)) { 
      const partes = enderecoCurto.split(',') 
      partes[0] = partes[0].trim() + ', ' + numeroDigitado 
      enderecoCurto = partes.join(',').trim() 
    } 
-   
+ 
    input.value = enderecoCurto 
    list.classList.add('hidden') 
  
