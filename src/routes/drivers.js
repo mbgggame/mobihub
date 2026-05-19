@@ -475,19 +475,18 @@ export default async function driversRoutes(fastify) {
 
   fastify.post('/api/admin/drivers/:id/resetar-corrida', { preHandler: requireAuth }, async (request, reply) => { 
     const { id } = request.params 
-    // Busca corrida mais recente do motorista que não está concluída/cancelada 
     const result = await query( 
-      `SELECT id FROM rides WHERE driver_id = $1 AND status NOT IN ('concluida','cancelada') ORDER BY id DESC LIMIT 1`, 
+      `SELECT id, status, pagamento_status FROM rides WHERE driver_id = $1 ORDER BY id DESC LIMIT 1`, 
       [id] 
     ) 
     const ride = result.rows[0] 
-    if (!ride) return reply.code(404).send({ error: 'Nenhuma corrida ativa encontrada' }) 
+    if (!ride) return reply.code(404).send({ error: 'Nenhuma corrida encontrada' }) 
     
     await query( 
       `UPDATE rides SET status = 'concluida', pagamento_status = 'pago', concluida_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $1`, 
       [ride.id] 
     ) 
-    return { ok: true, mensagem: 'Corrida resetada', corrida_id: ride.id } 
+    return { ok: true, mensagem: 'Corrida resetada', corrida_id: ride.id, status_anterior: ride.status, pagamento_anterior: ride.pagamento_status } 
   })
 
   fastify.post('/api/admin/drivers/:id/zerar-saldo', { preHandler: requireAuth }, async (request, reply) => { 
