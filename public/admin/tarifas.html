@@ -92,31 +92,14 @@
     const token = () => localStorage.getItem('mobihub_token')
     const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` })
 
-document.addEventListener('DOMContentLoaded', async () => { 
+document.addEventListener('DOMContentLoaded', () => { 
   const token = localStorage.getItem('mobihub_token') 
   if (!token) { 
     window.location.href = '/admin/login' 
     return 
   } 
-  try { 
-    const r = await fetch('/api/login/verify', { 
-      method: 'POST', 
-      headers: { 
-        'Content-Type': 'application/json', 
-        'Authorization': `Bearer ${token}` 
-      } 
-    }) 
-    if (!r.ok) { 
-      localStorage.removeItem('mobihub_token') 
-      window.location.href = '/admin/login' 
-      return 
-    } 
-    carregarTarifas()
-    carregarFeriados()
-  } catch (err) { 
-    localStorage.removeItem('mobihub_token') 
-    window.location.href = '/admin/login' 
-  } 
+  carregarTarifas()
+  carregarFeriados()
 })
 
     const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
