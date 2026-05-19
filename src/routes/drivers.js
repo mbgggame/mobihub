@@ -761,30 +761,79 @@ export default async function driversRoutes(fastify) {
     return { mensagem: 'Status atualizado' }
   })
 
-  fastify.get('/api/admin/motoristas/realtime', { preHandler: requireAuth }, async () => { 
+  fastify.get('/api/admin/motoristas/realtime', { preHandler: requireAuth }, async (request, reply) => { 
+    const { de, ate } = request.query
+    const hoje = new Date().toISOString().split('T')[0]
+    const dataDe = de || hoje
+    const dataAte = ate || hoje
+    
+    // 1. Buscar motoristas base
     const result = await query(` 
       SELECT 
-        d.id, d.nome, d.modelo_carro, d.cor_carro, d.placa, 
+        d.id, d.nome, d.modelo_carro, d.cor_carro, d.placa, d.telefone,
         d.online, d.ativo, d.status_cadastro, d.token_perfil, 
         d.media_avaliacao, d.total_viagens, d.total_avaliacoes, 
         d.balance_due, 
-        dl.lat, dl.lng, dl.updated_at as location_at, 
+        dl.lat as ultima_lat, dl.lng as ultima_lng, dl.updated_at as location_at, 
         r.id as corrida_id, r.status as corrida_status, 
-        r.origem, r.destino, r.valor, r.aceita_at, r.created_at as corrida_criada_at, 
+        r.origem, r.destino, r.valor, r.origem_lat, r.origem_lng, r.destino_lat, r.destino_lng,
+        r.aceita_at, r.created_at as corrida_criada_at, 
         c.nome as passageiro_nome, 
         EXTRACT(EPOCH FROM (NOW() - dl.updated_at)) as segundos_sem_update, 
-        (SELECT COUNT(*) FROM rides r2 WHERE r2.driver_id = d.id AND r2.status = 'concluida' AND DATE(r2.concluida_at) = CURRENT_DATE) as corridas_hoje, 
-        (SELECT COALESCE(SUM(r2.valor_motorista), 0) FROM rides r2 WHERE r2.driver_id = d.id AND r2.status = 'concluida' AND DATE(r2.concluida_at) = CURRENT_DATE) as ganhos_hoje 
+        (SELECT COUNT(*) FROM rides r2 WHERE r2.driver_id = d.id AND r2.status = 'concluida' AND DATE(r2.concluida_at) BETWEEN $1 AND $2) as corridas_hoje, 
+        (SELECT COALESCE(SUM(r2.valor_motorista), 0) FROM rides r2 WHERE r2.driver_id = d.id AND r2.status = 'concluida' AND DATE(r2.concluida_at) BETWEEN $1 AND $2) as ganhos_hoje 
       FROM drivers d 
       LEFT JOIN LATERAL ( 
         SELECT lat, lng, updated_at FROM driver_locations 
         WHERE driver_id = d.id ORDER BY updated_at DESC LIMIT 1 
       ) dl ON true 
-      LEFT JOIN rides r ON r.driver_id = d.id AND r.status IN ('aceita', 'em_viagem', 'aberta') 
+      LEFT JOIN rides r ON r.driver_id = d.id AND r.status IN ('aceita', 'em_viagem') 
       LEFT JOIN clients c ON r.client_id = c.id 
       WHERE d.status_cadastro IN ('aprovado', 'pendente', 'reprovado') 
       ORDER BY d.online DESC, d.nome ASC 
-    `) 
-    return result.rows 
+    `, [dataDe, dataAte]) 
+    
+    const drivers = result.rows
+    
+    // 2. Adicionar corrida_atual para cada motorista
+    // 3. Adicionar corridas_agendadas para cada motorista
+    const driverIds = drivers.map(d => d.id)
+    let corridasAgendadas = []
+    if (driverIds.length > 0) {
+      const agendadasResult = await query(`
+        SELECT id, driver_id, agendada_para, origem, destino, valor
+        FROM rides
+        WHERE status = 'agendada' AND driver_id = ANY($1)
+        ORDER BY agendada_para ASC
+      `, [driverIds])
+      corridasAgendadas = agendadasResult.rows
+    }
+    
+    // Montar o retorno final
+    const finalDrivers = drivers.map(d => {
+      const agendadas = corridasAgendadas.filter(a => a.driver_id === d.id)
+      let corridaAtual = null
+      
+      if (d.corrida_id && ['aceita','em_viagem'].includes(d.corrida_status)) {
+        corridaAtual = {
+          id: d.corrida_id,
+          origem: d.origem,
+          destino: d.destino,
+          origem_lat: d.origem_lat,
+          origem_lng: d.origem_lng,
+          destino_lat: d.destino_lat,
+          destino_lng: d.destino_lng,
+          valor: d.valor
+        }
+      }
+      
+      return {
+        ...d,
+        corrida_atual: corridaAtual,
+        corridas_agendadas: agendadas
+      }
+    })
+    
+    return finalDrivers 
   })
 }
