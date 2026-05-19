@@ -761,6 +761,12 @@ export default async function driversRoutes(fastify) {
     return { mensagem: 'Status atualizado' }
   })
 
+  fastify.post('/api/admin/drivers/:id/pagar-saldo', { preHandler: requireAuth }, async (request, reply) => { 
+    const { id } = request.params 
+    await query('UPDATE drivers SET balance_due = 0 WHERE id = $1', [id]) 
+    return { ok: true, message: 'Saldo zerado com sucesso' } 
+  })
+
   fastify.get('/api/admin/motoristas/realtime', { preHandler: requireAuth }, async (request, reply) => { 
     const { de, ate } = request.query
     const hoje = new Date().toISOString().split('T')[0]
