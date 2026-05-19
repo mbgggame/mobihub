@@ -201,31 +201,31 @@
    'Authorization': `Bearer ${localStorage.getItem('mobihub_token')}` 
  }) 
 
- const isLoginPage = window.location.pathname === '/admin/login';
- const tokenVal = localStorage.getItem('mobihub_token');
-
- async function verifyToken() {
-   if (!tokenVal) return false;
-   try {
-     const r = await fetch('/api/login/verify', {
-       method: 'POST',
-       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenVal}` }
-     });
-     return r.ok;
-   } catch {
-     return false;
-   }
- }
-
- async function init() {
-   const isValid = await verifyToken();
-   if (!isValid) {
-     localStorage.removeItem('mobihub_token');
-     location.href = '/admin/login';
-   }
- }
-
- init();
+document.addEventListener('DOMContentLoaded', async () => { 
+  const token = localStorage.getItem('mobihub_token') 
+  if (!token) { 
+    window.location.href = '/admin/login' 
+    return 
+  } 
+  try { 
+    const r = await fetch('/api/login/verify', { 
+      method: 'POST', 
+      headers: { 
+        'Content-Type': 'application/json', 
+        'Authorization': `Bearer ${token}` 
+      } 
+    }) 
+    if (!r.ok) { 
+      localStorage.removeItem('mobihub_token') 
+      window.location.href = '/admin/login' 
+      return 
+    } 
+    carregar() 
+  } catch (err) { 
+    localStorage.removeItem('mobihub_token') 
+    window.location.href = '/admin/login' 
+  } 
+})
 
  const DIAS_NOMES = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'] 
  const STATUS_CLS = { 
@@ -694,8 +694,6 @@
    alert('✅ Link de convite copiado: ' + link)
  }
 
- // Inicializa
- carregar()
  setInterval(carregar, 30000) // Atualiza a cada 30 segundos
 </script> 
 </body> 

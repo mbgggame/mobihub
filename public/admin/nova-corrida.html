@@ -149,33 +149,74 @@
 <script> 
 const token = () => localStorage.getItem('mobihub_token') 
 const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` }) 
- 
-const isLoginPage = window.location.pathname === '/admin/login';
-const tokenVal = localStorage.getItem('mobihub_token');
 
-async function verifyToken() {
-  if (!tokenVal) return false;
-  try {
-    const r = await fetch('/api/login/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenVal}` }
-    });
-    return r.ok;
-  } catch {
-    return false;
-  }
-}
+document.addEventListener('DOMContentLoaded', async () => { 
+  const token = localStorage.getItem('mobihub_token') 
+  if (!token) { 
+    window.location.href = '/admin/login' 
+    return 
+  } 
+  try { 
+    const r = await fetch('/api/login/verify', { 
+      method: 'POST', 
+      headers: { 
+        'Content-Type': 'application/json', 
+        'Authorization': `Bearer ${token}` 
+      } 
+    }) 
+    if (!r.ok) { 
+      localStorage.removeItem('mobihub_token') 
+      window.location.href = '/admin/login' 
+      return 
+    } 
+    initMap()
+    setupAutocomplete('busca-orig', 'origem')
+    setupAutocomplete('busca-dest', 'destino')
+    carregarConfig()
+    
+    // Repetir Viagem
+    const rOrigem = localStorage.getItem('repetir_origem')
+    const rDestino = localStorage.getItem('repetir_destino')
+    const rValor = localStorage.getItem('repetir_valor')
+    const rTelefone = localStorage.getItem('repetir_telefone')
+    const rOrigLat = localStorage.getItem('repetir_origem_lat')
+    const rOrigLng = localStorage.getItem('repetir_origem_lng')
+    const rDestLat = localStorage.getItem('repetir_destino_lat')
+    const rDestLng = localStorage.getItem('repetir_destino_lng')
+    
+    if (rOrigem && rDestino) {
+      document.getElementById('telefone').value = rTelefone || ''
+      document.getElementById('valor').value = rValor || ''
+      
+      if (rOrigLat && rOrigLng) {
+        const origemLat = parseFloat(rOrigLat)
+        const origemLng = parseFloat(rOrigLng)
+        document.getElementById('busca-orig').value = encurtarEndereco(rOrigem)
+        marcarPonto(origemLat, origemLng, rOrigem, 'origem')
+      }
+      if (rDestLat && rDestLng) {
+        const destinoLat = parseFloat(rDestLat)
+        const destinoLng = parseFloat(rDestLng)
+        document.getElementById('busca-dest').value = encurtarEndereco(rDestino)
+        marcarPonto(destinoLat, destinoLng, rDestino, 'destino')
+      }
+      
+      // Limpa o localStorage após preencher
+      localStorage.removeItem('repetir_origem')
+      localStorage.removeItem('repetir_destino')
+      localStorage.removeItem('repetir_valor')
+      localStorage.removeItem('repetir_telefone')
+      localStorage.removeItem('repetir_origem_lat')
+      localStorage.removeItem('repetir_origem_lng')
+      localStorage.removeItem('repetir_destino_lat')
+      localStorage.removeItem('repetir_destino_lng')
+    }
+  } catch (err) { 
+    localStorage.removeItem('mobihub_token') 
+    window.location.href = '/admin/login' 
+  } 
+})
 
-async function init() {
-  const isValid = await verifyToken();
-  if (!isValid) {
-    localStorage.removeItem('mobihub_token');
-    location.href = '/admin/login';
-  }
-}
-
-init();
- 
 let map, geocoder 
  let marcadores = { origem: null, destino: null } 
  let pontos = { origem: null, destino: null } 
@@ -406,52 +447,7 @@ document.getElementById('valor-km').addEventListener('input', (e) => {
   if (pontos.origem && pontos.destino) recalcular() 
 }) 
  
-window.onload = () => { 
-  initMap() 
-  setupAutocomplete('busca-orig', 'origem') 
-  setupAutocomplete('busca-dest', 'destino') 
-  carregarConfig() 
-   
-   // CORREÇÃO 5: Repetir Viagem
-   const rOrigem = localStorage.getItem('repetir_origem')
-   const rDestino = localStorage.getItem('repetir_destino')
-   const rValor = localStorage.getItem('repetir_valor')
-   const rTelefone = localStorage.getItem('repetir_telefone')
-   const rOrigLat = localStorage.getItem('repetir_origem_lat')
-   const rOrigLng = localStorage.getItem('repetir_origem_lng')
-   const rDestLat = localStorage.getItem('repetir_destino_lat')
-   const rDestLng = localStorage.getItem('repetir_destino_lng')
-
-   if (rOrigem && rDestino) {
-     document.getElementById('telefone').value = rTelefone || ''
-     document.getElementById('valor').value = rValor || ''
-     
-     if (rOrigLat && rOrigLng) {
-       origemLat = parseFloat(rOrigLat)
-       origemLng = parseFloat(rOrigLng)
-       origemEndereco = rOrigem
-       document.getElementById('busca-orig').value = encurtarEndereco(rOrigem)
-       marcarPonto(origemLat, origemLng, rOrigem, 'origem')
-     }
-     if (rDestLat && rDestLng) {
-       destinoLat = parseFloat(rDestLat)
-       destinoLng = parseFloat(rDestLng)
-       destinoEndereco = rDestino
-       document.getElementById('busca-dest').value = encurtarEndereco(rDestino)
-       marcarPonto(destinoLat, destinoLng, rDestino, 'destino')
-     }
-     
-     // Limpa o localStorage após preencher
-     localStorage.removeItem('repetir_origem')
-     localStorage.removeItem('repetir_destino')
-     localStorage.removeItem('repetir_valor')
-     localStorage.removeItem('repetir_telefone')
-     localStorage.removeItem('repetir_origem_lat')
-     localStorage.removeItem('repetir_origem_lng')
-     localStorage.removeItem('repetir_destino_lat')
-     localStorage.removeItem('repetir_destino_lng')
-   }
-} 
+ 
  
 let linkGerado = '' 
  

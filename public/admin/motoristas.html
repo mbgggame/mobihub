@@ -87,28 +87,31 @@
 const tk = localStorage.getItem('mobihub_token') 
 const H = () => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${tk}` }) 
 
-async function verifyToken() {
-  if (!tk) return false;
-  try {
-    const r = await fetch('/api/login/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tk}` }
-    });
-    return r.ok;
-  } catch {
-    return false;
-  }
-}
-
-async function init() {
-  const isValid = await verifyToken();
-  if (!isValid) {
-    localStorage.removeItem('mobihub_token');
-    location.href = '/admin/login';
-  }
-}
-
-init();
+document.addEventListener('DOMContentLoaded', async () => { 
+  const token = localStorage.getItem('mobihub_token') 
+  if (!token) { 
+    window.location.href = '/admin/login' 
+    return 
+  } 
+  try { 
+    const r = await fetch('/api/login/verify', { 
+      method: 'POST', 
+      headers: { 
+        'Content-Type': 'application/json', 
+        'Authorization': `Bearer ${token}` 
+      } 
+    }) 
+    if (!r.ok) { 
+      localStorage.removeItem('mobihub_token') 
+      window.location.href = '/admin/login' 
+      return 
+    } 
+    carregar() 
+  } catch (err) { 
+    localStorage.removeItem('mobihub_token') 
+    window.location.href = '/admin/login' 
+  } 
+})
 
 let dados = [] 
 let statusAtivo = 'todos' 
@@ -243,7 +246,6 @@ async function carregar() {
   } catch(e) { console.error(e) } 
 } 
 
-carregar() 
 setInterval(carregar, 15000) 
 
 // Atualizar texto de localização a cada 30 segundos

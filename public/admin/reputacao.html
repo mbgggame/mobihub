@@ -116,33 +116,33 @@
 <script> 
  const token = () => localStorage.getItem('mobihub_token') 
  const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` }) 
- 
- const isLoginPage = window.location.pathname === '/admin/login';
- const tokenVal = localStorage.getItem('mobihub_token');
 
- async function verifyToken() {
-   if (!tokenVal) return false;
-   try {
-     const r = await fetch('/api/login/verify', {
-       method: 'POST',
-       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenVal}` }
-     });
-     return r.ok;
-   } catch {
-     return false;
-   }
- }
+document.addEventListener('DOMContentLoaded', async () => { 
+  const token = localStorage.getItem('mobihub_token') 
+  if (!token) { 
+    window.location.href = '/admin/login' 
+    return 
+  } 
+  try { 
+    const r = await fetch('/api/login/verify', { 
+      method: 'POST', 
+      headers: { 
+        'Content-Type': 'application/json', 
+        'Authorization': `Bearer ${token}` 
+      } 
+    }) 
+    if (!r.ok) { 
+      localStorage.removeItem('mobihub_token') 
+      window.location.href = '/admin/login' 
+      return 
+    } 
+    carregarGeral()
+  } catch (err) { 
+    localStorage.removeItem('mobihub_token') 
+    window.location.href = '/admin/login' 
+  } 
+})
 
- async function init() {
-   const isValid = await verifyToken();
-   if (!isValid) {
-     localStorage.removeItem('mobihub_token');
-     location.href = '/admin/login';
-   }
- }
-
- init();
- 
  let tipoPesquisa = 'corrida' 
  
  function sair() { 
@@ -431,8 +431,7 @@
      }) 
    } 
  } 
- 
- carregarGeral() 
+
  </script> 
  </body> 
  </html> 

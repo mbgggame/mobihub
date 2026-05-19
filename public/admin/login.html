@@ -15,73 +15,50 @@
       <h1 class="text-xl font-semibold text-gray-900">MobiHub</h1> 
       <p class="text-sm text-gray-500 mt-1">Painel administrativo</p> 
     </div> 
-    <div id="erro" class="hidden bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2.5 mb-4"></div> 
-    <div class="space-y-3"> 
+    <div id="erro-login" class="hidden bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2.5 mb-4"></div> 
+    <form id="form-login" class="space-y-3"> 
       <input id="email" type="email" placeholder="Email" 
         class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
       <input id="senha" type="password" placeholder="Senha" 
         class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-      <button onclick="login()" 
+      <button type="submit" id="btn-login" 
         class="w-full bg-green-600 hover:bg-green-700 text-white rounded-lg py-2.5 font-semibold text-sm transition-colors"> 
         Entrar 
       </button> 
-    </div> 
+    </form> 
   </div> 
 <script> 
-const isLoginPage = window.location.pathname === '/admin/login';
-const token = localStorage.getItem('mobihub_token');
-
-const acabouDeLogar = sessionStorage.getItem('acabou_de_logar');
-if (acabouDeLogar) {
-  location.href = '/admin';
-  throw new Error('Redirecionando para admin após login');
-}
-
-async function verifyToken() {
-  if (!token) return false;
-  try {
-    const r = await fetch('/api/login/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
-    });
-    return r.ok;
-  } catch {
-    return false;
-  }
-}
-
-async function init() {
-  const isValid = await verifyToken();
-  if (isValid && isLoginPage) {
-    location.href = '/admin';
-  } else if (!isValid && !isLoginPage) {
-    localStorage.removeItem('mobihub_token');
-    location.href = '/admin/login';
-  }
-}
-
-init();
- 
-async function login() { 
-  const email = document.getElementById('email').value 
-  const senha = document.getElementById('senha').value 
-  const erro = document.getElementById('erro') 
-  erro.classList.add('hidden') 
-  try { 
-    const r = await fetch('/api/login', { 
-      method: 'POST', 
-      headers: { 'Content-Type': 'application/json' }, 
-      body: JSON.stringify({ email, senha }) 
-    }) 
-    const d = await r.json() 
-    if (!r.ok) { erro.textContent = d.error; erro.classList.remove('hidden'); return } 
-    localStorage.setItem('mobihub_token', d.token) 
-    sessionStorage.setItem('acabou_de_logar', '1') 
-    location.href = '/admin' 
-  } catch { erro.textContent = 'Erro de conexão.'; erro.classList.remove('hidden') } 
-} 
-
-document.getElementById('senha').addEventListener('keydown', e => { if (e.key === 'Enter') login() }) 
+document.addEventListener('DOMContentLoaded', () => { 
+  const token = localStorage.getItem('mobihub_token') 
+  if (token) { 
+    window.location.href = '/admin' 
+    return 
+  } 
+  document.getElementById('form-login')?.addEventListener('submit', async (e) => { 
+    e.preventDefault() 
+    const email = document.getElementById('email').value.trim() 
+    const senha = document.getElementById('senha').value.trim() 
+    const btn = document.getElementById('btn-login') 
+    btn.disabled = true 
+    btn.textContent = 'Entrando...' 
+    try { 
+      const r = await fetch('/api/login', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ email, senha }) 
+      }) 
+      const d = await r.json() 
+      if (!r.ok) throw new Error(d.error || 'Credenciais inválidas') 
+      localStorage.setItem('mobihub_token', d.token) 
+      window.location.href = '/admin' 
+    } catch (err) { 
+      document.getElementById('erro-login').textContent = err.message 
+      document.getElementById('erro-login').style.display = 'block' 
+      btn.disabled = false 
+      btn.textContent = 'Entrar' 
+    } 
+  }) 
+}) 
 </script> 
 </body> 
 </html>
