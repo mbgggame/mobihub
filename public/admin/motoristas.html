@@ -397,18 +397,8 @@ async function abrirModalMotorista(id) {
         <a href="https://wa.me/55${m.telefone.replace(/\D/g,'')}" target="_blank" class="text-sm font-medium text-green-700 hover:underline">📱 ${m.telefone}</a> 
       </div>` : ''} 
 
-      <!-- Saldo devedor --> 
-      ${m.balance_due > 0 ? ` 
-      <div class="bg-red-50 border border-red-200 rounded-lg p-3 flex justify-between items-center"> 
-        <p class="text-xs text-red-600 font-semibold">💸 Saldo Devedor</p> 
-        <p class="text-base font-bold text-red-700">R$ ${Number(m.balance_due).toFixed(2)}</p> 
-      </div>` : ''} 
-
       <!-- Corrida atual --> 
       ${corridaAtualHTML} 
-
-      <!-- Mini-mapa --> 
-      ${miniMapHTML} 
 
       <!-- Última localização --> 
       ${m.ultima_lat ? ` 
@@ -416,6 +406,19 @@ async function abrirModalMotorista(id) {
         <p class="text-xs text-gray-400">Última localização</p> 
         <p class="text-xs text-gray-600" id="end-modal-${m.id}">⏳ carregando...</p> 
       </div>` : ''} 
+
+      <!-- Saldo devedor com simulação de pagamento --> 
+      ${m.balance_due > 0 ? ` 
+      <div class="bg-red-50 border border-red-200 rounded-lg p-3"> 
+        <div class="flex justify-between items-center"> 
+          <p class="text-xs text-red-600 font-semibold">💸 Saldo Devedor</p> 
+          <p class="text-base font-bold text-red-700">R$ ${Number(m.balance_due).toFixed(2)}</p> 
+        </div> 
+        <button onclick="simularPagamento(${m.id})" class="mt-2 w-full text-sm bg-red-600 text-white rounded-lg py-1.5 font-medium hover:bg-red-700">💳 Simular pagamento</button> 
+      </div>` : ''} 
+
+      <!-- Mini-mapa corrida atual --> 
+      ${miniMapHTML} 
 
       <!-- Botões de ação --> 
       <div class="flex gap-2 pt-2 border-t border-gray-100"> 
@@ -481,6 +484,26 @@ async function abrirModalMotorista(id) {
     } catch(e) { console.error('Erro mapa:', e) } 
   } 
 }
+
+async function simularPagamento(id) { 
+  if (!confirm('Confirmar pagamento do saldo devedor?')) return 
+  try { 
+    const r = await fetch(`/api/admin/drivers/${id}/pagar-saldo`, { 
+      method: 'POST', 
+      headers: H() 
+    }) 
+    const d = await r.json() 
+    if (r.ok) { 
+      alert('✅ Pagamento registrado com sucesso!') 
+      fecharModalMotorista() 
+      carregar() 
+    } else { 
+      alert('Erro: ' + (d.error || d.message || 'Tente novamente')) 
+    } 
+  } catch(e) { 
+    alert('Erro de conexão') 
+  } 
+} 
 
 function fecharModalMotorista() {
   document.getElementById('modal-motorista').classList.add('hidden')
