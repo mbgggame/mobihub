@@ -537,11 +537,11 @@
      // Entra na sala da corrida
      socket.emit('entrar:corrida', String(ride.id)) 
  
-     if (ride.status === 'concluida' && ride.pagamento_status === 'pago') {
-       pollingAtivo = false
-       dadosAtuais = { ride, rating, paradas, config }
-       renderizar(ride, rating, paradas, config)
-       return
+     if (ride.status === 'concluida') { 
+       pollingAtivo = false 
+       dadosAtuais = { ride, rating, paradas, config } 
+       renderizar(ride, rating, paradas, config) 
+       return 
      }
      if (ride.status === 'cancelada') { 
        pollingAtivo = false 
