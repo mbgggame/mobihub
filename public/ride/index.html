@@ -195,6 +195,10 @@
          <span id="bill-parada-label" class="text-gray-600">Paradas (0 min além da franquia)</span> 
          <span id="bill-parada-valor" class="font-medium text-orange-600">—</span> 
        </div> 
+       <div id="bill-sinal-row" class="hidden flex justify-between text-sm"> 
+         <span class="text-gray-600">✅ Sinal já pago</span> 
+         <span id="bill-sinal-valor" class="font-medium text-green-600">—</span> 
+       </div> 
        <div class="border-t border-gray-100 pt-2 flex justify-between"> 
          <span class="font-bold text-gray-900">Total</span> 
          <span id="bill-total" class="font-bold text-green-700 text-lg">—</span> 
@@ -764,28 +768,42 @@
      document.getElementById('tel-motorista').textContent = ride.driver_telefone || '—' 
    } 
  
-   // Resumo financeiro 
    if (ride.status === 'concluida') { 
-     // Memória de cálculo transparente 
-     if (ride.total_value) { 
-       document.getElementById('card-detalhe-billing').classList.remove('hidden') 
-       document.getElementById('bill-base').textContent = `R$ ${Number(ride.base_value || 0).toFixed(2)}` 
-        
-       if (ride.wait_extra_charge > 0) { 
-         document.getElementById('bill-espera-row').classList.remove('hidden') 
-         document.getElementById('bill-espera-label').textContent = `Espera (${ride.wait_extra_minutes} min além da franquia)` 
-         document.getElementById('bill-espera-valor').textContent = `R$ ${Number(ride.wait_extra_charge).toFixed(2)}` 
-       } 
-        
-       if (ride.stop_extra_charge > 0) { 
-         document.getElementById('bill-parada-row').classList.remove('hidden') 
-         document.getElementById('bill-parada-label').textContent = `Paradas (${ride.stop_extra_minutes} min além da franquia)` 
-         document.getElementById('bill-parada-valor').textContent = `R$ ${Number(ride.stop_extra_charge).toFixed(2)}` 
-       } 
-        
-       document.getElementById('bill-total').textContent = `R$ ${Number(ride.total_value).toFixed(2)}` 
-     } 
-   } 
+    const valorBase = ride.valor || ride.base_value || 0 
+    const valorFinal = ride.valor_final || ride.total_value || valorBase 
+    const custoEspera = ride.custo_espera_inicial || ride.wait_extra_charge || 0 
+    const custoParadas = ride.custo_paradas || ride.stop_extra_charge || 0 
+    const minEspera = ride.tempo_espera_inicial_min || ride.wait_extra_minutes || 0 
+    const minParadas = ride.tempo_paradas_total_min || ride.stop_extra_minutes || 0 
+    const numParadas = ride.num_paradas || 0 
+    const sinalValor = ride.sinal_valor || 0 
+    const sinalPago = ride.sinal_pago || false 
+
+    document.getElementById('card-detalhe-billing').classList.remove('hidden') 
+    document.getElementById('bill-base').textContent = `R$ ${Number(valorBase).toFixed(2)}` 
+
+    if (custoEspera > 0) { 
+      document.getElementById('bill-espera-row').classList.remove('hidden') 
+      document.getElementById('bill-espera-label').textContent = `Espera (${Number(minEspera).toFixed(1)} min)` 
+      document.getElementById('bill-espera-valor').textContent = `+ R$ ${Number(custoEspera).toFixed(2)}` 
+    } 
+
+    if (custoParadas > 0) { 
+      document.getElementById('bill-parada-row').classList.remove('hidden') 
+      document.getElementById('bill-parada-label').textContent = `Paradas (${numParadas}x — ${Number(minParadas).toFixed(1)} min)` 
+      document.getElementById('bill-parada-valor').textContent = `+ R$ ${Number(custoParadas).toFixed(2)}` 
+    } 
+
+    if (sinalPago && sinalValor > 0) { 
+      const sinalRow = document.getElementById('bill-sinal-row') 
+      if (sinalRow) { 
+        sinalRow.classList.remove('hidden') 
+        document.getElementById('bill-sinal-valor').textContent = `- R$ ${Number(sinalValor).toFixed(2)}` 
+      } 
+    } 
+
+    document.getElementById('bill-total').textContent = `R$ ${Number(valorFinal).toFixed(2)}` 
+  } 
  
    // Mapa (REMOVIDO DUPLICADO)
    // O mapa agora está dentro de #card-rastreamento e é único.

@@ -652,6 +652,7 @@
         <p class="text-center text-sm text-green-700 font-bold mb-3">✅ Pagamento recebido!</p>
         <p id="txt-pagamento-valor" class="text-center text-2xl font-bold text-green-800 mb-1"></p>
         <p id="txt-pagamento-corrida" class="text-center text-xs text-green-600"></p>
+        <p id="txt-pagamento-detalhe" class="text-xs text-green-700 mt-2 whitespace-pre-line text-center"></p>
       </div> 
      </div> 
    </div> 
@@ -1796,8 +1797,29 @@ socket.on('agendamento:alerta_30min', (data) => {
      qrCard.classList.add('hidden')
      pagamentoConfirmadoCard.classList.remove('hidden')
      receberDinheiroCard.classList.add('hidden')
-     document.getElementById('txt-pagamento-valor').textContent = moeda(corrida.valor_motorista || corrida.valor_final || corrida.valor)
-     document.getElementById('txt-pagamento-corrida').textContent = `Corrida #${corrida.id}`
+     
+     const valorFinal = corrida.valor_final || corrida.valor || 0 
+     const valorMotorista = corrida.valor_motorista || 0 
+     const valorPlataforma = corrida.valor_mobihub || 0 
+     const custoEspera = corrida.custo_espera_inicial || 0 
+     const custoParadas = corrida.custo_paradas || 0 
+     const valorBase = corrida.valor || 0 
+     const sinalValor = corrida.sinal_valor || 0 
+     const sinalPago = corrida.sinal_pago || false 
+
+     document.getElementById('txt-pagamento-valor').textContent = moeda(valorMotorista || valorFinal) 
+     document.getElementById('txt-pagamento-corrida').textContent = `Corrida #${corrida.id}` 
+
+     // Detalhamento 
+     let detalhe = `💰 Total: ${moeda(valorFinal)}` 
+     if (custoEspera > 0) detalhe += `\n⏱️ Espera: + ${moeda(custoEspera)}` 
+     if (custoParadas > 0) detalhe += `\n🛑 Paradas: + ${moeda(custoParadas)}` 
+     if (sinalPago && sinalValor > 0) detalhe += `\n✅ Sinal recebido: ${moeda(sinalValor)}` 
+     detalhe += `\n🚗 Seu ganho: ${moeda(valorMotorista)}` 
+     if (valorPlataforma > 0) detalhe += `\n🏢 Plataforma: ${moeda(valorPlataforma)}` 
+
+     const txtDetalhe = document.getElementById('txt-pagamento-detalhe') 
+     if (txtDetalhe) txtDetalhe.textContent = detalhe
      setTimeout(() => { corridaAtualId = null }, 5000)
      if (corrida.id && !corridaAvaliadaId && !corridasJaAvaliadas.has(corrida.id)) { 
        corridaAvaliadaId = corrida.id 
