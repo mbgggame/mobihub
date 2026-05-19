@@ -302,120 +302,163 @@ async function toggle(id, ativo) {
   carregar() 
 }
 
-async function abrirModalMotorista(id) {
-  const m = dados.find(x => String(x.id) === String(id))
-  if (!m) return
-  
+async function abrirModalMotorista(id) { 
+  const m = dados.find(x => String(x.id) === String(id)) 
+  if (!m) return 
+
   let badge, badgeClass 
   if (isEmCorrida(m))       { badge = '🚗 Em corrida';  badgeClass = 'bg-yellow-100 text-yellow-800 border border-yellow-200' } 
   else if (isDisponivel(m)) { badge = '🟢 Disponível'; badgeClass = 'bg-green-100 text-green-800 border border-green-200' } 
-  else                      { badge = '⚫ Offline';     badgeClass = 'bg-gray-100 text-gray-600 border border-gray-200' }
-  
-  const veiculo = [m.modelo_carro, m.cor_carro, m.ano_carro].filter(v => v && v !== 'Não informado').join(' ')
-  
-  let corridaAtualHTML = ''
-  let miniMapHTML = ''
-  
-  if (m.corrida_atual) {
-    const orig = encurtarEnd(m.corrida_atual.origem)
-    const dest = encurtarEnd(m.corrida_atual.destino)
-    corridaAtualHTML = `
-      <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-3">
-        <p class="text-xs text-yellow-600 font-medium mb-1">🚗 Corrida Atual</p>
-        <p class="text-sm font-medium text-gray-800">${orig} → ${dest}</p>
-        <p class="text-sm text-green-700 font-semibold mt-1">R$ ${Number(m.corrida_atual.valor).toFixed(2)}</p>
-      </div>
-    `
-    
-    if (m.corrida_atual.origem_lat && m.corrida_atual.destino_lat) {
-      miniMapHTML = `
-        <div id="mapa-corrida-motorista" class="hidden rounded-xl overflow-hidden" style="height:250px"></div>
-      `
-    }
-  }
-  
-  document.getElementById('modal-motorista-conteudo').innerHTML = `
-    <div class="space-y-3">
-      <div class="flex items-center gap-3">
-        <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold text-lg">
-          ${m.nome.charAt(0).toUpperCase()}
-        </div>
-        <div class="flex-1">
-          <p class="font-semibold text-lg text-gray-900">${m.nome}</p>
-          <p class="text-xs text-gray-500">ID: ${m.id}</p>
-        </div>
-      </div>
-      
-      <div class="grid grid-cols-2 gap-3">
-        <div class="bg-gray-50 rounded-lg p-3">
-          <p class="text-xs text-gray-500">Veículo</p>
-          <p class="text-sm font-medium text-gray-800">${veiculo || '—'}</p>
-        </div>
-        <div class="bg-gray-50 rounded-lg p-3">
-          <p class="text-xs text-gray-500">Placa</p>
-          <p class="text-sm font-medium text-gray-800 font-mono">${m.placa || '—'}</p>
-        </div>
-      </div>
-      
-      <div class="bg-gray-50 rounded-lg p-3">
-        <div class="flex items-center justify-between">
-          <p class="text-xs text-gray-500">Status</p>
-          <span class="text-xs px-2 py-0.5 rounded-full font-medium ${badgeClass}">${badge}</span>
-        </div>
-      </div>
-      
-      ${corridaAtualHTML}
-      
-      ${miniMapHTML}
-      
-      <div class="grid grid-cols-3 gap-3">
-        <div class="bg-gray-50 rounded-lg p-3 text-center">
-          <p class="text-xs text-gray-500">Avaliação</p>
-          <p class="text-lg font-bold text-yellow-500">⭐ ${Number(m.media_avaliacao || 0).toFixed(1)}</p>
-        </div>
-        <div class="bg-gray-50 rounded-lg p-3 text-center">
-          <p class="text-xs text-gray-500">Corridas</p>
-          <p class="text-lg font-bold text-gray-800">${m.corridas_hoje || 0}</p>
-        </div>
-        <div class="bg-gray-50 rounded-lg p-3 text-center">
-          <p class="text-xs text-gray-500">Ganhos</p>
-          <p class="text-lg font-bold text-green-700">R$ ${Number(m.ganhos_hoje || 0).toFixed(2)}</p>
-        </div>
-      </div>
-      
-      ${m.telefone ? `
-      <div class="bg-gray-50 rounded-lg p-3">
-        <p class="text-xs text-gray-500">Telefone</p>
-        <p class="text-sm font-medium text-gray-800">${m.telefone}</p>
-      </div>` : ''}
-      
-      ${m.balance_due > 0 ? `
-      <div class="bg-red-50 border border-red-200 rounded-lg p-3">
-        <p class="text-xs text-red-600 font-medium">💸 Saldo Devedor</p>
-        <p class="text-lg font-bold text-red-700">R$ ${Number(m.balance_due).toFixed(2)}</p>
-      </div>` : ''}
-    </div>
-  `
-  
-  document.getElementById('modal-motorista').classList.remove('hidden')
-  
-  // Render mini-map if we have corrida_atual with coordinates
-  if (m.corrida_atual && m.corrida_atual.origem_lat && m.corrida_atual.destino_lat) {
-    try {
-      const token = await getMapboxToken()
-      
+  else                      { badge = '⚫ Offline';     badgeClass = 'bg-gray-100 text-gray-600 border border-gray-200' } 
+
+  const veiculo = [m.modelo_carro, m.cor_carro].filter(v => v && v !== 'Não informado').join(' ') 
+
+  let corridaAtualHTML = '' 
+  let miniMapHTML = '' 
+
+  if (m.corrida_atual) { 
+    const orig = encurtarEnd(m.corrida_atual.origem) 
+    const dest = encurtarEnd(m.corrida_atual.destino) 
+    const aceitaEm = m.aceita_at ? new Date(m.aceita_at).toLocaleTimeString('pt-BR') : '—' 
+    corridaAtualHTML = ` 
+      <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-3 space-y-1"> 
+        <p class="text-xs text-yellow-600 font-semibold">🚗 Corrida Atual</p> 
+        <p class="text-sm font-medium text-gray-800">${orig} → ${dest}</p> 
+        <p class="text-sm text-green-700 font-semibold">R$ ${Number(m.corrida_atual.valor||0).toFixed(2)}</p> 
+        ${m.passageiro_nome ? `<p class="text-xs text-gray-500">👤 Passageiro: ${m.passageiro_nome}</p>` : ''} 
+        <p class="text-xs text-gray-400">Aceita às ${aceitaEm}</p> 
+      </div> 
+    ` 
+    if (m.corrida_atual.origem_lat && m.corrida_atual.destino_lat) { 
+      miniMapHTML = `<div id="mapa-corrida-motorista" class="rounded-xl overflow-hidden" style="height:220px"></div>` 
+    } 
+  } 
+
+  const statusCadastro = { 
+    aprovado: '<span class="text-green-600 font-medium">✅ Aprovado</span>', 
+    pendente:  '<span class="text-yellow-600 font-medium">⏳ Pendente</span>', 
+    reprovado: '<span class="text-red-600 font-medium">❌ Reprovado</span>' 
+  }[m.status_cadastro] || '—' 
+
+  document.getElementById('modal-motorista-conteudo').innerHTML = ` 
+    <div class="space-y-3"> 
+
+      <!-- Cabeçalho --> 
+      <div class="flex items-center gap-3"> 
+        <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold text-xl"> 
+          ${(m.nome||'?').charAt(0).toUpperCase()} 
+        </div> 
+        <div class="flex-1"> 
+          <p class="font-semibold text-lg text-gray-900">${m.nome}</p> 
+          <p class="text-xs text-gray-400">ID: ${m.id} · ${statusCadastro}</p> 
+        </div> 
+        <span class="text-xs px-2 py-1 rounded-full font-medium ${badgeClass}">${badge}</span> 
+      </div> 
+
+      <!-- Veículo --> 
+      <div class="grid grid-cols-2 gap-2"> 
+        <div class="bg-gray-50 rounded-lg p-3"> 
+          <p class="text-xs text-gray-400">Veículo</p> 
+          <p class="text-sm font-medium text-gray-800">${veiculo || '—'}</p> 
+        </div> 
+        <div class="bg-gray-50 rounded-lg p-3"> 
+          <p class="text-xs text-gray-400">Placa</p> 
+          <p class="text-sm font-medium font-mono text-gray-800">${m.placa || '—'}</p> 
+        </div> 
+      </div> 
+
+      <!-- Stats --> 
+      <div class="grid grid-cols-3 gap-2"> 
+        <div class="bg-gray-50 rounded-lg p-3 text-center"> 
+          <p class="text-xs text-gray-400">Avaliação</p> 
+          <p class="text-base font-bold text-yellow-500">⭐ ${Number(m.media_avaliacao||0).toFixed(1)}</p> 
+          <p class="text-xs text-gray-400">${m.total_avaliacoes||0} avaliações</p> 
+        </div> 
+        <div class="bg-gray-50 rounded-lg p-3 text-center"> 
+          <p class="text-xs text-gray-400">Total viagens</p> 
+          <p class="text-base font-bold text-gray-800">${m.total_viagens||0}</p> 
+        </div> 
+        <div class="bg-gray-50 rounded-lg p-3 text-center"> 
+          <p class="text-xs text-gray-400">Ganhos hoje</p> 
+          <p class="text-base font-bold text-green-700">R$ ${Number(m.ganhos_hoje||0).toFixed(2)}</p> 
+        </div> 
+      </div> 
+
+      <!-- Corridas hoje --> 
+      <div class="bg-gray-50 rounded-lg p-3 flex justify-between items-center"> 
+        <p class="text-xs text-gray-400">Corridas hoje</p> 
+        <p class="text-sm font-bold text-gray-800">${m.corridas_hoje||0}</p> 
+      </div> 
+
+      <!-- Telefone --> 
+      ${m.telefone ? ` 
+      <div class="bg-gray-50 rounded-lg p-3 flex justify-between items-center"> 
+        <p class="text-xs text-gray-400">Telefone</p> 
+        <a href="https://wa.me/55${m.telefone.replace(/\D/g,'')}" target="_blank" class="text-sm font-medium text-green-700 hover:underline">📱 ${m.telefone}</a> 
+      </div>` : ''} 
+
+      <!-- Saldo devedor --> 
+      ${m.balance_due > 0 ? ` 
+      <div class="bg-red-50 border border-red-200 rounded-lg p-3 flex justify-between items-center"> 
+        <p class="text-xs text-red-600 font-semibold">💸 Saldo Devedor</p> 
+        <p class="text-base font-bold text-red-700">R$ ${Number(m.balance_due).toFixed(2)}</p> 
+      </div>` : ''} 
+
+      <!-- Corrida atual --> 
+      ${corridaAtualHTML} 
+
+      <!-- Mini-mapa --> 
+      ${miniMapHTML} 
+
+      <!-- Última localização --> 
+      ${m.ultima_lat ? ` 
+      <div class="bg-gray-50 rounded-lg p-3 flex justify-between items-center"> 
+        <p class="text-xs text-gray-400">Última localização</p> 
+        <p class="text-xs text-gray-600" id="end-modal-${m.id}">⏳ carregando...</p> 
+      </div>` : ''} 
+
+      <!-- Botões de ação --> 
+      <div class="flex gap-2 pt-2 border-t border-gray-100"> 
+        ${m.token_perfil ? ` 
+        <a href="/motorista/${m.token_perfil}" target="_blank" 
+          class="flex-1 text-center text-sm bg-blue-50 text-blue-700 border border-blue-200 rounded-lg py-2 font-medium hover:bg-blue-100"> 
+          🚗 Ver painel 
+        </a>` : ''} 
+        ${m.status_cadastro === 'aprovado' ? ` 
+        <button onclick="toggle(${m.id},${m.ativo}); fecharModalMotorista()" 
+          class="flex-1 text-sm ${m.ativo ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'} rounded-lg py-2 font-medium"> 
+          ${m.ativo ? '⛔ Desativar' : '✅ Ativar'} 
+        </button>` : ''} 
+        ${m.corridas_agendadas?.length > 0 ? ` 
+        <button onclick="verAgendadas(${m.id})" 
+          class="flex-1 text-sm bg-green-600 text-white rounded-lg py-2 font-medium hover:bg-green-700"> 
+          🗓️ ${m.corridas_agendadas.length} Agendada(s) 
+        </button>` : ''} 
+      </div> 
+
+    </div> 
+  ` 
+
+  document.getElementById('modal-motorista').classList.remove('hidden') 
+
+  // Geocodificar localização atual 
+  if (m.ultima_lat) { 
+    geocodificar(m.ultima_lat, m.ultima_lng).then(end => { 
+      const el = document.getElementById(`end-modal-${m.id}`) 
+      if (el) el.textContent = end 
+    }) 
+  } 
+
+  // Mini-mapa da corrida atual 
+  if (m.corrida_atual?.origem_lat && m.corrida_atual?.destino_lat) { 
+    try { 
+      const token = await getMapboxToken() 
       const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${m.corrida_atual.origem_lng},${m.corrida_atual.origem_lat};${m.corrida_atual.destino_lng},${m.corrida_atual.destino_lat}?access_token=${token}&geometries=geojson&overview=full` 
       const resp = await fetch(url) 
       const data = await resp.json() 
-      
-      const distKm = data.routes?.[0]?.distance / 1000 
-      const duracaoMin = Math.round(data.routes?.[0]?.duration / 60) 
       const geometry = data.routes?.[0]?.geometry 
-      
-      const mapaDiv = document.getElementById('mapa-corrida-motorista')
-      if (mapaDiv && distKm && duracaoMin) {
-        mapaDiv.classList.remove('hidden')
-        
+      const mapaDiv = document.getElementById('mapa-corrida-motorista') 
+      if (mapaDiv) { 
         const map = new mapboxgl.Map({ 
           container: 'mapa-corrida-motorista', 
           style: 'mapbox://styles/mapbox/streets-v12', 
@@ -423,30 +466,20 @@ async function abrirModalMotorista(id) {
           center: [m.corrida_atual.origem_lng, m.corrida_atual.origem_lat], 
           zoom: 11 
         }) 
-        
         map.on('load', () => { 
-          new mapboxgl.Marker({ color: '#16a34a' }) 
-            .setLngLat([m.corrida_atual.origem_lng, m.corrida_atual.origem_lat]) 
-            .addTo(map) 
-          
-          new mapboxgl.Marker({ color: '#dc2626' }) 
-            .setLngLat([m.corrida_atual.destino_lng, m.corrida_atual.destino_lat]) 
-            .addTo(map) 
-          
+          new mapboxgl.Marker({ color: '#16a34a' }).setLngLat([m.corrida_atual.origem_lng, m.corrida_atual.origem_lat]).addTo(map) 
+          new mapboxgl.Marker({ color: '#dc2626' }).setLngLat([m.corrida_atual.destino_lng, m.corrida_atual.destino_lat]).addTo(map) 
           if (geometry) { 
             map.addSource('rota', { type: 'geojson', data: { type: 'Feature', geometry } }) 
             map.addLayer({ id: 'rota', type: 'line', source: 'rota', paint: { 'line-color': '#2563eb', 'line-width': 3 } }) 
-            
             const bounds = new mapboxgl.LngLatBounds() 
             geometry.coordinates.forEach(c => bounds.extend(c)) 
             map.fitBounds(bounds, { padding: 40 }) 
           } 
-        })
-      }
-    } catch (e) {
-      console.error('Erro ao carregar mapa:', e)
-    }
-  }
+        }) 
+      } 
+    } catch(e) { console.error('Erro mapa:', e) } 
+  } 
 }
 
 function fecharModalMotorista() {
