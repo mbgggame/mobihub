@@ -774,7 +774,7 @@ export default async function driversRoutes(fastify) {
         d.online, d.ativo, d.status_cadastro, d.token_perfil, 
         d.media_avaliacao, d.total_viagens, d.total_avaliacoes, 
         d.balance_due, 
-        dl.lat, dl.lng, dl.updated_at as location_at, 
+        dl.lat AS ultima_lat, dl.lng AS ultima_lng, dl.updated_at as location_at, 
         r.id as corrida_id, r.status as corrida_status, 
         r.origem, r.destino, r.valor, r.origem_lat, r.origem_lng, r.destino_lat, r.destino_lng,
         r.aceita_at, r.created_at as corrida_criada_at, 
@@ -829,8 +829,6 @@ export default async function driversRoutes(fastify) {
       
       return {
         ...d,
-        ultima_lat: d.lat,
-        ultima_lng: d.lng,
         corrida_atual: corridaAtual,
         corridas_agendadas: agendadas
       }
