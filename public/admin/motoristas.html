@@ -195,7 +195,7 @@ function renderLinha(m) {
   else                      { badge = '⚫ Offline';     badgeClass = 'bg-gray-100 text-gray-600 border border-gray-200' }
 
   const veiculo = [m.modelo_carro, m.cor_carro].filter(v => v && v !== 'Não informado').join(' ') 
-  const loc = m.ultima_lat ? '⏳' : m.location_at && m.segundos_sem_update < 300 ? td(m.location_at) + ' atrás' : m.online ? '⚠️ Sem localização' : '—'
+  const loc = m.lat ? '⏳' : m.location_at && m.segundos_sem_update < 300 ? td(m.location_at) + ' atrás' : m.online ? '⚠️ Sem localização' : '—'
   let corrida = '<span class="text-gray-300">—</span>'
   if (m.corrida_atual) {
     const orig = encurtarEnd(m.corrida_atual.origem)
@@ -289,10 +289,10 @@ function filtrar() {
 }
 
 async function atualizarLocalizacoes() { 
-  await Promise.all(dados.filter(m => m.ultima_lat).map(async m => { 
+  await Promise.all(dados.filter(m => m.lat).map(async m => { 
     const cel = document.querySelector(`tr[data-id="${m.id}"] td[data-loc]`) 
     if (!cel) return 
-    const end = await geocodificar(m.ultima_lat, m.ultima_lng) 
+    const end = await geocodificar(m.lat, m.lng) 
     cel.textContent = end 
   })) 
 } 

@@ -767,14 +767,14 @@ export default async function driversRoutes(fastify) {
     const dataDe = de || hoje
     const dataAte = ate || hoje
     
-    // 1. Buscar motoristas base
+    // 1. Buscar motoristas base (mesmo query original, só com date params nas subqueries)
     const result = await query(` 
       SELECT 
         d.id, d.nome, d.modelo_carro, d.cor_carro, d.placa, d.telefone,
         d.online, d.ativo, d.status_cadastro, d.token_perfil, 
         d.media_avaliacao, d.total_viagens, d.total_avaliacoes, 
         d.balance_due, 
-        dl.lat as ultima_lat, dl.lng as ultima_lng, dl.updated_at as location_at, 
+        dl.lat, dl.lng, dl.updated_at as location_at, 
         r.id as corrida_id, r.status as corrida_status, 
         r.origem, r.destino, r.valor, r.origem_lat, r.origem_lng, r.destino_lat, r.destino_lng,
         r.aceita_at, r.created_at as corrida_criada_at, 
@@ -787,7 +787,7 @@ export default async function driversRoutes(fastify) {
         SELECT lat, lng, updated_at FROM driver_locations 
         WHERE driver_id = d.id ORDER BY updated_at DESC LIMIT 1 
       ) dl ON true 
-      LEFT JOIN rides r ON r.driver_id = d.id AND r.status IN ('aceita', 'em_viagem') 
+      LEFT JOIN rides r ON r.driver_id = d.id AND r.status IN ('aceita', 'em_viagem', 'aberta') 
       LEFT JOIN clients c ON r.client_id = c.id 
       WHERE d.status_cadastro IN ('aprovado', 'pendente', 'reprovado') 
       ORDER BY d.online DESC, d.nome ASC 
@@ -814,7 +814,7 @@ export default async function driversRoutes(fastify) {
       const agendadas = corridasAgendadas.filter(a => a.driver_id === d.id)
       let corridaAtual = null
       
-      if (d.corrida_id && ['aceita','em_viagem'].includes(d.corrida_status)) {
+      if (d.corrida_id && ['aceita','em_viagem','aberta'].includes(d.corrida_status)) {
         corridaAtual = {
           id: d.corrida_id,
           origem: d.origem,
@@ -829,6 +829,8 @@ export default async function driversRoutes(fastify) {
       
       return {
         ...d,
+        ultima_lat: d.lat,
+        ultima_lng: d.lng,
         corrida_atual: corridaAtual,
         corridas_agendadas: agendadas
       }
