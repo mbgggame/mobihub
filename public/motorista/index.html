@@ -1829,11 +1829,18 @@ socket.on('agendamento:alerta_30min', (data) => {
 
      const txtDetalhe = document.getElementById('txt-pagamento-detalhe') 
      if (txtDetalhe) txtDetalhe.textContent = detalhe
-     setTimeout(() => { corridaAtualId = null }, 5000)
-     if (corrida.id && !corridaAvaliadaId && !corridasJaAvaliadas.has(corrida.id) && !localStorage.getItem('corrida_avaliada_' + corrida.id)) { 
-       corridaAvaliadaId = corrida.id 
-       setTimeout(() => abrirModalAvaliarPassageiro(corrida.id), 2000) 
-     }
+     setTimeout(() => { corridaAtualId = null }, 5000) 
+ if (corrida.id && !corridaAvaliadaId && !corridasJaAvaliadas.has(corrida.id) && !localStorage.getItem('corrida_avaliada_' + corrida.id)) { 
+   corridaAvaliadaId = corrida.id 
+   corridasJaAvaliadas.add(corrida.id) // bloqueia imediatamente para o próximo polling não reagendar 
+   setTimeout(() => { 
+     // Só abre se ainda não foi avaliado 
+     if (!localStorage.getItem('corrida_avaliada_' + corrida.id)) { 
+       corridasJaAvaliadas.delete(corrida.id) // libera para a função de avaliação gerenciar 
+       abrirModalAvaliarPassageiro(corrida.id) 
+     } 
+   }, 2000) 
+ }
    } else if (corrida.status === 'concluida' && corrida.pagamento_status !== 'pago' && corrida.pagamento_status !== 'aguardando_pagamento' && (corrida.forma_pagamento === '1' || corrida.forma_pagamento === 1)) {
       qrCard.classList.add('hidden')
       pagamentoConfirmadoCard.classList.add('hidden')
