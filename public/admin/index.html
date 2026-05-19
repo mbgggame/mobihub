@@ -473,30 +473,13 @@ function sair() {
   location.href = '/admin/login' 
 } 
  
-document.addEventListener('DOMContentLoaded', async () => { 
+document.addEventListener('DOMContentLoaded', () => { 
   const token = localStorage.getItem('mobihub_token') 
   if (!token) { 
     window.location.href = '/admin/login' 
     return 
   } 
-  try { 
-    const r = await fetch('/api/login/verify', { 
-      method: 'POST', 
-      headers: { 
-        'Content-Type': 'application/json', 
-        'Authorization': `Bearer ${token}` 
-      } 
-    }) 
-    if (!r.ok) { 
-      localStorage.removeItem('mobihub_token') 
-      window.location.href = '/admin/login' 
-      return 
-    } 
-    carregar() 
-  } catch (err) { 
-    localStorage.removeItem('mobihub_token') 
-    window.location.href = '/admin/login' 
-  } 
+  carregar() 
 }) 
 setInterval(carregar, 30000) 
 </script> 
