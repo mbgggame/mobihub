@@ -233,7 +233,7 @@ async function toggle(id, ativo) {
 }
 
 function abrirModalMotorista(id) {
-  const m = dados.find(x => x.id === id)
+  const m = dados.find(x => String(x.id) === String(id))
   if (!m) return
   
   let badge, badgeClass 
