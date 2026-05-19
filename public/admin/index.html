@@ -278,6 +278,11 @@ function renderizar(corridas) {
           </button> 
         </div> 
         ` : ''} 
+      ${c.status === 'aguardando_pagamento' ? ` 
+      <button onclick="event.stopPropagation(); simularPagamentoPix(${c.id})" 
+        class="text-xs bg-blue-500 text-white px-3 py-1.5 rounded-lg hover:bg-blue-600"> 
+        💳 Simular pagamento Pix 
+      </button>` : ''} 
       ${['aberta','aceita','em_viagem'].includes(c.status) ? `<button onclick="confirmarCancelamento(${c.id})" class="flex-1 bg-red-50 text-red-600 border border-red-200 rounded-lg py-2 text-sm font-medium">❌ Cancelar corrida</button>` : ''} 
       ${msgCliente ? `<button onclick="copiarMensagem()" class="w-full bg-green-50 text-green-700 border border-green-200 rounded-lg py-2 text-sm font-medium">📋 Copiar mensagem para cliente</button>` : ''} 
       </div> 
@@ -450,11 +455,34 @@ function repetirViagem() {
    location.href = '/admin/nova-corrida' 
  }
  
+async function simularPagamentoPix(corridaId) { 
+  try { 
+    // Busca o motorista da corrida 
+    const todas = await fetch('/api/rides', { headers: headers() }).then(r => r.json()) 
+    const corrida = todas.find(c => c.id === corridaId) 
+    if (!corrida || !corrida.driver_id) { alert('Motorista não encontrado'); return } 
+    const r = await fetch(`/api/admin/drivers/${corrida.driver_id}/simular-pagamento`, { 
+      method: 'POST', 
+      headers: headers() 
+    }) 
+    const d = await r.json() 
+    if (r.ok) { 
+      alert('✅ Pagamento simulado! Corrida liberada.') 
+      fecharModal() 
+      carregar() 
+    } else { 
+      alert('Erro: ' + (d.error || d.message || 'Tente novamente')) 
+    } 
+  } catch(e) { 
+    alert('Erro de conexão') 
+  } 
+} 
+
 function copiarMensagem() { 
   navigator.clipboard.writeText(window._msgCliente || '') 
   alert('Mensagem copiada! Cole no WhatsApp do cliente.') 
 } 
- 
+
 function fecharModal() { 
   document.getElementById('modal').classList.add('hidden') 
   corridaAtual = null 
