@@ -1382,19 +1382,24 @@ socket.on('agendamento:alerta_30min', (data) => {
  async function enviarAvaliacaoPassageiro() { 
    if (!rideIdParaAvaliar || !estrelasPassageiro) return 
    const comentario = document.getElementById('comentario-passageiro').value 
+   const rideId = rideIdParaAvaliar 
+   // Marca como avaliada ANTES de enviar para evitar reabrir 
+   corridasJaAvaliadas.add(rideId) 
+   corridaAvaliadaId = null 
+   localStorage.setItem('corrida_avaliada_' + rideId, '1') 
+   fecharModalAvaliarPassageiro() 
    try { 
      await fetch('/api/rate', { 
        method: 'POST', 
        headers: { 'Content-Type': 'application/json' }, 
        body: JSON.stringify({ 
-         ride_id: rideIdParaAvaliar, 
+         ride_id: rideId, 
          tipo: 'cliente', 
          estrelas: estrelasPassageiro, 
          comentario: comentario || null 
        }) 
      }) 
    } catch(e) {} 
-   fecharModalAvaliarPassageiro() 
  } 
 
  function fecharModalDetalheCorrida() { 
@@ -1821,7 +1826,7 @@ socket.on('agendamento:alerta_30min', (data) => {
      const txtDetalhe = document.getElementById('txt-pagamento-detalhe') 
      if (txtDetalhe) txtDetalhe.textContent = detalhe
      setTimeout(() => { corridaAtualId = null }, 5000)
-     if (corrida.id && !corridaAvaliadaId && !corridasJaAvaliadas.has(corrida.id)) { 
+     if (corrida.id && !corridaAvaliadaId && !corridasJaAvaliadas.has(corrida.id) && !localStorage.getItem('corrida_avaliada_' + corrida.id)) { 
        corridaAvaliadaId = corrida.id 
        setTimeout(() => abrirModalAvaliarPassageiro(corrida.id), 2000) 
      }
