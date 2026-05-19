@@ -85,8 +85,30 @@
 
 <script> 
 const tk = localStorage.getItem('mobihub_token') 
-if (!tk) location.href = '/admin/login' 
 const H = () => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${tk}` }) 
+
+async function verifyToken() {
+  if (!tk) return false;
+  try {
+    const r = await fetch('/api/login/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tk}` }
+    });
+    return r.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function init() {
+  const isValid = await verifyToken();
+  if (!isValid) {
+    localStorage.removeItem('mobihub_token');
+    location.href = '/admin/login';
+  }
+}
+
+init();
 
 let dados = [] 
 let statusAtivo = 'todos' 

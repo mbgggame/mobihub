@@ -153,9 +153,28 @@ const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': `B
 const isLoginPage = window.location.pathname === '/admin/login';
 const tokenVal = localStorage.getItem('mobihub_token');
 
-if (!tokenVal && !isLoginPage) {
-  location.href = '/admin/login';
-} 
+async function verifyToken() {
+  if (!tokenVal) return false;
+  try {
+    const r = await fetch('/api/login/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenVal}` }
+    });
+    return r.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function init() {
+  const isValid = await verifyToken();
+  if (!isValid) {
+    localStorage.removeItem('mobihub_token');
+    location.href = '/admin/login';
+  }
+}
+
+init();
  
 let map, geocoder 
  let marcadores = { origem: null, destino: null } 

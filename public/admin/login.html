@@ -31,11 +31,30 @@
 const isLoginPage = window.location.pathname === '/admin/login';
 const token = localStorage.getItem('mobihub_token');
 
-if (token && isLoginPage) {
-  location.href = '/admin';
-} else if (!token && !isLoginPage) {
-  location.href = '/admin/login';
+async function verifyToken() {
+  if (!token) return false;
+  try {
+    const r = await fetch('/api/login/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+    });
+    return r.ok;
+  } catch {
+    return false;
+  }
 }
+
+async function init() {
+  const isValid = await verifyToken();
+  if (isValid && isLoginPage) {
+    location.href = '/admin';
+  } else if (!isValid && !isLoginPage) {
+    localStorage.removeItem('mobihub_token');
+    location.href = '/admin/login';
+  }
+}
+
+init();
  
 async function login() { 
   const email = document.getElementById('email').value 
@@ -54,7 +73,7 @@ async function login() {
     location.href = '/admin' 
   } catch { erro.textContent = 'Erro de conexão.'; erro.classList.remove('hidden') } 
 } 
- 
+
 document.getElementById('senha').addEventListener('keydown', e => { if (e.key === 'Enter') login() }) 
 </script> 
 </body> 
