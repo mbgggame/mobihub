@@ -65,6 +65,7 @@ const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': `B
  
 const isLoginPage = window.location.pathname === '/admin/login';
 const tokenVal = localStorage.getItem('mobihub_token');
+const acabouDeLogar = sessionStorage.getItem('acabou_de_logar');
 
 async function verifyToken() {
   if (!tokenVal) return false;
@@ -80,6 +81,10 @@ async function verifyToken() {
 }
 
 async function init() {
+  if (acabouDeLogar) {
+    sessionStorage.removeItem('acabou_de_logar');
+    return;
+  }
   const isValid = await verifyToken();
   if (!isValid) {
     localStorage.removeItem('mobihub_token');

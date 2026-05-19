@@ -33,8 +33,8 @@ const token = localStorage.getItem('mobihub_token');
 
 const acabouDeLogar = sessionStorage.getItem('acabou_de_logar');
 if (acabouDeLogar) {
-  sessionStorage.removeItem('acabou_de_logar');
   location.href = '/admin';
+  throw new Error('Redirecionando para admin após login');
 }
 
 async function verifyToken() {
