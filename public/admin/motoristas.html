@@ -490,7 +490,8 @@ async function simularPagamento(id) {
   try { 
     const r = await fetch(`/api/admin/drivers/${id}/pagar-saldo`, { 
       method: 'POST', 
-      headers: H() 
+      headers: H(), 
+      body: '{}' 
     }) 
     const d = await r.json() 
     if (r.ok) { 

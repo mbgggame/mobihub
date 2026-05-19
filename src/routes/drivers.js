@@ -473,7 +473,7 @@ export default async function driversRoutes(fastify) {
     return { mensagem: 'Pagamento simulado com sucesso', corrida_id: ride.id } 
   })
 
-  fastify.post('/api/admin/drivers/:id/resetar-corrida', { preHandler: requireAuth }, async (request, reply) => { 
+  fastify.post('/api/admin/drivers/:id/resetar-corrida', { preHandler: requireAuth, config: { rawBody: false } }, async (request, reply) => { 
     const { id } = request.params 
     const result = await query( 
       `SELECT id, status, pagamento_status FROM rides WHERE driver_id = $1 ORDER BY id DESC LIMIT 1`, 

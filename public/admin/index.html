@@ -463,7 +463,8 @@ async function simularPagamentoPix(corridaId) {
     if (!corrida || !corrida.driver_id) { alert('Motorista não encontrado'); return } 
     const r = await fetch(`/api/admin/drivers/${corrida.driver_id}/simular-pagamento`, { 
       method: 'POST', 
-      headers: headers() 
+      headers: headers(), 
+      body: '{}' 
     }) 
     const d = await r.json() 
     if (r.ok) { 
