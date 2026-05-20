@@ -1035,41 +1035,73 @@ export default async function publicRoutes(fastify) {
           })
         }
         
-        const asaasCobranca = await fetch('https://www.asaas.com/api/v3/payments', { 
-          method: 'POST', 
-          headers: { 
-            'Content-Type': 'application/json', 
-            'access_token': process.env.ASAAS_API_KEY 
-          }, 
-          body: JSON.stringify({ 
-            billingType: 'PIX', 
-            value: valorFinal, 
-            dueDate: new Date(Date.now() + 30 * 60000).toISOString().split('T')[0], 
-            description: `Corrida #${id} - MobiHub`, 
-            externalReference: String(id), 
-            customer: asaasCustomerId,
-            split: [ 
-              { 
-                walletId: driver.asaas_id, 
-                fixedValue: valorMotorista
-              } 
-            ] 
-          }) 
-        })
-        const asaasData = await asaasCobranca.json()
-        if (asaasData.id) { 
-          // Buscar QR Code Pix 
-          const qrResponse = await fetch(`https://www.asaas.com/api/v3/payments/${asaasData.id}/pixQrCode`, { 
-            headers: { 'access_token': process.env.ASAAS_API_KEY } 
-          }) 
-          const qrData = await qrResponse.json() 
-          asaasPaymentId = asaasData.id
-          asaasPaymentLink = asaasData.invoiceUrl
-          asaasPixPayload = qrData.payload
-          await query( 
-            'UPDATE rides SET asaas_payment_id = $1, asaas_payment_link = $2, asaas_pix_qrcode = $3, asaas_pix_payload = $4, pagamento_status = $5 WHERE id = $6', 
-            [asaasData.id, asaasData.invoiceUrl, qrData.encodedImage, qrData.payload, 'aguardando_pagamento', id] 
-          ) 
+        // Verifica gateway configurado
+        const gatewayConfig = (await query('SELECT * FROM gateway_config LIMIT 1')).rows[0]
+        const usarZighu = gatewayConfig?.ativo && gatewayConfig?.gateway === 'zighu'
+
+        if (usarZighu) {
+          // Gera QR Code via Zighu Pay
+          const zighuRes = await fetch(`${gatewayConfig.url}/zighu/cobranca`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': gatewayConfig.api_key
+            },
+            body: JSON.stringify({
+              corrida_id: id,
+              valor: valorFinal,
+              motorista_id: driver.id,
+              chave_pix: driver.chave_pix,
+              percentual_motorista: percentualMotorista,
+              app_origem: 'mobihub'
+            })
+          })
+          const zighuData = await zighuRes.json()
+          if (zighuData.pix_copia_cola) {
+            asaasPixPayload = zighuData.pix_copia_cola
+            asaasPaymentId = zighuData.cobranca_id
+            await query(
+              'UPDATE rides SET asaas_payment_id = $1, asaas_pix_payload = $2, pagamento_status = $3 WHERE id = $4',
+              [String(zighuData.cobranca_id), zighuData.pix_copia_cola, 'aguardando_pagamento', id]
+            )
+          }
+        } else {
+          // Gera QR Code via Asaas (original)
+          const asaasCobranca = await fetch('https://www.asaas.com/api/v3/payments', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'access_token': process.env.ASAAS_API_KEY
+            },
+            body: JSON.stringify({
+              billingType: 'PIX',
+              value: valorFinal,
+              dueDate: new Date(Date.now() + 30 * 60000).toISOString().split('T')[0],
+              description: `Corrida #${id} - MobiHub`,
+              externalReference: String(id),
+              customer: asaasCustomerId,
+              split: [
+                {
+                  walletId: driver.asaas_id,
+                  fixedValue: valorMotorista
+                }
+              ]
+            })
+          })
+          const asaasData = await asaasCobranca.json()
+          if (asaasData.id) {
+            const qrResponse = await fetch(`https://www.asaas.com/api/v3/payments/${asaasData.id}/pixQrCode`, {
+              headers: { 'access_token': process.env.ASAAS_API_KEY }
+            })
+            const qrData = await qrResponse.json()
+            asaasPaymentId = asaasData.id
+            asaasPaymentLink = asaasData.invoiceUrl
+            asaasPixPayload = qrData.payload
+            await query(
+              'UPDATE rides SET asaas_payment_id = $1, asaas_payment_link = $2, asaas_pix_qrcode = $3, asaas_pix_payload = $4, pagamento_status = $5 WHERE id = $6',
+              [asaasData.id, asaasData.invoiceUrl, qrData.encodedImage, qrData.payload, 'aguardando_pagamento', id]
+            )
+          }
         } 
       } catch (err) { 
         console.error('[ASAAS PIX] Erro ao gerar cobrança:', err) 
