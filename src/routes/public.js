@@ -988,54 +988,9 @@ export default async function publicRoutes(fastify) {
 
     // Gerar cobrança Pix no Asaas se forma_pagamento = 2 
     let asaasPaymentId = null, asaasPaymentLink = null, asaasPixPayload = null
-    if ((ride.forma_pagamento === '2' || ride.forma_pagamento === 2) && driver.asaas_id && process.env.ASAAS_API_KEY) { 
+    if ((ride.forma_pagamento === '2' || ride.forma_pagamento === 2)) { 
       try { 
-        // Buscar dados do cliente
-        let client = null
-        if (ride.client_id) {
-          const clientResult = await query('SELECT * FROM clients WHERE id = $1', [ride.client_id])
-          client = clientResult.rows[0]
-        }
-        
-        // Criar customer no Asaas se não existir
-        let asaasCustomerId = client?.asaas_customer_id
-        if (!asaasCustomerId && client) {
-          const customerResponse = await fetch('https://www.asaas.com/api/v3/customers', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'access_token': process.env.ASAAS_API_KEY
-            },
-            body: JSON.stringify({
-              name: client.nome,
-              phone: client.telefone?.replace(/\D/g, ''),
-              mobilePhone: client.telefone?.replace(/\D/g, ''),
-              ...(client.cpf ? { cpfCnpj: client.cpf.replace(/\D/g, '') } : {}),
-              externalReference: String(client.id)
-            })
-          })
-          const customerData = await customerResponse.json()
-          if (customerData.id) {
-            asaasCustomerId = customerData.id
-            await query('UPDATE clients SET asaas_customer_id = $1 WHERE id = $2', [customerData.id, client.id])
-          }
-        }
-
-        // Atualizar customer no Asaas com CPF se disponível
-        if (asaasCustomerId && client?.cpf) {
-          await fetch(`https://www.asaas.com/api/v3/customers/${asaasCustomerId}`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'access_token': process.env.ASAAS_API_KEY
-            },
-            body: JSON.stringify({
-              cpfCnpj: client.cpf.replace(/\D/g, '')
-            })
-          })
-        }
-        
-        // Verifica gateway configurado
+        // Verifica gateway configurado PRIMEIRO
         const gatewayConfig = (await query('SELECT * FROM gateway_config LIMIT 1')).rows[0]
         const usarZighu = gatewayConfig?.ativo && gatewayConfig?.gateway === 'zighu'
 
@@ -1067,42 +1022,89 @@ export default async function publicRoutes(fastify) {
           }
         } else {
           // Gera QR Code via Asaas (original)
-          const asaasCobranca = await fetch('https://www.asaas.com/api/v3/payments', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'access_token': process.env.ASAAS_API_KEY
-            },
-            body: JSON.stringify({
-              billingType: 'PIX',
-              value: valorFinal,
-              dueDate: new Date(Date.now() + 30 * 60000).toISOString().split('T')[0],
-              description: `Corrida #${id} - MobiHub`,
-              externalReference: String(id),
-              customer: asaasCustomerId,
-              split: [
-                {
-                  walletId: driver.asaas_id,
-                  fixedValue: valorMotorista
-                }
-              ]
+          // Apenas executa se tiver ASAAS_API_KEY e driver.asaas_id
+          if (driver.asaas_id && process.env.ASAAS_API_KEY) {
+            // Buscar dados do cliente
+            let client = null
+            if (ride.client_id) {
+              const clientResult = await query('SELECT * FROM clients WHERE id = $1', [ride.client_id])
+              client = clientResult.rows[0]
+            }
+            
+            // Criar customer no Asaas se não existir
+            let asaasCustomerId = client?.asaas_customer_id
+            if (!asaasCustomerId && client) {
+              const customerResponse = await fetch('https://www.asaas.com/api/v3/customers', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'access_token': process.env.ASAAS_API_KEY
+                },
+                body: JSON.stringify({
+                  name: client.nome,
+                  phone: client.telefone?.replace(/\D/g, ''),
+                  mobilePhone: client.telefone?.replace(/\D/g, ''),
+                  ...(client.cpf ? { cpfCnpj: client.cpf.replace(/\D/g, '') } : {}),
+                  externalReference: String(client.id)
+                })
+              })
+              const customerData = await customerResponse.json()
+              if (customerData.id) {
+                asaasCustomerId = customerData.id
+                await query('UPDATE clients SET asaas_customer_id = $1 WHERE id = $2', [customerData.id, client.id])
+              }
+            }
+
+            // Atualizar customer no Asaas com CPF se disponível
+            if (asaasCustomerId && client?.cpf) {
+              await fetch(`https://www.asaas.com/api/v3/customers/${asaasCustomerId}`, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'access_token': process.env.ASAAS_API_KEY
+                },
+                body: JSON.stringify({
+                  cpfCnpj: client.cpf.replace(/\D/g, '')
+                })
+              })
+            }
+            const asaasCobranca = await fetch('https://www.asaas.com/api/v3/payments', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'access_token': process.env.ASAAS_API_KEY
+              },
+              body: JSON.stringify({
+                billingType: 'PIX',
+                value: valorFinal,
+                dueDate: new Date(Date.now() + 30 * 60000).toISOString().split('T')[0],
+                description: `Corrida #${id} - MobiHub`,
+                externalReference: String(id),
+                customer: asaasCustomerId,
+                split: [
+                  {
+                    walletId: driver.asaas_id,
+                    fixedValue: valorMotorista
+                  }
+                ]
+              })
             })
-          })
-          const asaasData = await asaasCobranca.json()
-          if (asaasData.id) {
-            const qrResponse = await fetch(`https://www.asaas.com/api/v3/payments/${asaasData.id}/pixQrCode`, {
-              headers: { 'access_token': process.env.ASAAS_API_KEY }
-            })
-            const qrData = await qrResponse.json()
-            asaasPaymentId = asaasData.id
-            asaasPaymentLink = asaasData.invoiceUrl
-            asaasPixPayload = qrData.payload
-            await query(
-              'UPDATE rides SET asaas_payment_id = $1, asaas_payment_link = $2, asaas_pix_qrcode = $3, asaas_pix_payload = $4, pagamento_status = $5 WHERE id = $6',
-              [asaasData.id, asaasData.invoiceUrl, qrData.encodedImage, qrData.payload, 'aguardando_pagamento', id]
-            )
+            const asaasData = await asaasCobranca.json()
+            if (asaasData.id) {
+              const qrResponse = await fetch(`https://www.asaas.com/api/v3/payments/${asaasData.id}/pixQrCode`, {
+                headers: { 'access_token': process.env.ASAAS_API_KEY }
+              })
+              const qrData = await qrResponse.json()
+              asaasPaymentId = asaasData.id
+              asaasPaymentLink = asaasData.invoiceUrl
+              asaasPixPayload = qrData.payload
+              await query(
+                'UPDATE rides SET asaas_payment_id = $1, asaas_payment_link = $2, asaas_pix_qrcode = $3, asaas_pix_payload = $4, pagamento_status = $5 WHERE id = $6',
+                [asaasData.id, asaasData.invoiceUrl, qrData.encodedImage, qrData.payload, 'aguardando_pagamento', id]
+              )
+            }
           }
-        } 
+        }
       } catch (err) { 
         console.error('[ASAAS PIX] Erro ao gerar cobrança:', err) 
       } 
