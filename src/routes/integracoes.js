@@ -238,4 +238,59 @@ export default async function integracoesRoutes(fastify) {
       return inserted.rows[0]
     }
   })
+
+  // POST /api/pay/callback — recebe confirmação de pagamento do Zighu Pay
+  fastify.post('/api/pay/callback', async (request, reply) => {
+    try {
+      // Valida que a requisição vem do Zighu Pay
+      const zighuKey = request.headers['x-zighu-key']
+      const configResult = await query('SELECT * FROM gateway_config LIMIT 1')
+      const config = configResult.rows[0]
+
+      // Só processa se Zighu Pay estiver ativo
+      if (!config?.ativo) {
+        return reply.code(200).send({ ok: true, msg: 'Gateway Zighu Pay inativo — ignorado' })
+      }
+
+      const { corrida_id, status, valor_total, valor_motorista, valor_plataforma, pago_em } = request.body
+
+      if (!corrida_id || status !== 'pago') {
+        return reply.code(400).send({ error: 'Dados inválidos' })
+      }
+
+      // Busca a corrida
+      const rideResult = await query('SELECT * FROM rides WHERE id = $1', [corrida_id])
+      const ride = rideResult.rows[0]
+      if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' })
+
+      // Atualiza pagamento_status — igual ao webhook do Asaas
+      await query(
+        "UPDATE rides SET pagamento_status = 'pago', updated_at = CURRENT_TIMESTAMP WHERE id = $1",
+        [corrida_id]
+      )
+
+      // Registra split no driver_transactions — igual ao webhook do Asaas
+      if (ride.driver_id && valor_motorista) {
+        await query(
+          'INSERT INTO driver_transactions (driver_id, ride_id, tipo, descricao, valor) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING',
+          [ride.driver_id, ride.id, 'credito', `Corrida #${ride.id} paga via Zighu Pay`, Number(valor_motorista)]
+        )
+      }
+
+      // Notifica via Socket.io
+      try {
+        const io = getIo()
+        if (io) {
+          io.to(`ride:${corrida_id}`).emit('pagamento:confirmado', { corrida_id, valor_motorista, valor_plataforma })
+        }
+      } catch(e) {}
+
+      console.log(`[ZIGHU PAY] Pagamento confirmado — Corrida #${corrida_id} | R$ ${valor_total}`)
+      return reply.send({ ok: true })
+
+    } catch(e) {
+      console.error('[ZIGHU PAY CALLBACK]', e.message)
+      return reply.code(500).send({ error: 'Erro interno' })
+    }
+  })
 } 
