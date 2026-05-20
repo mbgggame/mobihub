@@ -212,5 +212,30 @@ export default async function integracoesRoutes(fastify) {
       [lider_id, codigo_indicacao, req.params.id] 
     )).rows[0] 
     return r 
-  }) 
+  })
+
+  // GET /api/admin/gateway — retorna configuração atual
+  fastify.get('/api/admin/gateway', { preHandler: requireAuth }, async (req, reply) => {
+    const result = await query('SELECT * FROM gateway_config ORDER BY id DESC LIMIT 1')
+    return result.rows[0] || { gateway: 'asaas', url: '', api_key: '', ativo: false }
+  })
+
+  // PUT /api/admin/gateway — salva configuração
+  fastify.put('/api/admin/gateway', { preHandler: requireAuth }, async (req, reply) => {
+    const { gateway, url, api_key, ativo } = req.body
+    const result = await query('SELECT id FROM gateway_config ORDER BY id DESC LIMIT 1')
+    if (result.rows.length > 0) {
+      const updated = await query(
+        'UPDATE gateway_config SET gateway = $1, url = $2, api_key = $3, ativo = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5 RETURNING *',
+        [gateway, url, api_key, ativo, result.rows[0].id]
+      )
+      return updated.rows[0]
+    } else {
+      const inserted = await query(
+        'INSERT INTO gateway_config (gateway, url, api_key, ativo) VALUES ($1, $2, $3, $4) RETURNING *',
+        [gateway, url, api_key, ativo]
+      )
+      return inserted.rows[0]
+    }
+  })
 } 

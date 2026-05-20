@@ -408,8 +408,25 @@ export async function initDB() {
       status_code INTEGER, 
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
     ); 
+
+    -- Tabela de configuração de gateway de pagamentos
+    CREATE TABLE IF NOT EXISTS gateway_config (
+      id SERIAL PRIMARY KEY,
+      gateway TEXT DEFAULT 'asaas',
+      url TEXT DEFAULT 'https://zighu-pay-1.onrender.com',
+      api_key TEXT DEFAULT 'zighu_2026',
+      ativo BOOLEAN DEFAULT false,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
   `) 
  
+  // Inserir configuração padrão de gateway se não existir
+  await query(`
+    INSERT INTO gateway_config (gateway, url, api_key, ativo) 
+    SELECT 'asaas', '', '', false 
+    WHERE NOT EXISTS (SELECT 1 FROM gateway_config)
+  `)
+
   // Migra veículos existentes dos motoristas para a nova tabela 
   await query(` 
     INSERT INTO vehicles (driver_id, modelo, ano, cor, placa, ativo) 

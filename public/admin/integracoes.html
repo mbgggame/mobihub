@@ -21,22 +21,46 @@
   </div>
 
   <div class="max-w-6xl mx-auto p-4 space-y-6">
-    <!-- WEBHOOK ASAAS -->
+    <!-- GATEWAY DE PAGAMENTOS -->
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-      <h2 class="text-lg font-bold text-gray-900 mb-4">🔔 Webhook Asaas</h2>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold text-gray-900">� Gateway de Pagamentos</h2>
+        <span id="gateway-status" class="text-xs px-3 py-1 rounded-full bg-gray-100 text-gray-500">Carregando...</span>
+      </div>
       <div class="space-y-4">
         <div>
-          <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">URL do Webhook</label>
-          <div class="flex gap-2">
-            <input type="text" id="asaas-webhook-url" value="https://mobihub-s9yl.onrender.com/webhook/asaas" readonly
-              class="flex-1 text-sm border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 font-mono">
-            <button onclick="copiarUrlAsaas()" class="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-3 text-sm font-semibold">
-              📋 Copiar
-            </button>
-          </div>
+          <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Gateway Ativo</label>
+          <select id="gateway-select" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" onchange="atualizarCamposGateway()">
+            <option value="asaas">Asaas</option>
+            <option value="zighu">Zighu Pay</option>
+          </select>
         </div>
-        <div>
-          <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Eventos suportados</label>
+        <div id="campos-zighu" class="hidden space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">URL do Zighu Pay</label>
+            <input type="text" id="gateway-url" placeholder="https://zighu-pay-1.onrender.com"
+              class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">API Key</label>
+            <input type="password" id="gateway-apikey" placeholder="sua_api_key"
+              class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+          </div>
+          <div class="bg-gray-50 rounded-xl p-3">
+            <p class="text-xs text-gray-500">📌 Webhook Inter: <span class="font-mono text-xs">https://zighu-pay-1.onrender.com/zighu/webhook/inter</span></p>
+            <p class="text-xs text-gray-500 mt-1">� Callback MobiHub: <span class="font-mono text-xs">https://mobihub-s9yl.onrender.com/api/pay/callback</span></p>
+          </div>
+          <button onclick="testarZighu()" class="text-sm text-blue-600 hover:text-blue-700 font-medium">🔍 Testar conexão</button>
+        </div>
+        <div id="campos-asaas" class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">URL do Webhook Asaas</label>
+            <div class="flex gap-2">
+              <input type="text" value="https://mobihub-s9yl.onrender.com/webhook/asaas" readonly
+                class="flex-1 text-sm border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 font-mono">
+              <button onclick="copiarTexto('https://mobihub-s9yl.onrender.com/webhook/asaas')" class="bg-blue-600 text-white rounded-xl px-4 py-3 text-sm">📋</button>
+            </div>
+          </div>
           <div class="flex flex-wrap gap-2">
             <span class="text-xs bg-gray-100 text-gray-800 rounded-lg px-3 py-1.5">PAYMENT_RECEIVED</span>
             <span class="text-xs bg-gray-100 text-gray-800 rounded-lg px-3 py-1.5">PAYMENT_CONFIRMED</span>
@@ -44,6 +68,7 @@
             <span class="text-xs bg-gray-100 text-gray-800 rounded-lg px-3 py-1.5">PAYMENT_DELETED</span>
           </div>
         </div>
+        <button onclick="salvarGateway()" class="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl py-3 font-bold text-sm">💾 Salvar configuração</button>
       </div>
     </div>
 
@@ -204,7 +229,8 @@ document.addEventListener('DOMContentLoaded', () => {
         carregarWebhooks(),
         carregarLogs(),
         carregarSplits(),
-        carregarMotoristas()
+        carregarMotoristas(),
+        carregarGateway()
       ])
     }
 
@@ -517,11 +543,60 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     })
 
-    function copiarUrlAsaas() {
-      const el = document.getElementById('asaas-webhook-url')
-      el.select()
-      document.execCommand('copy')
-      alert('✅ URL copiada para a área de transferência!')
+    async function carregarGateway() {
+      try {
+        const r = await fetch('/api/admin/gateway', { headers: headers() })
+        const d = await r.json()
+        document.getElementById('gateway-select').value = d.gateway || 'asaas'
+        document.getElementById('gateway-url').value = d.url || ''
+        document.getElementById('gateway-apikey').value = d.api_key || ''
+        atualizarCamposGateway()
+        document.getElementById('gateway-status').textContent = d.ativo ? '✅ Zighu Pay ativo' : '⚡ Asaas ativo'
+        document.getElementById('gateway-status').className = `text-xs px-3 py-1 rounded-full ${d.ativo ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`
+      } catch(e) { console.error(e) }
+    }
+
+    function atualizarCamposGateway() {
+      const gateway = document.getElementById('gateway-select').value
+      document.getElementById('campos-zighu').classList.toggle('hidden', gateway !== 'zighu')
+      document.getElementById('campos-asaas').classList.toggle('hidden', gateway !== 'asaas')
+    }
+
+    async function salvarGateway() {
+      const gateway = document.getElementById('gateway-select').value
+      const url = document.getElementById('gateway-url').value
+      const api_key = document.getElementById('gateway-apikey').value
+      try {
+        const r = await fetch('/api/admin/gateway', {
+          method: 'PUT',
+          headers: headers(),
+          body: JSON.stringify({ gateway, url, api_key, ativo: gateway === 'zighu' })
+        })
+        if (r.ok) {
+          alert('✅ Gateway salvo com sucesso!')
+          carregarGateway()
+        } else {
+          alert('Erro ao salvar')
+        }
+      } catch(e) { alert('Erro de conexão') }
+    }
+
+    async function testarZighu() {
+      const url = document.getElementById('gateway-url').value || 'https://zighu-pay-1.onrender.com'
+      try {
+        const r = await fetch(`${url}/zighu/health`)
+        const d = await r.json()
+        if (r.ok && d.status === 'ok') {
+          alert(`✅ Zighu Pay online!\nVersão: ${d.versao}\nBanco: ${d.banco}`)
+        } else throw new Error()
+      } catch(e) {
+        alert('❌ Zighu Pay offline ou inacessível')
+      }
+    }
+
+    function copiarTexto(texto) {
+      navigator.clipboard.writeText(texto)
+      alert('✅ Copiado!')
     }
 
 
