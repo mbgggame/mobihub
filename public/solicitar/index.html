@@ -1195,8 +1195,21 @@
      return
    }
 
-   const cliente_nome = localStorage.getItem('cliente_nome')
    const cliente_telefone = localStorage.getItem('cliente_telefone')
+   if (cliente_telefone) {
+     try {
+       const r = await fetch(`/api/client/${encodeURIComponent(cliente_telefone)}/corrida-pendente`)
+       const d = await r.json()
+       if (d.tem_pendente) {
+         alert(`Você tem uma corrida pendente de pagamento! Valor: R$ ${Number(d.valor || 0).toFixed(2)}\n\nPix: ${d.pix_copia_cola}`)
+         return
+       }
+     } catch(e) {
+       console.error('[SOLICITAR] Erro ao verificar corrida pendente:', e)
+     }
+   }
+
+   const cliente_nome = localStorage.getItem('cliente_nome')
    const cliente_email = localStorage.getItem('cliente_email')
    const cliente_cpf = localStorage.getItem('cliente_cpf')
    

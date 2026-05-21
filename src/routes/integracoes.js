@@ -263,10 +263,10 @@ export default async function integracoesRoutes(fastify) {
       const ride = rideResult.rows[0]
       if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' })
 
-      // Atualiza pagamento_status — igual ao webhook do Asaas
+      // Atualiza pagamento_status e campos adicionais
       await query(
-        "UPDATE rides SET pagamento_status = 'pago', updated_at = CURRENT_TIMESTAMP WHERE id = $1",
-        [corrida_id]
+        "UPDATE rides SET pagamento_status = 'pago', updated_at = CURRENT_TIMESTAMP, pago_em = CURRENT_TIMESTAMP, valor_motorista = $1, valor_mobihub = $2 WHERE id = $3",
+        [Number(valor_motorista || 0), Number(valor_plataforma || 0), corrida_id]
       )
 
       // Registra split no driver_transactions — igual ao webhook do Asaas
@@ -281,7 +281,14 @@ export default async function integracoesRoutes(fastify) {
       try {
         const io = getIo()
         if (io) {
-          io.to(`ride:${corrida_id}`).emit('pagamento:confirmado', { corrida_id, valor_motorista, valor_plataforma })
+          // Notifica passageiro
+          io.to(`ride:${corrida_id}`).emit('pagamento:confirmado', { mensagem: 'Pagamento confirmado! Obrigado' })
+          // Notifica motorista — para isso precisamos buscar o driver's room? Let's just emit to ride room as well, or find driver token?
+          // For now, let's emit to ride room which motorista is in too
+          io.to(`ride:${corrida_id}`).emit('pagamento:confirmado', { 
+            valor_motorista: Number(valor_motorista || 0), 
+            mensagem: `Pix recebido! R$ ${Number(valor_motorista || 0).toFixed(2)} transferido para sua chave` 
+          })
         }
       } catch(e) {}
 

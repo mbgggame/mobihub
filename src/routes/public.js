@@ -9,6 +9,32 @@ export default async function publicRoutes(fastify) {
     return { token: process.env.MAPBOX_TOKEN };
   });
 
+  // Verifica se cliente tem corrida não paga
+  fastify.get('/api/client/:telefone/corrida-pendente', async (request, reply) => {
+    const { telefone } = request.params
+    const client = (await query('SELECT id FROM clients WHERE telefone = $1', [telefone])).rows[0]
+    if (!client) return reply.send({ tem_pendente: false })
+    
+    const ride = (await query(`
+      SELECT id, asaas_pix_payload, valor_final, valor 
+      FROM rides 
+      WHERE client_id = $1 AND pagamento_status = 'aguardando_pagamento' 
+      ORDER BY created_at DESC 
+      LIMIT 1
+    `, [client.id])).rows[0]
+    
+    if (ride) {
+      return reply.send({ 
+        tem_pendente: true, 
+        corrida_id: ride.id, 
+        pix_copia_cola: ride.asaas_pix_payload,
+        valor: ride.valor_final || ride.valor
+      })
+    } else {
+      return reply.send({ tem_pendente: false })
+    }
+  })
+
   // --- ROTAS DE CHAT ---
   
   // Buscar mensagens da corrida (passageiro) 
@@ -1194,6 +1220,16 @@ export default async function publicRoutes(fastify) {
     ]) 
     await query('UPDATE drivers SET total_viagens = total_viagens + 1 WHERE id = $1', [driver.id]) 
     if (ride.client_id) await query('UPDATE clients SET total_corridas = total_corridas + 1 WHERE id = $1', [ride.client_id])
+
+    // Emitir evento para passageiro com Pix copia e cola
+    const io = getIo()
+    if (io && asaasPixPayload) {
+      io.to(`ride:${id}`).emit('corrida:aguardando_pagamento', { 
+        corrida_id: id, 
+        pix_copia_cola: asaasPixPayload, 
+        valor: valorFinal 
+      })
+    }
 
     // Disparar webhook de corrida finalizada 
     try { 
