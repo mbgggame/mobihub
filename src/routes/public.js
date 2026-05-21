@@ -1021,8 +1021,8 @@ export default async function publicRoutes(fastify) {
               asaasPixPayload = zighuData.pix_copia_cola
               asaasPaymentId = zighuData.cobranca_id
               await query(
-                'UPDATE rides SET asaas_payment_id = $1, asaas_pix_payload = $2, pagamento_status = $3 WHERE id = $4',
-                [String(zighuData.cobranca_id), zighuData.pix_copia_cola, 'aguardando_pagamento', id]
+                'UPDATE rides SET asaas_payment_id = $1, asaas_pix_payload = $2, asaas_pix_qrcode = $3, pagamento_status = $4 WHERE id = $5',
+                [String(zighuData.cobranca_id), zighuData.pix_copia_cola, zighuData.qr_code, 'aguardando_pagamento', id]
               )
             }
           } catch(e) {
