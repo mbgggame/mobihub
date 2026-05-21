@@ -875,7 +875,7 @@
       try { 
         console.log('[AUTOCOMPLETE] buscando:', query) 
         const token = await fetch('/api/config/mapbox').then(r => r.json()).then(d => d.token) 
-        const r = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&country=br&language=pt&limit=5`) 
+        const r = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&country=br&language=pt&limit=5&proximity=-40.3128,-20.3155&bbox=-41.87,-21.31,-39.69,-17.87`) 
         const d = await r.json() 
         console.log('[AUTOCOMPLETE] resultados mapbox:', d.features?.length) 
         
