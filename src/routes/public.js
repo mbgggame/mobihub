@@ -1012,6 +1012,7 @@ export default async function publicRoutes(fastify) {
             })
           })
           const zighuData = await zighuRes.json()
+          console.log('[ZIGHU] resposta:', JSON.stringify(zighuData))
           if (zighuData.pix_copia_cola) {
             asaasPixPayload = zighuData.pix_copia_cola
             asaasPaymentId = zighuData.cobranca_id
