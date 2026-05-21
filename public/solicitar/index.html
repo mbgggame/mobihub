@@ -859,48 +859,62 @@
  } 
 
  function setupAutocomplete(inputId, tipo) { 
-   const input = document.getElementById(inputId) 
-   const list = document.getElementById(tipo === 'origem' ? 'lista-orig' : 'lista-dest')
-   let timeout = null 
+  const input = document.getElementById(inputId) 
+  const list = document.getElementById(tipo === 'origem' ? 'lista-orig' : 'lista-dest')
+  let timeout = null 
 
-   input.addEventListener('input', () => { 
-     if (timeout) clearTimeout(timeout) 
-     const query = input.value.trim() 
-     if (query.length < 3) {
-       list.classList.add('hidden')
-       return 
-     }
+  input.addEventListener('input', () => { 
+    if (timeout) clearTimeout(timeout) 
+    const query = input.value.trim() 
+    if (query.length < 3) {
+      list.classList.add('hidden')
+      return 
+    }
 
-     timeout = setTimeout(async () => { 
-       try { 
-         const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=br&addressdetails=1&limit=5`) 
-         const d = await r.json() 
-         
-         if (d && d.length > 0) { 
-           list.innerHTML = d.map(res => `
-             <div class="autocomplete-item" 
-               onclick="selecionarSugestao('${tipo}', '${res.display_name.replace(/'/g, "\\'")}', ${res.lat}, ${res.lon})"
-               style="padding:12px;cursor:pointer;border-bottom:1px solid #eee;font-size:14px;">
-               ${res.display_name}
-             </div>
-           `).join('')
-           list.classList.remove('hidden')
-         } else {
-           list.classList.add('hidden')
-         }
-       } catch(err) { console.error(err) } 
-     }, 400) 
-   }) 
+    timeout = setTimeout(async () => { 
+      try { 
+        const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=br&addressdetails=1&limit=5`) 
+        const d = await r.json() 
+        
+        if (d && d.length > 0) { 
+          list.innerHTML = d.map(res => `
+            <div class="autocomplete-item" 
+              data-tipo="${tipo}"
+              data-endereco="${encodeURIComponent(res.display_name)}"
+              data-lat="${res.lat}"
+              data-lon="${res.lon}"
+              style="padding:12px;cursor:pointer;border-bottom:1px solid #eee;font-size:14px;">
+              ${res.display_name}
+            </div>
+          `).join('')
+          
+          list.querySelectorAll('.autocomplete-item').forEach(item => {
+            item.addEventListener('click', () => {
+              const tipoItem = item.dataset.tipo
+              const enderecoItem = decodeURIComponent(item.dataset.endereco)
+              const latItem = parseFloat(item.dataset.lat)
+              const lonItem = parseFloat(item.dataset.lon)
+              selecionarSugestao(tipoItem, enderecoItem, latItem, lonItem)
+            })
+          })
+          
+          list.classList.remove('hidden')
+        } else {
+          list.classList.add('hidden')
+        }
+      } catch(err) { console.error(err) } 
+    }, 400) 
+  }) 
 
-   // Fecha lista ao clicar fora — com delay para não interferir no toque mobile 
-   document.addEventListener('click', (e) => { 
-     setTimeout(() => { 
-       if (!input.contains(e.target) && !list.contains(e.target)) { 
-         list.classList.add('hidden') 
-       } 
-     }, 300) 
-   }) 
- } 
+  // Fecha lista ao clicar fora — com delay para não interferir no toque mobile 
+  document.addEventListener('click', (e) => { 
+    setTimeout(() => { 
+      if (!input.contains(e.target) && !list.contains(e.target)) { 
+        list.classList.add('hidden') 
+      } 
+    }, 300) 
+  }) 
+} 
 
  function selecionarSugestao(tipo, endereco, lat, lon) { 
    const input = document.getElementById(tipo === 'origem' ? 'busca-orig' : 'busca-dest') 
