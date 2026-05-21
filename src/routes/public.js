@@ -995,31 +995,38 @@ export default async function publicRoutes(fastify) {
         const usarZighu = gatewayConfig?.ativo && gatewayConfig?.gateway === 'zighu'
 
         if (usarZighu) {
-          // Gera QR Code via Zighu Pay
-          const zighuRes = await fetch(`${gatewayConfig.url}/zighu/cobranca`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-api-key': gatewayConfig.api_key
-            },
-            body: JSON.stringify({
-              corrida_id: id,
-              valor: valorFinal,
-              motorista_id: driver.id,
-              chave_pix: driver.chave_pix,
-              percentual_motorista: percentualMotorista,
-              app_origem: 'mobihub'
+          try {
+            const controller = new AbortController()
+            const timeout = setTimeout(() => controller.abort(), 5000)
+            const zighuRes = await fetch(`${gatewayConfig.url}/zighu/cobranca`, {
+              signal: controller.signal,
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': gatewayConfig.api_key
+              },
+              body: JSON.stringify({
+                corrida_id: id,
+                valor: valorFinal,
+                motorista_id: driver.id,
+                chave_pix: driver.chave_pix,
+                percentual_motorista: percentualMotorista,
+                app_origem: 'mobihub'
+              })
             })
-          })
-          const zighuData = await zighuRes.json()
-          console.log('[ZIGHU] resposta:', JSON.stringify(zighuData))
-          if (zighuData.pix_copia_cola) {
-            asaasPixPayload = zighuData.pix_copia_cola
-            asaasPaymentId = zighuData.cobranca_id
-            await query(
-              'UPDATE rides SET asaas_payment_id = $1, asaas_pix_payload = $2, pagamento_status = $3 WHERE id = $4',
-              [String(zighuData.cobranca_id), zighuData.pix_copia_cola, 'aguardando_pagamento', id]
-            )
+            const zighuData = await zighuRes.json()
+            clearTimeout(timeout)
+            console.log('[ZIGHU] resposta:', JSON.stringify(zighuData))
+            if (zighuData.pix_copia_cola) {
+              asaasPixPayload = zighuData.pix_copia_cola
+              asaasPaymentId = zighuData.cobranca_id
+              await query(
+                'UPDATE rides SET asaas_payment_id = $1, asaas_pix_payload = $2, pagamento_status = $3 WHERE id = $4',
+                [String(zighuData.cobranca_id), zighuData.pix_copia_cola, 'aguardando_pagamento', id]
+              )
+            }
+          } catch(e) {
+            console.log('[ZIGHU] Erro ao gerar QR:', e.message)
           }
         } else {
           // Gera QR Code via Asaas (original)
