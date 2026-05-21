@@ -1058,6 +1058,7 @@
           origem = origemEndereco 
           document.getElementById('busca-orig').value = origemEndereco 
           mostrarOrigemNoMapa(lat, lng, origemEndereco) 
+          marcarPonto(lat, lng, origemEndereco, 'origem') 
           verificarBotaoSolicitar()
           if (destinoLat) calcularValor() 
           erroEl.classList.add('hidden');
