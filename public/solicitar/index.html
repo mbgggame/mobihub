@@ -873,8 +873,10 @@
 
     timeout = setTimeout(async () => { 
       try { 
-        const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=br&addressdetails=1&limit=5`) 
+        console.log('[AUTOCOMPLETE] buscando:', query) 
+        const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=br&addressdetails=1&limit=5&_=${Date.now()}`) 
         const d = await r.json() 
+        console.log('[AUTOCOMPLETE] resultados:', d.length, d.map(x => x.display_name)) 
         
         if (d && d.length > 0) { 
           list.innerHTML = d.map(res => `
