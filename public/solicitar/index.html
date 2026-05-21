@@ -874,19 +874,20 @@
     timeout = setTimeout(async () => { 
       try { 
         console.log('[AUTOCOMPLETE] buscando:', query) 
-        const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=br&addressdetails=1&limit=5&_=${Date.now()}`) 
+        const token = await fetch('/api/config/mapbox').then(r => r.json()).then(d => d.token) 
+        const r = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&country=br&language=pt&limit=5`) 
         const d = await r.json() 
-        console.log('[AUTOCOMPLETE] resultados:', d.length, d.map(x => x.display_name)) 
+        console.log('[AUTOCOMPLETE] resultados mapbox:', d.features?.length) 
         
-        if (d && d.length > 0) { 
-          list.innerHTML = d.map(res => `
+        if (d.features && d.features.length > 0) { 
+          list.innerHTML = d.features.map(res => `
             <div class="autocomplete-item" 
               data-tipo="${tipo}"
-              data-endereco="${encodeURIComponent(res.display_name)}"
-              data-lat="${res.lat}"
-              data-lon="${res.lon}"
+              data-endereco="${encodeURIComponent(res.place_name)}"
+              data-lat="${res.center[1]}"
+              data-lon="${res.center[0]}"
               style="padding:12px;cursor:pointer;border-bottom:1px solid #eee;font-size:14px;">
-              ${res.display_name}
+              ${res.place_name}
             </div>
           `).join('')
           
@@ -996,39 +997,43 @@
  } 
 
  function usarLocalizacaoAtual() { 
-   const erroEl = document.getElementById('erro-solicitar');
-   if (!navigator.geolocation) { 
-     erroEl.textContent = 'Geolocalização não suportada';
-     erroEl.classList.remove('hidden');
-     return 
-   } 
-   navigator.geolocation.getCurrentPosition(pos => { 
-     const lat = pos.coords.latitude 
-     const lng = pos.coords.longitude 
+  const erroEl = document.getElementById('erro-solicitar');
+  if (!navigator.geolocation) { 
+    erroEl.textContent = 'Geolocalização não suportada';
+    erroEl.classList.remove('hidden');
+    return 
+  } 
+  navigator.geolocation.getCurrentPosition(pos => { 
+    const lat = pos.coords.latitude 
+    const lng = pos.coords.longitude 
 
-     fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=pt-BR`) 
-       .then(r => r.json()) 
-       .then(d => { 
-         if (d && d.display_name) { 
-           origemLat = lat 
-           origemLng = lng 
-           origemEndereco = d.display_name.substring(0, 60); 
-           document.getElementById('busca-orig').value = origemEndereco 
-           mostrarOrigemNoMapa(lat, lng, origemEndereco) 
-           verificarBotaoSolicitar()
-           if (destinoLat) calcularValor() 
-           erroEl.classList.add('hidden');
-         } 
-       }) 
-       .catch(() => {
-         erroEl.textContent = 'Não foi possível obter sua localização. Digite o endereço manualmente.';
-         erroEl.classList.remove('hidden');
-       }) 
-   }, (err) => { 
-     erroEl.textContent = 'Não foi possível obter sua localização. Digite o endereço manualmente.';
-     erroEl.classList.remove('hidden');
-   }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }) 
- } 
+    fetch('/api/config/mapbox')
+      .then(r => r.json())
+      .then(({ token }) => {
+        return fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${token}&country=br&language=pt&limit=1`)
+      })
+      .then(r => r.json()) 
+      .then(d => { 
+        if (d.features && d.features.length > 0) { 
+          origemLat = lat 
+          origemLng = lng 
+          origemEndereco = d.features[0].place_name.substring(0, 60); 
+          document.getElementById('busca-orig').value = origemEndereco 
+          mostrarOrigemNoMapa(lat, lng, origemEndereco) 
+          verificarBotaoSolicitar()
+          if (destinoLat) calcularValor() 
+          erroEl.classList.add('hidden');
+        } 
+      }) 
+      .catch(() => {
+        erroEl.textContent = 'Não foi possível obter sua localização. Digite o endereço manualmente.';
+        erroEl.classList.remove('hidden');
+      }) 
+  }, (err) => { 
+    erroEl.textContent = 'Não foi possível obter sua localização. Digite o endereço manualmente.';
+    erroEl.classList.remove('hidden');
+  }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }) 
+} 
 
  function marcarPonto(lat, lng, endereco, tipo) { 
    if (marcadores[tipo]) map.removeLayer(marcadores[tipo]) 
