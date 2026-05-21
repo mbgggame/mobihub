@@ -1864,12 +1864,18 @@ socket.on('agendamento:alerta_30min', (data) => {
         } else {
           receberDinheiroCard.classList.remove('hidden')
         }
+        console.log('[QR] qrCodeSrc:', qrCodeSrc?.substring(0,50))
+        console.log('[QR] corrida.pix_qrcode:', corrida.asaas_pix_qrcode?.substring(0,30))
+        console.log('[QR] corrida.pix_payload:', corrida.asaas_pix_payload?.substring(0,30))
         document.getElementById('img-qrcode-pix').src = qrCodeSrc
         document.getElementById('txt-pix-payload').value = corrida.asaas_pix_payload?.startsWith('data:image') ? '' : corrida.asaas_pix_payload
       } else if (temQrCode) {
         qrCard.classList.remove('hidden')
         receberDinheiroCard.classList.add('hidden')
         pagamentoConfirmadoCard.classList.add('hidden')
+        console.log('[QR] qrCodeSrc:', qrCodeSrc?.substring(0,50))
+        console.log('[QR] corrida.pix_qrcode:', corrida.asaas_pix_qrcode?.substring(0,30))
+        console.log('[QR] corrida.pix_payload:', corrida.asaas_pix_payload?.substring(0,30))
         document.getElementById('img-qrcode-pix').src = qrCodeSrc
         document.getElementById('txt-pix-payload').value = corrida.asaas_pix_payload?.startsWith('data:image') ? '' : corrida.asaas_pix_payload
       } else {
