@@ -863,14 +863,6 @@
   const list = document.getElementById(tipo === 'origem' ? 'lista-orig' : 'lista-dest')
   let timeout = null 
 
-  const pontosFixos = [ 
-    { nome: 'Aeroporto de Vitória - Eurico de Aguiar Salles', endereco: 'Av. Roza Helena Schorling Albuquerque, Vitória - ES', lat: -20.2583, lon: -40.2861 }, 
-    { nome: 'Terminal de Vila Velha', endereco: 'Terminal de Vila Velha, Vila Velha - ES', lat: -20.3297, lon: -40.2922 }, 
-    { nome: 'Shopping Vila Velha', endereco: 'Shopping Vila Velha, Vila Velha - ES', lat: -20.3411, lon: -40.3667 }, 
-    { nome: 'Shopping Vitória', endereco: 'Shopping Vitória, Vitória - ES', lat: -20.2927, lon: -40.2961 }, 
-    { nome: 'Rodoviária de Vitória', endereco: 'Rodoviária de Vitória, Vitória - ES', lat: -20.3194, lon: -40.3378 }, 
-  ]
-
   input.addEventListener('input', () => { 
     if (timeout) clearTimeout(timeout) 
     const query = input.value.trim().toLowerCase() 
@@ -879,13 +871,27 @@
       return 
     }
 
-    const resultadosFixos = pontosFixos.filter(ponto => 
-      ponto.nome.toLowerCase().includes(query) || ponto.endereco.toLowerCase().includes(query)
-    )
-
     timeout = setTimeout(async () => { 
       try { 
         console.log('[AUTOCOMPLETE] buscando:', query) 
+        
+        // Pontos de interesse fixos 
+        const pontosFixos = [ 
+          { nome: 'Aeroporto de Vitória - Eurico de Aguiar Salles (Antigo)', endereco: 'Av. Adalberto Simão Nader, Goiabeiras, Vitória - ES', lat: -20.2583, lon: -40.2861 }, 
+          { nome: 'Aeroporto de Vitória - Novo (VIX)', endereco: 'Av. Roza Helena Schorling Albuquerque, Vitória - ES', lat: -20.2566, lon: -40.2836 }, 
+          { nome: 'Shopping Vitória', endereco: 'Av. Dante Michelini, 747, Jardim Camburi, Vitória - ES', lat: -20.2712, lon: -40.2997 }, 
+          { nome: 'Shopping Vila Velha', endereco: 'Av. Luciano das Neves, 2999, Vila Velha - ES', lat: -20.3411, lon: -40.3667 }, 
+          { nome: 'Rodoviária de Vitória', endereco: 'Av. Marechal Mascarenhas de Moraes, Vitória - ES', lat: -20.3194, lon: -40.3378 }, 
+          { nome: 'Hospital Santa Casa de Misericórdia', endereco: 'R. Dr. João dos Santos Neves, 143, Vitória - ES', lat: -20.3156, lon: -40.3378 }, 
+          { nome: 'UFES - Universidade Federal do Espírito Santo', endereco: 'Av. Fernando Ferrari, 514, Goiabeiras, Vitória - ES', lat: -20.2761, lon: -40.3022 }, 
+        ] 
+        
+        const queryLower = query.toLowerCase() 
+        const pontosEncontrados = pontosFixos.filter(p => 
+          p.nome.toLowerCase().includes(queryLower) || 
+          p.endereco.toLowerCase().includes(queryLower) 
+        )
+        
         const token = await fetch('/api/config/mapbox').then(r => r.json()).then(d => d.token) 
         const r = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&country=br&language=pt&limit=8&proximity=-40.3128,-20.3155&bbox=-41.87,-21.31,-39.69,-17.87&types=poi,address,place,neighborhood,locality`) 
         const d = await r.json() 
@@ -893,8 +899,8 @@
         
         let todosResultados = []
         
-        if (resultadosFixos.length > 0) {
-          todosResultados = todosResultados.concat(resultadosFixos.map(ponto => ({
+        if (pontosEncontrados.length > 0) {
+          todosResultados = todosResultados.concat(pontosEncontrados.map(ponto => ({
             tipo: 'fixo',
             place_name: ponto.nome,
             endereco: ponto.endereco,
