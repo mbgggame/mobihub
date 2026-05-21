@@ -863,13 +863,25 @@
   const list = document.getElementById(tipo === 'origem' ? 'lista-orig' : 'lista-dest')
   let timeout = null 
 
+  const pontosFixos = [ 
+    { nome: 'Aeroporto de Vitória - Eurico de Aguiar Salles', endereco: 'Av. Roza Helena Schorling Albuquerque, Vitória - ES', lat: -20.2583, lon: -40.2861 }, 
+    { nome: 'Terminal de Vila Velha', endereco: 'Terminal de Vila Velha, Vila Velha - ES', lat: -20.3297, lon: -40.2922 }, 
+    { nome: 'Shopping Vila Velha', endereco: 'Shopping Vila Velha, Vila Velha - ES', lat: -20.3411, lon: -40.3667 }, 
+    { nome: 'Shopping Vitória', endereco: 'Shopping Vitória, Vitória - ES', lat: -20.2927, lon: -40.2961 }, 
+    { nome: 'Rodoviária de Vitória', endereco: 'Rodoviária de Vitória, Vitória - ES', lat: -20.3194, lon: -40.3378 }, 
+  ]
+
   input.addEventListener('input', () => { 
     if (timeout) clearTimeout(timeout) 
-    const query = input.value.trim() 
+    const query = input.value.trim().toLowerCase() 
     if (query.length < 3) {
       list.classList.add('hidden')
       return 
     }
+
+    const resultadosFixos = pontosFixos.filter(ponto => 
+      ponto.nome.toLowerCase().includes(query) || ponto.endereco.toLowerCase().includes(query)
+    )
 
     timeout = setTimeout(async () => { 
       try { 
@@ -879,8 +891,27 @@
         const d = await r.json() 
         console.log('[AUTOCOMPLETE] resultados mapbox:', d.features?.length) 
         
-        if (d.features && d.features.length > 0) { 
-          list.innerHTML = d.features.map(res => `
+        let todosResultados = []
+        
+        if (resultadosFixos.length > 0) {
+          todosResultados = todosResultados.concat(resultadosFixos.map(ponto => ({
+            tipo: 'fixo',
+            place_name: ponto.nome,
+            endereco: ponto.endereco,
+            center: [ponto.lon, ponto.lat]
+          })))
+        }
+        
+        if (d.features && d.features.length > 0) {
+          todosResultados = todosResultados.concat(d.features.map(res => ({
+            tipo: 'mapbox',
+            place_name: res.place_name,
+            center: res.center
+          })))
+        }
+        
+        if (todosResultados.length > 0) { 
+          list.innerHTML = todosResultados.map(res => `
             <div class="autocomplete-item" 
               data-tipo="${tipo}"
               data-endereco="${encodeURIComponent(res.place_name)}"
