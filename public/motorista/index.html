@@ -1853,9 +1853,11 @@ socket.on('agendamento:alerta_30min', (data) => {
       // QR Code do Zighu Pay vem como base64 em asaas_pix_payload
       // QR Code do Asaas vem como base64 em asaas_pix_qrcode
       const temQrCode = corrida.asaas_pix_qrcode || (corrida.asaas_pix_payload?.startsWith('data:image'))
-      const qrCodeSrc = corrida.asaas_pix_qrcode
-        ? `data:image/png;base64,${corrida.asaas_pix_qrcode}`
-        : corrida.asaas_pix_payload
+      const qrCodeSrc = corrida.asaas_pix_qrcode?.startsWith('data:')
+        ? corrida.asaas_pix_qrcode
+        : corrida.asaas_pix_qrcode
+          ? `data:image/png;base64,${corrida.asaas_pix_qrcode}`
+          : corrida.asaas_pix_payload
       if (corrida.forma_pagamento === '1' && temQrCode) {
         qrCard.classList.remove('hidden')
         pagamentoConfirmadoCard.classList.add('hidden')
