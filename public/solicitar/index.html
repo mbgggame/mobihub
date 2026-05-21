@@ -1055,6 +1055,7 @@
           origemLat = lat 
           origemLng = lng 
           origemEndereco = d.features[0].place_name.substring(0, 60); 
+          origem = origemEndereco 
           document.getElementById('busca-orig').value = origemEndereco 
           mostrarOrigemNoMapa(lat, lng, origemEndereco) 
           verificarBotaoSolicitar()
