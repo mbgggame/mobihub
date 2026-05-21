@@ -1989,9 +1989,23 @@ socket.on('agendamento:alerta_30min', (data) => {
      if (b.textContent.includes('Parar')) { url = `/api/rides/${corridaAtualId}/parada/iniciar`; method = 'POST'; b.textContent = '▶️ Retomar' } 
      else { url = `/api/rides/${corridaAtualId}/parada/ultima/finalizar`; b.textContent = '⏸️ Parar' } 
    } else if (acao === 'finalizar') { 
-     if (!confirm('Finalizar?')) return 
-     const r = await fetch(`/api/rides/${corridaAtualId}/finalizar-motorista`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token_motorista: tokenMotorista }) }) 
-     if (r.ok) { 
+    if (!confirm('Finalizar?')) return 
+    const controller = new AbortController() 
+    const timeoutId = setTimeout(() => controller.abort(), 10000) 
+    let r 
+    try { 
+      r = await fetch(`/api/rides/${corridaAtualId}/finalizar-motorista`, { 
+        method: 'PUT', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ token_motorista: tokenMotorista }), 
+        signal: controller.signal 
+      }) 
+    } catch(e) { 
+      console.log('[FINALIZAR] Timeout ou erro:', e.message) 
+    } finally { 
+      clearTimeout(timeoutId) 
+    } 
+    if (r?.ok) { 
        // Não limpa corridaAtualId imediatamente, para exibir QR Code Pix
        // Garante que o motorista continua online sem chamar carregar() 
        motoristOnline = true 
