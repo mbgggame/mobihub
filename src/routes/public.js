@@ -997,7 +997,7 @@ export default async function publicRoutes(fastify) {
         if (usarZighu) {
           try {
             const controller = new AbortController()
-            const timeout = setTimeout(() => controller.abort(), 5000)
+            const timeout = setTimeout(() => controller.abort(), 15000)
             const zighuRes = await fetch(`${gatewayConfig.url}/zighu/cobranca`, {
               signal: controller.signal,
               method: 'POST',
