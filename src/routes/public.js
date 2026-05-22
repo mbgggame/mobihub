@@ -529,7 +529,7 @@ export default async function publicRoutes(fastify) {
           versao_termos = '1.0', 
           aceite_responsabilidade = true 
         WHERE id = $2
-      `, [request.ip, client.id])
+      `, [request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.ip, client.id])
     } 
     const { v4: uuidv4 } = await import('uuid') 
     const token = uuidv4() 
@@ -1692,7 +1692,7 @@ export default async function publicRoutes(fastify) {
           versao_termos = '1.0', 
           aceite_responsabilidade = $2 
         WHERE telefone = $3 
-      `, [request.ip, aceite_responsabilidade ? true : false, telefone]) 
+      `, [request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.ip, aceite_responsabilidade ? true : false, telefone]) 
       
       return { success: true } 
     } catch(err) { 

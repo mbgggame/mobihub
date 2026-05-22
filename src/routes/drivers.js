@@ -523,7 +523,7 @@ export default async function driversRoutes(fastify) {
             versao_termos = '2.1', 
             aceite_arbitragem = $2 
         WHERE token_perfil = $3 
-      `, [request.ip, aceite_arbitragem ? true : false, token]); 
+      `, [request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.ip, aceite_arbitragem ? true : false, token]); 
  
       console.log('[ACEITE TERMOS] Token:', token, '| Rows updated:', result.rowCount); 
 
