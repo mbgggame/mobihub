@@ -1736,6 +1736,23 @@ export default async function publicRoutes(fastify) {
     return client 
   })
 
+  fastify.post('/api/client/cadastrar', async (request, reply) => {
+    const { nome, telefone, email, cpf } = request.body
+    if (!telefone) return reply.code(400).send({ error: 'Telefone obrigatório' })
+    
+    const result = await query(`
+      INSERT INTO clients (telefone, nome, email, cpf)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (telefone) DO UPDATE SET
+        nome = COALESCE(EXCLUDED.nome, clients.nome),
+        email = COALESCE(EXCLUDED.email, clients.email),
+        cpf = COALESCE(EXCLUDED.cpf, clients.cpf)
+      RETURNING id
+    `, [telefone, nome || null, email || null, cpf || null])
+    
+    return { success: true, clientId: result.rows[0].id }
+  })
+
   // Endpoints de cartão
   fastify.post('/api/client/cartao', async (request, reply) => {
     const { telefone, holderName, number, expiryMonth, expiryYear, ccv } = request.body

@@ -638,7 +638,7 @@
    } 
  } 
 
- function salvarCadastro() { 
+ async function salvarCadastro() { 
    const nome = document.getElementById('cad-nome').value.trim() 
    const celular = document.getElementById('cad-celular').value.trim() 
    const email = document.getElementById('cad-email').value.trim() 
@@ -648,6 +648,18 @@
    if (!celular) { erro.textContent = 'Celular é obrigatório'; erro.classList.remove('hidden'); return } 
    if (!cpf) { erro.textContent = 'CPF é obrigatório'; erro.classList.remove('hidden'); return } 
    erro.classList.add('hidden') 
+   
+   // Salvar no banco via API
+   try {
+     await fetch('/api/client/cadastrar', {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({ nome, telefone: celular, email, cpf })
+     })
+   } catch (e) {
+     console.error('[SALVAR CADASTRO] Erro ao salvar no banco:', e)
+   }
+   
    localStorage.setItem('cliente_nome', nome)
    localStorage.setItem('cliente_telefone', celular)
    if (email) localStorage.setItem('cliente_email', email)
