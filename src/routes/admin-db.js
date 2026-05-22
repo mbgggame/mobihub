@@ -40,8 +40,11 @@ export default async function adminDbRoutes(fastify) {
 
   fastify.delete('/api/admin/clients/:id/excluir', { preHandler: requireAuth }, async (request, reply) => {
     const { id } = request.params
+    // Primeiro deletar avaliações relacionadas às corridas do cliente
+    await query('DELETE FROM ratings WHERE ride_id IN (SELECT id FROM rides WHERE client_id = $1)', [id])
+    // Depois desassociar as corridas do cliente
     await query('UPDATE rides SET client_id = NULL WHERE client_id = $1', [id])
-    await query('DELETE FROM ratings WHERE client_id = $1', [id])
+    // Por fim deletar o cliente
     await query('DELETE FROM clients WHERE id = $1', [id])
     return { mensagem: 'Cliente excluído com sucesso' }
   })
