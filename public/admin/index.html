@@ -104,6 +104,12 @@
       <!-- Termo original completo -->
       <div id="termo-texto-completo" class="p-4 bg-gray-50 rounded-lg border border-gray-200 text-xs text-gray-700 whitespace-pre-wrap"></div>
       
+      <div class="mt-4 bg-gray-50 rounded-lg p-4 border border-gray-200">
+        <p class="text-xs text-gray-500 uppercase tracking-wide mb-2">🔐 Hash SHA-256</p>
+        <p class="text-sm font-mono text-gray-800" id="termo-hash">—</p>
+        <p class="text-xs text-gray-500 mt-2">Este hash é a prova criptográfica do aceite.</p>
+      </div>
+      
       <p class="text-xs text-gray-600 text-center mt-4">
         Este documento tem validade jurídica conforme LGPD e Marco Civil da Internet.
       </p>
@@ -670,7 +676,7 @@ function abrirModalTermo(tipo, id) {
   const item = dadosAtuaisDb.find(x => x.id === id)
   if (!item) return
   
-  let nome, cpf, telefone, versao, data, ip, aceite
+  let nome, cpf, telefone, versao, data, ip, aceite, hash
   if (tipo === 'cliente') {
     nome = item.nome || '—'
     cpf = item.cpf || '—'
@@ -679,6 +685,7 @@ function abrirModalTermo(tipo, id) {
     data = item.data_aceite_termos ? new Date(item.data_aceite_termos).toLocaleString('pt-BR') : '—'
     ip = item.ip_aceite_termos || '—'
     aceite = item.aceitou_termos ? '✅ Sim' : '❌ Não'
+    hash = item.hash_aceite_termos || '—'
   } else if (tipo === 'motorista') {
     nome = item.nome || '—'
     cpf = item.cpf || '—'
@@ -687,6 +694,7 @@ function abrirModalTermo(tipo, id) {
     data = item.data_aceite_termos ? new Date(item.data_aceite_termos).toLocaleString('pt-BR') : '—'
     ip = item.ip_aceite_termos || '—'
     aceite = item.aceite_arbitragem ? '✅ Sim' : '❌ Não'
+    hash = item.hash_aceite_termos || '—'
   }
   
   document.getElementById('termo-timeline-data').textContent = data
@@ -695,6 +703,7 @@ function abrirModalTermo(tipo, id) {
   document.getElementById('termo-timeline-nome').textContent = nome
   document.getElementById('termo-timeline-cpf').textContent = cpf
   document.getElementById('termo-timeline-telefone').textContent = telefone
+  document.getElementById('termo-hash').textContent = hash
 
   // Busca o termo original no banco
   if (versao && versao !== '—') {

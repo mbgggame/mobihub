@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid' 
 import { query, pool } from '../db.js' 
-import { requireAuth } from '../middleware/auth.js' 
+import { requireAuth } from '../middleware/auth.js'
+import crypto from 'crypto' 
  
 export default async function driversRoutes(fastify) {
 
@@ -516,17 +517,32 @@ export default async function driversRoutes(fastify) {
       console.log('[DEBUG] Token recebido:', token); 
       if (!token) return reply.code(400).send({ error: 'Token ausente no body' }); 
 
+      const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.ip
+      const versaoTermos = '2.1'
+
+      const motoristaResult = await query('SELECT * FROM drivers WHERE token_perfil = $1', [token])
+      const motorista = motoristaResult.rows[0]
+      if (!motorista) return reply.code(404).send({ error: 'Motorista não encontrado' })
+
+      const termoResult = await query('SELECT * FROM termos_versoes WHERE versao = $1', [versaoTermos])
+      const termo = termoResult.rows[0]
+      const textoTermo = termo?.conteudo || ''
+
+      const dadosHash = `${motorista.nome || ''}|${motorista.cpf || ''}|${motorista.telefone || ''}|${ip}|${new Date().toISOString()}|${versaoTermos}|${textoTermo}`
+      const hash = crypto.createHash('sha256').update(dadosHash).digest('hex')
+
       const result = await query(` 
         UPDATE drivers 
         SET aceitou_termos = true, 
             data_aceite_termos = CURRENT_TIMESTAMP, 
             ip_aceite_termos = $1, 
             versao_termos = '2.1', 
-            aceite_arbitragem = $2 
-        WHERE token_perfil = $3 
-      `, [request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.ip, aceite_arbitragem ? true : false, token]); 
- 
-      console.log('[ACEITE TERMOS] Token:', token, '| Rows updated:', result.rowCount); 
+            aceite_arbitragem = $2,
+            hash_aceite_termos = $3
+        WHERE token_perfil = $4 
+      `, [ip, aceite_arbitragem ? true : false, hash, token]); 
+
+      console.log('[ACEITE TERMOS] Token:', token, '| Rows updated:', result.rowCount);
 
       return { success: true }; 
     } catch (err) { 

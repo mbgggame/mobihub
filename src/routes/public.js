@@ -1,6 +1,7 @@
 import { query, pool } from '../db.js' 
 import { requireAuth } from '../middleware/auth.js'
-import { getIo } from '../server.js' 
+import { getIo } from '../server.js'
+import crypto from 'crypto' 
 
 export default async function publicRoutes(fastify) { 
 
@@ -1218,6 +1219,11 @@ export default async function publicRoutes(fastify) {
       valorFinal, 
       id 
     ]) 
+    
+    const dadosHash = `${id}|${ride.client_id || ''}|${driver.id}|${ride.origem}|${ride.destino}|${valorFinal}|${new Date().toISOString()}` 
+    const hash = crypto.createHash('sha256').update(dadosHash).digest('hex') 
+    await query('UPDATE rides SET hash_sha256 = $1 WHERE id = $2', [hash, id]) 
+    
     await query('UPDATE drivers SET total_viagens = total_viagens + 1 WHERE id = $1', [driver.id]) 
     if (ride.client_id) await query('UPDATE clients SET total_corridas = total_corridas + 1 WHERE id = $1', [ride.client_id])
 
@@ -1684,15 +1690,30 @@ export default async function publicRoutes(fastify) {
       const { telefone, aceite_responsabilidade } = request.body 
       if (!telefone) return reply.code(400).send({ error: 'Telefone obrigatório' }) 
       
+      const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.ip
+      const versaoTermos = '1.0'
+      
+      const clienteResult = await query('SELECT * FROM clients WHERE telefone = $1', [telefone])
+      const cliente = clienteResult.rows[0]
+      if (!cliente) return reply.code(404).send({ error: 'Cliente não encontrado' })
+
+      const termoResult = await query('SELECT * FROM termos_versoes WHERE versao = $1', [versaoTermos])
+      const termo = termoResult.rows[0]
+      const textoTermo = termo?.conteudo || ''
+      
+      const dadosHash = `${cliente.nome || ''}|${cliente.cpf || ''}|${telefone}|${ip}|${new Date().toISOString()}|${versaoTermos}|${textoTermo}`
+      const hash = crypto.createHash('sha256').update(dadosHash).digest('hex')
+      
       await query(` 
         UPDATE clients SET 
           aceitou_termos = true, 
           data_aceite_termos = CURRENT_TIMESTAMP, 
           ip_aceite_termos = $1, 
           versao_termos = '1.0', 
-          aceite_responsabilidade = $2 
-        WHERE telefone = $3 
-      `, [request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.ip, aceite_responsabilidade ? true : false, telefone]) 
+          aceite_responsabilidade = $2,
+          hash_aceite_termos = $3
+        WHERE telefone = $4 
+      `, [ip, aceite_responsabilidade ? true : false, hash, telefone]) 
       
       return { success: true } 
     } catch(err) { 

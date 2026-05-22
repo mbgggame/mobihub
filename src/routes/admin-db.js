@@ -12,7 +12,7 @@ export default async function adminDbRoutes(fastify) {
     const result = await query(`
       SELECT id, nome, telefone, email, cpf, aceitou_termos, versao_termos, 
         data_aceite_termos, ip_aceite_termos, aceite_responsabilidade, 
-        total_corridas, media_avaliacao, created_at 
+        total_corridas, media_avaliacao, created_at, hash_aceite_termos
       FROM clients 
       ORDER BY created_at DESC
     `)
@@ -24,7 +24,7 @@ export default async function adminDbRoutes(fastify) {
       SELECT id, nome, telefone, cpf, cnh_frente_base64, modelo_carro, ano_carro, 
         cor_carro, placa, chave_pix, media_avaliacao, total_viagens, 
         aceitou_termos, versao_termos, data_aceite_termos, ip_aceite_termos, 
-        aceite_arbitragem, created_at 
+        aceite_arbitragem, created_at, hash_aceite_termos
       FROM drivers 
       ORDER BY created_at DESC
     `)
