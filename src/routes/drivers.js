@@ -160,8 +160,9 @@ export default async function driversRoutes(fastify) {
     const driverResult = await query('SELECT * FROM drivers WHERE id = $1', [id])
     const driver = driverResult.rows[0]
     if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
+    await query('DELETE FROM driver_transactions WHERE driver_id = $1', [id]) 
     await query('DELETE FROM driver_locations WHERE driver_id = $1', [id]) 
-    await query('DELETE FROM ratings WHERE ride_id IN (SELECT id FROM rides WHERE driver_id = $1)', [id]) 
+    await query('DELETE FROM ratings WHERE driver_id = $1', [id]) 
     await query('UPDATE rides SET driver_id = NULL WHERE driver_id = $1', [id]) 
     await query('DELETE FROM drivers WHERE id = $1', [id]) 
     return { mensagem: 'Motorista excluído com sucesso' } 
