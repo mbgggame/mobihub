@@ -2,7 +2,7 @@ import { query } from '../db.js'
 import { requireAuth } from '../middleware/auth.js'
 
 export default async function adminDbRoutes(fastify) {
-  fastify.post('/api/admin/db/resetar-termos', { preHandler: requireAuth }, async () => {
+  fastify.post('/api/admin/db/resetar-termos', { preHandler: requireAuth, schema: { body: {} } }, async () => {
     await query(`UPDATE drivers SET aceitou_termos = false, versao_termos = null, data_aceite_termos = null, ip_aceite_termos = null`)
     await query(`UPDATE clients SET aceitou_termos = false, versao_termos = null, data_aceite_termos = null, ip_aceite_termos = null`)
     return { success: true, mensagem: 'Termos resetados com sucesso' }
