@@ -566,23 +566,23 @@ async function carregarDadosDb() {
   
   try {
     let dados = []
-    let headers = []
+    let tabelaHeaders = []
     
     if (abaAtualDb === 'clientes') {
       const r = await fetch('/api/admin/db/clientes', { headers: headers() })
       if (r.status === 401) { location.href = '/admin/login'; return }
       dados = await r.json()
-      headers = ['ID', 'Nome', 'Telefone', 'Email', 'CPF', 'Aceitou Termos?', 'Versão', 'Data Aceite', 'Total Corridas', 'Criado em']
+      tabelaHeaders = ['ID', 'Nome', 'Telefone', 'Email', 'CPF', 'Aceitou Termos?', 'Versão', 'Data Aceite', 'Total Corridas', 'Criado em']
     } else if (abaAtualDb === 'motoristas') {
       const r = await fetch('/api/admin/db/motoristas', { headers: headers() })
       if (r.status === 401) { location.href = '/admin/login'; return }
       dados = await r.json()
-      headers = ['ID', 'Nome', 'Aceitou Termos?', 'Versão', 'Data Aceite', 'Aceitou Arbitragem?', 'Total Viagens', 'Criado em']
+      tabelaHeaders = ['ID', 'Nome', 'Aceitou Termos?', 'Versão', 'Data Aceite', 'Aceitou Arbitragem?', 'Total Viagens', 'Criado em']
     } else if (abaAtualDb === 'corridas') {
       const r = await fetch('/api/admin/db/corridas', { headers: headers() })
       if (r.status === 401) { location.href = '/admin/login'; return }
       dados = await r.json()
-      headers = ['ID', 'Status', 'Pagamento', 'Valor Final', 'Motorista', 'MobiHub', 'Pago em', 'Criado em', 'Origem', 'Destino']
+      tabelaHeaders = ['ID', 'Status', 'Pagamento', 'Valor Final', 'Motorista', 'MobiHub', 'Pago em', 'Criado em', 'Origem', 'Destino']
     }
 
     if (!dados.length) {
@@ -594,7 +594,7 @@ async function carregarDadosDb() {
       <table class="w-full text-sm">
         <thead class="bg-gray-50 border-b border-gray-200">
           <tr>
-            ${headers.map(h => `<th class="text-left px-4 py-3 font-semibold text-gray-700 text-xs uppercase tracking-wide">${h}</th>`).join('')}
+            ${tabelaHeaders.map(h => `<th class="text-left px-4 py-3 font-semibold text-gray-700 text-xs uppercase tracking-wide">${h}</th>`).join('')}
           </tr>
         </thead>
         <tbody>
