@@ -49,6 +49,7 @@
     <button onclick="mostrarAbaDb('clientes')" id="aba-db-clientes" class="bg-green-50 text-green-700 border border-green-200 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors">👥 Clientes</button>
     <button onclick="mostrarAbaDb('motoristas')" id="aba-db-motoristas" class="bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors">🚖 Motoristas</button>
     <button onclick="mostrarAbaDb('corridas')" id="aba-db-corridas" class="bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors">🚗 Corridas</button>
+    <button onclick="resetarTermos()" class="bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors">🔄 Forçar novo aceite de todos</button>
     <button onclick="carregarDadosDb()" class="ml-auto bg-blue-50 text-blue-700 border border-blue-200 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors">🔄 Atualizar</button>
   </div>
 
@@ -817,6 +818,22 @@ function abrirModalCadastro(tipo, id) {
 function fecharModalCadastro() {
   document.getElementById('modal-cadastro').classList.add('hidden')
   document.getElementById('conteudo-cadastro').innerHTML = ''
+}
+
+async function resetarTermos() {
+  if (!confirm('Tem certeza que deseja resetar o aceite de termos de TODOS os usuários? Isso exigirá um novo aceite com IP correto.')) return
+  try {
+    const r = await fetch('/api/admin/db/resetar-termos', {
+      method: 'POST',
+      headers: headers()
+    })
+    if (!r.ok) throw new Error('Erro ao resetar termos')
+    await carregarDadosDb()
+    alert('Termos resetados com sucesso!')
+  } catch (e) {
+    console.error('[RESET TERMOS]', e)
+    alert('Erro ao resetar termos: ' + e.message)
+  }
 }
 
 function imprimirTermo() {
