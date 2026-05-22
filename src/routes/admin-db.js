@@ -19,13 +19,13 @@ export default async function adminDbRoutes(fastify) {
     return result.rows
   })
 
-  fastify.put('/api/admin/clients/:id/inativar', { preHandler: requireAuth }, async (request, reply) => {
+  fastify.put('/api/admin/clients/:id/inativar', { preHandler: requireAuth, schema: { body: {} } }, async (request, reply) => {
     const { id } = request.params
     await query('UPDATE clients SET ativo = false WHERE id = $1', [id])
     return { mensagem: 'Cliente inativado com sucesso' }
   })
 
-  fastify.put('/api/admin/clients/:id/reativar', { preHandler: requireAuth }, async (request, reply) => {
+  fastify.put('/api/admin/clients/:id/reativar', { preHandler: requireAuth, schema: { body: {} } }, async (request, reply) => {
     const { id } = request.params
     await query(`
       UPDATE clients SET 

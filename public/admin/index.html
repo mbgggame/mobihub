@@ -731,7 +731,8 @@ async function inativarCliente(id) {
   try {
     const r = await fetch(`/api/admin/clients/${id}/inativar`, {
       method: 'PUT',
-      headers: headers()
+      headers: headers(),
+      body: JSON.stringify({})
     })
     if (r.ok) {
       alert('Cliente inativado com sucesso!')
@@ -750,7 +751,8 @@ async function reativarCliente(id) {
   try {
     const r = await fetch(`/api/admin/clients/${id}/reativar`, {
       method: 'PUT',
-      headers: headers()
+      headers: headers(),
+      body: JSON.stringify({})
     })
     if (r.ok) {
       alert('Cliente reativado com sucesso!')
