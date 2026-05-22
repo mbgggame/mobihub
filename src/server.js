@@ -16,7 +16,8 @@ import driversRoutes from './routes/drivers.js'
 import ridesRoutes from './routes/rides.js'
 import publicRoutes from './routes/public.js'
 import integracoesRoutes from './routes/integracoes.js'
-import agendamentosRoutes from './routes/agendamentos.js' 
+import agendamentosRoutes from './routes/agendamentos.js'
+import adminDbRoutes from './routes/admin-db.js' 
 
 const __dirname = dirname(fileURLToPath(import.meta.url)) 
 
@@ -42,13 +43,14 @@ fastify.setErrorHandler((error, request, reply) => {
   reply.code(error.statusCode || 500).send({ error: error.message }) 
 }) 
 
-// Rotas API 
+// Rotas API
 await fastify.register(authRoutes)
 await fastify.register(driversRoutes)
 await fastify.register(ridesRoutes)
 await fastify.register(publicRoutes)
 await fastify.register(integracoesRoutes)
-await fastify.register(agendamentosRoutes) 
+await fastify.register(agendamentosRoutes)
+await fastify.register(adminDbRoutes) 
 
 await fastify.register(fastifyStatic, { 
   root: join(__dirname, '..', 'public'), 
