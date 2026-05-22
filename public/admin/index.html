@@ -112,7 +112,19 @@
       <button onclick="imprimirTermo()" class="flex-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl py-2.5 text-sm font-semibold transition-colors">🖨️ Imprimir</button>
     </div>
   </div>
-</div> 
+</div>
+<div id="modal-cadastro" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-50">
+  <div class="bg-white rounded-2xl max-w-lg w-full p-6 max-h-screen overflow-y-auto">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="font-semibold text-lg">👤 Dados do Cadastro</h2>
+      <button onclick="fecharModalCadastro()" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+    </div>
+    <div id="conteudo-cadastro" class="space-y-2 text-sm"></div>
+    <div class="mt-6">
+      <button onclick="fecharModalCadastro()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl py-2.5 text-sm font-semibold transition-colors">Fechar</button>
+    </div>
+  </div>
+</div>
  
 <style> 
 .active-filter { background:#16a34a; color:white; border-color:#16a34a; } 
@@ -701,7 +713,110 @@ function abrirModalTermo(tipo, id) {
 function fecharModalTermo() {
   document.getElementById('modal-termo').classList.add('hidden')
   const divTextoTermo = document.getElementById('termo-texto-completo')
-  if (divTextoTermo) divTextoTermo.remove()
+  if (divTextoTermo) divTextoTermo.textContent = ''
+}
+
+function abrirModalCadastro(tipo, id) {
+  const item = dadosAtuaisDb.find(x => x.id === id)
+  if (!item) return
+  
+  const conteudoDiv = document.getElementById('conteudo-cadastro')
+  
+  if (tipo === 'cliente') {
+    conteudoDiv.innerHTML = `
+      <div class="space-y-2">
+        <div class="flex justify-between border-b border-gray-100 pb-1">
+          <span class="text-gray-500">nome</span>
+          <span class="font-medium text-gray-800">${item.nome || '—'}</span>
+        </div>
+        <div class="flex justify-between border-b border-gray-100 pb-1">
+          <span class="text-gray-500">telefone</span>
+          <span class="font-medium text-gray-800">${item.telefone || '—'}</span>
+        </div>
+        <div class="flex justify-between border-b border-gray-100 pb-1">
+          <span class="text-gray-500">email</span>
+          <span class="font-medium text-gray-800">${item.email || '—'}</span>
+        </div>
+        <div class="flex justify-between border-b border-gray-100 pb-1">
+          <span class="text-gray-500">cpf</span>
+          <span class="font-medium text-gray-800">${item.cpf || '—'}</span>
+        </div>
+        <div class="flex justify-between border-b border-gray-100 pb-1">
+          <span class="text-gray-500">total_corridas</span>
+          <span class="font-medium text-gray-800">${item.total_corridas || '—'}</span>
+        </div>
+        <div class="flex justify-between border-b border-gray-100 pb-1">
+          <span class="text-gray-500">media_avaliacao</span>
+          <span class="font-medium text-gray-800">${item.media_avaliacao || '—'}</span>
+        </div>
+        <div class="flex justify-between border-b border-gray-100 pb-1">
+          <span class="text-gray-500">created_at</span>
+          <span class="font-medium text-gray-800">${item.created_at || '—'}</span>
+        </div>
+      </div>
+    `
+  } else if (tipo === 'motorista') {
+    const cnh = item.cnh_frente_base64 ? '✅' : '❌'
+    conteudoDiv.innerHTML = `
+      <div class="space-y-2">
+        <div class="flex justify-between border-b border-gray-100 pb-1">
+          <span class="text-gray-500">nome</span>
+          <span class="font-medium text-gray-800">${item.nome || '—'}</span>
+        </div>
+        <div class="flex justify-between border-b border-gray-100 pb-1">
+          <span class="text-gray-500">telefone</span>
+          <span class="font-medium text-gray-800">${item.telefone || '—'}</span>
+        </div>
+        <div class="flex justify-between border-b border-gray-100 pb-1">
+          <span class="text-gray-500">cpf</span>
+          <span class="font-medium text-gray-800">${item.cpf || '—'}</span>
+        </div>
+        <div class="flex justify-between border-b border-gray-100 pb-1">
+          <span class="text-gray-500">cnh</span>
+          <span class="font-medium text-gray-800">${cnh}</span>
+        </div>
+        <div class="flex justify-between border-b border-gray-100 pb-1">
+          <span class="text-gray-500">modelo_carro</span>
+          <span class="font-medium text-gray-800">${item.modelo_carro || '—'}</span>
+        </div>
+        <div class="flex justify-between border-b border-gray-100 pb-1">
+          <span class="text-gray-500">ano_carro</span>
+          <span class="font-medium text-gray-800">${item.ano_carro || '—'}</span>
+        </div>
+        <div class="flex justify-between border-b border-gray-100 pb-1">
+          <span class="text-gray-500">cor_carro</span>
+          <span class="font-medium text-gray-800">${item.cor_carro || '—'}</span>
+        </div>
+        <div class="flex justify-between border-b border-gray-100 pb-1">
+          <span class="text-gray-500">placa</span>
+          <span class="font-medium text-gray-800">${item.placa || '—'}</span>
+        </div>
+        <div class="flex justify-between border-b border-gray-100 pb-1">
+          <span class="text-gray-500">chave_pix</span>
+          <span class="font-medium text-gray-800">${item.chave_pix || '—'}</span>
+        </div>
+        <div class="flex justify-between border-b border-gray-100 pb-1">
+          <span class="text-gray-500">total_viagens</span>
+          <span class="font-medium text-gray-800">${item.total_viagens || '—'}</span>
+        </div>
+        <div class="flex justify-between border-b border-gray-100 pb-1">
+          <span class="text-gray-500">media_avaliacao</span>
+          <span class="font-medium text-gray-800">${item.media_avaliacao || '—'}</span>
+        </div>
+        <div class="flex justify-between border-b border-gray-100 pb-1">
+          <span class="text-gray-500">created_at</span>
+          <span class="font-medium text-gray-800">${item.created_at || '—'}</span>
+        </div>
+      </div>
+    `
+  }
+  
+  document.getElementById('modal-cadastro').classList.remove('hidden')
+}
+
+function fecharModalCadastro() {
+  document.getElementById('modal-cadastro').classList.add('hidden')
+  document.getElementById('conteudo-cadastro').innerHTML = ''
 }
 
 function imprimirTermo() {
@@ -810,7 +925,8 @@ async function carregarDadosDb() {
                   d.creditos ? `R$ ${Number(d.creditos).toFixed(2)}` : '—',
                   new Date(d.created_at).toLocaleDateString('pt-BR'),
                   d.aceitou_termos ? '✅' : '❌', 
-                  d.aceitou_termos ? `<button onclick="abrirModalTermo('cliente', ${d.id})" class="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-3 py-1 hover:bg-blue-100">📄 Ver Termo</button>` : ''
+                  `<button onclick="abrirModalCadastro('cliente', ${d.id})" class="text-xs bg-gray-100 text-gray-700 border border-gray-300 rounded-lg px-3 py-1 hover:bg-gray-200 mr-2">👤 Cadastro</button>
+                   ${d.aceitou_termos ? `<button onclick="abrirModalTermo('cliente', ${d.id})" class="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-3 py-1 hover:bg-blue-100">📄 Ver Termo</button>` : ''}`
                 ]
               } else if (abaAtualDb === 'motoristas') {
                 const avaliacao = d.media_avaliacao ? `${Number(d.media_avaliacao).toFixed(1)} ⭐` : '—'
@@ -822,7 +938,8 @@ async function carregarDadosDb() {
                   avaliacao, d.total_viagens || 0,
                   d.balance_due ? `R$ ${Number(d.balance_due).toFixed(2)}` : '—',
                   d.aceitou_termos ? '✅' : '❌', 
-                  d.aceitou_termos ? `<button onclick="abrirModalTermo('motorista', ${d.id})" class="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-3 py-1 hover:bg-blue-100">📄 Ver Termo</button>` : ''
+                  `<button onclick="abrirModalCadastro('motorista', ${d.id})" class="text-xs bg-gray-100 text-gray-700 border border-gray-300 rounded-lg px-3 py-1 hover:bg-gray-200 mr-2">👤 Cadastro</button>
+                   ${d.aceitou_termos ? `<button onclick="abrirModalTermo('motorista', ${d.id})" class="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-3 py-1 hover:bg-blue-100">📄 Ver Termo</button>` : ''}`
                 ]
               } else if (abaAtualDb === 'corridas') {
                 const formaPagamento = d.forma_pagamento === '1' ? '💵 Dinheiro' : d.forma_pagamento === '2' ? '📱 Pix' : d.forma_pagamento === '3' ? '💳 Cartão' : '—'
