@@ -198,6 +198,7 @@ export async function initDB() {
     ALTER TABLE clients ADD COLUMN IF NOT EXISTS ip_aceite_termos VARCHAR(50);
     ALTER TABLE clients ADD COLUMN IF NOT EXISTS versao_termos VARCHAR(10);
     ALTER TABLE clients ADD COLUMN IF NOT EXISTS aceite_responsabilidade BOOLEAN DEFAULT FALSE;
+    ALTER TABLE clients ADD COLUMN IF NOT EXISTS ativo BOOLEAN DEFAULT true;
 
     -- Campos de Memória de Cálculo (Transparência Billing) 
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS base_value DOUBLE PRECISION DEFAULT 0; 

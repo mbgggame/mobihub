@@ -12,11 +12,30 @@ export default async function adminDbRoutes(fastify) {
     const result = await query(`
       SELECT id, nome, telefone, email, cpf, aceitou_termos, versao_termos, 
         data_aceite_termos, ip_aceite_termos, aceite_responsabilidade, 
-        total_corridas, media_avaliacao, created_at, hash_aceite_termos
+        total_corridas, media_avaliacao, created_at, hash_aceite_termos, ativo
       FROM clients 
       ORDER BY created_at DESC
     `)
     return result.rows
+  })
+
+  fastify.put('/api/admin/clients/:id/inativar', { preHandler: requireAuth }, async (request, reply) => {
+    const { id } = request.params
+    await query('UPDATE clients SET ativo = false WHERE id = $1', [id])
+    return { mensagem: 'Cliente inativado com sucesso' }
+  })
+
+  fastify.put('/api/admin/clients/:id/reativar', { preHandler: requireAuth }, async (request, reply) => {
+    const { id } = request.params
+    await query(`
+      UPDATE clients SET 
+        ativo = true, 
+        aceitou_termos = false, 
+        versao_termos = null, 
+        hash_aceite_termos = null 
+      WHERE id = $1
+    `, [id])
+    return { mensagem: 'Cliente reativado com sucesso' }
   })
 
   fastify.get('/api/admin/db/motoristas', { preHandler: requireAuth }, async () => {

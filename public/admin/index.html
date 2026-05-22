@@ -726,6 +726,44 @@ function fecharModalTermo() {
   if (divTextoTermo) divTextoTermo.textContent = ''
 }
 
+async function inativarCliente(id) {
+  if (!confirm('Inativar este cliente?')) return
+  try {
+    const r = await fetch(`/api/admin/clients/${id}/inativar`, {
+      method: 'PUT',
+      headers: headers()
+    })
+    if (r.ok) {
+      alert('Cliente inativado com sucesso!')
+      await carregarDadosDb()
+    } else {
+      const d = await r.json()
+      alert('Erro: ' + (d.error || d.mensagem))
+    }
+  } catch (e) {
+    alert('Erro de conexão: ' + e.message)
+  }
+}
+
+async function reativarCliente(id) {
+  if (!confirm('Reativar este cliente? Ele precisará aceitar os termos novamente.')) return
+  try {
+    const r = await fetch(`/api/admin/clients/${id}/reativar`, {
+      method: 'PUT',
+      headers: headers()
+    })
+    if (r.ok) {
+      alert('Cliente reativado com sucesso!')
+      await carregarDadosDb()
+    } else {
+      const d = await r.json()
+      alert('Erro: ' + (d.error || d.mensagem))
+    }
+  } catch (e) {
+    alert('Erro de conexão: ' + e.message)
+  }
+}
+
 function abrirModalCadastro(tipo, id) {
   const item = dadosAtuaisDb.find(x => x.id === id)
   if (!item) return
@@ -762,6 +800,22 @@ function abrirModalCadastro(tipo, id) {
         <div class="flex justify-between border-b border-gray-100 pb-1">
           <span class="text-gray-500">created_at</span>
           <span class="font-medium text-gray-800">${item.created_at || '—'}</span>
+        </div>
+        <div class="flex justify-between border-b border-gray-100 pb-1">
+          <span class="text-gray-500">ativo</span>
+          <span class="font-medium text-gray-800">${item.ativo ? '✅ Sim' : '❌ Não'}</span>
+        </div>
+        <div class="flex justify-between border-b border-gray-100 pb-1">
+          <span class="text-gray-500">aceitou_termos</span>
+          <span class="font-medium text-gray-800">${item.aceitou_termos ? '✅ Sim' : '❌ Não'}</span>
+        </div>
+        <div class="flex justify-between border-b border-gray-100 pb-1">
+          <span class="text-gray-500">versao_termos</span>
+          <span class="font-medium text-gray-800">${item.versao_termos || '—'}</span>
+        </div>
+        <div class="flex justify-between border-b border-gray-100 pb-1">
+          <span class="text-gray-500">data_aceite_termos</span>
+          <span class="font-medium text-gray-800">${item.data_aceite_termos || '—'}</span>
         </div>
       </div>
     `
@@ -884,7 +938,7 @@ async function carregarDadosDb() {
       if (r.status === 401) { location.href = '/admin/login'; return }
       dados = await r.json()
       dadosAtuaisDb = dados
-      tabelaHeaders = ['ID', 'Nome', 'Telefone', 'Email', 'CPF', 'Avaliação Média', 'Total Corridas', 'Saldo Créditos', 'Data Cadastro', 'Termo', 'Ações']
+      tabelaHeaders = ['ID', 'Nome', 'Telefone', 'Email', 'CPF', 'Status', 'Avaliação Média', 'Total Corridas', 'Saldo Créditos', 'Data Cadastro', 'Termo', 'Ações']
     } else if (abaAtualDb === 'motoristas') {
       const r = await fetch('/api/admin/db/motoristas', { headers: headers() })
       if (r.status === 401) { location.href = '/admin/login'; return }
@@ -946,13 +1000,19 @@ async function carregarDadosDb() {
               let cells = []
               if (abaAtualDb === 'clientes') {
                 const avaliacao = d.media_avaliacao ? `${Number(d.media_avaliacao).toFixed(1)} ⭐` : '—'
+                const status = d.ativo ? '✅ Ativo' : '⛔ Inativo'
+                const acaoBotao = d.ativo 
+                  ? `<button onclick="inativarCliente(${d.id})" class="text-xs bg-red-50 text-red-700 border border-red-200 rounded-lg px-3 py-1 hover:bg-red-100 mr-2">⛔ Inativar</button>`
+                  : `<button onclick="reativarCliente(${d.id})" class="text-xs bg-green-50 text-green-700 border border-green-200 rounded-lg px-3 py-1 hover:bg-green-100 mr-2">✅ Reativar</button>`
                 cells = [
                   d.id, d.nome || '—', d.telefone || '—', d.email || '—', d.cpf || '—',
+                  status,
                   avaliacao, d.total_corridas || 0, 
                   d.creditos ? `R$ ${Number(d.creditos).toFixed(2)}` : '—',
                   new Date(d.created_at).toLocaleDateString('pt-BR'),
                   d.aceitou_termos ? '✅' : '❌', 
-                  `<button onclick="abrirModalCadastro('cliente', ${d.id})" class="text-xs bg-gray-100 text-gray-700 border border-gray-300 rounded-lg px-3 py-1 hover:bg-gray-200 mr-2">👤 Cadastro</button>
+                  `${acaoBotao}
+                   <button onclick="abrirModalCadastro('cliente', ${d.id})" class="text-xs bg-gray-100 text-gray-700 border border-gray-300 rounded-lg px-3 py-1 hover:bg-gray-200 mr-2">👤 Ver Cadastro</button>
                    ${d.aceitou_termos ? `<button onclick="abrirModalTermo('cliente', ${d.id})" class="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-3 py-1 hover:bg-blue-100">📄 Ver Termo</button>` : ''}`
                 ]
               } else if (abaAtualDb === 'motoristas') {
