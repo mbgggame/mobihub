@@ -1080,11 +1080,14 @@ socket.on('agendamento:alerta_30min', (data) => {
  } 
 
  async function aceitarTermos() { 
+     console.log('[DEBUG] aceitarTermos() called')
      const check1 = document.getElementById('check-termos-gerais')?.checked 
      const check2 = document.getElementById('check-arbitragem')?.checked 
+     console.log('[DEBUG] check1:', check1, 'check2:', check2)
      if (!check1 || !check2) return 
      
      const btn = document.getElementById('btn-aceitar-termos')
+     console.log('[DEBUG] btn found:', !!btn)
      btn.textContent = 'Aguarde...'
      btn.disabled = true
      
@@ -1098,29 +1101,36 @@ socket.on('agendamento:alerta_30min', (data) => {
      try {
        const tokenParaEnviar = String(tokenMotorista || localStorage.getItem('mobi_token_motorista'))
        console.log('[ACEITAR TERMOS] Token:', tokenParaEnviar)
+       const bodyToSend = JSON.stringify({ 
+         token: tokenParaEnviar, 
+         aceite_arbitragem: check2 
+       })
+       console.log('[DEBUG] Request body:', bodyToSend)
        
+       console.log('[DEBUG] About to fetch /api/motorista/aceitar-termos')
        const res = await fetch('/api/motorista/aceitar-termos', { 
          method: 'POST', 
          mode: 'cors',
          headers: { 'Content-Type': 'application/json' }, 
-         body: JSON.stringify({ 
-           token: tokenParaEnviar, 
-           aceite_arbitragem: check2 
-         }) 
+         body: bodyToSend
        }); 
+       console.log('[DEBUG] Fetch completed, res:', res)
 
        clearTimeout(timeoutId)
        
        if (res.ok) { 
+         console.log('[DEBUG] res.ok is true')
          document.getElementById('modal-termos').classList.add('hidden') 
          document.getElementById('modal-termos').style.display = 'none' 
          document.getElementById('conteudo-principal').classList.remove('hidden') 
          // Atualiza os dados do driver em memória para evitar reload com cache 
          if (window.driverData) { 
+           console.log('[DEBUG] Updating window.driverData')
            window.driverData.aceitou_termos = true 
            window.driverData.versao_termos = '2.1' 
          } 
        } else { 
+         console.log('[DEBUG] res.ok is false')
          const textoErro = await res.text(); 
          console.error('Erro MobiHub:', textoErro); 
          alert('Não foi possível gravar o aceite. Verifique sua conexão e tente novamente.'); 
@@ -1128,6 +1138,7 @@ socket.on('agendamento:alerta_30min', (data) => {
          btn.disabled = false
        } 
      } catch(e) {
+       console.error('[DEBUG] Entered catch block')
        clearTimeout(timeoutId)
        console.error('[ERRO REDE]:', e)
        alert('Erro de conexão. Verifique a internet e tente novamente.')
