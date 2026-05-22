@@ -614,11 +614,55 @@ function mostrarAbaDb(aba) {
   carregarDadosDb()
 }
 
+const textoTermoPassageiro = `
+TERMO DE USO E POLÍTICA DE PRIVACIDADE – PASSAGEIRO
+
+1. OBJETO
+O presente Termo de Uso regula o acesso e utilização do aplicativo MobiHub, operado pela ELVIVA GROUP LTDA, inscrita no CNPJ 62.444.354/0001-82, destinado à conexão entre passageiros e motoristas para o transporte de pessoas.
+
+2. ACEITE
+Ao clicar em "Aceitar", o usuário declara que leu, entendeu e concorda integralmente com todas as cláusulas deste termo.
+
+3. DADOS PESSOAIS
+O usuário autoriza a coleta, uso e compartilhamento de dados pessoais nos termos da Lei Geral de Proteção de Dados (LGPD – Lei nº 13.709/2018).
+
+4. OBRIGAÇÕES DO PASSAGEIRO
+- Informar dados verdadeiros e precisos;
+- Cumprir com as regras de trânsito e conduta;
+- Pagar o valor da corrida conforme acordado.
+
+5. LIMITAÇÃO DE RESPONSABILIDADE
+A ELVIVA GROUP LTDA não se responsabiliza por danos indiretos ou consequenciais decorrentes do uso do aplicativo.
+`
+
+const textoTermoMotorista = `
+TERMO DE USO E CONTRATO DE PRESTAÇÃO DE SERVIÇOS – MOTORISTA
+
+1. PARTES
+Contratada: ELVIVA GROUP LTDA, CNPJ 62.444.354/0001-82.
+Contratante: Motorista cadastrado na plataforma MobiHub.
+
+2. OBJETO
+Prestação de serviços de transporte de pessoas por parte do motorista, mediante intermediação da plataforma.
+
+3. ACEITE
+Ao clicar em "Aceitar", o motorista declara que leu, entendeu e concorda integralmente com todas as cláusulas deste termo, incluindo a cláusula compromissória de arbitragem.
+
+4. DADOS PESSOAIS
+O motorista autoriza a coleta, uso e compartilhamento de dados pessoais nos termos da Lei Geral de Proteção de Dados (LGPD – Lei nº 13.709/2018).
+
+5. REMUNERAÇÃO
+O motorista receberá o valor líquido definido pelas regras de split financeiro da plataforma.
+
+6. ARBITRAGEM
+Qualquer litígio decorrente deste termo será resolvido por arbitragem, de acordo com as regras da Câmara de Arbitragem do Estado do Espírito Santo.
+`
+
 function abrirModalTermo(tipo, id) {
   const item = dadosAtuaisDb.find(x => x.id === id)
   if (!item) return
   
-  let nome, cpf, telefone, versao, data, ip, aceite
+  let nome, cpf, telefone, versao, data, ip, aceite, textoTermo = ''
   if (tipo === 'cliente') {
     nome = item.nome || '—'
     cpf = item.cpf || '—'
@@ -627,6 +671,7 @@ function abrirModalTermo(tipo, id) {
     data = item.data_aceite_termos ? new Date(item.data_aceite_termos).toLocaleString('pt-BR') : '—'
     ip = item.ip_aceite_termos || '—'
     aceite = item.aceitou_termos ? '✅ Sim' : '❌ Não'
+    textoTermo = textoTermoPassageiro
   } else if (tipo === 'motorista') {
     nome = item.nome || '—'
     cpf = item.cpf || '—'
@@ -635,6 +680,7 @@ function abrirModalTermo(tipo, id) {
     data = item.data_aceite_termos ? new Date(item.data_aceite_termos).toLocaleString('pt-BR') : '—'
     ip = item.ip_aceite_termos || '—'
     aceite = item.aceite_arbitragem ? '✅ Sim' : '❌ Não'
+    textoTermo = textoTermoMotorista
   }
   
   document.getElementById('termo-nome').textContent = nome
@@ -644,16 +690,29 @@ function abrirModalTermo(tipo, id) {
   document.getElementById('termo-data').textContent = data
   document.getElementById('termo-ip').textContent = ip
   document.getElementById('termo-aceite').textContent = aceite
+  
+  const divTextoTermo = document.getElementById('termo-texto-completo')
+  if (!divTextoTermo) {
+    const containerTermo = document.getElementById('conteudo-termo').querySelector('.space-y-3')
+    const novoDiv = document.createElement('div')
+    novoDiv.id = 'termo-texto-completo'
+    novoDiv.className = 'mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200 text-xs text-gray-700 whitespace-pre-wrap'
+    containerTermo.appendChild(novoDiv)
+  }
+  document.getElementById('termo-texto-completo').textContent = textoTermo
+  
   document.getElementById('modal-termo').classList.remove('hidden')
 }
 
 function fecharModalTermo() {
   document.getElementById('modal-termo').classList.add('hidden')
+  const divTextoTermo = document.getElementById('termo-texto-completo')
+  if (divTextoTermo) divTextoTermo.remove()
 }
 
 function imprimirTermo() {
   const conteudo = document.getElementById('conteudo-termo').innerHTML
-  const novaJanela = window.open('', '', 'width=800,height=1000')
+  const novaJanela = window.open('', '', 'width=800,height=1200')
   novaJanela.document.write(`
     <!DOCTYPE html>
     <html>
@@ -662,6 +721,7 @@ function imprimirTermo() {
       <style>
         body { font-family: Arial, sans-serif; padding: 40px; }
         .empresa { background: #f3f4f6; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .texto-termo { white-space: pre-wrap; margin-top: 20px; padding: 20px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; }
       </style>
     </head>
     <body>
@@ -681,25 +741,54 @@ async function carregarDadosDb() {
   try {
     let dados = []
     let tabelaHeaders = []
+    let resumoFiscal = null
     
     if (abaAtualDb === 'clientes') {
       const r = await fetch('/api/admin/db/clientes', { headers: headers() })
       if (r.status === 401) { location.href = '/admin/login'; return }
       dados = await r.json()
       dadosAtuaisDb = dados
-      tabelaHeaders = ['ID', 'Nome', 'Telefone', 'CPF', 'Avaliação', 'Total Corridas', 'Termo', 'Ações']
+      tabelaHeaders = ['ID', 'Nome', 'Telefone', 'Email', 'CPF', 'Avaliação Média', 'Total Corridas', 'Saldo Créditos', 'Data Cadastro', 'Termo', 'Ações']
     } else if (abaAtualDb === 'motoristas') {
       const r = await fetch('/api/admin/db/motoristas', { headers: headers() })
       if (r.status === 401) { location.href = '/admin/login'; return }
       dados = await r.json()
       dadosAtuaisDb = dados
-      tabelaHeaders = ['ID', 'Nome', 'CPF', 'Carro', 'Placa', 'Chave Pix', 'Avaliação', 'Termo', 'Ações']
+      tabelaHeaders = ['ID', 'Nome', 'Telefone', 'CPF', 'Placa', 'Carro', 'Chave Pix', 'Avaliação Média', 'Total Viagens', 'Saldo Devedor', 'Termo', 'Ações']
     } else if (abaAtualDb === 'corridas') {
       const r = await fetch('/api/admin/db/corridas', { headers: headers() })
       if (r.status === 401) { location.href = '/admin/login'; return }
       dados = await r.json()
       dadosAtuaisDb = dados
-      tabelaHeaders = ['ID', 'Passageiro', 'Motorista', 'Origem', 'Destino', 'Valor Total', 'Valor Motorista', 'Forma Pagamento', 'Status Pagamento', 'Data', 'Km']
+      
+      // Calcula resumo fiscal
+      const totalCorridas = dados.length
+      const somaValorTotal = dados.reduce((sum, d) => sum + (Number(d.valor_final) || 0), 0)
+      const somaValorMotorista = dados.reduce((sum, d) => sum + (Number(d.valor_motorista) || 0), 0)
+      const somaValorPlataforma = dados.reduce((sum, d) => sum + (Number(d.valor_plataforma) || 0), 0)
+      
+      resumoFiscal = `
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          <div class="bg-white rounded-xl border border-gray-200 p-4">
+            <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Total de Corridas</p>
+            <p class="text-xl font-bold text-gray-800">${totalCorridas}</p>
+          </div>
+          <div class="bg-white rounded-xl border border-gray-200 p-4">
+            <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Soma Valor Total</p>
+            <p class="text-xl font-bold text-green-700">R$ ${somaValorTotal.toFixed(2)}</p>
+          </div>
+          <div class="bg-white rounded-xl border border-gray-200 p-4">
+            <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Soma Valor Plataforma</p>
+            <p class="text-xl font-bold text-blue-700">R$ ${somaValorPlataforma.toFixed(2)}</p>
+          </div>
+          <div class="bg-white rounded-xl border border-gray-200 p-4">
+            <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Soma Valor Motoristas</p>
+            <p class="text-xl font-bold text-indigo-700">R$ ${somaValorMotorista.toFixed(2)}</p>
+          </div>
+        </div>
+      `
+      
+      tabelaHeaders = ['ID', 'Passageiro', 'Motorista', 'Origem', 'Destino', 'Valor Total', 'Valor Plataforma', 'Valor Motorista', 'Forma Pagamento', 'Status Pagamento', 'Km Percorrido', 'Data Início', 'Data Conclusão']
     }
 
     if (!dados.length) {
@@ -708,50 +797,59 @@ async function carregarDadosDb() {
     }
 
     tabelaDiv.innerHTML = `
-      <table class="w-full text-sm">
-        <thead class="bg-gray-50 border-b border-gray-200">
-          <tr>
-            ${tabelaHeaders.map(h => `<th class="text-left px-4 py-3 font-semibold text-gray-700 text-xs uppercase tracking-wide">${h}</th>`).join('')}
-          </tr>
-        </thead>
-        <tbody>
-          ${dados.map(d => {
-            let cells = []
-            if (abaAtualDb === 'clientes') {
-              const avaliacao = d.media_avaliacao ? `${Number(d.media_avaliacao).toFixed(1)} ⭐` : '—'
-              cells = [
-                d.id, d.nome || '—', d.telefone || '—', d.cpf || '—', 
-                avaliacao, d.total_corridas || 0, 
-                d.aceitou_termos ? '✅' : '❌', 
-                d.aceitou_termos ? `<button onclick="abrirModalTermo('cliente', ${d.id})" class="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-3 py-1 hover:bg-blue-100">📄 Ver Termo</button>` : ''
-              ]
-            } else if (abaAtualDb === 'motoristas') {
-              const avaliacao = d.media_avaliacao ? `${Number(d.media_avaliacao).toFixed(1)} ⭐` : '—'
-              const carro = `${d.modelo_carro || ''} ${d.ano_carro || ''} ${d.cor_carro || ''}`.trim()
-              cells = [
-                d.id, d.nome || '—', d.cpf || '—', 
-                carro, d.placa || '—', d.chave_pix || '—',
-                avaliacao, d.aceitou_termos ? '✅' : '❌', 
-                d.aceitou_termos ? `<button onclick="abrirModalTermo('motorista', ${d.id})" class="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-3 py-1 hover:bg-blue-100">📄 Ver Termo</button>` : ''
-              ]
-            } else if (abaAtualDb === 'corridas') {
-              const formaPagamento = d.forma_pagamento === '1' ? '💵 Dinheiro' : d.forma_pagamento === '2' ? '📱 Pix' : d.forma_pagamento === '3' ? '💳 Cartão' : '—'
-              cells = [
-                d.id, d.cliente_nome || '—', d.motorista_nome || '—',
-                d.origem?.substring(0, 40) || '—', d.destino?.substring(0, 40) || '—',
-                d.valor_final ? `R$ ${Number(d.valor_final).toFixed(2)}` : '—',
-                d.valor_motorista ? `R$ ${Number(d.valor_motorista).toFixed(2)}` : '—',
-                formaPagamento, d.pagamento_status || '—',
-                d.created_at ? new Date(d.created_at).toLocaleString('pt-BR') : '—',
-                d.km_reais ? `${Number(d.km_reais).toFixed(1)} km` : '—'
-              ]
-            }
-            return `<tr class="border-b border-gray-100 hover:bg-gray-50">
-              ${cells.map(c => `<td class="px-4 py-2 text-gray-700">${c || '—'}</td>`).join('')}
-            </tr>`
-          }).join('')}
-        </tbody>
-      </table>
+      ${resumoFiscal || ''}
+      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 border-b border-gray-200">
+            <tr>
+              ${tabelaHeaders.map(h => `<th class="text-left px-4 py-3 font-semibold text-gray-700 text-xs uppercase tracking-wide">${h}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${dados.map(d => {
+              let cells = []
+              if (abaAtualDb === 'clientes') {
+                const avaliacao = d.media_avaliacao ? `${Number(d.media_avaliacao).toFixed(1)} ⭐` : '—'
+                cells = [
+                  d.id, d.nome || '—', d.telefone || '—', d.email || '—', d.cpf || '—',
+                  avaliacao, d.total_corridas || 0, 
+                  d.creditos ? `R$ ${Number(d.creditos).toFixed(2)}` : '—',
+                  new Date(d.created_at).toLocaleDateString('pt-BR'),
+                  d.aceitou_termos ? '✅' : '❌', 
+                  d.aceitou_termos ? `<button onclick="abrirModalTermo('cliente', ${d.id})" class="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-3 py-1 hover:bg-blue-100">📄 Ver Termo</button>` : ''
+                ]
+              } else if (abaAtualDb === 'motoristas') {
+                const avaliacao = d.media_avaliacao ? `${Number(d.media_avaliacao).toFixed(1)} ⭐` : '—'
+                const carro = `${d.modelo_carro || ''} ${d.ano_carro || ''} ${d.cor_carro || ''}`.trim()
+                cells = [
+                  d.id, d.nome || '—', d.telefone || '—', d.cpf || '—', d.placa || '—',
+                  carro, d.chave_pix || '—',
+                  avaliacao, d.total_viagens || 0,
+                  d.balance_due ? `R$ ${Number(d.balance_due).toFixed(2)}` : '—',
+                  d.aceitou_termos ? '✅' : '❌', 
+                  d.aceitou_termos ? `<button onclick="abrirModalTermo('motorista', ${d.id})" class="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-3 py-1 hover:bg-blue-100">📄 Ver Termo</button>` : ''
+                ]
+              } else if (abaAtualDb === 'corridas') {
+                const formaPagamento = d.forma_pagamento === '1' ? '💵 Dinheiro' : d.forma_pagamento === '2' ? '📱 Pix' : d.forma_pagamento === '3' ? '💳 Cartão' : '—'
+                cells = [
+                  d.id, d.cliente_nome || '—', d.motorista_nome || '—',
+                  d.origem?.substring(0, 30) || '—', d.destino?.substring(0, 30) || '—',
+                  d.valor_final ? `R$ ${Number(d.valor_final).toFixed(2)}` : '—',
+                  d.valor_plataforma ? `R$ ${Number(d.valor_plataforma).toFixed(2)}` : '—',
+                  d.valor_motorista ? `R$ ${Number(d.valor_motorista).toFixed(2)}` : '—',
+                  formaPagamento, d.pagamento_status || '—',
+                  d.km_reais ? `${Number(d.km_reais).toFixed(1)} km` : '—',
+                  d.aceita_at ? new Date(d.aceita_at).toLocaleDateString('pt-BR') : '—',
+                  d.concluida_at ? new Date(d.concluida_at).toLocaleDateString('pt-BR') : '—'
+                ]
+              }
+              return `<tr class="border-b border-gray-100 hover:bg-gray-50">
+                ${cells.map(c => `<td class="px-4 py-2 text-gray-700">${c || '—'}</td>`).join('')}
+              </tr>`
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
     `
   } catch (e) {
     console.error('[DB ERROR]', e)
