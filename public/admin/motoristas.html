@@ -345,30 +345,91 @@ async function toggle(id, ativo) {
 
 async function aprovarMotorista(id) {
   if (!confirm('Aprovar este motorista?')) return
-  await fetch(`/api/drivers/${id}/aprovar`, { method: 'PUT', headers: H() })
-  carregar()
+  try {
+    console.log('[DEBUG] Aprovar motorista:', id)
+    const response = await fetch(`/api/drivers/${id}/aprovar`, { 
+      method: 'PUT', 
+      headers: H() 
+    })
+    console.log('[DEBUG] Response status:', response.status)
+    if (!response.ok) {
+      const errorData = await response.json()
+      console.error('[DEBUG] Erro na resposta:', errorData)
+      alert('Erro: ' + (errorData.error || errorData.message || 'Tente novamente'))
+      return
+    }
+    carregar()
+  } catch (error) {
+    console.error('[DEBUG] Erro ao aprovar motorista:', error)
+    alert('Erro de conexão: ' + error.message)
+  }
 }
 
 async function reprovarMotorista(id) {
   const motivo = prompt('Motivo da reprovação (opcional):')
-  await fetch(`/api/drivers/${id}/reprovar`, { 
-    method: 'PUT', 
-    headers: H(), 
-    body: JSON.stringify({ motivo }) 
-  })
-  carregar()
+  try {
+    console.log('[DEBUG] Reprovar motorista:', id, 'Motivo:', motivo)
+    const response = await fetch(`/api/drivers/${id}/reprovar`, { 
+      method: 'PUT', 
+      headers: H(), 
+      body: JSON.stringify({ motivo }) 
+    })
+    console.log('[DEBUG] Response status:', response.status)
+    if (!response.ok) {
+      const errorData = await response.json()
+      console.error('[DEBUG] Erro na resposta:', errorData)
+      alert('Erro: ' + (errorData.error || errorData.message || 'Tente novamente'))
+      return
+    }
+    carregar()
+  } catch (error) {
+    console.error('[DEBUG] Erro ao reprovar motorista:', error)
+    alert('Erro de conexão: ' + error.message)
+  }
 }
 
 async function reativarMotorista(id) {
   if (!confirm('Reativar este motorista?')) return
-  await fetch(`/api/drivers/${id}/ativar`, { method: 'PUT', headers: H() })
-  carregar()
+  try {
+    console.log('[DEBUG] Reativar motorista:', id)
+    const response = await fetch(`/api/drivers/${id}/ativar`, { 
+      method: 'PUT', 
+      headers: H() 
+    })
+    console.log('[DEBUG] Response status:', response.status)
+    if (!response.ok) {
+      const errorData = await response.json()
+      console.error('[DEBUG] Erro na resposta:', errorData)
+      alert('Erro: ' + (errorData.error || errorData.message || 'Tente novamente'))
+      return
+    }
+    carregar()
+  } catch (error) {
+    console.error('[DEBUG] Erro ao reativar motorista:', error)
+    alert('Erro de conexão: ' + error.message)
+  }
 }
 
 async function excluirMotorista(id) {
   if (!confirm('Tem certeza que deseja EXCLUIR este motorista? Esta ação é irreversível!')) return
-  await fetch(`/api/drivers/${id}/excluir`, { method: 'DELETE', headers: H() })
-  carregar()
+  try {
+    console.log('[DEBUG] Excluir motorista:', id)
+    const response = await fetch(`/api/drivers/${id}/excluir`, { 
+      method: 'DELETE', 
+      headers: H() 
+    })
+    console.log('[DEBUG] Response status:', response.status)
+    if (!response.ok) {
+      const errorData = await response.json()
+      console.error('[DEBUG] Erro na resposta:', errorData)
+      alert('Erro: ' + (errorData.error || errorData.message || 'Tente novamente'))
+      return
+    }
+    carregar()
+  } catch (error) {
+    console.error('[DEBUG] Erro ao excluir motorista:', error)
+    alert('Erro de conexão: ' + error.message)
+  }
 }
 
 async function abrirModalMotorista(id) { 
