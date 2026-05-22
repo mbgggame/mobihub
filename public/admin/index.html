@@ -64,6 +64,59 @@
     </div> 
     <div id="modal-conteudo"></div> 
   </div> 
+</div>
+
+<!-- MODAL VER TERMO -->
+<div id="modal-termo" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-50">
+  <div id="conteudo-termo" class="bg-white rounded-2xl max-w-lg w-full p-6 max-h-screen overflow-y-auto">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="font-semibold text-lg">📄 Termo de Aceite — MobiHub</h2>
+      <button onclick="fecharModalTermo()" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+    </div>
+    <div class="space-y-3 text-sm">
+      <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+        <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Empresa</p>
+        <p class="font-semibold text-gray-800">ELVIVA GROUP LTDA</p>
+        <p class="text-gray-600">CNPJ: 62.444.354/0001-82</p>
+      </div>
+      <div>
+        <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Nome</p>
+        <p id="termo-nome" class="font-medium text-gray-800"></p>
+      </div>
+      <div>
+        <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">CPF</p>
+        <p id="termo-cpf" class="font-medium text-gray-800"></p>
+      </div>
+      <div>
+        <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Telefone</p>
+        <p id="termo-telefone" class="font-medium text-gray-800"></p>
+      </div>
+      <div>
+        <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Versão do Termo</p>
+        <p id="termo-versao" class="font-medium text-gray-800"></p>
+      </div>
+      <div>
+        <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Data/Hora do Aceite</p>
+        <p id="termo-data" class="font-medium text-gray-800"></p>
+      </div>
+      <div>
+        <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">IP do Aceite</p>
+        <p id="termo-ip" class="font-medium text-gray-800"></p>
+      </div>
+      <div>
+        <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Aceite de Responsabilidade/Arbitragem</p>
+        <p id="termo-aceite" class="font-medium text-gray-800"></p>
+      </div>
+      <hr class="border-gray-200 my-4">
+      <p class="text-xs text-gray-600 text-center">
+        Este documento tem validade jurídica conforme LGPD e Marco Civil da Internet.
+      </p>
+    </div>
+    <div class="mt-6 flex gap-3">
+      <button onclick="fecharModalTermo()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl py-2.5 text-sm font-semibold transition-colors">Fechar</button>
+      <button onclick="imprimirTermo()" class="flex-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl py-2.5 text-sm font-semibold transition-colors">🖨️ Imprimir</button>
+    </div>
+  </div>
 </div> 
  
 <style> 
@@ -520,6 +573,7 @@ function sair() {
 } 
  
 let abaAtualDb = 'clientes'
+let dadosAtuaisDb = []
 
 function mostrarSecao(secao) {
   const secaoCorridas = document.getElementById('secao-corridas')
@@ -560,6 +614,66 @@ function mostrarAbaDb(aba) {
   carregarDadosDb()
 }
 
+function abrirModalTermo(tipo, id) {
+  const item = dadosAtuaisDb.find(x => x.id === id)
+  if (!item) return
+  
+  let nome, cpf, telefone, versao, data, ip, aceite
+  if (tipo === 'cliente') {
+    nome = item.nome || '—'
+    cpf = item.cpf || '—'
+    telefone = item.telefone || '—'
+    versao = item.versao_termos || '—'
+    data = item.data_aceite_termos ? new Date(item.data_aceite_termos).toLocaleString('pt-BR') : '—'
+    ip = item.ip_aceite_termos || '—'
+    aceite = item.aceitou_termos ? '✅ Sim' : '❌ Não'
+  } else if (tipo === 'motorista') {
+    nome = item.nome || '—'
+    cpf = item.cpf || '—'
+    telefone = item.telefone || '—'
+    versao = item.versao_termos || '—'
+    data = item.data_aceite_termos ? new Date(item.data_aceite_termos).toLocaleString('pt-BR') : '—'
+    ip = item.ip_aceite_termos || '—'
+    aceite = item.aceite_arbitragem ? '✅ Sim' : '❌ Não'
+  }
+  
+  document.getElementById('termo-nome').textContent = nome
+  document.getElementById('termo-cpf').textContent = cpf
+  document.getElementById('termo-telefone').textContent = telefone
+  document.getElementById('termo-versao').textContent = versao
+  document.getElementById('termo-data').textContent = data
+  document.getElementById('termo-ip').textContent = ip
+  document.getElementById('termo-aceite').textContent = aceite
+  document.getElementById('modal-termo').classList.remove('hidden')
+}
+
+function fecharModalTermo() {
+  document.getElementById('modal-termo').classList.add('hidden')
+}
+
+function imprimirTermo() {
+  const conteudo = document.getElementById('conteudo-termo').innerHTML
+  const novaJanela = window.open('', '', 'width=800,height=1000')
+  novaJanela.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Termo de Aceite — MobiHub</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 40px; }
+        .empresa { background: #f3f4f6; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+      </style>
+    </head>
+    <body>
+      <h1>Termo de Aceite — MobiHub</h1>
+      ${conteudo}
+    </body>
+    </html>
+  `)
+  novaJanela.document.close()
+  novaJanela.print()
+}
+
 async function carregarDadosDb() {
   const tabelaDiv = document.getElementById('tabela-db')
   tabelaDiv.innerHTML = '<p class="p-6 text-center text-gray-400">Carregando...</p>'
@@ -572,17 +686,20 @@ async function carregarDadosDb() {
       const r = await fetch('/api/admin/db/clientes', { headers: headers() })
       if (r.status === 401) { location.href = '/admin/login'; return }
       dados = await r.json()
-      tabelaHeaders = ['ID', 'Nome', 'Telefone', 'Email', 'CPF', 'Aceitou Termos?', 'Versão', 'Data Aceite', 'Total Corridas', 'Criado em']
+      dadosAtuaisDb = dados
+      tabelaHeaders = ['ID', 'Nome', 'Telefone', 'CPF', 'Avaliação', 'Total Corridas', 'Termo', 'Ações']
     } else if (abaAtualDb === 'motoristas') {
       const r = await fetch('/api/admin/db/motoristas', { headers: headers() })
       if (r.status === 401) { location.href = '/admin/login'; return }
       dados = await r.json()
-      tabelaHeaders = ['ID', 'Nome', 'Aceitou Termos?', 'Versão', 'Data Aceite', 'Aceitou Arbitragem?', 'Total Viagens', 'Criado em']
+      dadosAtuaisDb = dados
+      tabelaHeaders = ['ID', 'Nome', 'CPF', 'Carro', 'Placa', 'Chave Pix', 'Avaliação', 'Termo', 'Ações']
     } else if (abaAtualDb === 'corridas') {
       const r = await fetch('/api/admin/db/corridas', { headers: headers() })
       if (r.status === 401) { location.href = '/admin/login'; return }
       dados = await r.json()
-      tabelaHeaders = ['ID', 'Status', 'Pagamento', 'Valor Final', 'Motorista', 'MobiHub', 'Pago em', 'Criado em', 'Origem', 'Destino']
+      dadosAtuaisDb = dados
+      tabelaHeaders = ['ID', 'Passageiro', 'Motorista', 'Origem', 'Destino', 'Valor Total', 'Valor Motorista', 'Forma Pagamento', 'Status Pagamento', 'Data', 'Km']
     }
 
     if (!dados.length) {
@@ -601,32 +718,32 @@ async function carregarDadosDb() {
           ${dados.map(d => {
             let cells = []
             if (abaAtualDb === 'clientes') {
+              const avaliacao = d.media_avaliacao ? `${Number(d.media_avaliacao).toFixed(1)} ⭐` : '—'
               cells = [
-                d.id, d.nome || '—', d.telefone || '—', d.email || '—', d.cpf || '—', 
-                d.aceitou_termos ? '✅' : '❌', d.versao_termos || '—', 
-                d.data_aceite_termos ? new Date(d.data_aceite_termos).toLocaleString('pt-BR') : '—', 
-                d.total_corridas || 0, 
-                new Date(d.created_at).toLocaleString('pt-BR')
+                d.id, d.nome || '—', d.telefone || '—', d.cpf || '—', 
+                avaliacao, d.total_corridas || 0, 
+                d.aceitou_termos ? '✅' : '❌', 
+                d.aceitou_termos ? `<button onclick="abrirModalTermo('cliente', ${d.id})" class="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-3 py-1 hover:bg-blue-100">📄 Ver Termo</button>` : ''
               ]
             } else if (abaAtualDb === 'motoristas') {
+              const avaliacao = d.media_avaliacao ? `${Number(d.media_avaliacao).toFixed(1)} ⭐` : '—'
+              const carro = `${d.modelo_carro || ''} ${d.ano_carro || ''} ${d.cor_carro || ''}`.trim()
               cells = [
-                d.id, d.nome || '—', 
-                d.aceitou_termos ? '✅' : '❌', d.versao_termos || '—', 
-                d.data_aceite_termos ? new Date(d.data_aceite_termos).toLocaleString('pt-BR') : '—', 
-                d.aceite_arbitragem ? '✅' : '❌', 
-                d.total_viagens || 0, 
-                new Date(d.created_at).toLocaleString('pt-BR')
+                d.id, d.nome || '—', d.cpf || '—', 
+                carro, d.placa || '—', d.chave_pix || '—',
+                avaliacao, d.aceitou_termos ? '✅' : '❌', 
+                d.aceitou_termos ? `<button onclick="abrirModalTermo('motorista', ${d.id})" class="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-3 py-1 hover:bg-blue-100">📄 Ver Termo</button>` : ''
               ]
             } else if (abaAtualDb === 'corridas') {
+              const formaPagamento = d.forma_pagamento === '1' ? '💵 Dinheiro' : d.forma_pagamento === '2' ? '📱 Pix' : d.forma_pagamento === '3' ? '💳 Cartão' : '—'
               cells = [
-                d.id, d.status || '—', d.pagamento_status || '—', 
-                d.valor_final ? `R$ ${Number(d.valor_final).toFixed(2)}` : '—', 
-                d.valor_motorista ? `R$ ${Number(d.valor_motorista).toFixed(2)}` : '—', 
-                d.valor_mobihub ? `R$ ${Number(d.valor_mobihub).toFixed(2)}` : '—', 
-                d.pago_em ? new Date(d.pago_em).toLocaleString('pt-BR') : '—', 
-                new Date(d.created_at).toLocaleString('pt-BR'), 
-                d.origem?.substring(0, 50), 
-                d.destino?.substring(0, 50)
+                d.id, d.cliente_nome || '—', d.motorista_nome || '—',
+                d.origem?.substring(0, 40) || '—', d.destino?.substring(0, 40) || '—',
+                d.valor_final ? `R$ ${Number(d.valor_final).toFixed(2)}` : '—',
+                d.valor_motorista ? `R$ ${Number(d.valor_motorista).toFixed(2)}` : '—',
+                formaPagamento, d.pagamento_status || '—',
+                d.created_at ? new Date(d.created_at).toLocaleString('pt-BR') : '—',
+                d.km_reais ? `${Number(d.km_reais).toFixed(1)} km` : '—'
               ]
             }
             return `<tr class="border-b border-gray-100 hover:bg-gray-50">
