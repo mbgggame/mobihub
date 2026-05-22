@@ -263,10 +263,10 @@ export default async function integracoesRoutes(fastify) {
       const ride = rideResult.rows[0]
       if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' })
 
-      // Atualiza pagamento_status e campos adicionais
+      // Atualiza pagamento_status
       await query(
-        "UPDATE rides SET pagamento_status = 'pago', updated_at = CURRENT_TIMESTAMP, pago_em = CURRENT_TIMESTAMP, valor_motorista = $1, valor_mobihub = $2 WHERE id = $3",
-        [Number(valor_motorista || 0), Number(valor_plataforma || 0), corrida_id]
+        "UPDATE rides SET pagamento_status = 'pago', updated_at = CURRENT_TIMESTAMP WHERE id = $1",
+        [corrida_id]
       )
 
       // Registra split no driver_transactions — igual ao webhook do Asaas
