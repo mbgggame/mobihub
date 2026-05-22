@@ -499,40 +499,52 @@
  async function verificarTermosPassageiro() {
    const modal = document.getElementById('modal-termos-passageiro')
    const conteudo = document.getElementById('conteudo-solicitar')
+   const STORAGE_KEY = 'passageiro_termos_aceitos_1.0'
    
    const telefone = localStorage.getItem('cliente_telefone')
+   
+   // Verificar localStorage PRIMEIRO
+   const jaAceitouNoLocalStorage = localStorage.getItem(STORAGE_KEY) === 'true'
    
    // Se tem telefone, verificar no banco
    if (telefone) {
      try {
        const r = await fetch(`/api/client/termos-status?telefone=${encodeURIComponent(telefone)}`)
        const d = await r.json()
-       if (d.versao_termos === '1.0' && d.aceitou_termos) {
-         // Já aceitou no banco — esconder modal
-         localStorage.setItem(STORAGE_TERMOS_PASSAGEIRO, 'true')
+       
+       if (jaAceitouNoLocalStorage && d.versao_termos === '1.0' && d.aceitou_termos) {
+         // Já aceitou — esconder modal
          modal.style.display = 'none'
          modal.classList.add('hidden')
          conteudo.classList.remove('hidden')
          return
        } else if (!d.aceitou_termos || d.versao_termos !== '1.0') {
-         localStorage.removeItem(STORAGE_TERMOS_PASSAGEIRO)
+         // Precisar aceitar — mostrar modal
+         localStorage.removeItem(STORAGE_KEY)
          modal.style.display = 'flex'
          modal.classList.remove('hidden')
          conteudo.classList.add('hidden')
+         return
+       } else {
+         // Aceitou no banco — salvar no localStorage
+         localStorage.setItem(STORAGE_KEY, 'true')
+         modal.style.display = 'none'
+         modal.classList.add('hidden')
+         conteudo.classList.remove('hidden')
          return
        }
      } catch(e) {}
    }
    
    // Fallback: verificar localStorage
-   const termosAceitos = localStorage.getItem(STORAGE_TERMOS_PASSAGEIRO)
+   const termosAceitos = localStorage.getItem(STORAGE_KEY)
    if (termosAceitos === 'true' && !telefone) {
      modal.style.display = 'none'
      modal.classList.add('hidden')
      conteudo.classList.remove('hidden')
    } else if (termosAceitos !== 'true') {
      // Forçar reaceite
-     localStorage.removeItem(STORAGE_TERMOS_PASSAGEIRO)
+     localStorage.removeItem(STORAGE_KEY)
      modal.style.display = 'flex'
      modal.classList.remove('hidden')
      conteudo.classList.add('hidden')
@@ -561,7 +573,7 @@
    const check2 = document.getElementById('check-termos-passageiro-responsabilidade')?.checked
    if (!check1 || !check2) return
    
-   localStorage.setItem(STORAGE_TERMOS_PASSAGEIRO, 'true')
+   localStorage.setItem('passageiro_termos_aceitos_1.0', 'true')
    
    const telefone = localStorage.getItem('cliente_telefone')
    if (telefone) {

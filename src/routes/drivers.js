@@ -339,7 +339,17 @@ export default async function driversRoutes(fastify) {
     }
     
     await query(`
-      UPDATE drivers SET ativo = 1, status_cadastro = 'aprovado', token_perfil = $1, mobihub_id = $2 WHERE id = $3
+      UPDATE drivers SET 
+        ativo = 1, 
+        status_cadastro = 'aprovado', 
+        token_perfil = $1, 
+        mobihub_id = $2,
+        aceitou_termos = false,
+        versao_termos = null,
+        data_aceite_termos = null,
+        ip_aceite_termos = null,
+        hash_aceite_termos = null
+      WHERE id = $3
     `, [token, mobihubId, id])
 
     // Integração Asaas: criar subconta automaticamente

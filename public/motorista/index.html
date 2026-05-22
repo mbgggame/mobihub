@@ -922,13 +922,25 @@ socket.on('agendamento:alerta_30min', (data) => {
      window.driverData = driver
      const modal = document.getElementById('modal-termos')
      const conteudoPrincipal = document.getElementById('conteudo-principal')
+     const STORAGE_KEY = 'motorista_termos_aceitos_2.1'
      
-     // Mostrar modal se não aceitou ou se versão antiga
-     if (!driver.aceitou_termos || driver.versao_termos !== '2.1') {
+     // Verificar localStorage PRIMEIRO
+     const jaAceitouNoLocalStorage = localStorage.getItem(STORAGE_KEY) === 'true'
+     
+     if (jaAceitouNoLocalStorage && driver.aceitou_termos && driver.versao_termos === '2.1') {
+       // Já aceitou — esconder modal
+       modal.style.display = 'none'
+       modal.classList.add('hidden')
+       conteudoPrincipal.classList.remove('hidden')
+     } else if (!driver.aceitou_termos || driver.versao_termos !== '2.1') {
+       // Precisar aceitar — mostrar modal
+       localStorage.removeItem(STORAGE_KEY)
        modal.style.display = 'flex'
        modal.classList.remove('hidden')
        conteudoPrincipal.classList.add('hidden')
      } else {
+       // Aceitou no banco — salvar no localStorage
+       localStorage.setItem(STORAGE_KEY, 'true')
        modal.style.display = 'none'
        modal.classList.add('hidden')
        conteudoPrincipal.classList.remove('hidden')
@@ -1120,6 +1132,7 @@ socket.on('agendamento:alerta_30min', (data) => {
        
        if (res.ok) { 
          console.log('[DEBUG] res.ok is true')
+         localStorage.setItem('motorista_termos_aceitos_2.1', 'true')
          document.getElementById('modal-termos').classList.add('hidden') 
          document.getElementById('modal-termos').style.display = 'none' 
          document.getElementById('conteudo-principal').classList.remove('hidden') 
