@@ -349,7 +349,8 @@ async function aprovarMotorista(id) {
     console.log('[DEBUG] Aprovar motorista:', id)
     const response = await fetch(`/api/drivers/${id}/aprovar`, { 
       method: 'PUT', 
-      headers: H() 
+      headers: H(), 
+      body: JSON.stringify({}) 
     })
     console.log('[DEBUG] Response status:', response.status)
     if (!response.ok) {
@@ -394,7 +395,8 @@ async function reativarMotorista(id) {
     console.log('[DEBUG] Reativar motorista:', id)
     const response = await fetch(`/api/drivers/${id}/ativar`, { 
       method: 'PUT', 
-      headers: H() 
+      headers: H(), 
+      body: JSON.stringify({}) 
     })
     console.log('[DEBUG] Response status:', response.status)
     if (!response.ok) {
@@ -416,7 +418,8 @@ async function excluirMotorista(id) {
     console.log('[DEBUG] Excluir motorista:', id)
     const response = await fetch(`/api/drivers/${id}/excluir`, { 
       method: 'DELETE', 
-      headers: H() 
+      headers: H(), 
+      body: JSON.stringify({}) 
     })
     console.log('[DEBUG] Response status:', response.status)
     if (!response.ok) {
