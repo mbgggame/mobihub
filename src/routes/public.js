@@ -507,6 +507,9 @@ export default async function publicRoutes(fastify) {
     } 
     const clientResult = await query('SELECT * FROM clients WHERE telefone = $1', [celular]) 
     let client = clientResult.rows[0] 
+    if (client && client.ativo === false) { 
+      return reply.code(403).send({ error: 'Sua conta está inativa. Entre em contato com o suporte MobiHub.' }) 
+    }
     if (client && client.balance_due > 0) {
       return reply.code(400).send({ 
         error: 'Você tem um débito pendente. Regularize para solicitar uma nova corrida.', 

@@ -1284,7 +1284,9 @@
 
      const d = await r.json() 
      if (!r.ok) { 
-       if (d.link_pagamento) {
+       if (r.status === 403) {
+         alert('⚠️ ' + (d.error || 'Sua conta está inativa. Entre em contato com o suporte MobiHub.'))
+       } else if (d.link_pagamento) {
          if (confirm(`Erro: ${d.error}\n\nClique OK para ir ao link de pagamento.`)) {
            window.open(d.link_pagamento, '_blank')
          }
