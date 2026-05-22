@@ -924,26 +924,29 @@ socket.on('agendamento:alerta_30min', (data) => {
      const conteudoPrincipal = document.getElementById('conteudo-principal')
      const STORAGE_KEY = 'motorista_termos_aceitos_2.1'
      
-     // Verificar localStorage PRIMEIRO
+     // Verificar localStorage PRIMEIRO!
      const jaAceitouNoLocalStorage = localStorage.getItem(STORAGE_KEY) === 'true'
      
-     if (jaAceitouNoLocalStorage && driver.aceitou_termos && driver.versao_termos === '2.1') {
-       // Já aceitou — esconder modal
+     if (jaAceitouNoLocalStorage) {
+       // Já aceitou no localStorage — não mostra modal, NÃO CHAMA A API!
        modal.style.display = 'none'
        modal.classList.add('hidden')
        conteudoPrincipal.classList.remove('hidden')
-     } else if (!driver.aceitou_termos || driver.versao_termos !== '2.1') {
-       // Precisar aceitar — mostrar modal
-       localStorage.removeItem(STORAGE_KEY)
-       modal.style.display = 'flex'
-       modal.classList.remove('hidden')
-       conteudoPrincipal.classList.add('hidden')
      } else {
-       // Aceitou no banco — salvar no localStorage
-       localStorage.setItem(STORAGE_KEY, 'true')
-       modal.style.display = 'none'
-       modal.classList.add('hidden')
-       conteudoPrincipal.classList.remove('hidden')
+       // Só verifica o banco se NÃO tem no localStorage
+       if (!driver.aceitou_termos || driver.versao_termos !== '2.1') {
+         // Precisar aceitar — mostrar modal
+         localStorage.removeItem(STORAGE_KEY)
+         modal.style.display = 'flex'
+         modal.classList.remove('hidden')
+         conteudoPrincipal.classList.add('hidden')
+       } else {
+         // Aceitou no banco — salvar no localStorage
+         localStorage.setItem(STORAGE_KEY, 'true')
+         modal.style.display = 'none'
+         modal.classList.add('hidden')
+         conteudoPrincipal.classList.remove('hidden')
+       }
      }
      
      renderizarPerfil(driver) 
