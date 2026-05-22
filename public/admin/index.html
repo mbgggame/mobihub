@@ -44,7 +44,7 @@
 </div>
 
 <!-- SEÇÃO BANCO DE DADOS -->
-<div id="secao-db" class="hidden max-w-6xl mx-auto px-4 py-4">
+<div id="secao-db" class="hidden w-full px-4 py-4">
   <div class="flex gap-2 mb-4 flex-wrap">
     <button onclick="mostrarAbaDb('clientes')" id="aba-db-clientes" class="bg-green-50 text-green-700 border border-green-200 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors">👥 Clientes</button>
     <button onclick="mostrarAbaDb('motoristas')" id="aba-db-motoristas" class="bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors">🚖 Motoristas</button>
@@ -68,7 +68,7 @@
 
 <!-- MODAL VER TERMO -->
 <div id="modal-termo" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-50">
-  <div id="conteudo-termo" class="bg-white rounded-2xl max-w-lg w-full p-6 max-h-screen overflow-y-auto">
+  <div id="conteudo-termo" class="bg-white rounded-2xl max-w-[900px] w-full p-6 max-h-screen overflow-y-auto">
     <div class="flex justify-between items-center mb-4">
       <h2 class="font-semibold text-lg">📄 Termo de Aceite — MobiHub</h2>
       <button onclick="fecharModalTermo()" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
@@ -79,36 +79,31 @@
         <p class="font-semibold text-gray-800">ELVIVA GROUP LTDA</p>
         <p class="text-gray-600">CNPJ: 62.444.354/0001-82</p>
       </div>
-      <div>
-        <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Nome</p>
-        <p id="termo-nome" class="font-medium text-gray-800"></p>
+      
+      <!-- Timeline -->
+      <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+        <p class="text-xs text-green-700 uppercase tracking-wide mb-3">Timeline</p>
+        <div class="space-y-2">
+          <div class="flex items-start gap-3">
+            <span class="text-lg">✅</span>
+            <div>
+              <p class="font-medium text-gray-900" id="termo-timeline-data"></p>
+              <p class="text-xs text-gray-600">Usuário aceitou o termo versão <span id="termo-timeline-versao"></span></p>
+              <div class="text-xs text-gray-500 mt-1">
+                📍 IP: <span id="termo-timeline-ip"></span><br>
+                👤 Nome: <span id="termo-timeline-nome"></span> | CPF: <span id="termo-timeline-cpf"></span> | Tel: <span id="termo-timeline-telefone"></span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div>
-        <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">CPF</p>
-        <p id="termo-cpf" class="font-medium text-gray-800"></p>
-      </div>
-      <div>
-        <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Telefone</p>
-        <p id="termo-telefone" class="font-medium text-gray-800"></p>
-      </div>
-      <div>
-        <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Versão do Termo</p>
-        <p id="termo-versao" class="font-medium text-gray-800"></p>
-      </div>
-      <div>
-        <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Data/Hora do Aceite</p>
-        <p id="termo-data" class="font-medium text-gray-800"></p>
-      </div>
-      <div>
-        <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">IP do Aceite</p>
-        <p id="termo-ip" class="font-medium text-gray-800"></p>
-      </div>
-      <div>
-        <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Aceite de Responsabilidade/Arbitragem</p>
-        <p id="termo-aceite" class="font-medium text-gray-800"></p>
-      </div>
+      
       <hr class="border-gray-200 my-4">
-      <p class="text-xs text-gray-600 text-center">
+      
+      <!-- Termo original completo -->
+      <div id="termo-texto-completo" class="p-4 bg-gray-50 rounded-lg border border-gray-200 text-xs text-gray-700 whitespace-pre-wrap"></div>
+      
+      <p class="text-xs text-gray-600 text-center mt-4">
         Este documento tem validade jurídica conforme LGPD e Marco Civil da Internet.
       </p>
     </div>
@@ -662,7 +657,7 @@ function abrirModalTermo(tipo, id) {
   const item = dadosAtuaisDb.find(x => x.id === id)
   if (!item) return
   
-  let nome, cpf, telefone, versao, data, ip, aceite, textoTermo = ''
+  let nome, cpf, telefone, versao, data, ip, aceite
   if (tipo === 'cliente') {
     nome = item.nome || '—'
     cpf = item.cpf || '—'
@@ -671,7 +666,6 @@ function abrirModalTermo(tipo, id) {
     data = item.data_aceite_termos ? new Date(item.data_aceite_termos).toLocaleString('pt-BR') : '—'
     ip = item.ip_aceite_termos || '—'
     aceite = item.aceitou_termos ? '✅ Sim' : '❌ Não'
-    textoTermo = textoTermoPassageiro
   } else if (tipo === 'motorista') {
     nome = item.nome || '—'
     cpf = item.cpf || '—'
@@ -680,27 +674,27 @@ function abrirModalTermo(tipo, id) {
     data = item.data_aceite_termos ? new Date(item.data_aceite_termos).toLocaleString('pt-BR') : '—'
     ip = item.ip_aceite_termos || '—'
     aceite = item.aceite_arbitragem ? '✅ Sim' : '❌ Não'
-    textoTermo = textoTermoMotorista
   }
   
-  document.getElementById('termo-nome').textContent = nome
-  document.getElementById('termo-cpf').textContent = cpf
-  document.getElementById('termo-telefone').textContent = telefone
-  document.getElementById('termo-versao').textContent = versao
-  document.getElementById('termo-data').textContent = data
-  document.getElementById('termo-ip').textContent = ip
-  document.getElementById('termo-aceite').textContent = aceite
-  
-  const divTextoTermo = document.getElementById('termo-texto-completo')
-  if (!divTextoTermo) {
-    const containerTermo = document.getElementById('conteudo-termo').querySelector('.space-y-3')
-    const novoDiv = document.createElement('div')
-    novoDiv.id = 'termo-texto-completo'
-    novoDiv.className = 'mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200 text-xs text-gray-700 whitespace-pre-wrap'
-    containerTermo.appendChild(novoDiv)
+  document.getElementById('termo-timeline-data').textContent = data
+  document.getElementById('termo-timeline-versao').textContent = versao
+  document.getElementById('termo-timeline-ip').textContent = ip
+  document.getElementById('termo-timeline-nome').textContent = nome
+  document.getElementById('termo-timeline-cpf').textContent = cpf
+  document.getElementById('termo-timeline-telefone').textContent = telefone
+
+  // Busca o termo original no banco
+  if (versao && versao !== '—') {
+    fetch(`/api/admin/db/termo/${versao}`, { headers: headers() })
+      .then(r => r.json())
+      .then(termo => {
+        if (termo) {
+          document.getElementById('termo-texto-completo').textContent = termo.conteudo
+        }
+      })
+      .catch(e => console.error('[TERMO ERROR', e))
   }
-  document.getElementById('termo-texto-completo').textContent = textoTermo
-  
+
   document.getElementById('modal-termo').classList.remove('hidden')
 }
 
@@ -754,7 +748,7 @@ async function carregarDadosDb() {
       if (r.status === 401) { location.href = '/admin/login'; return }
       dados = await r.json()
       dadosAtuaisDb = dados
-      tabelaHeaders = ['ID', 'Nome', 'Telefone', 'CPF', 'Placa', 'Carro', 'Chave Pix', 'Avaliação Média', 'Total Viagens', 'Saldo Devedor', 'Termo', 'Ações']
+      tabelaHeaders = ['ID', 'Nome', 'Telefone', 'Email', 'CPF', 'CNH', 'Placa', 'Carro', 'Chave Pix', 'Avaliação Média', 'Total Viagens', 'Saldo Devedor', 'Termo', 'Ações']
     } else if (abaAtualDb === 'corridas') {
       const r = await fetch('/api/admin/db/corridas', { headers: headers() })
       if (r.status === 401) { location.href = '/admin/login'; return }
@@ -821,9 +815,10 @@ async function carregarDadosDb() {
               } else if (abaAtualDb === 'motoristas') {
                 const avaliacao = d.media_avaliacao ? `${Number(d.media_avaliacao).toFixed(1)} ⭐` : '—'
                 const carro = `${d.modelo_carro || ''} ${d.ano_carro || ''} ${d.cor_carro || ''}`.trim()
+                const cnh = d.cnh_frente_base64 ? '✅' : '❌'
                 cells = [
-                  d.id, d.nome || '—', d.telefone || '—', d.cpf || '—', d.placa || '—',
-                  carro, d.chave_pix || '—',
+                  d.id, d.nome || '—', d.telefone || '—', d.email || '—', d.cpf || '—',
+                  cnh, d.placa || '—', carro, d.chave_pix || '—',
                   avaliacao, d.total_viagens || 0,
                   d.balance_due ? `R$ ${Number(d.balance_due).toFixed(2)}` : '—',
                   d.aceitou_termos ? '✅' : '❌', 

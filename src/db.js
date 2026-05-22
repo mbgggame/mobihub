@@ -418,6 +418,15 @@ export async function initDB() {
       ativo BOOLEAN DEFAULT false,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS termos_versoes (
+      id SERIAL PRIMARY KEY,
+      versao VARCHAR(10) UNIQUE NOT NULL,
+      tipo VARCHAR(20) NOT NULL,
+      titulo TEXT NOT NULL,
+      conteudo TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
   `) 
  
   // Inserir configuração padrão de gateway se não existir
@@ -453,6 +462,95 @@ export async function initDB() {
   await seedAdmin() 
   await seedConfigs() 
   await seedTarifas()
+
+  // Inserir termos oficiais
+  const textoTermoPassageiro = `TERMOS E CONDIÇÕES DE USO DA PLATAFORMA MOBIHUB – VERSÃO PASSAGEIRO
+Última atualização: Maio de 2026. Este instrumento rege a relação jurídica entre a ELVIVA GROUP LTDA e o Passageiro. O aceite eletrônico é condição mandatória para acesso e utilização do aplicativo MobiHub.
+
+CLÁUSULA 1 – DAS PARTES CONTRATANTES
+1.1. PROVEDORA: ELVIVA GROUP LTDA, sediada na Rua Joaquim Lírio, nº 237, Apt 1302-3 VG, Praia do Canto, Vitória - ES, CEP 29.055-460, CNPJ 62.444.354/0001-82, titular dos direitos sobre a plataforma MobiHub.
+1.2. PASSAGEIRO: Pessoa física plenamente capaz, devidamente cadastrada na plataforma, que utiliza o software para conectar-se a prestadores autônomos de serviços de transporte.
+
+CLÁUSULA 2 – DA NATUREZA JURÍDICA DO SERVIÇO
+2.1. A MobiHub atua exclusivamente como licenciadora de software (marketplace tecnológico), conforme CNAE 74.90-1-04.
+2.2. A MobiHub NÃO é empresa de transporte, não possui frota, não atua como seguradora e não exerce atividade de transportadora.
+2.3. O contrato de transporte é celebrado única e exclusivamente entre o Passageiro e o Motorista Parceiro Autônomo. O serviço da MobiHub encerra-se no exato instante em que a conexão tecnológica entre as partes é consolidada.
+
+CLÁUSULA 3 – DA EXCLUSÃO DE RESPONSABILIDADE CIVIL
+3.1. A MobiHub fica integralmente isenta de responsabilidade por danos decorrentes do trajeto, incluindo:
+a) Acidentes, colisões, mortes, invalidez ou lesões corporais durante o deslocamento;
+b) Roubos, assaltos, agressões físicas, verbais ou psicológicas praticadas por motoristas ou terceiros;
+c) Delitos contra a dignidade sexual, assédio ou importunação no interior do veículo;
+d) Perda, furto, esquecimento ou extravio de pertences no veículo;
+e) Atrasos, perda de voos, compromissos profissionais ou lucros cessantes.
+
+CLÁUSULA 4 – DA LIMITAÇÃO INDENIZATÓRIA
+4.1. Na hipótese de condenação por falha técnica exclusiva do software, o valor máximo de indenização estará limitado ao valor pago pela corrida geradora da controvérsia ou ao teto de R$ 200,00, aplicando-se o menor valor.
+
+CLÁUSULA 5 – DA RESPONSABILIDADE DO PASSAGEIRO
+5.1. O Passageiro é responsável por danos materiais, avarias, vandalismo ou higienização extraordinária (incluindo vômito) causados ao veículo do Motorista.
+5.2. O Passageiro autoriza expressamente a MobiHub a efetuar débitos automáticos no cartão cadastrado para ressarcimento do motorista lesado, sem necessidade de autorização prévia.
+
+CLÁUSULA 6 – DA TARIFA E CANCELAMENTO
+6.1. A MobiHub utiliza algoritmos de preço dinâmico que podem flutuar conforme oferta, demanda e condições de mercado.
+6.2. O cancelamento após o prazo de tolerância configurado no aplicativo (contado da aceitação pelo motorista) gerará cobrança automática de Taxa de Cancelamento.
+
+CLÁUSULA 7 – CONDUTA E DESATIVAÇÃO DA CONTA
+7.1. O Passageiro deve portar-se de modo respeitoso, usar cinto de segurança e não transportar substâncias ilícitas ou armas.
+7.2. A MobiHub pode suspender ou desativar a conta do Passageiro sem aviso prévio e sem direito a indenização em caso de: fraudes, perfis falsos, chargebacks indevidos, assédio ou descumprimento destes termos.
+
+CLÁUSULA 8 – DO FORO DE ELEIÇÃO
+8.1. Fica eleito o Foro da Comarca de Vitória/ES para dirimir controvérsias, ressalvadas as hipóteses de competência absoluta previstas na legislação consumerista.`
+
+  const textoTermoMotorista = `CONTRATO DE LICENCIAMENTO DE SOFTWARE E INTERMEDIAÇÃO DE NEGÓCIOS DIGITAIS
+
+1. Das Partes Contratantes
+De um lado, ELVIVA GROUP LTDA, pessoa jurídica de direito privado, sediada na Rua Joaquim Lírio, nº 237, Apt 1302-3 VG, Praia do Canto, Vitória - ES, CEP 29.055-460, inscrita no CNPJ sob o nº 62.444.354/0001-82, doravante denominada simplesmente MobiHub; e, de outro lado, o Motorista Parceiro, profissional autônomo e independente, devidamente cadastrado e aprovado na plataforma.
+
+2. Da Natureza do Serviço: Intermediação Pura e Natureza Civil
+2.1. A MobiHub fornece exclusivamente uma licença de uso de software (aplicativo) para intermediação e agenciamento de negócios (CNAE 74.90-1-04).
+2.2. A MobiHub não presta serviços de transporte, não possui frota de veículos, não atua como seguradora e não é concessionária de serviço público.
+2.3. O presente contrato possui natureza estritamente cível e comercial. O Motorista Parceiro reconhece que a MobiHub é uma plataforma tecnológica de marketplace e que o cliente final do motorista é o Passageiro, e não a MobiHub.
+
+3. Da Inexistência de Vínculo Empregatício, Subordinação e Indícios Trabalhistas
+3.1. O Motorista Parceiro declara estar ciente de que atua como prestador de serviços estritamente autônomo e independente.
+3.2. Não há qualquer relação de subordinação, habitualidade, exclusividade ou dependência econômica entre o Motorista Parceiro e a MobiHub.
+3.3. O Motorista Parceiro possui total autonomia para definir seus dias, horários e locais de trabalho, bem como ligar ou desligar o aplicativo quando lhe convier, sem qualquer penalidade por ociosidade.
+3.4. O Motorista Parceiro poderá cadastrar-se, prestar serviços e utilizar simultaneamente quaisquer outros aplicativos de tecnologia ou plataformas concorrentes no mercado, inexistindo obrigação de exclusividade.
+3.5. O Motorista Parceiro é o único responsável por determinar sua própria estratégia comercial, rotas de navegação e aceitação ou recusa de chamadas, não recebendo ordens, diretrizes de produtividade mínima ou fiscalização de jornada por parte da MobiHub.
+
+4. Da Indenidade e Blindagem de Responsabilidade Civil, Trabalhista e Criminal
+4.1. O Motorista Parceiro obriga-se a manter a MobiHub isenta de qualquer reclamação trabalhista, cível, fiscal, previdenciária ou criminal que venha a ser discutida em juízo ou fora dele.
+4.2. Caso a MobiHub seja demandada judicialmente por atos praticados pelo Motorista Parceiro (incluindo acidentes, multas, discussões de vínculo, assédio ou agressões), o Motorista autoriza a sua denunciação à lide, chamamento ao processo ou assunção imediata do polo passivo, arcando integralmente com os custos advocatícios, custas processuais, depósitos recursais e eventuais condenações.
+4.3. A responsabilidade por qualquer dano material, moral, estético ou corporal causado aos Passageiros ou a terceiros durante a execução do transporte é exclusiva e integral do Motorista Parceiro.
+
+5. Das Obrigações do Motorista Parceiro e Requisitos de Segurança
+5.1. Manter o veículo automotor com a manutenção preventiva em dia, limpo e com toda a documentação regularizada (CRLV e CNH com observação EAR).
+5.2. Arcar com todos os custos operacionais da sua atividade, tais como combustível, seguro de terceiros (APP), impostos, internet móvel e depreciação do bem.
+5.3. Manter ativa, válida e integralmente paga uma apólice de seguro de Responsabilidade Civil de Passageiros (Seguro APP - Acidentes Pessoais a Passageiros), sob pena de descredenciamento imediato.
+
+6. Da Taxa de Intermediação e Repasses Financeiros
+6.1. Pelo serviço de intermediação tecnológica, o Motorista Parceiro pagará à MobiHub uma taxa de intermediação por corrida realizada, retida diretamente na fonte ou cobrada no fechamento dos repasses.
+6.2. A MobiHub atua como mera mandatária do Motorista Parceiro para fins de facilitação de pagamento, recebendo os valores pagos pelos Passageiros via cartão/PIX e repassando-os ao Motorista após deduzida a taxa de intermediação.
+
+7. Da Rescisão, Suspensão e Desativação da Conta
+7.1. Este contrato poderá ser rescindido por qualquer das partes, a qualquer momento, sem direito a indenização, mediante o simples encerramento da conta no aplicativo ou notificação digital.
+7.2. A MobiHub reserva-se o direito de suspender temporariamente ou desativar definitivamente a conta do Motorista Parceiro, sem aviso prévio e sem que caiba qualquer indenização por lucros cessantes, em caso de: a) Desrespeito aos critérios mínimos de avaliação; b) Suspeita de fraudes tecnológicas; c) Violação de segurança, assédio ou violência; d) Descumprimento de qualquer cláusula deste instrumento.
+
+CLÁUSULA 8 — CLÁUSULA COMPROMISSÓRIA DE ARBITRAGEM (DESTAQUE OBRIGATÓRIO)
+O MOTORISTA PARCEIRO DECLARA CONCORDAR EXPRESSAMENTE QUE QUALQUER LITÍGIO, DISPUTA, DIVERGÊNCIA OU RECLAMAÇÃO DECORRENTE DESTE CONTRATO, DE SUA INTERPRETAÇÃO OU DE SUA EXECUÇÃO (INCLUINDO QUESTÕES SOBRE SUSPENSÃO OU BLOQUEIO DE CONTA), SERÁ RESOLVIDO DEFINITIVAMENTE POR MEIO DE ARBITRAGEM, RENUNCIANDO EXPRESSAMENTE AO DIREITO DE RECORRER À JUSTIÇA COMUM (PODER JUDICIÁRIO).
+8.1. A arbitragem será administrada pela CAMARB (Câmara de Mediação e Arbitragem Empresarial - Brasil) ou pela Plataforma de Arbitragem Digital Arbtrato, conduzida de forma 100% eletrônica/online.
+8.2. A sentença arbitral terá caráter definitivo, produzindo os mesmos efeitos de uma sentença judicial, sendo vinculante para ambas as partes.
+8.3. O idioma oficial da arbitragem será o português e a lei aplicável será a legislação da República Federativa do Brasil.
+8.4. As disputas serão resolvidas de forma estritamente individual, sendo proibida a instauração de arbitragens coletivas contra a MobiHub.`
+
+  await query(`
+    INSERT INTO termos_versoes (versao, tipo, titulo, conteudo) 
+    VALUES 
+      ('1.0', 'passageiro', 'TERMOS E CONDIÇÕES DE USO DA PLATAFORMA MOBIHUB – VERSÃO PASSAGEIRO', $1),
+      ('2.1', 'motorista', 'CONTRATO DE LICENCIAMENTO DE SOFTWARE E INTERMEDIAÇÃO DE NEGÓCIOS DIGITAIS', $2)
+    ON CONFLICT (versao) DO NOTHING
+  `, [textoTermoPassageiro, textoTermoMotorista])
 
   // Adicionar coluna com_lider se não existir
   await query(`ALTER TABLE split_rules ADD COLUMN IF NOT EXISTS com_lider BOOLEAN DEFAULT false`)
