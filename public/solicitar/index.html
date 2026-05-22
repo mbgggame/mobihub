@@ -501,8 +501,18 @@
    const STORAGE_KEY = 'passageiro_termos_aceitos_1.0'
    
    const telefone = localStorage.getItem('cliente_telefone')
+   const jaAceitouNoLocalStorage = localStorage.getItem(STORAGE_KEY) === 'true'
    
-   // Verificar NO BANCO PRIMEIRO!
+   // Verificar localStorage PRIMEIRO!
+   if (jaAceitouNoLocalStorage && telefone) {
+     // Já aceitou no localStorage — ir direto para verificarCadastro()
+     modal.style.display = 'none'
+     modal.classList.add('hidden')
+     verificarCadastro()
+     return
+   }
+   
+   // Só chama a API se não tem no localStorage
    if (telefone) {
      try {
        const r = await fetch(`/api/client/termos-status?telefone=${encodeURIComponent(telefone)}`)
