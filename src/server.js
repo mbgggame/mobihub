@@ -28,7 +28,7 @@ export function getIo() {
 }
  
 
-const fastify = Fastify({ logger: true }) 
+const fastify = Fastify({ logger: true, bodyLimit: 10485760 }) 
 
 await fastify.register(fastifyCors, { 
    origin: true, 
