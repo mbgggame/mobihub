@@ -38,7 +38,7 @@ export default async function adminDbRoutes(fastify) {
     return { mensagem: 'Cliente reativado com sucesso' }
   })
 
-  fastify.delete('/api/admin/clients/:id/excluir', { preHandler: requireAuth }, async (request, reply) => {
+  fastify.delete('/api/admin/clients/:id/excluir', { preHandler: requireAuth, schema: { body: {} } }, async (request, reply) => {
     const { id } = request.params
     // Primeiro deletar avaliações relacionadas às corridas do cliente
     await query('DELETE FROM ratings WHERE ride_id IN (SELECT id FROM rides WHERE client_id = $1)', [id])

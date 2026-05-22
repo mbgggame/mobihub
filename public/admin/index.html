@@ -766,6 +766,26 @@ async function reativarCliente(id) {
   }
 }
 
+async function excluirCliente(id) {
+  if (!confirm('Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.')) return
+  try {
+    const r = await fetch(`/api/admin/clients/${id}/excluir`, {
+      method: 'DELETE',
+      headers: headers(),
+      body: JSON.stringify({})
+    })
+    if (r.ok) {
+      alert('Cliente excluído com sucesso!')
+      await carregarDadosDb()
+    } else {
+      const d = await r.json()
+      alert('Erro: ' + (d.error || d.mensagem))
+    }
+  } catch (e) {
+    alert('Erro de conexão: ' + e.message)
+  }
+}
+
 function abrirModalCadastro(tipo, id) {
   const item = dadosAtuaisDb.find(x => x.id === id)
   if (!item) return
@@ -1015,7 +1035,8 @@ async function carregarDadosDb() {
                   d.aceitou_termos ? '✅' : '❌', 
                   `${acaoBotao}
                    <button onclick="abrirModalCadastro('cliente', ${d.id})" class="text-xs bg-gray-100 text-gray-700 border border-gray-300 rounded-lg px-3 py-1 hover:bg-gray-200 mr-2">👤 Ver Cadastro</button>
-                   ${d.aceitou_termos ? `<button onclick="abrirModalTermo('cliente', ${d.id})" class="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-3 py-1 hover:bg-blue-100">📄 Ver Termo</button>` : ''}`
+                   ${d.aceitou_termos ? `<button onclick="abrirModalTermo('cliente', ${d.id})" class="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-3 py-1 hover:bg-blue-100 mr-2">📄 Ver Termo</button>` : ''}
+                   <button onclick="excluirCliente(${d.id})" class="text-xs bg-red-100 text-red-800 border border-red-300 rounded-lg px-3 py-1 hover:bg-red-200">🗑️ Excluir</button>`
                 ]
               } else if (abaAtualDb === 'motoristas') {
                 const avaliacao = d.media_avaliacao ? `${Number(d.media_avaliacao).toFixed(1)} ⭐` : '—'
