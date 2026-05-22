@@ -1118,7 +1118,7 @@ socket.on('agendamento:alerta_30min', (data) => {
          // Atualiza os dados do driver em memória para evitar reload com cache 
          if (window.driverData) { 
            window.driverData.aceitou_termos = true 
-           window.driverData.versao_termos = '2.0' 
+           window.driverData.versao_termos = '2.1' 
          } 
        } else { 
          const textoErro = await res.text(); 
