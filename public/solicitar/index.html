@@ -11,14 +11,14 @@
   <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet">
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
   <style>
-    #map { height: 280px; } 
+    #map { height: 200px; } 
     .autocomplete-list { position: absolute; z-index: 1000; background: white; width: 100%; border: 1px solid #e5e7eb; border-radius: 0.5rem; margin-top: 0.25rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); max-height: 200px; overflow-y: auto; }
     .autocomplete-item { padding: 0.75rem 1rem; cursor: pointer; border-bottom: 1px solid #f3f4f6; font-size: 0.875rem; }
     .autocomplete-item:last-child { border-bottom: none; }
     .autocomplete-item:hover { background: #f9fafb; }
   </style> 
 </head> 
-<body class="bg-gray-50 min-h-screen pb-10"> 
+<body class="bg-gray-50 min-h-screen pb-10 overflow-x-hidden"> 
 
 <!-- MODAL DE ACEITE DOS TERMOS PARA PASSAGEIRO -->
 <div id="modal-termos-passageiro" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4 py-6">
@@ -235,7 +235,7 @@
   <button onclick="abrirModalHistorico()" class="text-sm bg-green-700 px-3 py-1.5 rounded-lg">🕒 Meu Histórico</button>
 </div> 
 
-<div id="conteudo-solicitar" class="max-w-lg mx-auto px-4 py-4 space-y-4"> 
+<div id="conteudo-solicitar" class="w-full px-4 py-4 space-y-4"> 
 
   <!-- TELA 1: CADASTRO --> 
   <div id="tela-cadastro"> 
@@ -328,7 +328,7 @@
     </div> 
 
     <div class="rounded-xl overflow-hidden border border-gray-200"> 
-      <div id="map" style="height: 200px !important; max-height: 200px;"></div> 
+      <div id="map" style="height:200px; width:100%; border-radius:12px;"></div> 
     </div> 
     <p id="txt-motoristas-online" class="text-xs text-center text-gray-400 py-1">Carregando motoristas...</p>
 
