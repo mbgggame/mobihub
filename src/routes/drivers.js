@@ -885,4 +885,28 @@ export default async function driversRoutes(fastify) {
     
     return finalDrivers 
   })
+
+  // Rota pública: app motorista consulta status e token pelo CPF
+  fastify.get('/api/motorista/status-cadastro', async (request, reply) => {
+    const { cpf } = request.query
+    if (!cpf) {
+      return reply.code(400).send({ error: 'CPF obrigatório' })
+    }
+    try {
+      const result = await query(
+        'SELECT status_cadastro, token_perfil, ativo FROM drivers WHERE cpf = $1',
+        [cpf.replace(/\D/g, '')]
+      )
+      if (result.rows.length === 0) {
+        return reply.send({ status: 'nao_encontrado', token: null })
+      }
+      const driver = result.rows[0]
+      return reply.send({
+        status: driver.status_cadastro,
+        token: driver.ativo === 1 || driver.ativo === true ? driver.token_perfil : null
+      })
+    } catch (err) {
+      return reply.code(500).send({ error: 'Erro ao consultar status' })
+    }
+  })
 }

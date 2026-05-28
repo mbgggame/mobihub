@@ -1,0 +1,10 @@
+R_DEF: Internal format may change without notice
+local
+id btnMotorista
+id btnPassageiro
+id webView
+layout activity_main
+layout activity_splash
+mipmap ic_launcher
+string app_name
+style Theme.MobiHub
