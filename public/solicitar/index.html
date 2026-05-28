@@ -285,7 +285,7 @@
           <span id="sua-nota-texto" class="text-xs font-medium text-yellow-700"></span>
         </div>
       </div>
-      <button onclick="abrirModalEditarDados()" class="text-xs text-gray-400 hover:text-gray-600 underline">✏️ Editar meus dados</button> 
+      <button onclick="abrirModalEditarDados()" class="text-xs text-gray-400 hover:text-gray-600 underline flex-shrink-0 whitespace-nowrap">✏️ Editar meus dados</button> 
     </div> 
 
     <div class="flex gap-2"> 
@@ -312,9 +312,9 @@
          <div class="flex gap-2 mt-1"> 
            <input id="busca-orig" type="text" placeholder="Ex: Aeroporto, Shopping, Rua X 123..." 
              class="flex-1 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
-           <button onclick="usarLocalizacaoAtual()" style="white-space:nowrap; font-size:12px;"
-             class="text-xs text-green-600 border border-green-200 rounded-lg px-2 py-1 hover:bg-green-50 flex-shrink-0 flex items-center gap-1"> 
-             📍 Minha localização 
+           <button onclick="usarLocalizacaoAtual()" 
+             class="text-xs text-green-600 border border-green-200 rounded-lg px-2 py-2 hover:bg-green-50 flex-shrink-0 whitespace-nowrap"> 
+             📍 
            </button> 
          </div> 
          <div id="lista-orig" class="autocomplete-list hidden"></div>
