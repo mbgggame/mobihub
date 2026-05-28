@@ -375,17 +375,19 @@
     <div class="bg-white border border-gray-200 rounded-xl p-4">
       <label class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-3 block">💳 Forma de Pagamento</label>
       <div class="grid grid-cols-2 gap-2">
-        <button type="button" onclick="selecionarFormaPagamento('1')" data-valor="1"
+        <button type="button" style="pointer-events:none; opacity:0.45" data-valor="1"
           class="forma-pagamento-btn border border-gray-200 rounded-lg py-3 text-sm font-semibold hover:border-blue-300 hover:bg-blue-50 transition-all">
-          💵 Dinheiro
+          <span>💵 Dinheiro</span>
+          <span style="display:block; font-size:10px; color:#666;">Em breve</span>
         </button>
         <button type="button" onclick="selecionarFormaPagamento('2')" data-valor="2"
           class="forma-pagamento-btn border border-gray-200 rounded-lg py-3 text-sm font-semibold hover:border-blue-300 hover:bg-blue-50 transition-all">
           📱 Pix
         </button>
-        <button type="button" onclick="selecionarFormaPagamento('3')" data-valor="3"
+        <button type="button" style="pointer-events:none; opacity:0.45" data-valor="3"
           class="forma-pagamento-btn border border-gray-200 rounded-lg py-3 text-sm font-semibold hover:border-blue-300 hover:bg-blue-50 transition-all">
-          💳 Cartão
+          <span>💳 Cartão</span>
+          <span style="display:block; font-size:10px; color:#666;">Em breve</span>
         </button>
         <button id="btn-creditos" type="button" onclick="selecionarFormaPagamento('4')" data-valor="4"
           class="forma-pagamento-btn border border-gray-200 rounded-lg py-3 text-sm font-semibold hover:border-blue-300 hover:bg-blue-50 transition-all hidden">
