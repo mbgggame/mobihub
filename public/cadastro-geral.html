@@ -65,8 +65,32 @@
         </div>
         <div>
           <label class="text-sm font-semibold text-zinc-400">Data de Nascimento</label>
-          <input id="f-data-nascimento" type="date"
-            class="mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"/>
+          <div style="display:flex; gap:8px; margin-top: 8px;">
+            <select name="dia_nascimento" id="dia_nascimento" required
+              style="flex:1; background:#27272a; border:1px solid #3f3f46; border-radius:12px; padding:14px 8px; font-size:14px; color:#e5e7eb;">
+              <option value="">Dia</option>
+            </select>
+            <select name="mes_nascimento" id="mes_nascimento" required
+              style="flex:1.5; background:#27272a; border:1px solid #3f3f46; border-radius:12px; padding:14px 8px; font-size:14px; color:#e5e7eb;">
+              <option value="">Mês</option>
+              <option value="01">Janeiro</option>
+              <option value="02">Fevereiro</option>
+              <option value="03">Março</option>
+              <option value="04">Abril</option>
+              <option value="05">Maio</option>
+              <option value="06">Junho</option>
+              <option value="07">Julho</option>
+              <option value="08">Agosto</option>
+              <option value="09">Setembro</option>
+              <option value="10">Outubro</option>
+              <option value="11">Novembro</option>
+              <option value="12">Dezembro</option>
+            </select>
+            <select name="ano_nascimento" id="ano_nascimento" required
+              style="flex:1.5; background:#27272a; border:1px solid #3f3f46; border-radius:12px; padding:14px 8px; font-size:14px; color:#e5e7eb;">
+              <option value="">Ano</option>
+            </select>
+          </div>
         </div>
         <div>
           <label class="text-sm font-semibold text-zinc-400">Tipo de Chave Pix</label>
@@ -374,6 +398,35 @@
       4: 'Termos de Uso'
     }
 
+    // Popular dias
+    const diaSelect = document.getElementById('dia_nascimento')
+    for (let d = 1; d <= 31; d++) {
+      const opt = document.createElement('option')
+      opt.value = String(d).padStart(2, '0')
+      opt.textContent = String(d).padStart(2, '0')
+      diaSelect.appendChild(opt)
+    }
+
+    // Popular anos (18 a 80 anos atrás)
+    const anoSelect = document.getElementById('ano_nascimento')
+    const anoAtual = new Date().getFullYear()
+    for (let a = anoAtual - 18; a >= anoAtual - 80; a--) {
+      const opt = document.createElement('option')
+      opt.value = a
+      opt.textContent = a
+      anoSelect.appendChild(opt)
+    }
+
+    function obterDataNascimento() {
+      const dia = document.getElementById('dia_nascimento').value
+      const mes = document.getElementById('mes_nascimento').value
+      const ano = document.getElementById('ano_nascimento').value
+      if (dia && mes && ano) {
+        return `${ano}-${mes}-${dia}`
+      }
+      return null
+    }
+
     function atualizarProgresso() {
       document.getElementById('etapa-atual').textContent = etapaAtual
       document.getElementById('etapa-titulo').textContent = etapasTitulos[etapaAtual]
@@ -402,7 +455,7 @@
         const email = document.getElementById('f-email').value.trim()
         const telefone = document.getElementById('f-telefone').value.trim()
         const cpf = document.getElementById('f-cpf').value.trim()
-        const dataNascimento = document.getElementById('f-data-nascimento').value
+        const dataNascimento = obterDataNascimento()
         const cep = document.getElementById('f-cep').value.trim()
         const logradouro = document.getElementById('f-logradouro').value.trim()
         const numero = document.getElementById('f-numero').value.trim()
@@ -636,7 +689,7 @@
           telefone: document.getElementById('f-telefone').value.trim(),
           email: document.getElementById('f-email').value.trim(),
           cpf: document.getElementById('f-cpf').value.trim(),
-          data_nascimento: document.getElementById('f-data-nascimento').value,
+          data_nascimento: obterDataNascimento(),
           cep: document.getElementById('f-cep').value.trim(),
           logradouro: document.getElementById('f-logradouro').value.trim(),
           numero: document.getElementById('f-numero').value.trim(),
