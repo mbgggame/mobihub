@@ -893,9 +893,11 @@ export default async function driversRoutes(fastify) {
       return reply.code(400).send({ error: 'CPF obrigatório' })
     }
     try {
+      const cpfLimpo = cpf.replace(/\D/g, '')
       const result = await query(
-        'SELECT status_cadastro, token_perfil, ativo FROM drivers WHERE cpf = $1',
-        [cpf.replace(/\D/g, '')]
+        `SELECT status_cadastro, token_perfil, ativo FROM drivers
+         WHERE regexp_replace(cpf, '[^0-9]', '', 'g') = $1`,
+        [cpfLimpo]
       )
       if (result.rows.length === 0) {
         return reply.send({ status: 'nao_encontrado', token: null })

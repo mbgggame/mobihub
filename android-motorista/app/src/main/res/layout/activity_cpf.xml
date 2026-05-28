@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="32dp"
+    android:background="#16a34a">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="MobiHub"
+        android:textColor="#FFFFFF"
+        android:textSize="36sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Motorista"
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:layout_marginBottom="48dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Digite seu CPF para continuar"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:layout_marginBottom="16dp"/>
+
+    <EditText
+        android:id="@+id/editCpf"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:hint="000.000.000-00"
+        android:textColorHint="#99FFFFFF"
+        android:textColor="#FFFFFF"
+        android:textSize="20sp"
+        android:inputType="number"
+        android:maxLength="11"
+        android:background="@android:color/transparent"
+        android:paddingBottom="8dp"
+        android:gravity="center"
+        android:layout_marginBottom="24dp"/>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#80FFFFFF"
+        android:layout_marginBottom="32dp"/>
+
+    <Button
+        android:id="@+id/btnContinuar"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="Continuar"
+        android:textColor="#16a34a"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:backgroundTint="#FFFFFF"
+        android:layout_marginBottom="16dp"
+        style="@style/Widget.AppCompat.Button"/>
+
+    <TextView
+        android:id="@+id/tvErro"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textColor="#FFE0E0"
+        android:textSize="14sp"
+        android:visibility="gone"/>
+
+</LinearLayout>
