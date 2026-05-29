@@ -517,7 +517,7 @@
        const r = await fetch(`/api/client/termos-status?telefone=${encodeURIComponent(telefone)}`)
        const d = await r.json()
        
-       if (d.aceitou_termos && d.versao_termos === '1.0') {
+       if (d.aceitou_termos) {
          // Já aceitou no banco — salvar no localStorage e chamar verificarCadastro()
          localStorage.setItem(STORAGE_KEY, 'true')
          modal.style.display = 'none'
