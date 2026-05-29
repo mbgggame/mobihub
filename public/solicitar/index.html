@@ -513,30 +513,27 @@
    
    // Só chama a API se não tem no localStorage
    if (telefone) {
-     try {
-       const r = await fetch(`/api/client/termos-status?telefone=${encodeURIComponent(telefone)}`)
-       const d = await r.json()
+     try { 
+       const r = await fetch(`/api/client/termos-status?telefone=${encodeURIComponent(telefone)}`) 
+       const d = await r.json() 
+       console.log('[TERMOS DEBUG]', JSON.stringify(d)) 
        
-       if (d.aceitou_termos) {
-         // Já aceitou no banco — salvar no localStorage e chamar verificarCadastro()
-         localStorage.setItem(STORAGE_KEY, 'true')
-         modal.style.display = 'none'
-         modal.classList.add('hidden')
-         verificarCadastro()
-         return
-       } else {
-         // Precisar aceitar — mostrar modal!
-         localStorage.removeItem(STORAGE_KEY)
-         // Esconder tela de cadastro e solicitar
-         document.getElementById('tela-cadastro').classList.add('hidden')
-         document.getElementById('tela-solicitar').classList.add('hidden')
-         // Mostrar modal de termos
-         modal.style.display = 'flex'
-         modal.classList.remove('hidden')
-         return
-       }
-     } catch(e) {
-       console.error('[VERIFICAR TERMOS] Erro ao verificar no banco:', e)
+       if (d.aceitou_termos) { 
+         localStorage.setItem(STORAGE_KEY, 'true') 
+         modal.style.display = 'none' 
+         modal.classList.add('hidden') 
+         verificarCadastro() 
+         return 
+       } else { 
+         localStorage.removeItem(STORAGE_KEY) 
+         document.getElementById('tela-cadastro').classList.add('hidden') 
+         document.getElementById('tela-solicitar').classList.add('hidden') 
+         modal.style.display = 'flex' 
+         modal.classList.remove('hidden') 
+         return 
+       } 
+     } catch(e) { 
+       console.error('[TERMOS ERROR]', e) 
      }
    }
    
