@@ -495,54 +495,49 @@
  let socket = null
  let formaPagamentoSelecionada = null
 
- async function verificarTermosPassageiro() {
-   const modal = document.getElementById('modal-termos-passageiro')
-   const STORAGE_KEY = 'passageiro_termos_aceitos_2.0'
-   
-   const telefone = localStorage.getItem('cliente_telefone')
-   const jaAceitouNoLocalStorage = localStorage.getItem(STORAGE_KEY) === 'true'
-   
-   // Verificar localStorage PRIMEIRO!
-   if (jaAceitouNoLocalStorage && telefone) {
-     // Já aceitou no localStorage — ir direto para verificarCadastro()
-     modal.style.display = 'none'
-     modal.classList.add('hidden')
-     verificarCadastro()
-     return
-   }
-   
-   // Só chama a API se não tem no localStorage
-   if (telefone) {
-     try { 
-       const r = await fetch(`/api/client/termos-status?telefone=${encodeURIComponent(telefone)}`) 
-       const d = await r.json() 
-       console.log('[TERMOS DEBUG]', JSON.stringify(d)) 
-       
-       if (d.aceitou_termos && d.versao_termos === '2.0') { 
-         localStorage.setItem(STORAGE_KEY, 'true') 
-         modal.style.display = 'none' 
-         modal.classList.add('hidden') 
-         verificarCadastro() 
-         return 
-       } else { 
-         localStorage.removeItem(STORAGE_KEY) 
-         document.getElementById('tela-cadastro').classList.add('hidden') 
-         document.getElementById('tela-solicitar').classList.add('hidden') 
-         modal.style.display = 'flex' 
-         modal.classList.remove('hidden') 
-         return 
-       } 
-     } catch(e) { 
-       console.error('[TERMOS ERROR]', e) 
-     }
-   }
-   
-   // Fallback: se não tem telefone, ir para tela de cadastro
-   document.getElementById('tela-cadastro').classList.remove('hidden')
-   document.getElementById('tela-solicitar').classList.add('hidden')
-   modal.style.display = 'none'
-   modal.classList.add('hidden')
- }
+ async function verificarTermosPassageiro() { 
+  const modal = document.getElementById('modal-termos-passageiro') 
+  const STORAGE_KEY = 'passageiro_termos_aceitos_2.0' 
+  const telefone = localStorage.getItem('cliente_telefone') 
+
+  // Sem telefone — vai para cadastro 
+  if (!telefone) { 
+    document.getElementById('tela-cadastro').classList.remove('hidden') 
+    document.getElementById('tela-solicitar').classList.add('hidden') 
+    modal.style.display = 'none' 
+    modal.classList.add('hidden') 
+    return 
+  } 
+
+  // Tem localStorage — passa direto 
+  if (localStorage.getItem(STORAGE_KEY) === 'true') { 
+    modal.style.display = 'none' 
+    modal.classList.add('hidden') 
+    verificarCadastro() 
+    return 
+  } 
+
+  // Consulta banco 
+  try { 
+    const r = await fetch(`/api/client/termos-status?telefone=${encodeURIComponent(telefone)}`) 
+    const d = await r.json() 
+    if (d.aceitou_termos) { 
+      localStorage.setItem(STORAGE_KEY, 'true') 
+      modal.style.display = 'none' 
+      modal.classList.add('hidden') 
+      verificarCadastro() 
+      return 
+    } 
+  } catch(e) { 
+    console.error('[TERMOS ERROR]', e) 
+  } 
+
+  // Não aceitou ainda — mostra modal 
+  document.getElementById('tela-cadastro').classList.add('hidden') 
+  document.getElementById('tela-solicitar').classList.add('hidden') 
+  modal.style.display = 'flex' 
+  modal.classList.remove('hidden') 
+}
 
  function verificarAceiteTermosPassageiro() {
    const check1 = document.getElementById('check-termos-passageiro-geral')?.checked
