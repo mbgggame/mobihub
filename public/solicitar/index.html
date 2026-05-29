@@ -497,7 +497,7 @@
 
  async function verificarTermosPassageiro() {
    const modal = document.getElementById('modal-termos-passageiro')
-   const STORAGE_KEY = 'passageiro_termos_aceitos_1.0'
+   const STORAGE_KEY = 'passageiro_termos_aceitos_2.0'
    
    const telefone = localStorage.getItem('cliente_telefone')
    const jaAceitouNoLocalStorage = localStorage.getItem(STORAGE_KEY) === 'true'
@@ -565,7 +565,7 @@
    const check2 = document.getElementById('check-termos-passageiro-responsabilidade')?.checked
    if (!check1 || !check2) return
    
-   localStorage.setItem('passageiro_termos_aceitos_1.0', 'true')
+   localStorage.setItem('passageiro_termos_aceitos_2.0', 'true')
    
    const telefone = localStorage.getItem('cliente_telefone')
    if (telefone) {
