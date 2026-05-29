@@ -530,7 +530,7 @@ export default async function publicRoutes(fastify) {
           aceitou_termos = true, 
           data_aceite_termos = CURRENT_TIMESTAMP, 
           ip_aceite_termos = $1, 
-          versao_termos = '1.0', 
+          versao_termos = '2.0', 
           aceite_responsabilidade = true 
         WHERE id = $2
       `, [request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.ip, client.id])
@@ -1694,7 +1694,7 @@ export default async function publicRoutes(fastify) {
       if (!telefone) return reply.code(400).send({ error: 'Telefone obrigatório' }) 
       
       const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.ip
-      const versaoTermos = '1.0'
+      const versaoTermos = '2.0'
       
       const clienteResult = await query('SELECT * FROM clients WHERE telefone = $1', [telefone])
       const cliente = clienteResult.rows[0]
@@ -1712,7 +1712,7 @@ export default async function publicRoutes(fastify) {
           aceitou_termos = true, 
           data_aceite_termos = CURRENT_TIMESTAMP, 
           ip_aceite_termos = $1, 
-          versao_termos = '1.0', 
+          versao_termos = '2.0', 
           aceite_responsabilidade = $2,
           hash_aceite_termos = $3
         WHERE telefone = $4 

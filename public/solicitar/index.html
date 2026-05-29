@@ -518,7 +518,7 @@
        const d = await r.json() 
        console.log('[TERMOS DEBUG]', JSON.stringify(d)) 
        
-       if (d.aceitou_termos) { 
+       if (d.aceitou_termos && d.versao_termos === '2.0') { 
          localStorage.setItem(STORAGE_KEY, 'true') 
          modal.style.display = 'none' 
          modal.classList.add('hidden') 
