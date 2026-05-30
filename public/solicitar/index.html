@@ -567,9 +567,11 @@
        body: JSON.stringify({ telefone, aceite_responsabilidade: check2 })
      }).then(r => r.json()).then(d => {
        console.log('[ACEITE PASSAGEIRO]', d)
+       localStorage.setItem('mobi_termos_passageiro', 'true')
        verificarCadastro()
      }).catch(e => console.error('[ACEITE PASSAGEIRO]', e))
    } else {
+     localStorage.setItem('mobi_termos_passageiro', 'true')
      verificarCadastro()
    }
 
@@ -1201,7 +1203,7 @@
 } 
 
  async function solicitar() { 
-   const termosAceitos = localStorage.getItem(STORAGE_TERMOS_PASSAGEIRO)
+   const termosAceitos = localStorage.getItem('passageiro_termos_aceitos_2.0')
    if (termosAceitos !== 'true') {
      alert('Por favor aceite os termos de uso antes de solicitar uma corrida!')
      verificarTermosPassageiro()
