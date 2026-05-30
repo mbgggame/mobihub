@@ -128,12 +128,22 @@ class MainActivity : AppCompatActivity() {
             ): Boolean {
                 fileUploadCallback?.onReceiveValue(null)
                 fileUploadCallback = filePathCallback
+                
+                // Salva estado do formulário antes de abrir seletor
+                webView?.evaluateJavascript(
+                    "if(window.salvarEstadoFormulario) window.salvarEstadoFormulario();",
+                    null
+                )
+                
                 val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
                     addCategory(Intent.CATEGORY_OPENABLE)
                     type = "*/*"
                     putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/*", "application/pdf"))
                 }
-                startActivityForResult(Intent.createChooser(intent, "Selecionar arquivo"), FILE_CHOOSER_REQUEST_CODE)
+                startActivityForResult(
+                    Intent.createChooser(intent, "Selecionar arquivo"),
+                    FILE_CHOOSER_REQUEST_CODE
+                )
                 return true
             }
         }
@@ -250,6 +260,12 @@ class MainActivity : AppCompatActivity() {
             } else null
             fileUploadCallback?.onReceiveValue(results)
             fileUploadCallback = null
+            
+            // Restaura estado do formulário
+            binding.webView.evaluateJavascript(
+                "if(window.restaurarEstadoFormulario) window.restaurarEstadoFormulario();",
+                null
+            )
         }
     }
 

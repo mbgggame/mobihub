@@ -731,5 +731,41 @@
       }
     }
   </script>
+
+  <script>
+    // Salva e restaura estado do formulário para upload mobile
+    window.salvarEstadoFormulario = function() {
+      const campos = ['nome','telefone','email','cpf','cep','logradouro','numero','complemento','bairro','cidade','estado','marca','modelo','ano','placa','renavam','tipo-chave-pix','chave-pix'];
+      const estado = {};
+      campos.forEach(id => {
+        const el = document.getElementById('f-' + id) || document.querySelector(`[name="${id}"]`);
+        if (el) estado[id] = el.value;
+      });
+      estado['etapa-atual'] = etapaAtual;
+      sessionStorage.setItem('form_estado', JSON.stringify(estado));
+    };
+
+    window.restaurarEstadoFormulario = function() {
+      const json = sessionStorage.getItem('form_estado');
+      if (!json) return;
+      const estado = JSON.parse(json);
+      Object.entries(estado).forEach(([id, val]) => {
+        if (id === 'etapa-atual') {
+          if (val) {
+            etapaAtual = val;
+            atualizarProgresso();
+          }
+          return;
+        }
+        const el = document.getElementById('f-' + id) || document.querySelector(`[name="${id}"]`);
+        if (el && val) el.value = val;
+      });
+    };
+
+    // Restaura ao carregar página
+    window.addEventListener('load', () => {
+      setTimeout(window.restaurarEstadoFormulario, 500);
+    });
+  </script>
 </body>
 </html>
