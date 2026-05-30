@@ -1888,14 +1888,14 @@ socket.on('agendamento:alerta_30min', (data) => {
         receberDinheiroCard.classList.remove('hidden')
       }
     } else if (corrida.status === 'concluida' && corrida.pagamento_status === 'aguardando_pagamento') {
-      // QR Code do Zighu Pay vem como base64 em asaas_pix_payload
-      // QR Code do Asaas vem como base64 em asaas_pix_qrcode
-      const temQrCode = corrida.asaas_pix_qrcode || (corrida.asaas_pix_payload?.startsWith('data:image'))
-      const qrCodeSrc = corrida.asaas_pix_qrcode?.startsWith('data:')
-        ? corrida.asaas_pix_qrcode
-        : corrida.asaas_pix_qrcode
-          ? `data:image/png;base64,${corrida.asaas_pix_qrcode}`
-          : corrida.asaas_pix_payload
+      // QR Code do Zighu Pay vem como base64 em zighu_pix_payload
+      // QR Code do Zighu Pay vem como base64 em zighu_pix_qrcode
+      const temQrCode = corrida.zighu_pix_qrcode || (corrida.zighu_pix_payload?.startsWith('data:image'))
+      const qrCodeSrc = corrida.zighu_pix_qrcode?.startsWith('data:')
+        ? corrida.zighu_pix_qrcode
+        : corrida.zighu_pix_qrcode
+          ? `data:image/png;base64,${corrida.zighu_pix_qrcode}`
+          : corrida.zighu_pix_payload
       if (corrida.forma_pagamento === '1' && temQrCode) {
         qrCard.classList.remove('hidden')
         pagamentoConfirmadoCard.classList.add('hidden')
@@ -1905,19 +1905,19 @@ socket.on('agendamento:alerta_30min', (data) => {
           receberDinheiroCard.classList.remove('hidden')
         }
         console.log('[QR] qrCodeSrc:', qrCodeSrc?.substring(0,50))
-        console.log('[QR] corrida.pix_qrcode:', corrida.asaas_pix_qrcode?.substring(0,30))
-        console.log('[QR] corrida.pix_payload:', corrida.asaas_pix_payload?.substring(0,30))
+        console.log('[QR] corrida.pix_qrcode:', corrida.zighu_pix_qrcode?.substring(0,30))
+        console.log('[QR] corrida.pix_payload:', corrida.zighu_pix_payload?.substring(0,30))
         document.getElementById('img-qrcode-pix').src = qrCodeSrc
-        document.getElementById('txt-pix-payload').value = corrida.asaas_pix_payload?.startsWith('data:image') ? '' : corrida.asaas_pix_payload
+        document.getElementById('txt-pix-payload').value = corrida.zighu_pix_payload?.startsWith('data:image') ? '' : corrida.zighu_pix_payload
       } else if (temQrCode) {
         qrCard.classList.remove('hidden')
         receberDinheiroCard.classList.add('hidden')
         pagamentoConfirmadoCard.classList.add('hidden')
         console.log('[QR] qrCodeSrc:', qrCodeSrc?.substring(0,50))
-        console.log('[QR] corrida.pix_qrcode:', corrida.asaas_pix_qrcode?.substring(0,30))
-        console.log('[QR] corrida.pix_payload:', corrida.asaas_pix_payload?.substring(0,30))
+        console.log('[QR] corrida.pix_qrcode:', corrida.zighu_pix_qrcode?.substring(0,30))
+        console.log('[QR] corrida.pix_payload:', corrida.zighu_pix_payload?.substring(0,30))
         document.getElementById('img-qrcode-pix').src = qrCodeSrc
-        document.getElementById('txt-pix-payload').value = corrida.asaas_pix_payload?.startsWith('data:image') ? '' : corrida.asaas_pix_payload
+        document.getElementById('txt-pix-payload').value = corrida.zighu_pix_payload?.startsWith('data:image') ? '' : corrida.zighu_pix_payload
       } else {
         qrCard.classList.add('hidden')
         receberDinheiroCard.classList.add('hidden')

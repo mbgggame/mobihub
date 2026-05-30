@@ -148,7 +148,7 @@
             <input id="cartao-validade" type="text" placeholder="MM/AA" maxlength="5" class="border rounded-lg px-3 py-2 text-sm"/>
             <input id="cartao-cvv" type="text" placeholder="CVV" maxlength="4" class="border rounded-lg px-3 py-2 text-sm"/>
           </div>
-          <button onclick="cadastrarCartao()" class="w-full bg-blue-600 text-white rounded-lg py-2 text-sm font-semibold">Salvar cartão</button>
+          <button onclick="cadastrarCartao()" class="w-full bg-blue-600 text-white rounded-lg py-2 text-sm font-semibold" style="pointer-events:none; opacity:0.45">Salvar cartão</button>
         </div>
       </div>
       <div class="border-t pt-3">
@@ -159,7 +159,7 @@
         </div>
         <div class="space-y-2">
           <input id="valor-recarga" type="text" placeholder="Valor (mín. R$ 50,00)" class="w-full border rounded-lg px-3 py-2 text-sm"/>
-          <button onclick="recarregarCreditos()" class="w-full bg-green-600 text-white rounded-lg py-2 text-sm font-semibold">Gerar QR Code Pix</button>
+          <button onclick="recarregarCreditos()" class="w-full bg-green-600 text-white rounded-lg py-2 text-sm font-semibold" style="pointer-events:none; opacity:0.45">Gerar QR Code Pix</button>
         </div>
         <div id="qrcode-recarga" class="hidden mt-3 text-center">
           <img id="img-qrcode-recarga" class="mx-auto w-40 h-40"/>

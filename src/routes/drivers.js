@@ -217,53 +217,7 @@ export default async function driversRoutes(fastify) {
       UPDATE drivers SET status_cadastro = 'aprovado', ativo = 1, token_perfil = $1, mobihub_id = $2 WHERE id = $3 
     `, [token, mobihubId, id]) 
 
-    // Integração Asaas: criar subconta automaticamente
-    if (process.env.ASAAS_API_KEY) {
-      try {
-        const asaasResponse = await fetch('https://www.asaas.com/api/v3/accounts', { 
-          method: 'POST', 
-          headers: { 
-            'Content-Type': 'application/json', 
-            'access_token': process.env.ASAAS_API_KEY 
-          }, 
-          body: JSON.stringify({ 
-            name: driver.nome, 
-            email: driver.email, 
-            cpfCnpj: driver.cpf?.replace(/\D/g, ''), 
-            phone: driver.telefone?.replace(/\D/g, ''), 
-            mobilePhone: driver.telefone?.replace(/\D/g, ''), 
-            address: driver.logradouro, 
-            addressNumber: driver.numero, 
-            complement: driver.complemento, 
-            province: driver.bairro, 
-            postalCode: driver.cep?.replace('-', ''), 
-            companyType: 'INDIVIDUAL',
-            birthDate: driver.data_nascimento ? new Date(driver.data_nascimento).toISOString().split('T')[0] : undefined,
-            incomeValue: 1500
-          }) 
-        })
-        const asaasData = await asaasResponse.json()
-        if (asaasData.walletId) { 
-          await query('UPDATE drivers SET asaas_id = $1 WHERE id = $2', [asaasData.walletId, driver.id]) 
-        } else if (asaasData.errors?.[0]?.description?.includes('já está em uso') || 
-                   asaasData.errors?.[0]?.description?.includes('já existe')) { 
-          const buscarResponse = await fetch( 
-            `https://www.asaas.com/api/v3/accounts?cpfCnpj=${driver.cpf?.replace(/\D/g, '')}`, 
-            { 
-              headers: { 'access_token': process.env.ASAAS_API_KEY } 
-            } 
-          ) 
-          const buscarData = await buscarResponse.json() 
-          const contaExistente = buscarData.data?.[0] 
-          if (contaExistente?.walletId) { 
-            await query('UPDATE drivers SET asaas_id = $1 WHERE id = $2', [contaExistente.walletId, driver.id]) 
-          } 
-        }
-      } catch (e) { 
-        console.error('[ASAAS SUBCONTA] Erro ao criar subconta:', e.message, JSON.stringify(e)) 
-        // Não bloqueia a aprovação por falha no Asaas
-      }
-    }
+
 
     // Notifica motorista via Telegram 
     if (driver?.telegram_id) { 
@@ -352,53 +306,7 @@ export default async function driversRoutes(fastify) {
       WHERE id = $3
     `, [token, mobihubId, id])
 
-    // Integração Asaas: criar subconta automaticamente
-    if (process.env.ASAAS_API_KEY) {
-      try {
-        const asaasResponse = await fetch('https://www.asaas.com/api/v3/accounts', { 
-          method: 'POST', 
-          headers: { 
-            'Content-Type': 'application/json', 
-            'access_token': process.env.ASAAS_API_KEY 
-          }, 
-          body: JSON.stringify({ 
-            name: driver.nome, 
-            email: driver.email, 
-            cpfCnpj: driver.cpf?.replace(/\D/g, ''), 
-            phone: driver.telefone?.replace(/\D/g, ''), 
-            mobilePhone: driver.telefone?.replace(/\D/g, ''), 
-            address: driver.logradouro, 
-            addressNumber: driver.numero, 
-            complement: driver.complemento, 
-            province: driver.bairro, 
-            postalCode: driver.cep?.replace('-', ''), 
-            companyType: 'INDIVIDUAL',
-            birthDate: driver.data_nascimento ? new Date(driver.data_nascimento).toISOString().split('T')[0] : undefined,
-            incomeValue: 1500
-          }) 
-        })
-        const asaasData = await asaasResponse.json()
-        if (asaasData.walletId) { 
-          await query('UPDATE drivers SET asaas_id = $1 WHERE id = $2', [asaasData.walletId, driver.id]) 
-        } else if (asaasData.errors?.[0]?.description?.includes('já está em uso') || 
-                   asaasData.errors?.[0]?.description?.includes('já existe')) { 
-          const buscarResponse = await fetch( 
-            `https://www.asaas.com/api/v3/accounts?cpfCnpj=${driver.cpf?.replace(/\D/g, '')}`, 
-            { 
-              headers: { 'access_token': process.env.ASAAS_API_KEY } 
-            } 
-          ) 
-          const buscarData = await buscarResponse.json() 
-          const contaExistente = buscarData.data?.[0] 
-          if (contaExistente?.walletId) { 
-            await query('UPDATE drivers SET asaas_id = $1 WHERE id = $2', [contaExistente.walletId, driver.id]) 
-          } 
-        }
-      } catch (e) { 
-        console.error('[ASAAS SUBCONTA] Erro ao criar subconta:', e.message, JSON.stringify(e)) 
-        // Não bloqueia a ativação por falha no Asaas
-      }
-    }
+
 
     // Disparar webhook motorista.aprovado
     const { dispararWebhook } = await import('../webhook.js')
