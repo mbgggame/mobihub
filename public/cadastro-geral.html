@@ -735,13 +735,16 @@
   <script>
     // Salva e restaura estado do formulário para upload mobile
     window.salvarEstadoFormulario = function() {
-      const campos = ['nome','telefone','email','cpf','cep','logradouro','numero','complemento','bairro','cidade','estado','marca','modelo','ano','placa','renavam','tipo-chave-pix','chave-pix'];
+      const campos = ['nome','telefone','email','cpf','cep','logradouro','numero','complemento','bairro','cidade','estado','marca_carro','modelo_carro','ano_carro','placa','renavam','tipo_chave_pix','chave_pix'];
       const estado = {};
       campos.forEach(id => {
-        const el = document.getElementById('f-' + id) || document.querySelector(`[name="${id}"]`);
+        const el = document.getElementById('f-' + id) || document.getElementById(id) || document.querySelector(`[name="${id}"]`);
         if (el) estado[id] = el.value;
       });
       estado['etapa-atual'] = etapaAtual;
+      estado['dia_nascimento'] = document.getElementById('dia_nascimento').value;
+      estado['mes_nascimento'] = document.getElementById('mes_nascimento').value;
+      estado['ano_nascimento'] = document.getElementById('ano_nascimento').value;
       sessionStorage.setItem('form_estado', JSON.stringify(estado));
     };
 
@@ -757,7 +760,7 @@
           }
           return;
         }
-        const el = document.getElementById('f-' + id) || document.querySelector(`[name="${id}"]`);
+        const el = document.getElementById('f-' + id) || document.getElementById(id) || document.querySelector(`[name="${id}"]`);
         if (el && val) el.value = val;
       });
     };

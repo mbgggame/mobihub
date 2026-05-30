@@ -743,9 +743,12 @@
 </div> 
 
 <script> 
- const tokenMotorista = location.pathname.split('/motorista/')[1] 
+ // Check URL params
+ const urlParams = new URLSearchParams(window.location.search)
+ const isAndroidApp = urlParams.get('app') === 'motorista'
+ const tokenMotorista = location.pathname.split('/motorista/')[1]?.split('?')[0] // strip query string if present
  localStorage.setItem('mobi_token_motorista', tokenMotorista)
- console.log('[INIT] Token motorista:', tokenMotorista)
+ console.log('[INIT] Token motorista:', tokenMotorista, 'isAndroidApp:', isAndroidApp)
  const socket = io()
  let novaFotoBase64 = null 
  let streamCamera = null 
@@ -908,7 +911,11 @@ socket.on('agendamento:alerta_30min', (data) => {
      if (!r.ok) { 
        if (r.status === 400 || r.status === 401 || r.status === 404) {
          localStorage.clear()
-         location.href = '/'
+         if (isAndroidApp) {
+           location.href = '/quero-dirigir?app=motorista'
+         } else {
+           location.href = '/'
+         }
        }
        document.body.innerHTML = `<div class="flex items-center justify-center min-h-screen px-4 text-center"><div><p class="text-4xl mb-4">🚗</p><p class="text-gray-600 font-medium">Perfil não encontrado</p></div></div>` 
        return 
@@ -960,7 +967,11 @@ socket.on('agendamento:alerta_30min', (data) => {
    } catch(e) { 
      console.error(e)
      localStorage.clear()
-     location.href = '/'
+     if (isAndroidApp) {
+       location.href = '/quero-dirigir?app=motorista'
+     } else {
+       location.href = '/'
+     }
    } 
  } 
 
