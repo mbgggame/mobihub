@@ -2040,6 +2040,7 @@ socket.on('agendamento:alerta_30min', (data) => {
      const b = document.getElementById('btn-parada') 
      if (b.textContent.includes('Parar')) { url = `/api/rides/${corridaAtualId}/parada/iniciar`; method = 'POST'; b.textContent = '▶️ Retomar' } 
      else { url = `/api/rides/${corridaAtualId}/parada/ultima/finalizar`; b.textContent = '⏸️ Parar' } 
+   console.log('[FINALIZAR DEBUG] corridaAtualId:', corridaAtualId, '| tokenMotorista:', tokenMotorista) 
    } else if (acao === 'finalizar') { 
     if (!confirm('Finalizar?')) return 
     const controller = new AbortController() 
