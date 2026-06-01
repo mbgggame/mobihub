@@ -1561,7 +1561,7 @@ async function carregar() {
          ${c.custo_espera_inicial > 0 ? `<div class="flex justify-between"><span class="text-gray-500">Espera (${Number(c.tempo_espera_inicial_min||0).toFixed(1)} min)</span><span class="text-orange-600">+ R$ ${Number(c.custo_espera_inicial).toFixed(2)}</span></div>` : ''} 
          ${c.custo_paradas > 0 ? `<div class="flex justify-between"><span class="text-gray-500">Paradas (${c.num_paradas||0}x — ${Number(c.tempo_paradas_total_min||0).toFixed(1)} min)</span><span class="text-orange-600">+ R$ ${Number(c.custo_paradas).toFixed(2)}</span></div>` : ''} 
          <div class="flex justify-between font-semibold border-t border-green-200 pt-1"><span>Total final</span><span class="text-green-700">R$ ${Number(c.valor_final||c.valor||0).toFixed(2)}</span></div> 
-         <div class="flex justify-between border-t border-green-200 pt-1"><span class="text-gray-500">Seu ganho</span><span class="font-bold text-green-700">R$ ${Number(c.valor_motorista||0).toFixed(2)}</span></div> 
+         <div class="flex justify-between border-t border-green-200 pt-1"><span class="text-gray-500">Seu ganho</span><span class="font-bold text-green-700">R$ ${Number(c.status === 'cancelada' ? 0 : c.valor_motorista||0).toFixed(2)}</span></div> 
          ${c.km_reais ? `<div class="flex justify-between"><span class="text-gray-500">Km real</span><span class="text-blue-700">${Number(c.km_reais).toFixed(1)} km</span></div>` : ''} 
        </div> 
 
