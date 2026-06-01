@@ -236,12 +236,13 @@ export default async function publicRoutes(fastify) {
 
 
   fastify.get('/api/motorista/:token', async (request, reply) => { 
-    const result = await query(` 
-      SELECT id, nome, modelo_carro, ano_carro, cor_carro, placa, 
-        total_viagens, media_avaliacao, total_avaliacoes, 
+    const result = await query(`
+      SELECT id, nome, modelo_carro, ano_carro, cor_carro, placa,
+        total_viagens, media_avaliacao, total_avaliacoes,
         foto_base64, ativo, created_at, aceitou_termos,
-        balance_due, balance_due_blocked_at, balance_due_charge_pix
-      FROM drivers WHERE token_perfil = $1 
+        balance_due, balance_due_blocked_at, balance_due_charge_pix,
+        total_cancelamentos, tc_percentual, suspenso_tc
+      FROM drivers WHERE token_perfil = $1
     `, [request.params.token]) 
     const driver = result.rows[0] 
 
@@ -282,15 +283,18 @@ export default async function publicRoutes(fastify) {
 
     const balance_due_bloqueado = parseFloat(driver.balance_due || 0) >= 30
 
-    return { 
-      driver, 
-      corridas, 
-      comentarios, 
-      financeiro, 
+    return {
+      driver,
+      corridas,
+      comentarios,
+      financeiro,
       balance_due: parseFloat(driver.balance_due || 0),
       balance_due_bloqueado,
       balance_due_charge_pix: driver.balance_due_charge_pix,
-      balance_due_blocked_at: driver.balance_due_blocked_at
+      balance_due_blocked_at: driver.balance_due_blocked_at,
+      total_cancelamentos: driver.total_cancelamentos,
+      tc_percentual: driver.tc_percentual,
+      suspenso_tc: driver.suspenso_tc
     } 
   })
 
@@ -337,15 +341,16 @@ export default async function publicRoutes(fastify) {
     )).rows[0] 
     if (!driver) return { corrida: null } 
 
-    const corrida = (await query(` 
-      SELECT r.*, c.nome as client_nome, c.media_avaliacao as client_media 
-      FROM rides r 
-      LEFT JOIN clients c ON r.client_id = c.id 
-      WHERE r.status = 'aberta' 
-      AND r.driver_id IS NULL 
-      ORDER BY r.created_at ASC 
-      LIMIT 1 
-    `)).rows[0] 
+    const corrida = (await query(`
+      SELECT r.*, c.nome as client_nome, c.media_avaliacao as client_media
+      FROM rides r
+      LEFT JOIN clients c ON r.client_id = c.id
+      WHERE r.status = 'aberta'
+      AND r.driver_id IS NULL
+      AND (r.cancelado_por_driver_id IS NULL OR r.cancelado_por_driver_id != $1)
+      ORDER BY r.created_at ASC
+      LIMIT 1
+    `, [driver.id])).rows[0] 
     return { corrida: corrida || null } 
   }) 
 
@@ -1326,9 +1331,36 @@ export default async function publicRoutes(fastify) {
       const { editGroupMessage } = await import('../telegram.js')
       if (ride.telegram_message_id) await editGroupMessage(ride.telegram_message_id, `❌ *Corrida cancelada pelo motorista*\n\n📍 ${ride.origem}\n🏁 ${ride.destino}\n📋 Motivo: ${motivo.descricao}`)
     } catch(e) {}
+
+    // Reabre a corrida para outros motoristas (exclui o motorista que cancelou)
+    const { v4: uuidv4 } = await import('uuid')
+    const novoToken = uuidv4()
+    const novaCorreida = await query(`
+      INSERT INTO rides (token, client_id, origem, origem_lat, origem_lng, destino, destino_lat, destino_lng, valor, valor_motorista, valor_mobihub, tipo, forma_pagamento, status)
+      SELECT $1, client_id, origem, origem_lat, origem_lng, destino, destino_lat, destino_lng, valor, valor_motorista, valor_mobihub, tipo, forma_pagamento, 'aberta'
+      FROM rides WHERE id = $2
+      RETURNING id, token
+    `, [novoToken, rideId])
+
+    const novaRide = novaCorreida.rows[0]
+
+    // Salva motorista que cancelou para excluir das ofertas
+    await query('UPDATE rides SET cancelado_por_driver_id = $1 WHERE id = $2', [driver.id, novaRide.id])
+
+    // Notifica grupo Telegram com nova corrida
+    try {
+      const { sendRideToGroup } = await import('../telegram.js')
+      const rideCompleta = (await query('SELECT * FROM rides WHERE id = $1', [novaRide.id])).rows[0]
+      const messageId = await sendRideToGroup(rideCompleta)
+      if (messageId) await query('UPDATE rides SET telegram_message_id = $1 WHERE id = $2', [messageId, novaRide.id])
+    } catch(e) { console.error('[REABRIR]', e.message) }
+
     const io = getIo()
-    if (io) io.to(`ride:${rideId}`).emit('corrida:status_atualizado', { status: 'cancelada', token: ride.token, rideId })
-    return { mensagem: 'Corrida cancelada com sucesso', taxa_cobrada, taxa_valor }
+    if (io) {
+      io.to(`ride:${rideId}`).emit('corrida:status_atualizado', { status: 'cancelada', token: ride.token, rideId, nova_corrida_token: novaRide.token })
+      io.emit('nova_corrida', (await query('SELECT * FROM rides WHERE id = $1', [novaRide.id])).rows[0])
+    }
+    return { mensagem: 'Corrida cancelada com sucesso', taxa_cobrada, taxa_valor, nova_corrida_token: novaRide.token }
   })
 
   fastify.get('/api/cancelamento/motivos', async (request, reply) => {

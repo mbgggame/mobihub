@@ -742,16 +742,24 @@
     <p class="text-xs text-gray-300 mt-2">Avaliações fornecidas pelos passageiros via plataforma</p> 
   </div> 
 
-  <!-- ESTATÍSTICAS --> 
-  <div class="grid grid-cols-2 gap-3"> 
-    <div class="bg-white border border-gray-200 rounded-xl p-4 text-center"> 
-      <p id="hist-viagens" class="text-2xl font-bold text-green-700">—</p> 
-      <p class="text-xs text-gray-500 mt-0.5">Viagens concluídas</p> 
-    </div> 
-    <div class="bg-white border border-gray-200 rounded-xl p-4 text-center"> 
-      <p id="hist-ganhos-total" class="text-2xl font-bold text-blue-700">—</p> 
-      <p class="text-xs text-gray-500 mt-0.5">Total ganho</p> 
-    </div> 
+  <!-- ESTATÍSTICAS -->
+  <div class="grid grid-cols-2 gap-3">
+    <div class="bg-white border border-gray-200 rounded-xl p-4 text-center">
+      <p id="hist-viagens" class="text-2xl font-bold text-green-700">—</p>
+      <p class="text-xs text-gray-500 mt-0.5">Viagens concluídas</p>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-xl p-4 text-center">
+      <p id="hist-ganhos-total" class="text-2xl font-bold text-blue-700">—</p>
+      <p class="text-xs text-gray-500 mt-0.5">Total ganho</p>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-xl p-4 text-center">
+      <p id="hist-total-cancelamentos" class="text-2xl font-bold text-orange-700">—</p>
+      <p class="text-xs text-gray-500 mt-0.5">Cancelamentos</p>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-xl p-4 text-center">
+      <p id="hist-tc-percentual" class="text-2xl font-bold text-red-700">—</p>
+      <p class="text-xs text-gray-500 mt-0.5">Taxa de cancelamento</p>
+    </div>
   </div> 
 
   <!-- HISTÓRICO DE CORRIDAS --> 
@@ -990,7 +998,7 @@ async function carregar() {
        document.body.innerHTML = `<div class="flex items-center justify-center min-h-screen px-4 text-center"><div><p class="text-4xl mb-4">🚗</p><p class="text-gray-600 font-medium">Perfil não encontrado</p></div></div>` 
        return 
      } 
-     const { driver, financeiro, balance_due, balance_due_bloqueado, balance_due_charge_pix, balance_due_blocked_at } = await r.json() 
+     const { driver, financeiro, balance_due, balance_due_bloqueado, balance_due_charge_pix, balance_due_blocked_at, total_cancelamentos, tc_percentual, suspenso_tc } = await r.json() 
      dadosAtuaisDriver = driver 
      
      console.log('[DIAGNÓSTICO] aceitou_termos:', driver.aceitou_termos)
@@ -2182,14 +2190,16 @@ async function carregar() {
    up(); timerInterval = setInterval(up, 1000) 
  } 
  
- async function carregarHistorico() { 
-   const r = await fetch(`/api/motorista/${tokenMotorista}`) 
-   if (r.ok) { 
-     const { driver, corridas, financeiro } = await r.json() 
-     document.getElementById('hist-stars').textContent = estrelas(driver.media_avaliacao) 
-     document.getElementById('hist-media').textContent = driver.media_avaliacao ? `${driver.media_avaliacao.toFixed(1)} / 5.0` : '—' 
-     document.getElementById('hist-viagens').textContent = driver.total_viagens || 0 
-     document.getElementById('hist-ganhos-total').textContent = moeda(financeiro?.ganhos_total) 
+ async function carregarHistorico() {
+   const r = await fetch(`/api/motorista/${tokenMotorista}`)
+   if (r.ok) {
+     const { driver, corridas, financeiro, total_cancelamentos, tc_percentual } = await r.json()
+     document.getElementById('hist-stars').textContent = estrelas(driver.media_avaliacao)
+     document.getElementById('hist-media').textContent = driver.media_avaliacao ? `${driver.media_avaliacao.toFixed(1)} / 5.0` : '—'
+     document.getElementById('hist-viagens').textContent = driver.total_viagens || 0
+     document.getElementById('hist-ganhos-total').textContent = moeda(financeiro?.ganhos_total)
+     document.getElementById('hist-total-cancelamentos').textContent = total_cancelamentos || 0
+     document.getElementById('hist-tc-percentual').textContent = tc_percentual ? `${tc_percentual.toFixed(1)}%` : '0%' 
      document.getElementById('hist-lista-corridas').innerHTML = corridas.map(c => { 
        // Tratar endereço de origem e destino (JSON ou texto)
        let origem = c.origem;
