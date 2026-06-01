@@ -1166,17 +1166,18 @@
      const res = await fetch(`/api/ride/${token}/motorista-location`) 
      const data = await res.json() 
       
-     if (!data.location) return 
- 
      const ride = dadosAtuais.ride 
      const loc = data.location 
- 
+      
+     // Mostra valor sempre, mesmo sem localização 
+     document.getElementById('track-ride-valor').textContent = `R$ ${Number(data.valor || ride?.valor || 0).toFixed(2)}` 
+      
+     if (!loc) return 
      document.getElementById('card-rastreamento').classList.remove('hidden') 
      document.getElementById('track-driver-nome').textContent = ride.driver_nome || 'Motorista' 
      document.getElementById('track-driver-modelo').textContent = `${ride.modelo_carro} ${ride.cor_carro}` 
      document.getElementById('track-driver-placa').textContent = ride.placa 
      document.getElementById('track-driver-foto').src = ride.driver_foto || '/img/driver-placeholder.png' 
-     document.getElementById('track-ride-valor').textContent = `R$ ${Number(data.valor || 0).toFixed(2)}` 
      document.getElementById('track-ride-distancia').textContent = `${loc.distancia_km} km` 
      document.getElementById('track-ride-eta').textContent = `${loc.eta_minutos} min` 
  
