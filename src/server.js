@@ -38,7 +38,50 @@ await fastify.register(fastifyCors, {
  }) 
 
 await fastify.register(fastifyFormbody) 
-await fastify.register(fastifyJwt, { secret: process.env.JWT_SECRET }) 
+await fastify.register(fastifyJwt, { secret: process.env.JWT_SECRET })
+
+// === SEGURANÇA ===
+
+// Headers de segurança HTTP
+fastify.addHook('onSend', async (request, reply, payload) => {
+  reply.header('X-Content-Type-Options', 'nosniff')
+  reply.header('X-Frame-Options', 'DENY')
+  reply.header('X-XSS-Protection', '1; mode=block')
+  reply.header('Referrer-Policy', 'strict-origin-when-cross-origin')
+  reply.header('Permissions-Policy', 'geolocation=(), microphone=()')
+  return payload
+})
+
+// Rate limiting manual por IP
+const ipRequests = new Map()
+fastify.addHook('onRequest', async (request, reply) => {
+  const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.ip
+  const agora = Date.now()
+  const janela = 60000 // 1 minuto
+  const limite = request.url === '/api/login' ? 5 : 100
+
+  if (!ipRequests.has(ip)) ipRequests.set(ip, [])
+  const reqs = ipRequests.get(ip).filter(t => agora - t < janela)
+  reqs.push(agora)
+  ipRequests.set(ip, reqs)
+
+  if (reqs.length > limite) {
+    return reply.code(429).send({
+      error: 'Too Many Requests',
+      message: 'Muitas requisições. Tente novamente em 1 minuto.'
+    })
+  }
+})
+
+// Limpa o mapa de IPs a cada 5 minutos
+setInterval(() => {
+  const agora = Date.now()
+  for (const [ip, reqs] of ipRequests.entries()) {
+    const recentes = reqs.filter(t => agora - t < 60000)
+    if (recentes.length === 0) ipRequests.delete(ip)
+    else ipRequests.set(ip, recentes)
+  }
+}, 300000)
 
 fastify.setErrorHandler((error, request, reply) => { 
   console.log('[ERRO GLOBAL FASTIFY]:', error) 
