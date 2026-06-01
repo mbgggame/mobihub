@@ -452,6 +452,14 @@
       </svg>
     </div>
   </button>
+
+  <!-- INDICAÇÕES -->
+  <div id="card-indicacoes" class="bg-white border border-gray-200 rounded-xl p-4">
+    <p class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-3">🎯 Indicações</p>
+    <div id="conteudo-indicacoes">
+      <p class="text-sm text-gray-500">Carregando...</p>
+    </div>
+  </div>
   <!-- VEÍCULOS --> 
   <div class="bg-white border border-gray-200 rounded-xl p-4"> 
     <div class="flex items-center justify-between mb-3"> 
@@ -905,7 +913,57 @@ socket.on('agendamento:alerta_30min', (data) => {
  
  let dadosAtuaisDriver = null 
  
- async function carregar() { 
+ async function carregarIndicacoes() {
+  const el = document.getElementById('conteudo-indicacoes');
+  try {
+    const r = await fetch(`/api/motorista/${tokenMotorista}/codigo-indicacao`);
+    if (!r.ok) {
+      el.innerHTML = '<p class="text-sm text-gray-400">Erro ao carregar indicações</p>';
+      return;
+    }
+    const data = await r.json();
+    
+    if (!data.ativo) {
+      el.innerHTML = '<p class="text-sm text-gray-400">Sistema de indicações inativo</p>';
+      return;
+    }
+    
+    el.innerHTML = `
+      <div class="space-y-3">
+        <div class="text-center">
+          <p class="text-xs text-gray-500 mb-1">Seu código</p>
+          <div class="flex items-center justify-center gap-2">
+            <code class="text-xl font-bold text-green-700 bg-green-50 px-4 py-2 rounded-lg">${data.codigo}</code>
+            <button onclick="navigator.clipboard.writeText('${data.codigo}').then(() => alert('✅ Código copiado!'))" class="text-sm border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50">📋</button>
+          </div>
+        </div>
+        <p class="text-xs text-gray-500 text-center">Link: ${data.link}</p>
+        <div class="grid grid-cols-3 gap-2 mt-3 text-center">
+          <div class="bg-gray-50 rounded-lg p-2">
+            <p class="text-lg font-bold text-gray-700">${data.stats.total_indicados}</p>
+            <p class="text-[10px] text-gray-500">Indicados</p>
+          </div>
+          <div class="bg-gray-50 rounded-lg p-2">
+            <p class="text-lg font-bold text-green-700">${data.stats.bonus_liberados}</p>
+            <p class="text-[10px] text-gray-500">Bônus liberados</p>
+          </div>
+          <div class="bg-gray-50 rounded-lg p-2">
+            <p class="text-lg font-bold text-blue-700">R$ ${Number(data.stats.total_ganho || 0).toFixed(2)}</p>
+            <p class="text-[10px] text-gray-500">Total ganho</p>
+          </div>
+        </div>
+        <p class="text-xs text-gray-400 text-center">
+          Ganhe R$ ${data.bonus_motorista} por indicação e o passageiro ganha R$ ${data.desconto_passageiro} na primeira corrida!
+        </p>
+      </div>
+    `;
+  } catch(e) {
+    el.innerHTML = '<p class="text-sm text-gray-400">Erro ao carregar indicações</p>';
+    console.error('[INDICACOES]', e);
+  }
+}
+
+async function carregar() { 
    try { 
      const r = await fetch(`/api/motorista/${tokenMotorista}`) 
      if (!r.ok) { 
@@ -961,6 +1019,7 @@ socket.on('agendamento:alerta_30min', (data) => {
      renderizarStatusOnline(driver) 
      renderizarSaldoDevedor(balance_due, balance_due_bloqueado, balance_due_charge_pix, balance_due_blocked_at)
      carregarVeiculos() 
+     carregarIndicacoes() 
 
      // Inicia rastreamento de posição se online 
      if (driver.online) iniciarLocalizacao() 
