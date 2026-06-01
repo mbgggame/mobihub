@@ -2079,15 +2079,23 @@ socket.on('agendamento:alerta_30min', (data) => {
    if (btnCancelar) btnCancelar.disabled = true 
    console.log('[CANCELAR] Iniciando cancelamento, corridaAtualId:', corridaAtualId, 'token:', tokenMotorista) 
    try { 
-     const r = await fetch(`/api/motorista/${tokenMotorista}/cancelar-corrida/${corridaAtualId}`, { 
-       method: 'PUT', 
-       headers: { 'Content-Type': 'application/json' }, 
-       body: JSON.stringify({ token_motorista: tokenMotorista }) 
+     await new Promise((resolve, reject) => { 
+       const xhr = new XMLHttpRequest() 
+       xhr.open('PUT', `/api/motorista/${tokenMotorista}/cancelar-corrida/${corridaAtualId}`) 
+       xhr.setRequestHeader('Content-Type', 'application/json') 
+       xhr.onload = () => { 
+         console.log('[CANCELAR] XHR status:', xhr.status, xhr.responseText) 
+         if (xhr.status === 200) esconderCorridaAtiva() 
+         if (btnCancelar) btnCancelar.disabled = false 
+         resolve() 
+       } 
+       xhr.onerror = (e) => { 
+         console.error('[CANCELAR] XHR erro:', e) 
+         if (btnCancelar) btnCancelar.disabled = false 
+         reject(e) 
+       } 
+       xhr.send(JSON.stringify({ token_motorista: tokenMotorista })) 
      }) 
-     const respText = await r.text() 
-     console.log('[CANCELAR] Resposta:', r.status, respText) 
-     if (r.ok) { esconderCorridaAtiva() } 
-     if (btnCancelar) btnCancelar.disabled = false 
    } catch(e) { 
      console.error('[CANCELAR] Erro:', e.message) 
      if (btnCancelar) btnCancelar.disabled = false 
