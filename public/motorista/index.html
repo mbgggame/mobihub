@@ -1867,7 +1867,11 @@ socket.on('agendamento:alerta_30min', (data) => {
 
      const txtDetalhe = document.getElementById('txt-pagamento-detalhe') 
      if (txtDetalhe) txtDetalhe.textContent = detalhe
-     setTimeout(() => { corridaAtualId = null }, 5000) 
+     setTimeout(() => { 
+       corridaAtualId = null 
+       corridaAtualToken = null 
+       esconderCorridaAtiva() 
+     }, 5000) 
  if (corrida.id && !corridaAvaliadaId && !corridasJaAvaliadas.has(corrida.id) && !localStorage.getItem('corrida_avaliada_' + corrida.id)) { 
    corridaAvaliadaId = corrida.id 
    corridasJaAvaliadas.add(corrida.id) // bloqueia imediatamente para o próximo polling não reagendar 
