@@ -1326,7 +1326,12 @@ function iniciarPollingAutomatico() {
 
    socket.on('corrida:status_atualizado', (data) => {
      console.log('[SOCKET] Status atualizado:', data);
-     carregar();
+     // Se cancelada pelo motorista e tem nova_corrida_token, redireciona direto para nova corrida
+     if (data.status === 'cancelada' && data.nova_corrida_token) {
+       window.location.href = `/ride/${data.nova_corrida_token}`;
+     } else {
+       carregar();
+     }
    });
 
    socket.on('agendamento:aceito', (data) => { 
