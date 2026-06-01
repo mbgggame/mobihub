@@ -1762,6 +1762,27 @@ export default async function publicRoutes(fastify) {
     return reply.code(503).send({ error: 'Recarga temporariamente indisponível. Em breve!' })
   })
 
-
+  fastify.get('/api/admin/mapa-dados', { preHandler: requireAuth }, async (request, reply) => { 
+    const dias = parseInt(request.query.dias || 30) 
+    const corridas = (await query(` 
+      SELECT id, origem_lat, origem_lng, destino_lat, destino_lng, 
+             valor, valor_final, status, h3_id, created_at 
+      FROM rides 
+      WHERE created_at >= NOW() - INTERVAL '${dias} days' 
+      ORDER BY created_at DESC 
+      LIMIT 5000 
+    `)).rows 
+    const stats = (await query(` 
+      SELECT 
+        COUNT(*) as total, 
+        COALESCE(SUM(valor_final), 0) as receita, 
+        COUNT(DISTINCT driver_id) as motoristas, 
+        COALESCE(AVG(valor_final), 0) as ticket_medio 
+      FROM rides 
+      WHERE created_at >= NOW() - INTERVAL '${dias} days' 
+      AND status = 'concluida' 
+    `)).rows[0] 
+    return { corridas, stats } 
+  })
 
 } 
