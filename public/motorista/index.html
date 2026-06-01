@@ -2042,7 +2042,7 @@ socket.on('agendamento:alerta_30min', (data) => {
      else { url = `/api/rides/${corridaAtualId}/parada/ultima/finalizar`; b.textContent = '⏸️ Parar' } 
    console.log('[FINALIZAR DEBUG] corridaAtualId:', corridaAtualId, '| tokenMotorista:', tokenMotorista) 
    } else if (acao === 'finalizar') { 
-    if (!confirm('Finalizar?')) return 
+   console.log('[FINALIZAR] Iniciando finalização, corridaAtualId:', corridaAtualId) 
     const controller = new AbortController() 
     const timeoutId = setTimeout(() => controller.abort(), 10000) 
     let r 
