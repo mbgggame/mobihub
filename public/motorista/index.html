@@ -2075,7 +2075,7 @@ socket.on('agendamento:alerta_30min', (data) => {
      } 
      return 
    } else if (acao === 'cancelar') { 
-     if (!confirm('Cancelar?')) return 
+   console.log('[CANCELAR] Iniciando cancelamento, corridaAtualId:', corridaAtualId) 
      const r = await fetch(`/api/motorista/${tokenMotorista}/cancelar-corrida/${corridaAtualId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' } }) 
      if (r.ok) { esconderCorridaAtiva() } 
      return 
