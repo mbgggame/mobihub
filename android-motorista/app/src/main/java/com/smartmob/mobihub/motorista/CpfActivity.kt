@@ -22,6 +22,16 @@ class CpfActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_cpf)
 
+        // Verifica se já tem token salvo — vai direto sem pedir CPF
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val tokenSalvo = prefs.getString(TOKEN_KEY, null)
+        if (!tokenSalvo.isNullOrEmpty()) {
+            android.util.Log.d("MobiHub", "Token já salvo, indo direto para MainActivity")
+            startActivity(Intent(this, MainActivity::class.java))
+            finish()
+            return
+        }
+
         val editCpf = findViewById<EditText>(R.id.editCpf)
         val btnContinuar = findViewById<Button>(R.id.btnContinuar)
         val tvErro = findViewById<TextView>(R.id.tvErro)
