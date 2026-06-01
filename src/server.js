@@ -4,8 +4,6 @@ import fastifyJwt from '@fastify/jwt'
 import fastifyStatic from '@fastify/static' 
 import fastifyCors from '@fastify/cors' 
 import fastifyFormbody from '@fastify/formbody' 
-import fastifyHelmet from '@fastify/helmet' 
-import fastifyRateLimit from '@fastify/rate-limit' 
 import { join, dirname } from 'path' 
 import { fileURLToPath } from 'url' 
 import { Server } from 'socket.io' 
@@ -37,23 +35,6 @@ await fastify.register(fastifyCors, {
    origin: true, 
    methods: ['GET', 'POST', 'OPTIONS'], 
    allowedHeaders: ['Content-Type', 'Authorization'] 
- }) 
-
- // Segurança — Headers HTTP 
- await fastify.register(fastifyHelmet, { 
-   contentSecurityPolicy: false, 
-   crossOriginEmbedderPolicy: false 
- }) 
- 
- // Rate limiting — máximo 100 requisições por minuto por IP 
- await fastify.register(fastifyRateLimit, { 
-   max: 100, 
-   timeWindow: '1 minute', 
-   errorResponseBuilder: () => ({ 
-     error: 'Too Many Requests', 
-     message: 'Muitas requisições. Tente novamente em 1 minuto.', 
-     statusCode: 429 
-   }) 
  }) 
 
 await fastify.register(fastifyFormbody) 
