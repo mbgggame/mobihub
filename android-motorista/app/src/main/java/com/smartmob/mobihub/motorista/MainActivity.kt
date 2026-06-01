@@ -51,7 +51,7 @@ class MainActivity : AppCompatActivity() {
             token != null -> {
                 // Token salvo — abre direto no painel
                 isApproved = true
-                binding.webView.loadUrl("$BASE_URL/motorista/$token")
+                binding.webView.loadUrl("$BASE_URL/motorista/$token?app=motorista")
             }
             cpf != null -> {
                 // Tem CPF mas sem token — verifica aprovação agora antes de mostrar qualquer tela
@@ -68,13 +68,13 @@ class MainActivity : AppCompatActivity() {
                                 isApproved = true
                                 binding.webView.loadUrl("$BASE_URL/motorista/$tokenApi")
                             } else {
-                                binding.webView.loadUrl("$BASE_URL/quero-dirigir")
+                                binding.webView.loadUrl("$BASE_URL/quero-dirigir?app=motorista")
                                 startPolling()
                             }
                         }
                     } catch (e: Exception) {
                         handler.post {
-                            binding.webView.loadUrl("$BASE_URL/quero-dirigir")
+                            binding.webView.loadUrl("$BASE_URL/quero-dirigir?app=motorista")
                             startPolling()
                         }
                     }
@@ -103,7 +103,27 @@ class MainActivity : AppCompatActivity() {
             setAcceptThirdPartyCookies(webView, true)
         }
         webView.webViewClient = object : WebViewClient() {
-            override fun shouldOverrideUrlLoading(view: WebView?, url: String?) = false
+            override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+                if (url == null) return false
+                // Abre Waze, Google Maps e outros apps externos
+                return if (url.startsWith("https://waze.com") ||
+                           url.startsWith("https://www.google.com/maps") ||
+                           url.startsWith("intent://") ||
+                           url.startsWith("geo:")) {
+                    try {
+                        val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        // App não instalado — abre no browser
+                        val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                        intent.setPackage("com.android.chrome")
+                        startActivity(intent)
+                    }
+                    true
+                } else {
+                    false
+                }
+            }
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
@@ -208,7 +228,7 @@ class MainActivity : AppCompatActivity() {
                     isApproved = true
                     stopPolling()
                     handler.post {
-                        binding.webView.loadUrl("$BASE_URL/motorista/$token")
+                        binding.webView.loadUrl("$BASE_URL/motorista/$token?app=motorista")
                     }
                 }
             } catch (e: Exception) {
