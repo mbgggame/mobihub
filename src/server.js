@@ -55,16 +55,6 @@ await fastify.register(fastifyCors, {
      statusCode: 429 
    }) 
  }) 
- 
- // Rate limiting mais restrito para login 
- fastify.after(() => { 
-   fastify.route({ 
-     method: 'POST', 
-     url: '/api/login', 
-     config: { rateLimit: { max: 5, timeWindow: '1 minute' } }, 
-     handler: async (request, reply) => reply.callNotFound() 
-   }) 
- }) 
 
 await fastify.register(fastifyFormbody) 
 await fastify.register(fastifyJwt, { secret: process.env.JWT_SECRET }) 
