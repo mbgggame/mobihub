@@ -17,7 +17,8 @@ import ridesRoutes from './routes/rides.js'
 import publicRoutes from './routes/public.js'
 import integracoesRoutes from './routes/integracoes.js'
 import agendamentosRoutes from './routes/agendamentos.js'
-import adminDbRoutes from './routes/admin-db.js' 
+import adminDbRoutes from './routes/admin-db.js'
+import indicacoesRoutes from './routes/indicacoes.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url)) 
 
@@ -50,7 +51,8 @@ await fastify.register(ridesRoutes)
 await fastify.register(publicRoutes)
 await fastify.register(integracoesRoutes)
 await fastify.register(agendamentosRoutes)
-await fastify.register(adminDbRoutes) 
+await fastify.register(adminDbRoutes)
+await fastify.register(indicacoesRoutes) 
 
 await fastify.register(fastifyStatic, { 
   root: join(__dirname, '..', 'public'), 
