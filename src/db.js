@@ -548,13 +548,17 @@ O MOTORISTA PARCEIRO DECLARA CONCORDAR EXPRESSAMENTE QUE QUALQUER LITÍGIO, DISP
 8.3. O idioma oficial da arbitragem será o português e a lei aplicável será a legislação da República Federativa do Brasil.
 8.4. As disputas serão resolvidas de forma estritamente individual, sendo proibida a instauração de arbitragens coletivas contra a MobiHub.`
 
-  await query(`
-    INSERT INTO termos_versoes (versao, tipo, titulo, conteudo) 
-    VALUES 
-      ('1.0', 'passageiro', 'TERMOS E CONDIÇÕES DE USO DA PLATAFORMA MOBIHUB – VERSÃO PASSAGEIRO', $1),
-      ('2.1', 'motorista', 'CONTRATO DE LICENCIAMENTO DE SOFTWARE E INTERMEDIAÇÃO DE NEGÓCIOS DIGITAIS', $2)
-    ON CONFLICT (versao) DO NOTHING
-  `, [textoTermoPassageiro, textoTermoMotorista])
+  try {
+    await query(`
+      INSERT INTO termos_versoes (versao, tipo, titulo, conteudo) 
+      VALUES 
+        ('1.0', 'passageiro', 'TERMOS E CONDIÇÕES DE USO DA PLATAFORMA MOBIHUB – VERSÃO PASSAGEIRO', $1),
+        ('2.1', 'motorista', 'CONTRATO DE LICENCIAMENTO DE SOFTWARE E INTERMEDIAÇÃO DE NEGÓCIOS DIGITAIS', $2)
+      ON CONFLICT (versao) DO NOTHING
+    `, [textoTermoPassageiro, textoTermoMotorista])
+  } catch(e) {
+    console.log('[TERMOS] Seed falhou, talvez já exista:', e.message)
+  }
 
   // Adicionar coluna com_lider se não existir
   await query(`ALTER TABLE split_rules ADD COLUMN IF NOT EXISTS com_lider BOOLEAN DEFAULT false`)
