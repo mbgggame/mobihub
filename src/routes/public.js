@@ -1286,59 +1286,66 @@ export default async function publicRoutes(fastify) {
     return { mensagem: 'Corrida cancelada' } 
   })
 
-  fastify.put('/api/motorista/:token/cancelar-corrida/:rideId', async (request, reply) => { 
-    const { token, rideId } = request.params 
-  
-    const driver = (await query( 
-      'SELECT id FROM drivers WHERE token_perfil = $1', [token] 
-    )).rows[0] 
-    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
-  
-    const ride = (await query( 
-      "SELECT * FROM rides WHERE id = $1 AND driver_id = $2 AND status IN ('aceita', 'aberta')", 
-      [rideId, driver.id] 
-    )).rows[0] 
-  
-    if (!ride) { 
-      // Verifica se a corrida existe mas já foi finalizada 
-      const corridaExiste = (await query( 
-        'SELECT status FROM rides WHERE id = $1', [rideId] 
-      )).rows[0] 
-      if (corridaExiste) { 
-        return reply.code(400).send({ error: `Não é possível cancelar corrida com status: ${corridaExiste.status}` }) 
-      } 
-      return reply.code(404).send({ error: 'Corrida não encontrada' }) 
-    } 
-  
-    if (ride.passageiro_embarcou_at) { 
-      return reply.code(400).send({ error: 'Não é possível cancelar após embarque do passageiro' }) 
-    } 
-  
-    await query(` 
-      UPDATE rides SET 
-        status = 'cancelada', 
-        cancelada_at = CURRENT_TIMESTAMP, 
-        status_detalhe = 'cancelada_motorista' 
-      WHERE id = $1 
-    `, [rideId]) 
-  
-    // Notifica grupo Telegram 
-    try { 
-      const { editGroupMessage } = await import('../telegram.js') 
-      if (ride.telegram_message_id) { 
-        await editGroupMessage(ride.telegram_message_id, 
-          `❌ *Corrida cancelada pelo motorista*\n\n📍 ${ride.origem}\n🏁 ${ride.destino}` 
-        ) 
-      } 
-    } catch(e) {} 
-  
-    // Emite evento socket.io
-    const io = getIo()
-    if (io) {
-      io.to(`ride:${rideId}`).emit('corrida:status_atualizado', { status: 'cancelada', token: ride.token, rideId: rideId })
+  fastify.put('/api/motorista/:token/cancelar-corrida/:rideId', async (request, reply) => {
+    const { token, rideId } = request.params
+    const { motivo_codigo } = request.body || {}
+    const driver = (await query('SELECT id FROM drivers WHERE token_perfil = $1', [token])).rows[0]
+    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' })
+    const ride = (await query("SELECT * FROM rides WHERE id = $1 AND driver_id = $2 AND status IN ('aceita', 'aberta')", [rideId, driver.id])).rows[0]
+    if (!ride) {
+      const existe = (await query('SELECT status FROM rides WHERE id = $1', [rideId])).rows[0]
+      if (existe) return reply.code(400).send({ error: `Não é possível cancelar corrida com status: ${existe.status}` })
+      return reply.code(404).send({ error: 'Corrida não encontrada' })
     }
-  
-    return { mensagem: 'Corrida cancelada com sucesso' } 
+    if (ride.passageiro_embarcou_at) return reply.code(400).send({ error: 'Não é possível cancelar após embarque do passageiro' })
+    if (!motivo_codigo) return reply.code(400).send({ error: 'Motivo do cancelamento é obrigatório' })
+    const motivo = (await query('SELECT * FROM cancelamento_motivos WHERE codigo = $1 AND ativo = true', [motivo_codigo])).rows[0]
+    if (!motivo) return reply.code(400).send({ error: 'Motivo inválido' })
+    const config = (await query('SELECT * FROM cancelamento_config LIMIT 1')).rows[0]
+    let taxa_cobrada = false
+    let taxa_valor = 0
+    if (motivo.permite_taxa && motivo.requer_tempo_espera && ride.motorista_chegou_at) {
+      const minutos = (Date.now() - new Date(ride.motorista_chegou_at).getTime()) / 60000
+      if (minutos >= (config?.tempo_espera_minutos || 5)) {
+        taxa_valor = config?.taxa_cancelamento_valor || 5.00
+        taxa_cobrada = true
+      }
+    }
+    await query(`UPDATE rides SET status = 'cancelada', cancelada_at = CURRENT_TIMESTAMP, status_detalhe = 'cancelada_motorista', motivo_cancelamento = $1, taxa_cancelamento = $2, taxa_cancel_cobrada = $3, cancelado_por = 'motorista' WHERE id = $4`, [motivo_codigo, taxa_valor, taxa_cobrada, rideId])
+    if (!motivo.permite_taxa || !taxa_cobrada) {
+      await query('UPDATE drivers SET total_cancelamentos = total_cancelamentos + 1 WHERE id = $1', [driver.id])
+      const stats = (await query(`SELECT COUNT(*) as total, SUM(CASE WHEN status = 'cancelada' AND status_detalhe = 'cancelada_motorista' AND (motivo_cancelamento IS NULL OR motivo_cancelamento NOT IN ('passageiro_nao_apareceu')) THEN 1 ELSE 0 END) as cancels FROM rides WHERE driver_id = $1 AND created_at >= NOW() - INTERVAL '30 days'`, [driver.id])).rows[0]
+      const tc = parseFloat(stats.total) > 0 ? parseFloat((parseFloat(stats.cancels) / parseFloat(stats.total) * 100).toFixed(1)) : 0
+      await query('UPDATE drivers SET tc_percentual = $1, tc_ultima_atualizacao = NOW() WHERE id = $2', [tc, driver.id])
+      const tcLimite = config?.tc_limite_percentual || 15
+      if (config?.suspensao_automatica && tc >= tcLimite) {
+        await query('UPDATE drivers SET suspenso_tc = true WHERE id = $1', [driver.id])
+      }
+    }
+    try {
+      const { editGroupMessage } = await import('../telegram.js')
+      if (ride.telegram_message_id) await editGroupMessage(ride.telegram_message_id, `❌ *Corrida cancelada pelo motorista*\n\n📍 ${ride.origem}\n🏁 ${ride.destino}\n📋 Motivo: ${motivo.descricao}`)
+    } catch(e) {}
+    const io = getIo()
+    if (io) io.to(`ride:${rideId}`).emit('corrida:status_atualizado', { status: 'cancelada', token: ride.token, rideId })
+    return { mensagem: 'Corrida cancelada com sucesso', taxa_cobrada, taxa_valor }
+  })
+
+  fastify.get('/api/cancelamento/motivos', async (request, reply) => {
+    const motivos = (await query('SELECT codigo, descricao, permite_taxa, requer_tempo_espera FROM cancelamento_motivos WHERE ativo = true ORDER BY ordem')).rows
+    return { motivos }
+  })
+
+  fastify.get('/api/admin/cancelamento-config', { preHandler: requireAuth }, async () => {
+    const config = (await query('SELECT * FROM cancelamento_config LIMIT 1')).rows[0]
+    const motivos = (await query('SELECT * FROM cancelamento_motivos ORDER BY ordem')).rows
+    return { config, motivos }
+  })
+
+  fastify.put('/api/admin/cancelamento-config', { preHandler: requireAuth }, async (request, reply) => {
+    const { tempo_espera_minutos, taxa_cancelamento_valor, tc_limite_percentual, tc_janela_corridas, suspensao_automatica } = request.body
+    await query(`UPDATE cancelamento_config SET tempo_espera_minutos=$1, taxa_cancelamento_valor=$2, tc_limite_percentual=$3, tc_janela_corridas=$4, suspensao_automatica=$5, updated_at=NOW() WHERE id=1`, [tempo_espera_minutos, taxa_cancelamento_valor, tc_limite_percentual, tc_janela_corridas, suspensao_automatica])
+    return { success: true }
   })
 
 
