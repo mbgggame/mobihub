@@ -535,6 +535,15 @@ export default async function publicRoutes(fastify) {
         WHERE id = $2
       `, [request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.ip, client.id])
     } 
+    // Check for referral discount
+    let valorDesconto = 0
+    let hasDesconto = false
+    if (client && client.desconto_primeira_corrida > 0 && !client.desconto_usado) {
+      valorDesconto = Math.min(client.desconto_primeira_corrida, valor) // Ensure discount doesn't exceed ride value
+      hasDesconto = true
+    }
+    const valorFinal = Math.max(0, valor - valorDesconto)
+
     const { v4: uuidv4 } = await import('uuid') 
     const token = uuidv4() 
     const statusInicial = tipo === 'agendada' ? 'agendada' : 'aberta' 
@@ -543,21 +552,27 @@ export default async function publicRoutes(fastify) {
       "SELECT * FROM split_rules WHERE ativo = 1 AND com_lider = false ORDER BY id LIMIT 1" 
     )).rows[0] 
     const percentualMotoristaDefault = splitRuleDefault?.percentual_motorista || 82 
-    const valorMotorista = parseFloat((valor * percentualMotoristaDefault / 100).toFixed(2)) 
-    const valorMobihub = parseFloat((valor - valorMotorista).toFixed(2)) 
+    // Calculate motorista share based on final discounted value
+    const valorMotorista = parseFloat((valorFinal * percentualMotoristaDefault / 100).toFixed(2)) 
+    const valorMobihub = parseFloat((valorFinal - valorMotorista).toFixed(2)) 
     
     let sinalValor = null
     let pixPayload = null
     let chargeId = null
 
     if (tipo === 'agendada') {
-      sinalValor = parseFloat((valor * 0.30).toFixed(2))
+      sinalValor = parseFloat((valorFinal * 0.30).toFixed(2))
     }
 
     const result = await query(` 
-      INSERT INTO rides (token, client_id, origem, origem_lat, origem_lng, destino, destino_lat, destino_lng, valor, valor_motorista, valor_mobihub, tipo, agendada_para, status, forma_pagamento, sinal_valor, sinal_pago) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING id 
-    `, [token, client.id, origem, origem_lat, origem_lng, destino, destino_lat, destino_lng, valor, valorMotorista, valorMobihub, tipo || 'normal', agendada_para || null, statusInicial, forma_pagamento || '1', sinalValor, false]) 
+      INSERT INTO rides (token, client_id, origem, origem_lat, origem_lng, destino, destino_lat, destino_lng, valor, valor_final, valor_motorista, valor_mobihub, tipo, agendada_para, status, forma_pagamento, sinal_valor, sinal_pago, desconto_aplicado) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING id 
+    `, [token, client.id, origem, origem_lat, origem_lng, destino, destino_lat, destino_lng, valor, valorFinal, valorMotorista, valorMobihub, tipo || 'normal', agendada_para || null, statusInicial, forma_pagamento || '1', sinalValor, false, valorDesconto])
+    
+    // Mark discount as used if applicable
+    if (hasDesconto) {
+      await query('UPDATE clients SET desconto_usado = true WHERE id = $1', [client.id])
+    }
     const ride = (await query('SELECT * FROM rides WHERE id = $1', [result.rows[0].id])).rows[0] 
 
     if (tipo === 'agendada' && process.env.ASAAS_API_KEY) {
@@ -1120,7 +1135,40 @@ export default async function publicRoutes(fastify) {
       [h3Id, JSON.stringify(splitH3), id]) 
     
     await query('UPDATE drivers SET total_viagens = total_viagens + 1 WHERE id = $1', [driver.id]) 
-    if (ride.client_id) await query('UPDATE clients SET total_corridas = total_corridas + 1 WHERE id = $1', [ride.client_id])
+    if (ride.client_id) {
+      await query('UPDATE clients SET total_corridas = total_corridas + 1 WHERE id = $1', [ride.client_id])
+      
+      // Check for referral and handle bonus
+      const indicacaoResult = await query('SELECT * FROM indicacoes WHERE client_id = $1 AND bonus_liberado = false', [ride.client_id])
+      if (indicacaoResult.rows.length > 0) {
+        const indicacao = indicacaoResult.rows[0]
+        // Increment corridas_completadas
+        await query('UPDATE indicacoes SET corridas_completadas = corridas_completadas + 1 WHERE id = $1', [indicacao.id])
+        // Get referral config
+        const config = (await query('SELECT * FROM indicacao_config LIMIT 1')).rows[0]
+        if (config) {
+          const updatedIndicacao = (await query('SELECT * FROM indicacoes WHERE id = $1', [indicacao.id])).rows[0]
+          if (updatedIndicacao.corridas_completadas >= config.min_corridas_liberar) {
+            // Release bonus!
+            await query(`
+              UPDATE indicacoes 
+              SET bonus_liberado = true, bonus_valor = $1 
+              WHERE id = $2
+            `, [config.bonus_motorista, indicacao.id])
+            
+            // Add bonus to driver's transactions
+            await query(`
+              INSERT INTO driver_transactions (driver_id, tipo, descricao, valor, created_at)
+              VALUES ($1, 'credito', $2, $3, CURRENT_TIMESTAMP)
+            `, [indicacao.driver_id, `Bônus indicação passageiro #${ride.client_id}`, config.bonus_motorista])
+            
+            // Update driver's credits if needed (depending on how your system works)
+            // For now, just log it
+            console.log(`[REFERRAL] Bonus R$${config.bonus_motorista} released to driver #${indicacao.driver_id}`)
+          }
+        }
+      }
+    }
 
     // Emitir evento para passageiro com Pix copia e cola
     const io = getIo()

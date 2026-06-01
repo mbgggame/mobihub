@@ -263,6 +263,12 @@
           <input id="cad-cpf" type="text" placeholder="000.000.000-00" 
             class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
         </div> 
+        <div> 
+          <label class="text-xs text-gray-500 font-medium">Código de indicação (opcional)</label> 
+          <input id="cad-indicacao" type="text" placeholder="Ex: JOHND123" 
+            class="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/> 
+          <p id="msg-indicacao" class="text-xs text-gray-400 mt-1"></p>
+        </div> 
         <div id="erro-cadastro" class="hidden text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2"></div> 
         <button onclick="salvarCadastro()" 
           class="w-full bg-green-600 text-white rounded-xl py-3 font-semibold text-sm hover:bg-green-700"> 
@@ -466,7 +472,17 @@
    } catch(e) {} 
    const partes = endereco.split(','); 
    return partes.slice(0, 2).join(',').trim(); 
- } 
+ }
+ 
+ // Check for referral code in URL query params
+ (function() {
+   const urlParams = new URLSearchParams(window.location.search);
+   const refCode = urlParams.get('ref');
+   if (refCode) {
+     document.getElementById('cad-indicacao').value = refCode;
+     validarIndicacao(refCode);
+   }
+ })() 
  window.origemLat = null 
  window.origemLng = null 
  window.destinoLat = null 
@@ -629,11 +645,42 @@
    } 
  } 
 
- async function salvarCadastro() { 
+ async function validarIndicacao(codigo) {
+  const msgEl = document.getElementById('msg-indicacao');
+  if (!codigo || codigo.trim() === '') {
+    msgEl.textContent = '';
+    return null;
+  }
+
+  try {
+    const r = await fetch(`/api/indicacao/validar/${encodeURIComponent(codigo)}`);
+    const d = await r.json();
+    if (d.valido) {
+      msgEl.textContent = `✅ Bônus de R$ ${d.desconto} na primeira corrida! (${d.motorista_nome} te indicou você!`;
+      msgEl.className = 'text-xs text-green-600 mt-1';
+      return d;
+    } else {
+      msgEl.textContent = d.motivo || '❌ Código inválido';
+      msgEl.className = 'text-xs text-red-600 mt-1';
+      return null;
+    }
+  } catch (e) {
+    console.error('[VALIDAR INDICACAO]', e);
+    msgEl.textContent = '';
+    return null;
+  }
+}
+
+document.getElementById('cad-indicacao').addEventListener('blur', async function() {
+  validarIndicacao(this.value);
+});
+
+async function salvarCadastro() { 
    const nome = document.getElementById('cad-nome').value.trim() 
    const celular = document.getElementById('cad-celular').value.trim() 
    const email = document.getElementById('cad-email').value.trim() 
    const cpf = document.getElementById('cad-cpf').value.trim() 
+   const codigoIndicacao = document.getElementById('cad-indicacao').value.trim() 
    const erro = document.getElementById('erro-cadastro') 
    if (!nome) { erro.textContent = 'Nome é obrigatório'; erro.classList.remove('hidden'); return } 
    if (!celular) { erro.textContent = 'Celular é obrigatório'; erro.classList.remove('hidden'); return } 
@@ -642,13 +689,21 @@
    
    // Salvar no banco via API
    try {
-     await fetch('/api/client/cadastrar', {
+     const r = await fetch('/api/client/cadastrar', {
        method: 'POST',
        headers: { 'Content-Type': 'application/json' },
        body: JSON.stringify({ nome, telefone: celular, email, cpf })
-     })
+     });
+     
+     if (codigoIndicacao) {
+       await fetch('/api/indicacao/aplicar', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ telefone: celular, codigo: codigoIndicacao })
+       });
+     }
    } catch (e) {
-     console.error('[SALVAR CADASTRO] Erro ao salvar no banco:', e)
+     console.error('[SALVAR CADASTRO] Erro ao salvar no banco:', e);
    }
    
    localStorage.setItem('cliente_nome', nome)
