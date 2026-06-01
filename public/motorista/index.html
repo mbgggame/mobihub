@@ -592,10 +592,22 @@
            ⏸️ Parar 
          </button> 
          <button onclick="acaoCorridaAtiva('finalizar')" 
-           class="bg-green-600 text-white rounded-lg py-2.5 text-sm font-bold hover:bg-green-700"> 
-           ✅ Finalizar 
-         </button> 
-         <button onclick="acaoCorridaAtiva('cancelar')" 
+          class="bg-green-600 text-white rounded-lg py-2.5 text-sm font-bold hover:bg-green-700"> 
+          ✅ Finalizar 
+        </button> 
+<!-- Modal Cancelamento --> 
+<div id="modal-cancelamento" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end justify-center"> 
+  <div class="bg-white rounded-t-2xl w-full max-w-lg p-6"> 
+    <h3 class="text-lg font-bold mb-1">Cancelar corrida</h3> 
+    <p class="text-sm text-gray-500 mb-4">Selecione o motivo do cancelamento:</p> 
+    <div id="lista-motivos" class="space-y-2 mb-4"></div> 
+    <div class="flex gap-3"> 
+      <button onclick="fecharModalCancelamento()" class="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg text-sm font-medium">Voltar</button> 
+      <button onclick="confirmarCancelamento()" id="btn-confirmar-cancel" class="flex-1 bg-red-600 text-white py-2.5 rounded-lg text-sm font-medium" disabled>Confirmar</button> 
+    </div> 
+  </div> 
+</div> 
+        <button onclick="acaoCorridaAtiva('cancelar')" 
            class="col-span-2 bg-red-50 text-red-600 border border-red-200 rounded-lg py-2.5 text-sm font-medium hover:bg-red-100" 
            id="btn-cancelar-corrida"> 
            ❌ Cancelar corrida 
@@ -2139,31 +2151,7 @@ async function carregar() {
      } 
      return 
    } else if (acao === 'cancelar') { 
-   const btnCancelar = document.getElementById('btn-cancelar-corrida') 
-   if (btnCancelar) btnCancelar.disabled = true 
-   console.log('[CANCELAR] Iniciando cancelamento, corridaAtualId:', corridaAtualId, 'token:', tokenMotorista) 
-   try { 
-     await new Promise((resolve, reject) => { 
-       const xhr = new XMLHttpRequest() 
-       xhr.open('PUT', `/api/motorista/${tokenMotorista}/cancelar-corrida/${corridaAtualId}`) 
-       xhr.setRequestHeader('Content-Type', 'application/json') 
-       xhr.onload = () => { 
-         console.log('[CANCELAR] XHR status:', xhr.status, xhr.responseText) 
-         if (xhr.status === 200) esconderCorridaAtiva() 
-         if (btnCancelar) btnCancelar.disabled = false 
-         resolve() 
-       } 
-       xhr.onerror = (e) => { 
-         console.error('[CANCELAR] XHR erro:', e) 
-         if (btnCancelar) btnCancelar.disabled = false 
-         reject(e) 
-       } 
-       xhr.send(JSON.stringify({ token_motorista: tokenMotorista })) 
-     }) 
-   } catch(e) { 
-     console.error('[CANCELAR] Erro:', e.message) 
-     if (btnCancelar) btnCancelar.disabled = false 
-   } 
+   await abrirModalCancelamento() 
    return 
    } 
    await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token_motorista: tokenMotorista }) }) 
@@ -2518,6 +2506,75 @@ async function verificarAgendamentosDisponiveis() {
     } 
   } catch(e) {} 
 }
+
+let motivoSelecionado = null 
+
+async function abrirModalCancelamento() { 
+  motivoSelecionado = null 
+  document.getElementById('btn-confirmar-cancel').disabled = true 
+  const modal = document.getElementById('modal-cancelamento') 
+  const lista = document.getElementById('lista-motivos') 
+  lista.innerHTML = '<p class="text-gray-400 text-sm">Carregando...</p>' 
+  modal.classList.remove('hidden') 
+  try { 
+    const r = await fetch('/api/cancelamento/motivos') 
+    const { motivos } = await r.json() 
+    lista.innerHTML = motivos.map(m => ` 
+      <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50"> 
+        <input type="radio" name="motivo-cancel" value="${m.codigo}" onchange="selecionarMotivo('${m.codigo}', ${m.requer_tempo_espera})" class="text-red-600"> 
+        <span class="text-sm">${m.descricao}</span> 
+      </label> 
+    `).join('') 
+  } catch(e) { 
+    lista.innerHTML = '<p class="text-red-500 text-sm">Erro ao carregar motivos</p>' 
+  } 
+} 
+
+function selecionarMotivo(codigo, requerEspera) { 
+  motivoSelecionado = codigo 
+  document.getElementById('btn-confirmar-cancel').disabled = false 
+} 
+
+function fecharModalCancelamento() { 
+  document.getElementById('modal-cancelamento').classList.add('hidden') 
+  motivoSelecionado = null 
+  const btnCancelar = document.getElementById('btn-cancelar-corrida') 
+  if (btnCancelar) btnCancelar.disabled = false 
+} 
+
+async function confirmarCancelamento() { 
+  if (!motivoSelecionado) return 
+  const btnConfirmar = document.getElementById('btn-confirmar-cancel') 
+  btnConfirmar.disabled = true 
+  btnConfirmar.textContent = 'Cancelando...' 
+  console.log('[CANCELAR] corridaAtualId:', corridaAtualId, 'motivo:', motivoSelecionado) 
+  try { 
+    const xhr = new XMLHttpRequest() 
+    xhr.open('PUT', `/api/motorista/${tokenMotorista}/cancelar-corrida/${corridaAtualId}`) 
+    xhr.setRequestHeader('Content-Type', 'application/json') 
+    xhr.onload = () => { 
+      console.log('[CANCELAR] Resposta:', xhr.status, xhr.responseText) 
+      fecharModalCancelamento() 
+      if (xhr.status === 200) { 
+        const data = JSON.parse(xhr.responseText) 
+        if (data.taxa_cobrada) { 
+          alert(`✅ Corrida cancelada. Taxa de R$ ${data.taxa_valor.toFixed(2)} será cobrada do passageiro.`) 
+        } 
+        esconderCorridaAtiva() 
+      } else { 
+        alert('Erro ao cancelar. Tente novamente.') 
+      } 
+    } 
+    xhr.onerror = () => { 
+      fecharModalCancelamento() 
+      alert('Erro de conexão.') 
+    } 
+    xhr.send(JSON.stringify({ motivo_codigo: motivoSelecionado })) 
+  } catch(e) { 
+    fecharModalCancelamento() 
+    console.error('[CANCELAR] Erro:', e) 
+  } 
+} 
 
 // Verificar agendamentos disponíveis a cada 60 segundos 
 setInterval(verificarAgendamentosDisponiveis, 60000) 
