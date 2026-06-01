@@ -70,14 +70,22 @@
         <label class="text-sm font-medium">Nome</label>
         <input id="regiao-nome" type="text" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm" placeholder="Ex: Vitória">
       </div>
+      <div>
+        <label class="text-sm font-medium">Buscar cidade</label>
+        <div class="flex gap-2 mt-1">
+          <input id="regiao-busca" type="text" placeholder="Ex: Viana, ES" class="flex-1 border rounded-lg px-3 py-2 text-sm">
+          <button onclick="buscarCidade()" class="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm">🔍</button>
+        </div>
+        <div id="busca-resultados" class="hidden mt-1 border rounded-lg overflow-hidden"></div>
+      </div>
       <div class="grid grid-cols-2 gap-3">
         <div>
           <label class="text-sm font-medium">Latitude</label>
-          <input id="regiao-lat" type="number" step="0.0001" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm">
+          <input id="regiao-lat" type="number" step="0.0001" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-gray-50">
         </div>
         <div>
           <label class="text-sm font-medium">Longitude</label>
-          <input id="regiao-lng" type="number" step="0.0001" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm">
+          <input id="regiao-lng" type="number" step="0.0001" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-gray-50">
         </div>
       </div>
       <div>
@@ -100,6 +108,38 @@ const token = localStorage.getItem('mobihub_token')
 if (!token) window.location.href = '/admin/login'
 const h = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
 let regioes = []
+
+async function buscarCidade() {
+  const q = document.getElementById('regiao-busca').value.trim()
+  if (!q) return
+  const mbRes = await fetch('/api/config/mapbox')
+  const { token: mbToken } = await mbRes.json()
+  const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?access_token=${mbToken}&country=BR&language=pt&limit=5`)
+  const data = await res.json()
+  const el = document.getElementById('busca-resultados')
+  if (!data.features?.length) {
+    el.innerHTML = '<p class="px-3 py-2 text-sm text-gray-400">Nenhum resultado</p>'
+    el.classList.remove('hidden')
+    return
+  }
+  el.innerHTML = data.features.map(f => `
+    <button onclick="selecionarCidade(${f.center[1]}, ${f.center[0]}, '${f.text}')"
+      class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b last:border-0">
+      📍 ${f.place_name}
+    </button>
+  `).join('')
+  el.classList.remove('hidden')
+}
+
+function selecionarCidade(lat, lng, nome) {
+  document.getElementById('regiao-lat').value = lat.toFixed(4)
+  document.getElementById('regiao-lng').value = lng.toFixed(4)
+  if (!document.getElementById('regiao-nome').value) {
+    document.getElementById('regiao-nome').value = nome
+  }
+  document.getElementById('busca-resultados').classList.add('hidden')
+  document.getElementById('regiao-busca').value = ''
+}
 
 async function carregar() {
   const r = await fetch('/api/admin/operacional', { headers: h })
