@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>MobiHub — Painel Operacional</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+<div class="max-w-4xl mx-auto py-8 px-4">
+  <div class="flex items-center gap-4 mb-6">
+    <a href="/admin" class="text-gray-500 hover:text-gray-700">← Admin</a>
+    <h1 class="text-2xl font-bold">⚙️ Painel Operacional</h1>
+  </div>
+  <div class="grid grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded-xl shadow p-4 text-center">
+      <div class="text-2xl font-bold" id="stat-total">—</div>
+      <div class="text-sm text-gray-500">Total corridas</div>
+    </div>
+    <div class="bg-white rounded-xl shadow p-4 text-center">
+      <div class="text-2xl font-bold text-orange-500" id="stat-testes">—</div>
+      <div class="text-sm text-gray-500">Corridas teste</div>
+    </div>
+    <div class="bg-white rounded-xl shadow p-4 text-center">
+      <div class="text-2xl font-bold text-green-600" id="stat-reais">—</div>
+      <div class="text-sm text-gray-500">Corridas reais</div>
+    </div>
+  </div>
+  <div class="bg-white rounded-xl shadow p-6 mb-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <h2 class="text-lg font-semibold">🧪 Modo Teste</h2>
+        <p class="text-sm text-gray-500 mt-1">Quando ativo, novas corridas são marcadas como teste automaticamente</p>
+      </div>
+      <label class="flex items-center gap-2 cursor-pointer">
+        <div class="relative">
+          <input type="checkbox" id="modo-teste" class="sr-only" onchange="alternarModoTeste()">
+          <div id="toggle-teste-bg" class="w-12 h-6 rounded-full bg-gray-300"></div>
+          <div id="toggle-teste-dot" class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform"></div>
+        </div>
+        <span id="modo-teste-label" class="text-sm font-medium text-gray-600">Inativo</span>
+      </label>
+    </div>
+  </div>
+  <div class="bg-white rounded-xl shadow p-6 mb-6">
+    <h2 class="text-lg font-semibold mb-2">🗑️ Resetar Histórico</h2>
+    <p class="text-sm text-gray-500 mb-4">Marca todas as corridas até a data selecionada como "teste", limpando a análise real.</p>
+    <div class="flex gap-3 items-end">
+      <div>
+        <label class="text-sm font-medium text-gray-700">Data de corte</label>
+        <input type="date" id="data-corte" class="mt-1 block border rounded-lg px-3 py-2 text-sm">
+      </div>
+      <button onclick="resetarHistorico()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium">🗑️ Resetar</button>
+    </div>
+    <p id="msg-reset" class="mt-2 text-sm"></p>
+  </div>
+  <div class="bg-white rounded-xl shadow p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-semibold">📍 Regiões de Cobertura</h2>
+      <button onclick="abrirModalRegiao()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Adicionar</button>
+    </div>
+    <div id="lista-regioes"></div>
+  </div>
+</div>
+<div id="modal-regiao" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style="z-index:9999">
+  <div class="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+    <h3 class="text-lg font-bold mb-4" id="modal-regiao-titulo">Nova Região</h3>
+    <input type="hidden" id="regiao-id">
+    <div class="space-y-3">
+      <div>
+        <label class="text-sm font-medium">Nome</label>
+        <input id="regiao-nome" type="text" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm" placeholder="Ex: Vitória">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-sm font-medium">Latitude</label>
+          <input id="regiao-lat" type="number" step="0.0001" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="text-sm font-medium">Longitude</label>
+          <input id="regiao-lng" type="number" step="0.0001" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm">
+        </div>
+      </div>
+      <div>
+        <label class="text-sm font-medium">Raio (km)</label>
+        <input id="regiao-raio" type="number" step="0.5" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm" placeholder="15">
+      </div>
+      <div class="flex items-center gap-2">
+        <input type="checkbox" id="regiao-ativo" checked class="rounded">
+        <label class="text-sm">Região ativa</label>
+      </div>
+    </div>
+    <div class="flex gap-3 mt-4">
+      <button onclick="fecharModalRegiao()" class="flex-1 border border-gray-300 py-2 rounded-lg text-sm">Cancelar</button>
+      <button onclick="salvarRegiao()" class="flex-1 bg-green-600 text-white py-2 rounded-lg text-sm font-medium">Salvar</button>
+    </div>
+  </div>
+</div>
+<script>
+const token = localStorage.getItem('mobihub_token')
+if (!token) window.location.href = '/admin/login'
+const h = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+let regioes = []
+
+async function carregar() {
+  const r = await fetch('/api/admin/operacional', { headers: h })
+  const { config, regioes: rg, stats } = await r.json()
+  document.getElementById('stat-total').textContent = stats.total
+  document.getElementById('stat-testes').textContent = stats.testes
+  document.getElementById('stat-reais').textContent = stats.reais
+  const ativo = config.modo_teste
+  document.getElementById('modo-teste').checked = ativo
+  document.getElementById('toggle-teste-bg').className = `w-12 h-6 rounded-full ${ativo ? 'bg-green-500' : 'bg-gray-300'}`
+  document.getElementById('toggle-teste-dot').style.transform = ativo ? 'translateX(24px)' : 'translateX(0)'
+  document.getElementById('modo-teste-label').textContent = ativo ? '🟢 Ativo' : 'Inativo'
+  regioes = rg
+  renderizarRegioes()
+  const hoje = new Date().toISOString().split('T')[0]
+  document.getElementById('data-corte').value = hoje
+}
+
+async function alternarModoTeste() {
+  const ativo = document.getElementById('modo-teste').checked
+  await fetch('/api/admin/operacional/modo-teste', { method: 'PUT', headers: h, body: JSON.stringify({ modo_teste: ativo }) })
+  document.getElementById('toggle-teste-bg').className = `w-12 h-6 rounded-full ${ativo ? 'bg-green-500' : 'bg-gray-300'}`
+  document.getElementById('toggle-teste-dot').style.transform = ativo ? 'translateX(24px)' : 'translateX(0)'
+  document.getElementById('modo-teste-label').textContent = ativo ? '🟢 Ativo' : 'Inativo'
+}
+
+async function resetarHistorico() {
+  const data = document.getElementById('data-corte').value
+  if (!data) return alert('Selecione a data de corte')
+  if (!confirm(`Marcar todas as corridas até ${data} como teste?`)) return
+  const r = await fetch('/api/admin/operacional/resetar-historico', { method: 'POST', headers: h, body: JSON.stringify({ data_corte: data }) })
+  const d = await r.json()
+  const msg = document.getElementById('msg-reset')
+  msg.textContent = `✅ ${d.marcadas} corridas marcadas como teste!`
+  msg.className = 'mt-2 text-sm text-green-600'
+  carregar()
+}
+
+function renderizarRegioes() {
+  const el = document.getElementById('lista-regioes')
+  if (!regioes.length) { el.innerHTML = '<p class="text-gray-400 text-sm">Nenhuma região cadastrada.</p>'; return }
+  el.innerHTML = regioes.map(r => `
+    <div class="flex items-center justify-between py-3 border-b last:border-0">
+      <div>
+        <div class="font-medium flex items-center gap-2">${r.nome} <span class="text-xs px-2 py-0.5 rounded-full ${r.ativo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}">${r.ativo ? 'Ativa' : 'Inativa'}</span></div>
+        <div class="text-xs text-gray-500">📍 ${r.lat}, ${r.lng} • Raio: ${r.raio_km}km</div>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="editarRegiao(${r.id})" class="text-blue-600 text-sm hover:underline">Editar</button>
+        <button onclick="deletarRegiao(${r.id})" class="text-red-500 text-sm hover:underline">Excluir</button>
+      </div>
+    </div>
+  `).join('')
+}
+
+function abrirModalRegiao() {
+  document.getElementById('regiao-id').value = ''
+  document.getElementById('regiao-nome').value = ''
+  document.getElementById('regiao-lat').value = ''
+  document.getElementById('regiao-lng').value = ''
+  document.getElementById('regiao-raio').value = '15'
+  document.getElementById('regiao-ativo').checked = true
+  document.getElementById('modal-regiao-titulo').textContent = 'Nova Região'
+  document.getElementById('modal-regiao').classList.remove('hidden')
+}
+
+function editarRegiao(id) {
+  const r = regioes.find(x => x.id === id)
+  if (!r) return
+  document.getElementById('regiao-id').value = r.id
+  document.getElementById('regiao-nome').value = r.nome
+  document.getElementById('regiao-lat').value = r.lat
+  document.getElementById('regiao-lng').value = r.lng
+  document.getElementById('regiao-raio').value = r.raio_km
+  document.getElementById('regiao-ativo').checked = r.ativo
+  document.getElementById('modal-regiao-titulo').textContent = 'Editar Região'
+  document.getElementById('modal-regiao').classList.remove('hidden')
+}
+
+function fecharModalRegiao() { document.getElementById('modal-regiao').classList.add('hidden') }
+
+async function salvarRegiao() {
+  const id = document.getElementById('regiao-id').value
+  const body = {
+    nome: document.getElementById('regiao-nome').value,
+    lat: parseFloat(document.getElementById('regiao-lat').value),
+    lng: parseFloat(document.getElementById('regiao-lng').value),
+    raio_km: parseFloat(document.getElementById('regiao-raio').value),
+    ativo: document.getElementById('regiao-ativo').checked
+  }
+  if (!body.nome || !body.lat || !body.lng) return alert('Preencha todos os campos')
+  if (id) await fetch(`/api/admin/operacional/regioes/${id}`, { method: 'PUT', headers: h, body: JSON.stringify(body) })
+  else await fetch('/api/admin/operacional/regioes', { method: 'POST', headers: h, body: JSON.stringify(body) })
+  fecharModalRegiao()
+  carregar()
+}
+
+async function deletarRegiao(id) {
+  if (!confirm('Excluir esta região?')) return
+  await fetch(`/api/admin/operacional/regioes/${id}`, { method: 'DELETE', headers: h })
+  carregar()
+}
+
+carregar()
+</script>
+</body>
+</html>
