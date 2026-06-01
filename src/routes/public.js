@@ -1043,7 +1043,7 @@ export default async function publicRoutes(fastify) {
                 valor: valorFinal,
                 motorista_id: driver.id,
                 chave_pix: driver.chave_pix,
-                percentual_motorista: parseFloat(((splitH3.motorista_total / valorFinal) * 100).toFixed(2)),
+                percentual_motorista: Math.round((splitH3.motorista_total / valorFinal) * 100),
                 app_origem: 'mobihub'
               })
             })
