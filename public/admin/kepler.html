@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MobiHub — Mapa de Calor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+  <style>
+    #map { width:100%; height:calc(100vh - 110px); }
+  </style>
+</head>
+<body class="bg-gray-900 text-white">
+  <div class="flex items-center justify-between px-6 py-3 bg-gray-800 border-b border-gray-700">
+    <div class="flex items-center gap-4">
+      <a href="/admin" class="text-gray-400 hover:text-white text-sm">← Admin</a>
+      <h1 class="text-lg font-bold">🗺️ Mapa de Calor</h1>
+    </div>
+    <div class="flex items-center gap-3">
+      <select id="periodo" class="bg-gray-700 text-white text-sm rounded px-3 py-1.5 border border-gray-600">
+        <option value="7">Últimos 7 dias</option>
+        <option value="30" selected>Últimos 30 dias</option>
+        <option value="90">Últimos 90 dias</option>
+      </select>
+      <select id="tipo" class="bg-gray-700 text-white text-sm rounded px-3 py-1.5 border border-gray-600">
+        <option value="origem">Origens</option>
+        <option value="destino">Destinos</option>
+      </select>
+      <button onclick="carregarDados()" class="bg-green-600 hover:bg-green-700 text-sm px-4 py-1.5 rounded font-medium">🔄 Atualizar</button>
+      <button onclick="exportarCSV()" class="bg-blue-600 hover:bg-blue-700 text-sm px-4 py-1.5 rounded font-medium">📥 CSV</button>
+    </div>
+  </div>
+  <div class="grid grid-cols-4 gap-0 bg-gray-800 border-b border-gray-700">
+    <div class="text-center py-2 border-r border-gray-700">
+      <div class="text-xl font-bold text-green-400" id="stat-corridas">—</div>
+      <div class="text-xs text-gray-400">Corridas</div>
+    </div>
+    <div class="text-center py-2 border-r border-gray-700">
+      <div class="text-xl font-bold text-blue-400" id="stat-receita">—</div>
+      <div class="text-xs text-gray-400">Receita</div>
+    </div>
+    <div class="text-center py-2 border-r border-gray-700">
+      <div class="text-xl font-bold text-yellow-400" id="stat-motoristas">—</div>
+      <div class="text-xs text-gray-400">Motoristas</div>
+    </div>
+    <div class="text-center py-2">
+      <div class="text-xl font-bold text-purple-400" id="stat-ticket">—</div>
+      <div class="text-xs text-gray-400">Ticket Médio</div>
+    </div>
+  </div>
+  <div id="map"></div>
+  <script>
+    const token = localStorage.getItem('mobihub_token')
+    if (!token) window.location.href = '/admin/login'
+    let map, heatLayer, dadosCorridas = []
+    async function iniciarMapa() {
+      const res = await fetch('/api/config/mapbox')
+      const { token: mbToken } = await res.json()
+      map = L.map('map').setView([-20.3155, -40.3128], 12)
+      L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token=${mbToken}`, {
+        tileSize: 512, zoomOffset: -1, maxZoom: 19,
+        attribution: '© Mapbox © OpenStreetMap'
+      }).addTo(map)
+      carregarDados()
+    }
+    async function carregarDados() {
+      const dias = document.getElementById('periodo').value
+      const tipo = document.getElementById('tipo').value
+      const res = await fetch(`/api/admin/mapa-dados?dias=${dias}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      const data = await res.json()
+      dadosCorridas = data.corridas || []
+      const s = data.stats
+      document.getElementById('stat-corridas').textContent = s.total
+      document.getElementById('stat-receita').textContent = `R$ ${Number(s.receita).toFixed(0)}`
+      document.getElementById('stat-motoristas').textContent = s.motoristas
+      document.getElementById('stat-ticket').textContent = `R$ ${Number(s.ticket_medio).toFixed(2)}`
+      atualizarHeatmap(tipo)
+    }
+    function atualizarHeatmap(tipo) {
+      if (heatLayer) map.removeLayer(heatLayer)
+      const pontos = dadosCorridas
+        .filter(r => tipo === 'origem' ? r.origem_lat : r.destino_lat)
+        .map(r => tipo === 'origem'
+          ? [parseFloat(r.origem_lat), parseFloat(r.origem_lng), 1]
+          : [parseFloat(r.destino_lat), parseFloat(r.destino_lng), 1])
+      heatLayer = L.heatLayer(pontos, { radius: 25, blur: 15, maxZoom: 17,
+        gradient: { 0.4: 'blue', 0.6: 'lime', 0.8: 'yellow', 1.0: 'red' }
+      }).addTo(map)
+    }
+    function exportarCSV() {
+      if (!dadosCorridas.length) return alert('Carregue os dados primeiro!')
+      const h = ['id','origem_lat','origem_lng','destino_lat','destino_lng','valor','status','h3_id','created_at']
+      const csv = [h.join(','), ...dadosCorridas.map(r => h.map(k => r[k]||'').join(','))].join('\n')
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}))
+      a.download = `corridas_${new Date().toISOString().split('T')[0]}.csv`
+      a.click()
+    }
+    document.getElementById('tipo').addEventListener('change', e => atualizarHeatmap(e.target.value))
+    iniciarMapa()
+  </script>
+</body>
+</html>
