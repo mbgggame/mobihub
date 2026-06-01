@@ -2075,6 +2075,8 @@ socket.on('agendamento:alerta_30min', (data) => {
      } 
      return 
    } else if (acao === 'cancelar') { 
+   const btnCancelar = document.getElementById('btn-cancelar-corrida') 
+   if (btnCancelar) btnCancelar.disabled = true 
    console.log('[CANCELAR] Iniciando cancelamento, corridaAtualId:', corridaAtualId, 'token:', tokenMotorista) 
    try { 
      const r = await fetch(`/api/motorista/${tokenMotorista}/cancelar-corrida/${corridaAtualId}`, { 
@@ -2085,8 +2087,10 @@ socket.on('agendamento:alerta_30min', (data) => {
      const respText = await r.text() 
      console.log('[CANCELAR] Resposta:', r.status, respText) 
      if (r.ok) { esconderCorridaAtiva() } 
+     if (btnCancelar) btnCancelar.disabled = false 
    } catch(e) { 
      console.error('[CANCELAR] Erro:', e.message) 
+     if (btnCancelar) btnCancelar.disabled = false 
    } 
    return 
    } 
