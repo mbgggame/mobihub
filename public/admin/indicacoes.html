@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>MobiHub — Indicações</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+<div id="app" class="max-w-4xl mx-auto py-8 px-4">
+  <div class="flex items-center gap-4 mb-6">
+    <a href="/admin" class="text-gray-500 hover:text-gray-700">← Admin</a>
+    <h1 class="text-2xl font-bold">🎯 Sistema de Indicações</h1>
+  </div>
+  <!-- Config Card -->
+  <div class="bg-white rounded-xl shadow p-6 mb-6">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-semibold">Configurações</h2>
+      <label class="flex items-center gap-2 cursor-pointer">
+        <span class="text-sm text-gray-600">Sistema ativo</span>
+        <div class="relative">
+          <input type="checkbox" id="ativo" class="sr-only">
+          <div id="toggle-bg" class="w-11 h-6 bg-gray-300 rounded-full"></div>
+          <div id="toggle-dot" class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform"></div>
+        </div>
+      </label>
+    </div>
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="text-sm font-medium text-gray-700">Bônus do motorista (R$)</label>
+        <input id="bonus_motorista" type="number" step="0.01" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm">
+        <p class="text-xs text-gray-400 mt-1">Valor creditado quando o passageiro completar o mínimo de corridas</p>
+      </div>
+      <div>
+        <label class="text-sm font-medium text-gray-700">Desconto do passageiro (R$)</label>
+        <input id="desconto_passageiro" type="number" step="0.01" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm">
+        <p class="text-xs text-gray-400 mt-1">Desconto aplicado somente na primeira corrida</p>
+      </div>
+      <div>
+        <label class="text-sm font-medium text-gray-700">Mínimo de corridas para liberar bônus</label>
+        <input id="min_corridas_liberar" type="number" min="1" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm">
+      </div>
+      <div>
+        <label class="text-sm font-medium text-gray-700">Validade do código (dias)</label>
+        <input id="validade_dias" type="number" min="1" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm">
+      </div>
+      <div>
+        <label class="text-sm font-medium text-gray-700">Limite de indicações por mês</label>
+        <input id="limite_mes" type="number" min="1" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm">
+      </div>
+      <div>
+        <label class="text-sm font-medium text-gray-700">Tipo de bônus</label>
+        <select id="tipo_bonus" class="mt-1 w-full border rounded-lg px-3 py-2 text-sm">
+          <option value="credito">Crédito na plataforma</option>
+          <option value="percentual">% extra na próxima corrida</option>
+        </select>
+      </div>
+    </div>
+    <button onclick="salvarConfig()" class="mt-4 bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg text-sm font-medium">
+      💾 Salvar Configurações
+    </button>
+    <span id="msg-config" class="ml-3 text-sm"></span>
+  </div>
+  <!-- Ranking -->
+  <div class="bg-white rounded-xl shadow p-6">
+    <h2 class="text-lg font-semibold mb-4">🏆 Ranking de Indicações</h2>
+    <div id="ranking-container">
+      <p class="text-gray-400 text-sm">Carregando...</p>
+    </div>
+  </div>
+</div>
+<script>
+  const token = localStorage.getItem('mobihub_token')
+  if (!token) window.location.href = '/admin/login'
+  const h = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+
+  async function carregarConfig() {
+    const r = await fetch('/api/admin/indicacao-config', { headers: h })
+    const c = await r.json()
+    document.getElementById('bonus_motorista').value = c.bonus_motorista || 5
+    document.getElementById('desconto_passageiro').value = c.desconto_passageiro || 10
+    document.getElementById('min_corridas_liberar').value = c.min_corridas_liberar || 1
+    document.getElementById('validade_dias').value = c.validade_dias || 30
+    document.getElementById('limite_mes').value = c.limite_mes || 50
+    document.getElementById('tipo_bonus').value = c.tipo_bonus || 'credito'
+    const ativo = c.ativo || false
+    document.getElementById('ativo').checked = ativo
+    document.getElementById('toggle-bg').className = `w-11 h-6 rounded-full ${ativo ? 'bg-green-500' : 'bg-gray-300'}`
+    document.getElementById('toggle-dot').style.transform = ativo ? 'translateX(20px)' : 'translateX(0)'
+  }
+
+  document.getElementById('ativo').addEventListener('change', function() {
+    const v = this.checked
+    document.getElementById('toggle-bg').className = `w-11 h-6 rounded-full ${v ? 'bg-green-500' : 'bg-gray-300'}`
+    document.getElementById('toggle-dot').style.transform = v ? 'translateX(20px)' : 'translateX(0)'
+  })
+
+  async function salvarConfig() {
+    const body = {
+      ativo: document.getElementById('ativo').checked,
+      bonus_motorista: parseFloat(document.getElementById('bonus_motorista').value),
+      desconto_passageiro: parseFloat(document.getElementById('desconto_passageiro').value),
+      min_corridas_liberar: parseInt(document.getElementById('min_corridas_liberar').value),
+      validade_dias: parseInt(document.getElementById('validade_dias').value),
+      limite_mes: parseInt(document.getElementById('limite_mes').value),
+      tipo_bonus: document.getElementById('tipo_bonus').value
+    }
+    const r = await fetch('/api/admin/indicacao-config', { method: 'PUT', headers: h, body: JSON.stringify(body) })
+    const msg = document.getElementById('msg-config')
+    if (r.ok) { msg.textContent = '✅ Salvo!'; msg.className = 'ml-3 text-sm text-green-600' }
+    else { msg.textContent = '❌ Erro ao salvar'; msg.className = 'ml-3 text-sm text-red-600' }
+    setTimeout(() => msg.textContent = '', 3000)
+  }
+
+  async function carregarRanking() {
+    const r = await fetch('/api/admin/indicacoes', { headers: h })
+    const { ranking } = await r.json()
+    const el = document.getElementById('ranking-container')
+    if (!ranking.length) { el.innerHTML = '<p class="text-gray-400 text-sm">Nenhuma indicação ainda.</p>'; return }
+    el.innerHTML = `<table class="w-full text-sm">
+      <thead><tr class="text-left text-gray-500 border-b">
+        <th class="pb-2">#</th><th class="pb-2">Motorista</th><th class="pb-2">Código</th>
+        <th class="pb-2">Indicados</th><th class="pb-2">Bônus Liberados</th><th class="pb-2">Total Ganho</th>
+      </tr></thead>
+      <tbody>${ranking.map((r,i) => `<tr class="border-b hover:bg-gray-50">
+        <td class="py-2">${i+1}</td>
+        <td class="py-2 font-medium">${r.nome}</td>
+        <td class="py-2"><code class="bg-gray-100 px-2 py-0.5 rounded">${r.codigo_indicacao_proprio}</code></td>
+        <td class="py-2">${r.total_indicados}</td>
+        <td class="py-2">${r.bonus_liberados}</td>
+        <td class="py-2 text-green-600 font-medium">R$ ${Number(r.total_ganho||0).toFixed(2)}</td>
+      </tr>`).join('')}</tbody>
+    </table>`
+  }
+
+  carregarConfig()
+  carregarRanking()
+</script>
+</body>
+</html>
