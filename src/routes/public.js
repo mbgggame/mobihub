@@ -1769,6 +1769,8 @@ export default async function publicRoutes(fastify) {
              valor, valor_final, status, h3_id, created_at 
       FROM rides 
       WHERE created_at >= NOW() - INTERVAL '${dias} days' 
+      AND status IN ('concluida', 'cancelada', 'aberta', 'aceita') 
+      AND (is_teste IS NULL OR is_teste = false) 
       ORDER BY created_at DESC 
       LIMIT 5000 
     `)).rows 
@@ -1781,6 +1783,7 @@ export default async function publicRoutes(fastify) {
       FROM rides 
       WHERE created_at >= NOW() - INTERVAL '${dias} days' 
       AND status = 'concluida' 
+      AND (is_teste IS NULL OR is_teste = false) 
     `)).rows[0] 
     return { corridas, stats } 
   })
