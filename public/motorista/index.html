@@ -2216,7 +2216,7 @@ async function carregar() {
        origem = encurtarEndereco(origem);
        destino = encurtarEndereco(destino);
        // Calcular valor líquido do motorista (75%)
-       const valorLiquido = c.valor_motorista || (c.valor ? (c.valor * 0.75).toFixed(2) : null);
+       const valorLiquido = c.status === 'cancelada' ? 0 : (c.valor_motorista || (c.valor ? (c.valor * 0.75).toFixed(2) : null));
        return `<div class="border border-gray-100 rounded-xl px-3 py-3">
          <div class="flex justify-between items-start mb-1">
            <div class="flex-1 min-w-0">
