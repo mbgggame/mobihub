@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import pkg from 'pg'; 
 const { Client } = pkg; 
 import fs from 'fs'; 
