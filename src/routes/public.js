@@ -964,18 +964,23 @@ export default async function publicRoutes(fastify) {
       [temLider] 
     )).rows[0] 
 
-    const percentualPlataforma = splitRule?.percentual_plataforma || 15 
     const percentualLider = temLider ? (splitRule?.percentual_lider ?? 0) : 0 
-    const percentualMotorista = splitRule?.percentual_motorista || 83 
 
     // Cálculo detalhado para memória de cálculo 
     const waitInfo = calculateInitialWaitCost(ride.tempo_espera_inicial_min || 0, config) 
     const valorFinal = calculateTotalRideCost(valorBase, waitInfo.cost, ride.custo_paradas || 0, config) 
 
-    const valorPlataforma = parseFloat((valorFinal * percentualPlataforma / 100).toFixed(2)) 
+    // Split em duas faixas usando valor_minimo da tarifa como limite 
+    const { calcularSplitFaixas, getH3Id } = await import('../h3split.js') 
+    const splitH3 = calcularSplitFaixas(valorFinal, tarifaAtiva, temLider) 
+    const h3Id = getH3Id(ride.origem_lat, ride.origem_lng) 
+
+    let valorMotorista = splitH3.motorista_total 
+    let valorPlataforma = splitH3.plataforma_total 
     const valorLider = parseFloat((valorFinal * percentualLider / 100).toFixed(2)) 
-    let valorMotorista = parseFloat((valorFinal - valorPlataforma - valorLider).toFixed(2)) 
-    console.log(`[BILLING] Split inicial: Plataforma ${percentualPlataforma}% (R$${valorPlataforma}) | Líder ${percentualLider}% (R$${valorLider}) | Motorista ${percentualMotorista}% (R$${valorMotorista})`)
+    valorMotorista = parseFloat((valorMotorista - valorLider).toFixed(2)) 
+
+    console.log(`[SPLIT H3] ${h3Id} | Total: R$${valorFinal} | Limite: R$${splitH3.valor_limite} | Motorista: R$${valorMotorista} | Plataforma: R$${valorPlataforma}`)
 
     // Verificar e aplicar abatimento de saldo devedor (ANTES do split do Asaas!)
     let abatimento = 0
@@ -1108,7 +1113,11 @@ export default async function publicRoutes(fastify) {
     
     const dadosHash = `${id}|${ride.client_id || ''}|${driver.id}|${ride.origem}|${ride.destino}|${valorFinal}|${new Date().toISOString()}` 
     const hash = crypto.createHash('sha256').update(dadosHash).digest('hex') 
-    await query('UPDATE rides SET hash_sha256 = $1 WHERE id = $2', [hash, id]) 
+    await query('UPDATE rides SET hash_sha256 = $1 WHERE id = $2', [hash, id])
+    
+    // Salva h3_id e split_detalhes 
+    await query('UPDATE rides SET h3_id = $1, split_detalhes = $2 WHERE id = $3', 
+      [h3Id, JSON.stringify(splitH3), id]) 
     
     await query('UPDATE drivers SET total_viagens = total_viagens + 1 WHERE id = $1', [driver.id]) 
     if (ride.client_id) await query('UPDATE clients SET total_corridas = total_corridas + 1 WHERE id = $1', [ride.client_id])
@@ -1150,10 +1159,14 @@ export default async function publicRoutes(fastify) {
         zighu_payment_id: zighuPaymentId,
         zighu_payment_link: zighuPaymentLink,
         zighu_pix_payload: zighuPixPayload,
-        split: { 
-          percentual_plataforma: percentualPlataforma, 
-          percentual_lider: percentualLider, 
-          percentual_motorista: percentualMotorista 
+        split: {
+          faixa1: splitH3.faixa1,
+          faixa2: splitH3.faixa2,
+          motorista_total: splitH3.motorista_total,
+          plataforma_total: splitH3.plataforma_total,
+          valor_limite: splitH3.valor_limite,
+          teve_excedente: splitH3.teve_excedente,
+          percentual_lider: percentualLider
         }, 
         finalizada_at: new Date().toISOString() 
       }) 
