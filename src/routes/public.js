@@ -580,6 +580,12 @@ export default async function publicRoutes(fastify) {
     }
     const ride = (await query('SELECT * FROM rides WHERE id = $1', [result.rows[0].id])).rows[0] 
 
+    // Verifica modo teste
+    const opConfig = (await query('SELECT modo_teste FROM operacional_config LIMIT 1')).rows[0]
+    if (opConfig?.modo_teste) {
+      await query('UPDATE rides SET is_teste = true WHERE id = $1', [result.rows[0].id])
+    }
+
     if (tipo === 'agendada' && process.env.ASAAS_API_KEY) {
       try {
         const { criarCobrancaAsaas, buscarPixPayload } = await import('./agendamentos.js')
@@ -1873,6 +1879,56 @@ export default async function publicRoutes(fastify) {
       AND (is_teste IS NULL OR is_teste = false) 
     `)).rows[0] 
     return { corridas, stats } 
+  })
+
+  // === PAINEL OPERACIONAL ===
+
+  fastify.get('/api/admin/operacional', { preHandler: requireAuth }, async () => {
+    const config = (await query('SELECT * FROM operacional_config LIMIT 1')).rows[0]
+    const regioes = (await query('SELECT * FROM regioes_cobertura ORDER BY nome')).rows
+    const stats = (await query(`
+      SELECT
+        COUNT(*) as total,
+        SUM(CASE WHEN is_teste = true THEN 1 ELSE 0 END) as testes,
+        SUM(CASE WHEN is_teste = false OR is_teste IS NULL THEN 1 ELSE 0 END) as reais
+      FROM rides
+    `)).rows[0]
+    return { config, regioes, stats }
+  })
+
+  fastify.put('/api/admin/operacional/modo-teste', { preHandler: requireAuth }, async (request, reply) => {
+    const { modo_teste } = request.body
+    await query('UPDATE operacional_config SET modo_teste = $1, updated_at = NOW() WHERE id = 1', [modo_teste])
+    return { success: true, modo_teste }
+  })
+
+  fastify.post('/api/admin/operacional/resetar-historico', { preHandler: requireAuth }, async (request, reply) => {
+    const { data_corte } = request.body
+    const dataCorte = data_corte || new Date().toISOString().split('T')[0]
+    const r = await query(`UPDATE rides SET is_teste = true WHERE (is_teste IS NULL OR is_teste = false) AND created_at::date <= $1`, [dataCorte])
+    return { success: true, marcadas: r.rowCount }
+  })
+
+  fastify.get('/api/admin/operacional/regioes', { preHandler: requireAuth }, async () => {
+    const regioes = (await query('SELECT * FROM regioes_cobertura ORDER BY nome')).rows
+    return { regioes }
+  })
+
+  fastify.post('/api/admin/operacional/regioes', { preHandler: requireAuth }, async (request, reply) => {
+    const { nome, lat, lng, raio_km } = request.body
+    const r = await query('INSERT INTO regioes_cobertura (nome, lat, lng, raio_km) VALUES ($1, $2, $3, $4) RETURNING *', [nome, lat, lng, raio_km])
+    return { success: true, regiao: r.rows[0] }
+  })
+
+  fastify.put('/api/admin/operacional/regioes/:id', { preHandler: requireAuth }, async (request, reply) => {
+    const { nome, lat, lng, raio_km, ativo } = request.body
+    const r = await query('UPDATE regioes_cobertura SET nome=$1, lat=$2, lng=$3, raio_km=$4, ativo=$5 WHERE id=$6 RETURNING *', [nome, lat, lng, raio_km, ativo, request.params.id])
+    return { success: true, regiao: r.rows[0] }
+  })
+
+  fastify.delete('/api/admin/operacional/regioes/:id', { preHandler: requireAuth }, async (request, reply) => {
+    await query('DELETE FROM regioes_cobertura WHERE id = $1', [request.params.id])
+    return { success: true }
   })
 
 } 
