@@ -681,7 +681,7 @@
        ? 'pelo motorista' : 'por você' 
      const icone = ride.status_detalhe === 'cancelada_motorista' ? '🚗❌' : '❌' 
      const msg = ride.status_detalhe === 'cancelada_motorista' 
-       ? 'O motorista cancelou a corrida' 
+       ? 'O motorista cancelou a corrida — você será redirecionado em 5 segundos' 
        : 'Você cancelou a corrida' 
    
      const cardObrigado = document.getElementById('card-obrigado') 
@@ -697,6 +697,14 @@
          </a> 
        </div> 
      ` 
+     
+     // Auto redirect if canceled by motorista
+     if (ride.status_detalhe === 'cancelada_motorista') {
+       setTimeout(() => {
+         window.location.href = '/solicitar'
+       }, 5000)
+     }
+     
      return 
    } 
 
