@@ -1177,6 +1177,7 @@ socket.on('agendamento:alerta_30min', (data) => {
  async function reportarLocalizacao(lat, lng) { 
    if (!motoristOnline) return 
    try { 
+     console.log('[GPS] Reportando localização:', lat, lng, 'corridaId:', corridaAtualId) 
      await fetch('/api/motorista/localizacao', { 
        method: 'POST', 
        headers: { 'Content-Type': 'application/json' }, 
@@ -2349,11 +2350,12 @@ socket.on('agendamento:alerta_30min', (data) => {
  function iniciarLocalizacao() { 
    if (!navigator.geolocation || watchId) return 
    watchId = navigator.geolocation.watchPosition(async (p) => { 
+     console.log('[GPS] Posição recebida:', p.coords.latitude, p.coords.longitude) 
      const { latitude: lat, longitude: lng } = p.coords; minhaPos = { lat, lng } 
      verificarParadaAutomatica(lat, lng) 
      if (!map) iniciarMapaMotorista() 
      if (markerMotorista) markerMotorista.setLatLng([lat, lng]) 
-     if (corridaAtualId) {
+     if (corridaAtualId) { 
        socket.emit('motorista:posicao', { rideId: corridaAtualId, lat, lng });
        if (Date.now() - lastReportTime > 10000) { lastReportTime = Date.now(); reportarLocalizacao(lat, lng) } 
      }
