@@ -37,7 +37,7 @@ class MainActivity : AppCompatActivity() {
                 domStorageEnabled = true
                 databaseEnabled = true
                 allowFileAccess = true
-                cacheMode = WebSettings.LOAD_DEFAULT
+                cacheMode = WebSettings.LOAD_NO_CACHE
             }
 
             CookieManager.getInstance().apply {
@@ -58,19 +58,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkLocationPermission() {
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-                ),
-                LOCATION_PERMISSION_REQUEST_CODE
-            )
+        val permissoes = mutableListOf<String>()
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            permissoes.add(Manifest.permission.ACCESS_FINE_LOCATION)
+            permissoes.add(Manifest.permission.ACCESS_COARSE_LOCATION)
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                permissoes.add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+        if (permissoes.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, permissoes.toTypedArray(), LOCATION_PERMISSION_REQUEST_CODE)
         }
     }
 
