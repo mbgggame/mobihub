@@ -2075,12 +2075,20 @@ socket.on('agendamento:alerta_30min', (data) => {
      } 
      return 
    } else if (acao === 'cancelar') { 
-   console.log('[CANCELAR] Iniciando cancelamento, corridaAtualId:', corridaAtualId) 
-     const r = await fetch(`/api/motorista/${tokenMotorista}/cancelar-corrida/${corridaAtualId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' } }) 
+   console.log('[CANCELAR] Iniciando cancelamento, corridaAtualId:', corridaAtualId, 'token:', tokenMotorista) 
+   try { 
+     const r = await fetch(`/api/motorista/${tokenMotorista}/cancelar-corrida/${corridaAtualId}`, { 
+       method: 'PUT', 
+       headers: { 'Content-Type': 'application/json' }, 
+       body: JSON.stringify({ token_motorista: tokenMotorista }) 
+     }) 
      const respText = await r.text() 
      console.log('[CANCELAR] Resposta:', r.status, respText) 
      if (r.ok) { esconderCorridaAtiva() } 
-     return 
+   } catch(e) { 
+     console.error('[CANCELAR] Erro:', e.message) 
+   } 
+   return 
    } 
    await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token_motorista: tokenMotorista }) }) 
    verificarCorridaAtiva() 
