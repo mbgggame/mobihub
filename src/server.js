@@ -71,6 +71,7 @@ fastify.get('/admin/reputacao', (req, reply) => reply.sendFile('admin/reputacao.
 fastify.get('/admin/configuracoes', (req, reply) => reply.sendFile('admin/configuracoes.html')) 
 fastify.get('/admin/integracoes', (req, reply) => reply.sendFile('admin/integracoes.html')) 
 fastify.get('/admin/relatorios', (req, reply) => reply.sendFile('admin/relatorios.html')) 
+fastify.get('/admin/kepler', (req, reply) => reply.sendFile('admin/kepler.html')) 
 fastify.get('/solicitar', (req, reply) => reply.sendFile('solicitar/index.html')) 
 fastify.get('/quero-dirigir', (req, reply) => reply.sendFile('cadastro-geral.html')) 
 fastify.get('/r/:token', (req, reply) => reply.sendFile('ride/index.html')) 
