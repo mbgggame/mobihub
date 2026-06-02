@@ -3,46 +3,147 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MobiHub — Baixar App</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>MobiHub — Mobilidade Premium em Grande Vitória</title>
+  <meta name="description" content="Motoristas verificados, tarifa justa e sua primeira corrida com 5% de desconto. Disponível em Vitória, Serra, Vila Velha, Guarapari, Viana e Aracruz.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: #0a0a0a; color: #fff; }
+    .hero { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 40px 20px; background: radial-gradient(ellipse at top, #0d2b0d 0%, #0a0a0a 60%); position: relative; overflow: hidden; }
+    .hero::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle at 30% 20%, rgba(34,197,94,0.08) 0%, transparent 50%), radial-gradient(circle at 70% 80%, rgba(34,197,94,0.05) 0%, transparent 50%); pointer-events: none; }
+    .badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.3); color: #4ade80; padding: 8px 18px; border-radius: 100px; font-size: 13px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 32px; }
+    .badge i { font-size: 10px; }
+    h1 { font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 800; line-height: 1.1; margin-bottom: 20px; }
+    h1 span { color: #22c55e; }
+    .subtitle { font-size: clamp(1rem, 2.5vw, 1.25rem); color: #9ca3af; max-width: 560px; line-height: 1.7; margin-bottom: 48px; }
+    .discount-badge { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(135deg, #16a34a, #15803d); border-radius: 16px; padding: 16px 28px; margin-bottom: 48px; font-weight: 700; font-size: 1.1rem; box-shadow: 0 0 40px rgba(34,197,94,0.3); }
+    .discount-badge i { font-size: 1.4rem; }
+    .download-section { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 16px; margin-bottom: 60px; }
+    .btn-download { display: flex; align-items: center; gap: 16px; padding: 20px 28px; border-radius: 18px; text-decoration: none; transition: all 0.3s; border: 1px solid transparent; }
+    .btn-passenger { background: linear-gradient(135deg, #16a34a, #15803d); box-shadow: 0 8px 32px rgba(34,197,94,0.3); }
+    .btn-passenger:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(34,197,94,0.4); }
+    .btn-driver { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); }
+    .btn-driver:hover { background: rgba(255,255,255,0.08); transform: translateY(-2px); }
+    .btn-icon { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
+    .btn-passenger .btn-icon { background: rgba(255,255,255,0.2); }
+    .btn-driver .btn-icon { background: rgba(255,255,255,0.08); }
+    .btn-text { flex: 1; text-align: left; }
+    .btn-title { font-size: 1.1rem; font-weight: 700; color: #fff; display: block; }
+    .btn-sub { font-size: 0.85rem; color: rgba(255,255,255,0.7); display: block; margin-top: 3px; }
+    .btn-arrow { font-size: 1.2rem; color: rgba(255,255,255,0.6); }
+    .features { background: #111; padding: 80px 20px; }
+    .features-inner { max-width: 1000px; margin: 0 auto; }
+    .section-title { text-align: center; font-size: clamp(1.8rem, 4vw, 2.5rem); font-weight: 800; margin-bottom: 12px; }
+    .section-sub { text-align: center; color: #6b7280; font-size: 1rem; margin-bottom: 56px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; }
+    .feature-card { background: #1a1a1a; border: 1px solid #222; border-radius: 20px; padding: 32px 24px; transition: all 0.3s; }
+    .feature-card:hover { border-color: rgba(34,197,94,0.3); transform: translateY(-4px); }
+    .feature-icon { width: 56px; height: 56px; background: rgba(34,197,94,0.1); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #22c55e; margin-bottom: 20px; }
+    .feature-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 10px; }
+    .feature-desc { color: #6b7280; font-size: 0.9rem; line-height: 1.6; }
+    .cities { background: #0a0a0a; padding: 60px 20px; border-top: 1px solid #1a1a1a; }
+    .cities-inner { max-width: 700px; margin: 0 auto; text-align: center; }
+    .cities-title { font-size: 1.1rem; font-weight: 600; color: #6b7280; margin-bottom: 24px; text-transform: uppercase; letter-spacing: 1px; }
+    .cities-grid { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+    .city-tag { display: flex; align-items: center; gap: 8px; background: #1a1a1a; border: 1px solid #222; border-radius: 100px; padding: 10px 20px; font-size: 0.9rem; font-weight: 500; }
+    .city-tag i { color: #22c55e; font-size: 0.7rem; }
+    .install-guide { background: #111; padding: 60px 20px; border-top: 1px solid #1a1a1a; }
+    .install-inner { max-width: 560px; margin: 0 auto; }
+    .install-title { text-align: center; font-size: 1.5rem; font-weight: 700; margin-bottom: 32px; }
+    .steps { display: flex; flex-direction: column; gap: 20px; }
+    .step { display: flex; align-items: flex-start; gap: 16px; }
+    .step-num { width: 36px; height: 36px; background: #22c55e; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; color: #000; flex-shrink: 0; }
+    .step-text { padding-top: 6px; }
+    .step-title { font-weight: 600; margin-bottom: 4px; }
+    .step-desc { color: #6b7280; font-size: 0.9rem; }
+    footer { background: #0a0a0a; border-top: 1px solid #1a1a1a; padding: 32px 20px; text-align: center; color: #374151; font-size: 0.85rem; }
+    footer span { color: #22c55e; }
+  </style>
 </head>
-<body class="bg-gray-900 min-h-screen flex items-center justify-center p-4">
-  <div class="max-w-md w-full">
-    <div class="text-center mb-8">
-      <div class="w-20 h-20 bg-green-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-        <span class="text-4xl">🚗</span>
+<body>
+  <section class="hero">
+    <div class="badge"><i class="fa-solid fa-circle" style="color:#22c55e"></i> Disponível em Grande Vitória</div>
+    <h1>Mobilidade Premium<br>em <span>Grande Vitória</span></h1>
+    <p class="subtitle">Motoristas verificados, tarifa justa e transparente. Sua corrida com quem realmente se importa com você.</p>
+    <div class="discount-badge">
+      <i class="fa-solid fa-tag"></i>
+      Primeira corrida com <strong>&nbsp;5% de desconto&nbsp;</strong> para novos passageiros!
+    </div>
+    <div class="download-section">
+      <a href="/apk/passageiro" class="btn-download btn-passenger">
+        <div class="btn-icon"><i class="fa-solid fa-user"></i></div>
+        <div class="btn-text">
+          <span class="btn-title">Sou Passageiro</span>
+          <span class="btn-sub">Baixar MobiHub — 1ª corrida com 5% off</span>
+        </div>
+        <i class="fa-solid fa-arrow-down btn-arrow"></i>
+      </a>
+      <a href="/apk/motorista" class="btn-download btn-driver">
+        <div class="btn-icon"><i class="fa-solid fa-car"></i></div>
+        <div class="btn-text">
+          <span class="btn-title">Sou Motorista</span>
+          <span class="btn-sub">Baixar MobiHub Drivers — Ganhe mais</span>
+        </div>
+        <i class="fa-solid fa-arrow-down btn-arrow"></i>
+      </a>
+    </div>
+  </section>
+  <section class="features">
+    <div class="features-inner">
+      <h2 class="section-title">Por que escolher o MobiHub?</h2>
+      <p class="section-sub">Tudo pensado para sua segurança e conforto</p>
+      <div class="grid-4">
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fa-solid fa-shield-halved"></i></div>
+          <div class="feature-title">Motoristas Verificados</div>
+          <div class="feature-desc">Todos os motoristas passam por rigoroso processo de seleção e verificação de documentos.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fa-solid fa-scale-balanced"></i></div>
+          <div class="feature-title">Tarifa Justa</div>
+          <div class="feature-desc">Preço transparente calculado antes da corrida. Sem surpresas no final da viagem.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fa-solid fa-bolt"></i></div>
+          <div class="feature-title">Corrida Rápida</div>
+          <div class="feature-desc">Motoristas disponíveis em minutos. Rastreamento em tempo real no mapa.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fa-solid fa-star"></i></div>
+          <div class="feature-title">Padrão Executivo</div>
+          <div class="feature-desc">Carros selecionados e motoristas avaliados para garantir sua melhor experiência.</div>
+        </div>
       </div>
-      <h1 class="text-3xl font-bold text-white">MobiHub</h1>
-      <p class="text-gray-400 mt-2">O padrão executivo que Vitória esperava</p>
     </div>
-    <div class="space-y-4">
-      <a href="/apk/passageiro" class="flex items-center gap-4 bg-green-600 hover:bg-green-700 text-white rounded-2xl p-5 transition">
-        <div class="text-4xl">📱</div>
-        <div>
-          <div class="font-bold text-lg">MobiHub Passageiro</div>
-          <div class="text-green-200 text-sm">Solicite corridas premium</div>
-        </div>
-        <div class="ml-auto text-2xl">↓</div>
-      </a>
-      <a href="/apk/motorista" class="flex items-center gap-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl p-5 transition">
-        <div class="text-4xl">🚙</div>
-        <div>
-          <div class="font-bold text-lg">MobiHub Drivers</div>
-          <div class="text-blue-200 text-sm">Para motoristas parceiros</div>
-        </div>
-        <div class="ml-auto text-2xl">↓</div>
-      </a>
+  </section>
+  <section class="cities">
+    <div class="cities-inner">
+      <p class="cities-title"><i class="fa-solid fa-location-dot" style="color:#22c55e;margin-right:8px"></i>Cidades atendidas</p>
+      <div class="cities-grid">
+        <div class="city-tag"><i class="fa-solid fa-circle"></i>Vitória</div>
+        <div class="city-tag"><i class="fa-solid fa-circle"></i>Serra</div>
+        <div class="city-tag"><i class="fa-solid fa-circle"></i>Vila Velha</div>
+        <div class="city-tag"><i class="fa-solid fa-circle"></i>Guarapari</div>
+        <div class="city-tag"><i class="fa-solid fa-circle"></i>Viana</div>
+        <div class="city-tag"><i class="fa-solid fa-circle"></i>Aracruz</div>
+      </div>
     </div>
-    <div class="mt-8 bg-gray-800 rounded-xl p-4 text-sm text-gray-400">
-      <p class="font-medium text-white mb-2">📋 Como instalar:</p>
-      <ol class="space-y-1 list-decimal list-inside">
-        <li>Baixe o app clicando no botão acima</li>
-        <li>Abra o arquivo APK baixado</li>
-        <li>Permita instalar de fontes desconhecidas</li>
-        <li>Clique em Instalar</li>
-      </ol>
+  </section>
+  <section class="install-guide">
+    <div class="install-inner">
+      <h2 class="install-title">📲 Como instalar</h2>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-text"><div class="step-title">Baixe o app</div><div class="step-desc">Clique no botão de download acima e aguarde o arquivo APK baixar.</div></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-text"><div class="step-title">Abra o arquivo</div><div class="step-desc">Toque no arquivo baixado na barra de notificações ou na pasta Downloads.</div></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-text"><div class="step-title">Permita a instalação</div><div class="step-desc">Se solicitado, permita instalar aplicativos de fontes desconhecidas nas configurações.</div></div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-text"><div class="step-title">Pronto!</div><div class="step-desc">Abra o MobiHub, cadastre-se e aproveite sua primeira corrida com desconto.</div></div></div>
+      </div>
     </div>
-    <p class="text-center text-gray-600 text-xs mt-6">© 2026 MobiHub — Grande Vitória, ES</p>
-  </div>
+  </section>
+  <footer>
+    © 2026 <span>MobiHub</span> — Grande Vitória, ES · Todos os direitos reservados
+  </footer>
 </body>
 </html>
