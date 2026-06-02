@@ -3,6 +3,9 @@ node_modules/
 mobihub.db
 mobihub.db-shm
 mobihub.db-wal
+keystore/
+android-motorista/keystore.properties
+android-passageiro/keystore.properties
 
 # Android
 *.apk
