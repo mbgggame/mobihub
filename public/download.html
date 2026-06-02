@@ -21,18 +21,18 @@
     .discount-badge { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(135deg, #16a34a, #15803d); border-radius: 16px; padding: 16px 28px; margin-bottom: 48px; font-weight: 700; font-size: 1.1rem; box-shadow: 0 0 40px rgba(34,197,94,0.3); }
     .discount-badge i { font-size: 1.4rem; }
     .download-section { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 16px; margin-bottom: 60px; }
-    .btn-download { display: flex; align-items: center; gap: 16px; padding: 20px 28px; border-radius: 18px; text-decoration: none; transition: all 0.3s; border: 1px solid transparent; }
+    .btn-download { display: flex; align-items: center; gap: 16px; padding: 20px 28px; border-radius: 18px; text-decoration: none; transition: all 0.3s; border: 1px solid transparent; cursor: pointer; }
     .btn-passenger { background: linear-gradient(135deg, #16a34a, #15803d); box-shadow: 0 8px 32px rgba(34,197,94,0.3); }
     .btn-passenger:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(34,197,94,0.4); }
     .btn-driver { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); }
     .btn-driver:hover { background: rgba(255,255,255,0.08); transform: translateY(-2px); }
-    .btn-icon { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
+    .btn-icon { width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; flex-shrink: 0; }
     .btn-passenger .btn-icon { background: rgba(255,255,255,0.2); }
     .btn-driver .btn-icon { background: rgba(255,255,255,0.08); }
     .btn-text { flex: 1; text-align: left; }
-    .btn-title { font-size: 1.1rem; font-weight: 700; color: #fff; display: block; }
-    .btn-sub { font-size: 0.85rem; color: rgba(255,255,255,0.7); display: block; margin-top: 3px; }
-    .btn-arrow { font-size: 1.2rem; color: rgba(255,255,255,0.6); }
+    .btn-title { font-size: 1.15rem; font-weight: 700; color: #fff; display: block; }
+    .btn-sub { font-size: 0.875rem; color: rgba(255,255,255,0.7); display: block; margin-top: 4px; }
+    .btn-arrow { font-size: 1.4rem; color: rgba(255,255,255,0.6); }
     .features { background: #111; padding: 80px 20px; }
     .features-inner { max-width: 1000px; margin: 0 auto; }
     .section-title { text-align: center; font-size: clamp(1.8rem, 4vw, 2.5rem); font-weight: 800; margin-bottom: 12px; }
@@ -60,47 +60,104 @@
     .step-desc { color: #6b7280; font-size: 0.9rem; }
     footer { background: #0a0a0a; border-top: 1px solid #1a1a1a; padding: 32px 20px; text-align: center; color: #374151; font-size: 0.85rem; }
     footer span { color: #22c55e; }
+    .back-btn { display: inline-flex; align-items: center; gap: 8px; color: #9ca3af; text-decoration: none; margin-bottom: 32px; font-size: 1rem; font-weight: 500; transition: color 0.2s; cursor: pointer; }
+    .back-btn:hover { color: #fff; }
+    .back-btn i { font-size: 0.9rem; }
+    .page { display: none; }
+    .page.active { display: block; }
+    .page-title { font-size: clamp(2rem, 5vw, 3rem); font-weight: 800; margin-bottom:16px; }
+    .page-subtitle { color: #9ca3af; font-size: 1.1rem; margin-bottom: 48px; max-width: 480px; }
   </style>
 </head>
 <body>
   <section class="hero">
-    <div class="badge"><i class="fa-solid fa-circle" style="color:#22c55e"></i> Disponível em Grande Vitória</div>
-    <h1>Mobilidade Premium<br>em <span>Grande Vitória</span></h1>
-    <p class="subtitle">Motoristas verificados, tarifa justa e transparente. Sua corrida com quem realmente se importa com você.</p>
-    <div class="discount-badge">
-      <i class="fa-solid fa-tag"></i>
-      Primeira corrida com <strong>&nbsp;5% de desconto&nbsp;</strong> para novos passageiros!
+    <!-- Page 1: Choose User Type -->
+    <div id="page-1" class="page active">
+      <div class="badge"><i class="fa-solid fa-circle" style="color:#22c55e"></i> Disponível em Grande Vitória</div>
+      <h1>Mobilidade Premium<br>em <span>Grande Vitória</span></h1>
+      <p class="subtitle">Escolha abaixo quem você é para continuar</p>
+      <div class="discount-badge">
+        <i class="fa-solid fa-tag"></i>
+        Primeira corrida com <strong>&nbsp;5% de desconto&nbsp;</strong> para novos passageiros!
+      </div>
+      <div class="download-section">
+        <button class="btn-download btn-passenger" onclick="showPage('passenger')">
+          <div class="btn-icon"><i class="fa-solid fa-user"></i></div>
+          <div class="btn-text">
+            <span class="btn-title">Sou Passageiro</span>
+            <span class="btn-sub">Quero solicitar corridas</span>
+          </div>
+          <i class="fa-solid fa-arrow-right btn-arrow"></i>
+        </button>
+        <button class="btn-download btn-driver" onclick="showPage('driver')">
+          <div class="btn-icon"><i class="fa-solid fa-car"></i></div>
+          <div class="btn-text">
+            <span class="btn-title">Sou Motorista</span>
+            <span class="btn-sub">Quero dirigir com a MobiHub</span>
+          </div>
+          <i class="fa-solid fa-arrow-right btn-arrow"></i>
+        </button>
+      </div>
     </div>
-    <div class="download-section">
-      <a href="/apk/passageiro" class="btn-download btn-passenger">
-        <div class="btn-icon"><i class="fa-solid fa-user"></i></div>
-        <div class="btn-text">
-          <span class="btn-title">Sou Passageiro</span>
-          <span class="btn-sub">Baixar MobiHub — 1ª corrida com 5% off</span>
-        </div>
-        <i class="fa-solid fa-arrow-down btn-arrow"></i>
-      </a>
-      <a href="/apk/motorista" class="btn-download btn-driver">
-        <div class="btn-icon"><i class="fa-solid fa-car"></i></div>
-        <div class="btn-text">
-          <span class="btn-title">Sou Motorista</span>
-          <span class="btn-sub">Baixar MobiHub Drivers — Ganhe mais</span>
-        </div>
-        <i class="fa-solid fa-arrow-down btn-arrow"></i>
-      </a>
-      <a href="https://mobihub-s9yl.onrender.com/solicitar" class="btn-download btn-driver" style="border-color:rgba(255,255,255,0.15)">
-        <div class="btn-icon"><i class="fa-brands fa-apple"></i></div>
-        <div class="btn-text">
-          <span class="btn-title">iPhone (iOS)</span>
-          <span class="btn-sub">Acessar via navegador — sem instalação</span>
-        </div>
-        <i class="fa-solid fa-arrow-right btn-arrow"></i>
-      </a>
+
+    <!-- Page 2: Passenger Platform -->
+    <div id="page-passenger" class="page">
+      <div class="back-btn" onclick="showPage('1')">
+        <i class="fa-solid fa-arrow-left"></i> Voltar
+      </div>
+      <h2 class="page-title">Para Passageiro</h2>
+      <p class="page-subtitle">Escolha a sua plataforma para baixar o app</p>
+      <div class="download-section">
+        <a href="/apk/passageiro" class="btn-download btn-passenger">
+          <div class="btn-icon"><i class="fa-brands fa-android"></i></div>
+          <div class="btn-text">
+            <span class="btn-title">Android</span>
+            <span class="btn-sub">Baixar APK — 1ª corrida com 5% off</span>
+          </div>
+          <i class="fa-solid fa-arrow-down btn-arrow"></i>
+        </a>
+        <a href="https://mobihub-s9yl.onrender.com/solicitar" class="btn-download btn-driver" style="border-color:rgba(255,255,255,0.15)">
+          <div class="btn-icon"><i class="fa-brands fa-apple"></i></div>
+          <div class="btn-text">
+            <span class="btn-title">iPhone (iOS)</span>
+            <span class="btn-sub">Acessar via navegador — sem instalação</span>
+          </div>
+          <i class="fa-solid fa-arrow-right btn-arrow"></i>
+        </a>
+      </div>
+    </div>
+
+    <!-- Page 3: Driver Platform -->
+    <div id="page-driver" class="page">
+      <div class="back-btn" onclick="showPage('1')">
+        <i class="fa-solid fa-arrow-left"></i> Voltar
+      </div>
+      <h2 class="page-title">Para Motorista</h2>
+      <p class="page-subtitle">Escolha a sua plataforma para baixar o app</p>
+      <div class="download-section">
+        <a href="/apk/motorista" class="btn-download btn-passenger">
+          <div class="btn-icon"><i class="fa-brands fa-android"></i></div>
+          <div class="btn-text">
+            <span class="btn-title">Android</span>
+            <span class="btn-sub">Baixar APK — Comece a dirigir</span>
+          </div>
+          <i class="fa-solid fa-arrow-down btn-arrow"></i>
+        </a>
+        <a href="https://mobihub-s9yl.onrender.com/motorista" class="btn-download btn-driver" style="border-color:rgba(255,255,255,0.15)">
+          <div class="btn-icon"><i class="fa-brands fa-apple"></i></div>
+          <div class="btn-text">
+            <span class="btn-title">iPhone (iOS)</span>
+            <span class="btn-sub">Acessar via navegador — sem instalação</span>
+          </div>
+          <i class="fa-solid fa-arrow-right btn-arrow"></i>
+        </a>
+      </div>
     </div>
   </section>
+
   <section class="features">
     <div class="features-inner">
-      <h2 class="section-title">Por que escolher o MobiHub?</h2>
+      <h2 class="section-title">Por que escolher a MobiHub?</h2>
       <p class="section-sub">Tudo pensado para sua segurança e conforto</p>
       <div class="grid-4">
         <div class="feature-card">
@@ -126,6 +183,7 @@
       </div>
     </div>
   </section>
+
   <section class="cities">
     <div class="cities-inner">
       <p class="cities-title"><i class="fa-solid fa-location-dot" style="color:#22c55e;margin-right:8px"></i>Cidades atendidas</p>
@@ -139,19 +197,29 @@
       </div>
     </div>
   </section>
+
   <section class="install-guide">
     <div class="install-inner">
-      <h2 class="install-title">📲 Como instalar</h2>
+      <h2 class="install-title">📲 Como instalar no Android</h2>
       <div class="steps">
         <div class="step"><div class="step-num">1</div><div class="step-text"><div class="step-title">Baixe o app</div><div class="step-desc">Clique no botão de download acima e aguarde o arquivo APK baixar.</div></div></div>
         <div class="step"><div class="step-num">2</div><div class="step-text"><div class="step-title">Abra o arquivo</div><div class="step-desc">Toque no arquivo baixado na barra de notificações ou na pasta Downloads.</div></div></div>
         <div class="step"><div class="step-num">3</div><div class="step-text"><div class="step-title">Permita a instalação</div><div class="step-desc">Se solicitado, permita instalar aplicativos de fontes desconhecidas nas configurações.</div></div></div>
-        <div class="step"><div class="step-num">4</div><div class="step-text"><div class="step-title">Pronto!</div><div class="step-desc">Abra o MobiHub, cadastre-se e aproveite sua primeira corrida com desconto.</div></div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-text"><div class="step-title">Pronto!</div><div class="step-desc">Abra a MobiHub, cadastre-se e aproveite sua primeira corrida com desconto.</div></div></div>
       </div>
     </div>
   </section>
+
   <footer>
     © 2026 <span>MobiHub</span> — Grande Vitória, ES · Todos os direitos reservados
   </footer>
+
+  <script>
+    function showPage(pageId) {
+      document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+      document.getElementById('page-' + pageId).classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  </script>
 </body>
 </html>
