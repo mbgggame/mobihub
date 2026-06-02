@@ -954,7 +954,7 @@ socket.on('agendamento:alerta_30min', (data) => {
           <p class="text-xs text-gray-500 mb-1">Seu código</p>
           <div class="flex items-center justify-center gap-2">
             <code class="text-xl font-bold text-green-700 bg-green-50 px-4 py-2 rounded-lg">${data.codigo}</code>
-            <button onclick="navigator.clipboard.writeText('${data.codigo}').then(() => alert('✅ Código copiado!'))" class="text-sm border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50">📋</button>
+            <button onclick="navigator.clipboard.writeText('${data.link}').then(() => alert('✅ Link copiado!'))" class="text-sm border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50">📋</button>
           </div>
         </div>
         <p class="text-xs text-gray-500 text-center">Link: ${data.link}</p>
