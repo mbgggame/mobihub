@@ -29,7 +29,7 @@ export default async function indicacoesRoutes(fastify) {
     `, [driver.id])).rows[0]
     return {
       codigo: driver.codigo_indicacao_proprio,
-      link: `${process.env.BASE_URL}/cadastro?ref=${driver.codigo_indicacao_proprio}`,
+      link: `${process.env.BASE_URL}/solicitar?ref=${driver.codigo_indicacao_proprio}`,
       ativo: config?.ativo || false,
       bonus_motorista: config?.bonus_motorista || 0,
       desconto_passageiro: config?.desconto_passageiro || 0,
