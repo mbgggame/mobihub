@@ -129,10 +129,10 @@ fastify.get('/cadastro-motorista/:token', (req, reply) => reply.sendFile('cadast
 fastify.get('/favicon.ico', (req, reply) => reply.code(204).send())
 fastify.get('/download', (req, reply) => reply.sendFile('download.html'))
 fastify.get('/apk/passageiro', async (request, reply) => {
-  return reply.sendFile('MobiHub-Passageiro-Release.apk', 'c:\\MobiHub')
+  return reply.sendFile('MobiHub-Passageiro.apk')
 })
 fastify.get('/apk/motorista', async (request, reply) => {
-  return reply.sendFile('MobiHub-Motorista-Release.apk', 'c:\\MobiHub')
+  return reply.sendFile('MobiHub-Motorista.apk')
 }) 
 
 // Webhook do Telegram 
