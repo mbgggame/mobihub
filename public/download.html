@@ -18,10 +18,14 @@
     h1 { font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 800; line-height: 1.1; margin-bottom: 20px; }
     h1 span { color: #22c55e; }
     .subtitle { font-size: clamp(1rem, 2.5vw, 1.25rem); color: #9ca3af; max-width: 560px; line-height: 1.7; margin-bottom: 48px; }
-    .discount-badge { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(135deg, #16a34a, #15803d); border-radius: 16px; padding: 16px 28px; margin-bottom: 48px; font-weight: 700; font-size: 1.1rem; box-shadow: 0 0 40px rgba(34,197,94,0.3); }
+    .discount-badge { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(135deg, #16a34a, #15803d); border-radius: 16px; padding: 16px 28px; margin-bottom: 48px; font-weight: 700; font-size: 1.1rem; box-shadow: 0 0 40px rgba(34,197,94,0.3); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { box-shadow: 0 0 40px rgba(34,197,94,0.3); } 50% { box-shadow: 0 0 60px rgba(34,197,94,0.5); } }
     .discount-badge i { font-size: 1.4rem; }
     .download-section { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 16px; margin-bottom: 60px; }
-    .btn-download { display: flex; align-items: center; gap: 16px; padding: 20px 28px; border-radius: 18px; text-decoration: none; transition: all 0.3s; border: 1px solid transparent; cursor: pointer; }
+    .btn-download { display: flex; align-items: center; gap: 16px; padding: 20px 28px; border-radius: 18px; text-decoration: none; transition: all 0.3s; border: 1px solid transparent; cursor: pointer; position: relative; overflow: hidden; }
+    .btn-download:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-download .loader { position: absolute; right: 20px; width: 24px; height: 24px; border: 3px solid rgba(255,255,255,0.3); border-top: 3px solid white; border-radius: 50%; animation: spin 1s linear infinite; display: none; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     .btn-passenger { background: linear-gradient(135deg, #16a34a, #15803d); box-shadow: 0 8px 32px rgba(34,197,94,0.3); }
     .btn-passenger:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(34,197,94,0.4); }
     .btn-driver { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); }
@@ -67,6 +71,9 @@
     .page.active { display: block; }
     .page-title { font-size: clamp(2rem, 5vw, 3rem); font-weight: 800; margin-bottom:16px; }
     .page-subtitle { color: #9ca3af; font-size: 1.1rem; margin-bottom: 48px; max-width: 480px; }
+    .ios-section { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 24px; margin-bottom: 24px; }
+    .ios-section-title { font-size: 1rem; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .ios-section-desc { color: #9ca3af; font-size: 0.9rem; line-height: 1.6; }
   </style>
 </head>
 <body>
@@ -77,7 +84,7 @@
       <h1>Mobilidade Premium<br>em <span>Grande Vitória</span></h1>
       <p class="subtitle">Escolha abaixo quem você é para continuar</p>
       <div class="discount-badge">
-        <i class="fa-solid fa-tag"></i>
+        <i class="fa-solid fa-gift"></i>
         Primeira corrida com <strong>&nbsp;5% de desconto&nbsp;</strong> para novos passageiros!
       </div>
       <div class="download-section">
@@ -107,22 +114,27 @@
       </div>
       <h2 class="page-title">Para Passageiro</h2>
       <p class="page-subtitle">Escolha a sua plataforma para baixar o app</p>
+      <div class="ios-section">
+        <div class="ios-section-title"><i class="fa-brands fa-apple" style="color:#22c55e"></i> Usuário de iPhone?</div>
+        <div class="ios-section-desc">Você pode acessar o MobiHub diretamente pelo navegador do seu iPhone, sem precisar instalar nada! Basta adicionar à tela inicial para usar como um app.</div>
+      </div>
       <div class="download-section">
-        <a href="/apk/passageiro" class="btn-download btn-passenger">
+        <a href="/apk/passageiro" class="btn-download btn-passenger" onclick="handleDownload(event, this, 'passenger')">
           <div class="btn-icon"><i class="fa-brands fa-android"></i></div>
           <div class="btn-text">
             <span class="btn-title">Android</span>
             <span class="btn-sub">Baixar APK — 1ª corrida com 5% off</span>
           </div>
+          <div class="loader"></div>
           <i class="fa-solid fa-arrow-down btn-arrow"></i>
         </a>
-        <a href="https://mobihub-s9yl.onrender.com/solicitar" class="btn-download btn-driver" style="border-color:rgba(255,255,255,0.15)">
+        <a href="https://mobihub-s9yl.onrender.com/solicitar" target="_blank" class="btn-download btn-driver" style="border-color:rgba(255,255,255,0.15)">
           <div class="btn-icon"><i class="fa-brands fa-apple"></i></div>
           <div class="btn-text">
             <span class="btn-title">iPhone (iOS)</span>
             <span class="btn-sub">Acessar via navegador — sem instalação</span>
           </div>
-          <i class="fa-solid fa-arrow-right btn-arrow"></i>
+          <i class="fa-solid fa-arrow-up-right-from-square btn-arrow"></i>
         </a>
       </div>
     </div>
@@ -134,22 +146,27 @@
       </div>
       <h2 class="page-title">Para Motorista</h2>
       <p class="page-subtitle">Escolha a sua plataforma para baixar o app</p>
+      <div class="ios-section">
+        <div class="ios-section-title"><i class="fa-brands fa-apple" style="color:#22c55e"></i> Usuário de iPhone?</div>
+        <div class="ios-section-desc">Você pode acessar o painel do motorista diretamente pelo navegador do seu iPhone, sem precisar instalar nada!</div>
+      </div>
       <div class="download-section">
-        <a href="/apk/motorista" class="btn-download btn-passenger">
+        <a href="/apk/motorista" class="btn-download btn-passenger" onclick="handleDownload(event, this, 'motorista')">
           <div class="btn-icon"><i class="fa-brands fa-android"></i></div>
           <div class="btn-text">
             <span class="btn-title">Android</span>
             <span class="btn-sub">Baixar APK — Comece a dirigir</span>
           </div>
+          <div class="loader"></div>
           <i class="fa-solid fa-arrow-down btn-arrow"></i>
         </a>
-        <a href="https://mobihub-s9yl.onrender.com/motorista" class="btn-download btn-driver" style="border-color:rgba(255,255,255,0.15)">
+        <a href="https://mobihub-s9yl.onrender.com/motorista" target="_blank" class="btn-download btn-driver" style="border-color:rgba(255,255,255,0.15)">
           <div class="btn-icon"><i class="fa-brands fa-apple"></i></div>
           <div class="btn-text">
             <span class="btn-title">iPhone (iOS)</span>
             <span class="btn-sub">Acessar via navegador — sem instalação</span>
           </div>
-          <i class="fa-solid fa-arrow-right btn-arrow"></i>
+          <i class="fa-solid fa-arrow-up-right-from-square btn-arrow"></i>
         </a>
       </div>
     </div>
@@ -219,6 +236,23 @@
       document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
       document.getElementById('page-' + pageId).classList.add('active');
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function handleDownload(event, button, type) {
+      event.preventDefault();
+      const loader = button.querySelector('.loader');
+      const arrow = button.querySelector('.btn-arrow');
+      
+      if (loader && arrow) {
+        arrow.style.display = 'none';
+        loader.style.display = 'block';
+      }
+      
+      button.disabled = true;
+      
+      setTimeout(() => {
+        window.location.href = button.getAttribute('href');
+      }, 100);
     }
   </script>
 </body>
