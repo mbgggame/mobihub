@@ -34,5 +34,5 @@ android-passageiro/build/
 android-motorista/build/
 *.apk
 MobiHub.apk
-MobiHub-Passageiro.apk
-MobiHub-Motorista.apk
+!public/MobiHub-Passageiro.apk
+!public/MobiHub-Motorista.apk
