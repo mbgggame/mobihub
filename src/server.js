@@ -58,10 +58,10 @@ fastify.addHook('onRequest', async (request, reply) => {
   const agora = Date.now()
   const janela = 60000 // 1 minuto
   
-  // Rotas de polling não contam no rate limit
-  const rotasExcluidas = ['/api/motorista/', '/api/ride/', '/api/motoristas-online']
-  const isPolling = rotasExcluidas.some(r => request.url.includes(r))
-  if (isPolling) return
+  // Rotas excluídas do rate limit
+  const rotasExcluidas = ['/api/motorista/', '/api/ride/', '/api/motoristas-online', '/api/admin/', '/admin']
+  const isExcluida = rotasExcluidas.some(r => request.url.includes(r))
+  if (isExcluida) return
 
   const limite = request.url === '/api/login' ? 5 : 300
 
