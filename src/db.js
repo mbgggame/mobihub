@@ -25,7 +25,6 @@ export async function initDB() {
       id SERIAL PRIMARY KEY, 
       nome TEXT NOT NULL, 
       telefone TEXT, 
-      telegram_id TEXT, 
       modelo_carro TEXT NOT NULL, 
       ano_carro TEXT NOT NULL, 
       cor_carro TEXT NOT NULL, 
@@ -69,7 +68,6 @@ export async function initDB() {
       status TEXT DEFAULT 'aberta', 
       tipo TEXT DEFAULT 'normal', 
       maps_link TEXT, 
-      telegram_message_id TEXT, 
       agendada_para TIMESTAMP, 
       disparada_at TIMESTAMP, 
       concluida_auto INTEGER DEFAULT 0, 
@@ -157,10 +155,6 @@ export async function initDB() {
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS cidade TEXT;
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS estado TEXT;
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS data_nascimento DATE;
-    
-    -- Remove unique constraint on telegram_id (allow same ID for client -> driver)
-    ALTER TABLE drivers DROP CONSTRAINT IF EXISTS drivers_telegram_id_key;
-    ALTER TABLE drivers ALTER COLUMN telegram_id DROP NOT NULL;
   `) 
  
   await query(` 
@@ -349,7 +343,6 @@ export async function initDB() {
     ALTER TABLE drivers ADD COLUMN IF NOT EXISTS balance_due_charge_pix TEXT;
     ALTER TABLE clients ADD COLUMN IF NOT EXISTS asaas_customer_id TEXT; 
     ALTER TABLE clients ADD COLUMN IF NOT EXISTS cpf TEXT;
-    ALTER TABLE clients ADD COLUMN IF NOT EXISTS telegram_id TEXT;
     ALTER TABLE clients ADD COLUMN IF NOT EXISTS balance_due_charge_id TEXT;
     ALTER TABLE clients ADD COLUMN IF NOT EXISTS balance_due_charge_link TEXT;
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS hash_sha256 TEXT;
