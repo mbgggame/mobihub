@@ -158,18 +158,28 @@ export default async function integracoesRoutes(fastify) {
       const ride = rideResult.rows[0]
       if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' })
 
-      // Atualiza pagamento_status
-      await query(
-        "UPDATE rides SET pagamento_status = 'pago', updated_at = CURRENT_TIMESTAMP WHERE id = $1",
-        [corrida_id]
-      )
-
-      // Registra split no driver_transactions — igual ao webhook do Asaas
-      if (ride.driver_id && valor_motorista) {
+      // Verifica se é sinal de agendamento ou corrida completa
+      if (ride.tipo === 'agendada' && ride.sinal_pix_payload) {
+        // É sinal de agendamento
         await query(
-          'INSERT INTO driver_transactions (driver_id, ride_id, tipo, descricao, valor) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING',
-          [ride.driver_id, ride.id, 'credito', `Corrida #${ride.id} paga via Zighu Pay`, Number(valor_motorista)]
+          "UPDATE rides SET sinal_pago = true, updated_at = CURRENT_TIMESTAMP WHERE id = $1",
+          [corrida_id]
         )
+        console.log(`[ZIGHU PAY] Sinal confirmado — Corrida #${corrida_id} | R$ ${valor_total}`)
+      } else {
+        // É corrida completa
+        await query(
+          "UPDATE rides SET pagamento_status = 'pago', updated_at = CURRENT_TIMESTAMP WHERE id = $1",
+          [corrida_id]
+        )
+
+        // Registra split no driver_transactions — igual ao webhook do Asaas
+        if (ride.driver_id && valor_motorista) {
+          await query(
+            'INSERT INTO driver_transactions (driver_id, ride_id, tipo, descricao, valor) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING',
+            [ride.driver_id, ride.id, 'credito', `Corrida #${ride.id} paga via Zighu Pay`, Number(valor_motorista)]
+          )
+        }
       }
 
       // Notifica via Socket.io

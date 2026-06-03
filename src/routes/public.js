@@ -577,64 +577,43 @@ export default async function publicRoutes(fastify) {
       await query('UPDATE rides SET is_teste = true WHERE id = $1', [result.rows[0].id])
     }
 
-    if (tipo === 'agendada' && process.env.ASAAS_API_KEY) {
+    if (tipo === 'agendada') {
       try {
-        const { criarCobrancaAsaas, buscarPixPayload } = await import('./agendamentos.js')
-        const dueDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-        
-        // Garante que o cliente tem asaas_customer_id
-        const clientData = (await query('SELECT * FROM clients WHERE id = $1', [client.id])).rows[0] 
-        let asaasCustomerId = clientData?.asaas_customer_id 
-        
-        if (!asaasCustomerId) { 
-          const customerResponse = await fetch('https://www.asaas.com/api/v3/customers', { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json', 'access_token': process.env.ASAAS_API_KEY }, 
-            body: JSON.stringify({ 
-              name: clientData.nome || 'Passageiro', 
-              mobilePhone: clientData.telefone?.replace(/\D/g, ''), 
-              ...(clientData.cpf ? { cpfCnpj: clientData.cpf.replace(/\D/g, '') } : {}), 
-              externalReference: String(clientData.id) 
-            }) 
-          }) 
-          const customerData = await customerResponse.json() 
-          if (customerData.id) { 
-            asaasCustomerId = customerData.id 
-            await query('UPDATE clients SET asaas_customer_id = $1 WHERE id = $2', [customerData.id, clientData.id]) 
-          } 
-        }
-        
-        // Se forma_pagamento = '3' e cliente tem cartÃ£o, cobrar no cartÃ£o
-        let billingType = 'PIX'
-        let creditCardToken = null
-        
-        if (forma_pagamento === '3' && client.id) {
-          const clientInfo = (await query('SELECT asaas_credit_card_token FROM clients WHERE id = $1', [client.id])).rows[0]
-          if (clientInfo?.asaas_credit_card_token) {
-            billingType = 'CREDIT_CARD'
-            creditCardToken = clientInfo.asaas_credit_card_token
+        // Gerar cobrança sinal via Zighu
+        const gatewayConfig = (await query('SELECT * FROM gateway_config LIMIT 1')).rows[0]
+        if (gatewayConfig?.ativo && gatewayConfig?.gateway === 'zighu') {
+          try {
+            const controller = new AbortController()
+            const timeout = setTimeout(() => controller.abort(), 15000)
+            const zighuRes = await fetch(`${gatewayConfig.url}/zighu/cobranca-sinal`, {
+              signal: controller.signal,
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': gatewayConfig.api_key
+              },
+              body: JSON.stringify({
+                corrida_id: ride.id,
+                valor: sinalValor,
+                descricao: `Sinal agendamento MobiHub #${ride.id} - ${origem} â†’ ${destino}`,
+                app_origem: 'mobihub'
+              })
+            })
+            const zighuData = await zighuRes.json()
+            clearTimeout(timeout)
+            console.log('[ZIGHU SINAL] resposta:', JSON.stringify(zighuData))
+            if (zighuData.pix_copia_cola) {
+              await query(
+                'UPDATE rides SET sinal_charge_id = $1, sinal_pix_payload = $2 WHERE id = $3',
+                [zighuData.cobranca_id, zighuData.pix_copia_cola, ride.id]
+              )
+            }
+          } catch(e) {
+            console.log('[ZIGHU SINAL] Erro ao gerar QR:', e.message)
           }
         }
-        
-        const charge = await criarCobrancaAsaas(
-          sinalValor,
-          `Sinal agendamento MobiHub #${ride.id} - ${origem} â†’ ${destino}`,
-          `sinal_${ride.id}`,
-          dueDate,
-          billingType,
-          asaasCustomerId,
-          creditCardToken
-        )
-        if (charge?.id) {
-          chargeId = charge.id
-          pixPayload = await buscarPixPayload(chargeId)
-          await query(
-            'UPDATE rides SET sinal_charge_id = $1, sinal_pix_payload = $2 WHERE id = $3',
-            [chargeId, pixPayload, ride.id]
-          )
-        }
       } catch (err) {
-        console.error('[SOLICITAR] Erro Asaas:', err.message)
+        console.error('[SOLICITAR] Erro sinal:', err.message)
       }
     }
 
