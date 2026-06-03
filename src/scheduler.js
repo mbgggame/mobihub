@@ -13,27 +13,9 @@ export function initScheduler() {
     await verificarAgendamentos()
     await verificarNaoComparecimento()
     await verificarChegada()
-    await limparCorridasPresas()
   }, 30 * 1000) // verifica a cada 30 segundos
 
   console.log('[SCHEDULER] Iniciado — verifica a cada 30 segundos')
-}
-
-async function limparCorridasPresas() {
-  try {
-    const result = await query(`
-      UPDATE rides
-      SET status = 'concluida', concluida_at = CURRENT_TIMESTAMP
-      WHERE status IN ('aberta', 'aceita', 'em_andamento')
-        AND tipo != 'agendada'
-        AND created_at < NOW() - INTERVAL '4 hours'
-    `);
-    if (result.rowCount > 0) {
-      console.log(`[SCHEDULER] Limpadas ${result.rowCount} corridas presas`);
-    }
-  } catch(err) {
-    console.error('[SCHEDULER] Erro limparCorridasPresas:', err.message);
-  }
 } 
  
 async function verificarAgendamentos() { 
@@ -101,45 +83,61 @@ async function verificarAgendamentos() {
   } 
 } 
  
-// Detecta automaticamente motoristas que não confirmaram presença 30min após o horário agendado
+// Detecta automaticamente motoristas que não confirmaram presença 5min após o alerta de 30min
 async function verificarNaoComparecimento() {
   try {
     const result = await query(`
-      SELECT r.*, c.id as client_id_val
+      SELECT r.*, d.id as driver_id_val
       FROM rides r
       LEFT JOIN drivers d ON r.driver_id = d.id
-      LEFT JOIN clients c ON r.client_id = c.id
       WHERE r.tipo = 'agendada'
         AND r.status = 'agendada_aceita'
-        AND r.agendada_para < NOW() - INTERVAL '30 minutes'
+        AND r.alerta_30min_enviado IS NOT NULL
+        AND r.confirmou_presenca IS NULL
+        AND r.alerta_30min_enviado < NOW() - INTERVAL '5 minutes'
     `)
 
     for (const ride of result.rows) {
-      console.log(`[SCHEDULER] Não comparecimento detectado: motorista da corrida agendada #${ride.id}`)
+      console.log(`[SCHEDULER] Motorista não confirmou presença corrida agendada #${ride.id}`)
 
+      // Aumenta TC do motorista
       if (ride.driver_id) {
-        await query(
-          "UPDATE drivers SET bloqueado_agendamento_ate = NOW() + INTERVAL '1 month' WHERE id = $1",
-          [ride.driver_id]
-        )
+        await query('UPDATE drivers SET total_cancelamentos = total_cancelamentos + 1 WHERE id = $1', [ride.driver_id])
+        const stats = (await query(`
+          SELECT COUNT(*) as total,
+            SUM(CASE WHEN status = 'cancelada' THEN 1 ELSE 0 END) as cancels
+          FROM rides WHERE driver_id = $1 AND created_at >= NOW() - INTERVAL '30 days'
+        `, [ride.driver_id])).rows[0]
+        const tc = parseFloat(stats.total) > 0 ? parseFloat((parseFloat(stats.cancels) / parseFloat(stats.total) * 100).toFixed(1)) : 0
+        await query('UPDATE drivers SET tc_percentual = $1, tc_ultima_atualizacao = NOW() WHERE id = $2', [tc, ride.driver_id])
       }
 
-      await query(
-        "UPDATE rides SET status = 'cancelada', cancelada_at = CURRENT_TIMESTAMP, cancelado_por = 'driver_nao_compareceu' WHERE id = $1",
-        [ride.id]
-      )
+      // Reabre a corrida excluindo motorista que não confirmou
+      await query(`
+        UPDATE rides SET
+          status = 'agendada',
+          driver_id = NULL,
+          aceita_at = NULL,
+          alerta_30min_enviado = NULL,
+          confirmou_presenca = NULL,
+          cancelado_por_driver_id = $1
+        WHERE id = $2
+      `, [ride.driver_id, ride.id])
 
-      // Reembolsa passageiro em créditos automaticamente
-      if (ride.client_id && ride.sinal_pago && parseFloat(ride.sinal_valor || 0) > 0) {
-        await query('UPDATE clients SET creditos = creditos + $1 WHERE id = $2', [ride.sinal_valor, ride.client_id])
-      }
       const io = getIo()
       if (io) {
-        io.to(`ride:${ride.id}`).emit('agendamento:cancelado', {
+        // Notifica passageiro
+        io.to(`ride:${ride.id}`).emit('agendamento:buscando_motorista', {
           rideId: ride.id,
-          motivo: 'driver_nao_compareceu',
-          creditos_restituidos: parseFloat(ride.sinal_valor || 0)
+          mensagem: 'O motorista não confirmou presença. Buscando outro motorista...'
         })
+        // Atualiza badge para todos motoristas
+        const disponiveis = (await query(`
+          SELECT COUNT(*) as total FROM rides
+          WHERE tipo = 'agendada' AND status = 'agendada'
+          AND sinal_pago = true AND driver_id IS NULL AND agendada_para > NOW()
+        `)).rows[0]
+        io.emit('agendamentos:atualizar', { count: parseInt(disponiveis.total) })
       }
     }
   } catch (err) {

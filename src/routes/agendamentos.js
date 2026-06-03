@@ -323,7 +323,7 @@ export default async function agendamentosRoutes(fastify) {
     if (!ride) return reply.code(404).send({ error: 'Agendamento não encontrado' })
 
     await query(
-      "UPDATE rides SET status = 'aberta', disparada_at = CURRENT_TIMESTAMP WHERE id = $1",
+      "UPDATE rides SET status = 'aberta', disparada_at = CURRENT_TIMESTAMP, confirmou_presenca = CURRENT_TIMESTAMP WHERE id = $1",
       [ride.id]
     )
 
