@@ -1,5 +1,6 @@
 import { query, pool } from './db.js' 
 import { getIo } from './server.js'
+import { enviarPush, enviarPushVarios } from './firebase.js'
 
 async function getConfig(chave) { 
   try { 
@@ -13,6 +14,7 @@ export function initScheduler() {
     await verificarAgendamentos()
     await verificarNaoComparecimento()
     await verificarChegada()
+    await verificarAlertaVoo()
   }, 30 * 1000) // verifica a cada 30 segundos
 
   console.log('[SCHEDULER] Iniciado — verifica a cada 30 segundos')
@@ -212,4 +214,81 @@ function calcularDistancia(lat1, lng1, lat2, lng2) {
     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
     Math.sin(dLng/2) * Math.sin(dLng/2) 
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) 
+}
+
+async function verificarAlertaVoo() { 
+  try { 
+    const agora = new Date() 
+    const em30min = new Date(agora.getTime() + 30 * 60 * 1000) 
+    const em31min = new Date(agora.getTime() + 31 * 60 * 1000) 
+
+    // Busca tarifas que iniciam nos próximos 30-31 minutos 
+    const tarifas = (await query('SELECT * FROM tarifas WHERE ativo = true')).rows 
+    
+    for (const tarifa of tarifas) { 
+      const dias = tarifa.dias || [] 
+      const diaSemana = agora.getDay() // 0=Dom, 1=Seg... 
+      const diasMap = { dom: 0, seg: 1, ter: 2, qua: 3, qui: 4, sex: 5, sab: 6 } 
+      
+      const tarifaAtivaNoDia = dias.some(d => diasMap[d?.toLowerCase()] === diaSemana) 
+      if (!tarifaAtivaNoDia) continue 
+
+      // Verifica se o horário de início está em 30-31 minutos 
+      const [hInicio, mInicio] = tarifa.hora_inicio.split(':').map(Number) 
+      const inicioDaCorrente = new Date(agora) 
+      inicioDaCorrente.setHours(hInicio, mInicio, 0, 0) 
+
+      if (inicioDaCorrente >= em30min && inicioDaCorrente <= em31min) { 
+        console.log(`[SCHEDULER] Alerta de voo — tarifa ${tarifa.nome} inicia às ${tarifa.hora_inicio}`) 
+
+        const horaFormatada = tarifa.hora_inicio 
+
+        // Busca motoristas online (com fcm_token) 
+        const motoristasOnline = (await query(` 
+          SELECT d.fcm_token FROM drivers d 
+          JOIN driver_locations dl ON dl.driver_id = d.id 
+          WHERE d.ativo = 1 AND d.fcm_token IS NOT NULL 
+          AND dl.updated_at >= NOW() - INTERVAL '2 minutes' 
+        `)).rows.map(r => r.fcm_token) 
+
+        // Busca motoristas offline (com fcm_token) 
+        const motoristasOffline = (await query(` 
+          SELECT d.fcm_token FROM drivers d 
+          LEFT JOIN driver_locations dl ON dl.driver_id = d.id 
+          WHERE d.ativo = 1 AND d.fcm_token IS NOT NULL 
+          AND (dl.updated_at IS NULL OR dl.updated_at < NOW() - INTERVAL '2 minutes') 
+        `)).rows.map(r => r.fcm_token) 
+
+        // Push para offline 
+        if (motoristasOffline.length > 0) { 
+          await enviarPushVarios( 
+            motoristasOffline, 
+            '✈️ Avião chegando em VIX!', 
+            `Fique online! Atendimento inicia às ${horaFormatada}. Vamos embarcar passageiros!` 
+          ) 
+        } 
+
+        // Socket para online 
+        const io = getIo() 
+        if (io && motoristasOnline.length > 0) { 
+          io.emit('alerta:voo', { 
+            mensagem: `✈️ Avião chegando em VIX — Vamos embarcar passageiros!`, 
+            hora_inicio: horaFormatada, 
+            tarifa_nome: tarifa.nome 
+          }) 
+        } 
+
+        // Push também para online (reforço) 
+        if (motoristasOnline.length > 0) { 
+          await enviarPushVarios( 
+            motoristasOnline, 
+            '✈️ Avião chegando em VIX!', 
+            `Vamos embarcar passageiros! Atendimento inicia às ${horaFormatada}` 
+          ) 
+        } 
+      } 
+    } 
+  } catch(err) { 
+    console.error('[SCHEDULER] Erro verificarAlertaVoo:', err.message) 
+  } 
 } 
