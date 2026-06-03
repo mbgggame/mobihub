@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "516770144849",
+    "project_id": "zighub",
+    "storage_bucket": "zighub.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:516770144849:android:331723f204c43c4d754e70",
+        "android_client_info": {
+          "package_name": "com.zighub.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "516770144849-t1avosq6jkn6ncgu46fvuhit5lgvlc1g.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBKpsRov4hXMRaKOWiyQdRgslaqYBcSP6E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "516770144849-t1avosq6jkn6ncgu46fvuhit5lgvlc1g.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "516770144849-d00cstiupqni3a1t9r5835c7vbuhpecn.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.zighub.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
