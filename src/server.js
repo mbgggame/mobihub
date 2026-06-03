@@ -10,6 +10,7 @@ import { Server } from 'socket.io'
 
 import { initDB } from './db.js' 
 import { initScheduler } from './scheduler.js' 
+import { initFirebase } from './firebase.js' 
 import authRoutes from './routes/auth.js'
 import driversRoutes from './routes/drivers.js'
 import ridesRoutes from './routes/rides.js'
@@ -143,6 +144,7 @@ fastify.get('/apk/motorista', async (request, reply) => {
 // Inicializa 
 await initDB() 
 initScheduler() 
+initFirebase() 
 
 // Inicializa Socket.IO (antes de listen!) 
 ioInstance = new Server(fastify.server, { cors: { origin: '*' } }); 

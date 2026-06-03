@@ -1851,5 +1851,14 @@ export default async function publicRoutes(fastify) {
     return { success: true }
   })
 
+  fastify.post('/api/motorista/:token/fcm-token', async (request, reply) => {
+    const { fcm_token } = request.body
+    if (!fcm_token) return reply.code(400).send({ error: 'fcm_token obrigatório' })
+    const driver = (await query('SELECT id FROM drivers WHERE token_perfil = $1', [request.params.token])).rows[0]
+    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' })
+    await query('UPDATE drivers SET fcm_token = $1 WHERE id = $2', [fcm_token, driver.id])
+    return { success: true }
+  })
+
 } 
 
