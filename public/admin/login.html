@@ -28,39 +28,54 @@
     </form> 
   </div> 
 <script> 
-document.addEventListener('DOMContentLoaded', () => { 
-  const token = localStorage.getItem('mobihub_token') 
-  if (token) { 
-    window.location.href = '/admin' 
-    return 
-  } 
-  document.getElementById('form-login')?.addEventListener('submit', async (e) => { 
-    e.preventDefault() 
-    const email = document.getElementById('email').value.trim() 
-    const senha = document.getElementById('senha').value.trim() 
-    const btn = document.getElementById('btn-login') 
-    btn.disabled = true 
-    btn.textContent = 'Entrando...' 
-    try { 
-      const r = await fetch('/api/login', { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ email, senha }) 
-      }) 
-      const d = await r.json() 
-      console.log('STATUS:', r.status) 
-      console.log('RESPOSTA:', JSON.stringify(d)) 
-      if (!r.ok) throw new Error(d.error || 'Credenciais inválidas') 
-      localStorage.setItem('mobihub_token', d.token) 
-      console.log('TOKEN SALVO:', localStorage.getItem('mobihub_token')) 
-      window.location.href = '/admin' 
-    } catch (err) { 
-      document.getElementById('erro-login').textContent = err.message 
-      document.getElementById('erro-login').style.display = 'block' 
-      btn.disabled = false 
-      btn.textContent = 'Entrar' 
-    } 
-  }) 
+document.addEventListener('DOMContentLoaded', async () => {
+  const token = localStorage.getItem('mobihub_token')
+  if (token) {
+    // Verifica se o token é válido antes de redirecionar
+    try {
+      const r = await fetch('/api/login/verify', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      if (r.ok) {
+        window.location.href = '/admin'
+        return
+      } else {
+        // Token inválido/expirado, remove e permanece na tela de login
+        localStorage.removeItem('mobihub_token')
+      }
+    } catch (err) {
+      // Erro na conexão, remove token e permanece na tela de login
+      localStorage.removeItem('mobihub_token')
+    }
+  }
+  document.getElementById('form-login')?.addEventListener('submit', async (e) => {
+    e.preventDefault()
+    const email = document.getElementById('email').value.trim()
+    const senha = document.getElementById('senha').value.trim()
+    const btn = document.getElementById('btn-login')
+    btn.disabled = true
+    btn.textContent = 'Entrando...'
+    try {
+      const r = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, senha })
+      })
+      const d = await r.json()
+      console.log('STATUS:', r.status)
+      console.log('RESPOSTA:', JSON.stringify(d))
+      if (!r.ok) throw new Error(d.error || 'Credenciais inválidas')
+      localStorage.setItem('mobihub_token', d.token)
+      console.log('TOKEN SALVO:', localStorage.getItem('mobihub_token'))
+      window.location.href = '/admin'
+    } catch (err) {
+      document.getElementById('erro-login').textContent = err.message
+      document.getElementById('erro-login').style.display = 'block'
+      btn.disabled = false
+      btn.textContent = 'Entrar'
+    }
+  })
 }) 
 </script> 
 </body> 
