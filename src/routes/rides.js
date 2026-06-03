@@ -1,6 +1,5 @@
 import { query as dbQuery, pool, query } from '../db.js' 
 import { requireAuth } from '../middleware/auth.js' 
-import { sendRideToGroup, editGroupMessage } from '../telegram.js' 
 import { v4 as uuidv4 } from 'uuid' 
 import { calculateInitialWaitCost, calculateStopCost, calculateTotalRideCost, calcularTempoMinutos, podeMotoristaCancel } from '../billing.js'
 import { getIo } from '../server.js' 
@@ -119,12 +118,12 @@ export default async function ridesRoutes(fastify) {
     } = request.body 
  
     if (!origem || !destino) { 
-      return reply.code(400).send({ error: 'Origem e destino são obrigatórios' }) 
+      return reply.code(400).send({ error: 'Origem e destino sÃ£o obrigatÃ³rios' }) 
     } 
  
     let clientId = client_id 
  
-    // Se não tem client_id mas tem telefone, busca ou cria cliente 
+    // Se nÃ£o tem client_id mas tem telefone, busca ou cria cliente 
     if (!clientId && telefone_cliente) { 
       const existing = (await query( 
         'SELECT id FROM clients WHERE telefone = $1', [telefone_cliente] 
@@ -158,23 +157,12 @@ export default async function ridesRoutes(fastify) {
     const rideResult = await dbQuery('SELECT * FROM rides WHERE id = $1', [rideId]) 
     const ride = rideResult.rows[0]
  
-    // Só dispara imediatamente se for corrida NORMAL 
-    if (!tipo || tipo === 'normal') { 
-      try { 
-        const messageId = await sendRideToGroup(ride) 
-        if (messageId) { 
-          await query('UPDATE rides SET telegram_message_id = $1 WHERE id = $2', [messageId, ride.id]) 
-        } 
-      } catch (err) { 
-        console.error('[RIDES] Erro ao enviar para Telegram:', err.message) 
-      } 
-    } 
-
+    // telegram removido
     return { 
       id: ride.id, 
       token: ride.token, 
       link: `${process.env.BASE_URL}/r/${token}`, 
-      mensagem: tipo === 'agendada' ? 'Corrida agendada com sucesso' : 'Corrida criada e enviada para o grupo Telegram' 
+      mensagem: tipo === 'agendada' ? 'Corrida agendada com sucesso' : 'Corrida criada com sucesso' 
     } 
   }) 
  
@@ -184,12 +172,12 @@ export default async function ridesRoutes(fastify) {
     const statusValidos = ['aberta', 'aceita', 'concluida', 'cancelada'] 
  
     if (!statusValidos.includes(status)) { 
-      return reply.code(400).send({ error: 'Status inválido' }) 
+      return reply.code(400).send({ error: 'Status invÃ¡lido' }) 
     } 
  
     const rideResult = await dbQuery('SELECT * FROM rides WHERE id = $1', [id]) 
     const ride = rideResult.rows[0]
-    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
+    if (!ride) return reply.code(404).send({ error: 'Corrida nÃ£o encontrada' }) 
  
     let updateQuery = 'UPDATE rides SET status = $1' 
     const params = [status] 
@@ -224,12 +212,7 @@ export default async function ridesRoutes(fastify) {
       if (ride.client_id) {
         await dbQuery('UPDATE clients SET total_corridas = total_corridas + 1 WHERE id = $1', [ride.client_id])
       }
-      if (ride.telegram_message_id) {
-        await editGroupMessage(
-          ride.telegram_message_id,
-          `✅ *Corrida concluída!*\n\n📍 ${ride.origem}\n🏁 ${ride.destino}\n💰 R$ ${Number(ride.valor).toFixed(2)}`
-        )
-      }
+      // telegram removido
 
       // Corrida agendada com sinal pago: cobrar 70% restante
       if (ride.tipo === 'agendada' && ride.sinal_pago) {
@@ -238,18 +221,13 @@ export default async function ridesRoutes(fastify) {
           const rideAtualizado = (await dbQuery('SELECT * FROM rides WHERE id = $1', [id])).rows[0]
           await gerarCobrancaRestante(rideAtualizado)
         } catch (e) {
-          console.error('[RIDES] Erro ao gerar cobrança restante:', e.message)
+          console.error('[RIDES] Erro ao gerar cobranÃ§a restante:', e.message)
         }
       }
     } 
  
-    if (status === 'cancelada' && ride.telegram_message_id) { 
-      await editGroupMessage( 
-        ride.telegram_message_id, 
-        `❌ *Corrida cancelada.*\n\n📍 ${ride.origem}\n🏁 ${ride.destino}` 
-      ) 
-    } 
- 
+    // telegram removido
+
     return { mensagem: `Status atualizado para ${status}` } 
   }) 
  
@@ -259,7 +237,7 @@ export default async function ridesRoutes(fastify) {
  
     const rideResult = await dbQuery('SELECT id FROM rides WHERE id = $1', [id]) 
     const ride = rideResult.rows[0]
-    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
+    if (!ride) return reply.code(404).send({ error: 'Corrida nÃ£o encontrada' }) 
  
     await dbQuery('UPDATE rides SET maps_link = $1 WHERE id = $2', [maps_link, id]) 
     return { mensagem: 'Link do mapa salvo' } 
@@ -291,14 +269,14 @@ export default async function ridesRoutes(fastify) {
     return { mensagem: 'Tarifa atualizada' } 
   }) 
  
-  // Rota pública para o cliente calcular o valor 
+  // Rota pÃºblica para o cliente calcular o valor 
   fastify.get('/api/tarifas/calcular', async (request) => { 
     const { data_hora, distancia_km } = request.query 
     const resultado = await calcularTarifa(data_hora, parseFloat(distancia_km)) 
     return resultado 
   }) 
 
-  // Obter corrida pelo token (público) 
+  // Obter corrida pelo token (pÃºblico) 
   fastify.get('/api/rides/token/:token', async (request, reply) => { 
     const { token } = request.params 
     const ride = (await query(` 
@@ -312,19 +290,19 @@ export default async function ridesRoutes(fastify) {
       WHERE r.token = $1 
     `, [token])).rows[0] 
 
-    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
+    if (!ride) return reply.code(404).send({ error: 'Corrida nÃ£o encontrada' }) 
     return ride 
   }) 
  
-  // Métricas para o Dashboard 
+  // MÃ©tricas para o Dashboard 
   fastify.get('/api/metricas', { preHandler: requireAuth }, async (request) => { 
     const { dataInicio, dataFim } = request.query
 
-    // Define o intervalo padrão (últimos 15 dias)
+    // Define o intervalo padrÃ£o (Ãºltimos 15 dias)
     let dataInicioParam = dataInicio ? new Date(dataInicio) : new Date(Date.now() - 15 * 24 * 60 * 60 * 1000)
     let dataFimParam = dataFim ? new Date(dataFim) : new Date()
 
-    // Ajusta para o início do dia e fim do dia
+    // Ajusta para o inÃ­cio do dia e fim do dia
     dataInicioParam.setHours(0, 0, 0, 0)
     dataFimParam.setHours(23, 59, 59, 999)
 
@@ -375,7 +353,7 @@ export default async function ridesRoutes(fastify) {
     `, [dataInicioParam.toISOString(), dataFimParam.toISOString()]) 
     const dadosPeriodo = dadosPeriodoResult.rows
 
-    // Demandas por hora (últimos 7 dias, independente do filtro)
+    // Demandas por hora (Ãºltimos 7 dias, independente do filtro)
     const demandasPorHoraResult = await dbQuery(`
       SELECT 
         EXTRACT(HOUR FROM created_at) as hora,
@@ -460,11 +438,11 @@ export default async function ridesRoutes(fastify) {
         if (driver) autorizado = true 
       } 
     } 
-    if (!autorizado) return reply.code(401).send({ error: 'Não autorizado' }) 
+    if (!autorizado) return reply.code(401).send({ error: 'NÃ£o autorizado' }) 
   
     const ride = (await query('SELECT * FROM rides WHERE id = $1', [id])).rows[0] 
-    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
-    if (ride.status !== 'aceita') return reply.code(400).send({ error: 'Corrida não está aceita' }) 
+    if (!ride) return reply.code(404).send({ error: 'Corrida nÃ£o encontrada' }) 
+    if (ride.status !== 'aceita') return reply.code(400).send({ error: 'Corrida nÃ£o estÃ¡ aceita' }) 
   
     await query(` 
       UPDATE rides SET 
@@ -498,10 +476,10 @@ export default async function ridesRoutes(fastify) {
         if (driver) autorizado = true 
       } 
     } 
-    if (!autorizado) return reply.code(401).send({ error: 'Não autorizado' }) 
+    if (!autorizado) return reply.code(401).send({ error: 'NÃ£o autorizado' }) 
   
     const ride = (await query('SELECT * FROM rides WHERE id = $1', [id])).rows[0] 
-    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
+    if (!ride) return reply.code(404).send({ error: 'Corrida nÃ£o encontrada' }) 
     if (!ride.motorista_chegou_at) return reply.code(400).send({ error: 'Registre chegada primeiro' }) 
   
     const config = await getConfig() 
@@ -542,12 +520,12 @@ export default async function ridesRoutes(fastify) {
         if (driver) autorizado = true 
       } 
     } 
-    if (!autorizado) return reply.code(401).send({ error: 'Não autorizado' }) 
+    if (!autorizado) return reply.code(401).send({ error: 'NÃ£o autorizado' }) 
   
     const paradaAberta = (await query( 
       'SELECT id FROM ride_stops WHERE ride_id = $1 AND finalizada_at IS NULL', [id] 
     )).rows[0] 
-    if (paradaAberta) return reply.code(400).send({ error: 'Já existe parada em andamento' }) 
+    if (paradaAberta) return reply.code(400).send({ error: 'JÃ¡ existe parada em andamento' }) 
   
     const result = await query( 
       'INSERT INTO ride_stops (ride_id) VALUES ($1) RETURNING id', [id] 
@@ -572,7 +550,7 @@ export default async function ridesRoutes(fastify) {
       'SELECT * FROM ride_stops WHERE id = $1 AND ride_id = $2 AND finalizada_at IS NULL', 
       [stopId, id] 
     )).rows[0] 
-    if (!stop) return reply.code(404).send({ error: 'Parada não encontrada' }) 
+    if (!stop) return reply.code(404).send({ error: 'Parada nÃ£o encontrada' }) 
  
     const config = await getConfig() 
     const duracaoMin = calcularTempoMinutos(stop.iniciada_at) 
@@ -612,8 +590,8 @@ export default async function ridesRoutes(fastify) {
   fastify.put('/api/rides/:id/cancelar-espera', { preHandler: requireAuth }, async (request, reply) => { 
     const { id } = request.params 
     const ride = (await query('SELECT * FROM rides WHERE id = $1', [id])).rows[0] 
-    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
-    if (!ride.motorista_chegou_at) return reply.code(400).send({ error: 'Timer não iniciado' }) 
+    if (!ride) return reply.code(404).send({ error: 'Corrida nÃ£o encontrada' }) 
+    if (!ride.motorista_chegou_at) return reply.code(400).send({ error: 'Timer nÃ£o iniciado' }) 
  
     const config = await getConfig() 
  
@@ -649,7 +627,7 @@ export default async function ridesRoutes(fastify) {
   fastify.put('/api/rides/:id/cancelar', { preHandler: requireAuth }, async (request, reply) => {
     const { id } = request.params
     const ride = (await dbQuery('SELECT * FROM rides WHERE id = $1', [id])).rows[0]
-    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' })
+    if (!ride) return reply.code(404).send({ error: 'Corrida nÃ£o encontrada' })
 
     await dbQuery(`
       UPDATE rides SET 
@@ -659,16 +637,7 @@ export default async function ridesRoutes(fastify) {
       WHERE id = $1
     `, [id])
 
-    if (ride.telegram_message_id) {
-      try {
-        await editGroupMessage(
-          ride.telegram_message_id,
-          `❌ *Corrida cancelada pelo admin.*\n\n📍 ${ride.origem}\n🏁 ${ride.destino}`
-        )
-      } catch (e) {
-        console.error('[RIDES] Erro ao editar mensagem Telegram:', e.message)
-      }
-    }
+    // telegram removido
 
     return { mensagem: 'Corrida cancelada com sucesso' }
   })
@@ -677,7 +646,7 @@ export default async function ridesRoutes(fastify) {
   fastify.get('/api/rides/:id/resumo-financeiro', { preHandler: requireAuth }, async (request, reply) => { 
     const { id } = request.params 
     const ride = (await query('SELECT * FROM rides WHERE id = $1', [id])).rows[0] 
-    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
+    if (!ride) return reply.code(404).send({ error: 'Corrida nÃ£o encontrada' }) 
 
     const config = await getConfig() 
     const paradas = (await query('SELECT * FROM ride_stops WHERE ride_id = $1 ORDER BY iniciada_at', [id])).rows 
@@ -714,3 +683,4 @@ export default async function ridesRoutes(fastify) {
   }) 
  
 }
+

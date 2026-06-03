@@ -105,7 +105,7 @@ async function verificarAgendamentos() {
 async function verificarNaoComparecimento() {
   try {
     const result = await query(`
-      SELECT r.*, d.telegram_id as driver_telegram, c.telegram_id as client_telegram, c.id as client_id_val
+      SELECT r.*, c.id as client_id_val
       FROM rides r
       LEFT JOIN drivers d ON r.driver_id = d.id
       LEFT JOIN clients c ON r.client_id = c.id
@@ -198,18 +198,7 @@ async function verificarChegada() {
           await query('UPDATE clients SET total_corridas = total_corridas + 1 WHERE id = $1', [ride.client_id]) 
         } 
 
-        // Notifica motorista para avaliar (sem Telegram)
-        try { 
-          const { editGroupMessage } = await import('./telegram.js') 
-          if (ride.telegram_message_id) { 
-            await editGroupMessage( 
-              ride.telegram_message_id, 
-              `✅ *Corrida concluída automaticamente!*\n\n📍 ${ride.origem}\n🏁 ${ride.destino}\n💰 R$ ${Number(ride.valor).toFixed(2)}` 
-            ) 
-          } 
-        } catch(err) { 
-          console.error('[SCHEDULER] Erro ao notificar chegada:', err.message) 
-        } 
+        // telegram removido 
       } 
     } 
   } catch(err) { 

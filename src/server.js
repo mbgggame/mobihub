@@ -9,7 +9,6 @@ import { fileURLToPath } from 'url'
 import { Server } from 'socket.io' 
 
 import { initDB } from './db.js' 
-import { initBot } from './telegram.js' 
 import { initScheduler } from './scheduler.js' 
 import authRoutes from './routes/auth.js'
 import driversRoutes from './routes/drivers.js'
@@ -141,17 +140,8 @@ fastify.get('/apk/motorista', async (request, reply) => {
   return reply.sendFile('MobiHub-Motorista.apk')
 }) 
 
-// Webhook do Telegram 
-fastify.post('/webhook/telegram', async (request, reply) => { 
-  const { getBot } = await import('./telegram.js') 
-  const bot = getBot() 
-  if (bot) bot.processUpdate(request.body) 
-  return { ok: true } 
-}) 
-
 // Inicializa 
 await initDB() 
-initBot() 
 initScheduler() 
 
 // Inicializa Socket.IO (antes de listen!) 
@@ -170,23 +160,8 @@ ioInstance.on('connection', (socket) => {
 
 const port = parseInt(process.env.PORT || '3000') 
 try { 
-  // 1. Inicia o servidor primeiro para evitar timeout no Render 
   await fastify.listen({ port, host: '0.0.0.0' }) 
   console.log(`[SERVER] MobiHub rodando em http://localhost:${port}`) 
-
-  // 2. Configura o Telegram de forma assíncrona após o servidor estar online 
-  const isProduction = process.env.BASE_URL && !process.env.BASE_URL.includes('localhost') 
-  if (isProduction) { 
-    import('./telegram.js').then(({ getBot }) => { 
-      const bot = getBot() 
-      if (bot) { 
-        const webhookUrl = `${process.env.BASE_URL}/webhook/telegram` 
-        bot.setWebHook(webhookUrl) 
-          .then(() => console.log('[BOT] Webhook configurado com sucesso:', webhookUrl)) 
-          .catch(e => console.error('[BOT ERROR] Falha ao configurar Webhook:', e.message)) 
-      } 
-    }).catch(e => console.error('[BOT ERROR] Falha ao importar telegram.js:', e.message)) 
-  } 
 } catch (err) { 
   console.error('[ERRO DE INICIALIZAÇÃO RENDER]:', err) 
   process.exit(1) 

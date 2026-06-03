@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid' 
+﻿import { v4 as uuidv4 } from 'uuid' 
 import { query, pool } from '../db.js' 
 import { requireAuth } from '../middleware/auth.js'
 import crypto from 'crypto' 
@@ -20,7 +20,7 @@ export default async function driversRoutes(fastify) {
 
   fastify.post('/api/cadastro-geral', async (request, reply) => { 
     const { 
-      nome, telefone, telegram_id, email, cpf,
+      nome, telefone, email, cpf,
       marca_carro, modelo_carro, ano_carro, cor_carro, placa, renavam,
       crlv_base64, cnh_frente_base64, cnh_verso_base64, cnh_digital_base64, foto_base64,
       tipo_chave_pix, chave_pix, cep, logradouro, numero, complemento, bairro, cidade, estado,
@@ -28,7 +28,7 @@ export default async function driversRoutes(fastify) {
     } = request.body 
 
     if (!nome || !telefone || !cpf || !modelo_carro || !ano_carro || !placa || !renavam || !numero) { 
-      return reply.code(400).send({ error: 'Todos os campos obrigatórios são necessários' }) 
+      return reply.code(400).send({ error: 'Todos os campos obrigatÃ³rios sÃ£o necessÃ¡rios' }) 
     } 
 
     const temFotosCnh = cnh_frente_base64 && cnh_verso_base64
@@ -38,14 +38,6 @@ export default async function driversRoutes(fastify) {
     }
 
     try { 
-      // Verifica se já existe motorista com esse telegram_id
-      if (telegram_id && telegram_id !== '0') {
-        const check = await query('SELECT id FROM drivers WHERE telegram_id = $1', [telegram_id])
-        if (check.rows.length > 0) {
-          return reply.code(409).send({ error: 'Telegram ID já cadastrado como motorista' }) 
-        }
-      }
-
       const result = await query(` 
    INSERT INTO drivers 
      (nome, telefone, email, status_cadastro, ativo, 
@@ -63,7 +55,7 @@ export default async function driversRoutes(fastify) {
    RETURNING id 
  `, [ 
    nome, telefone, email || null, 
-   modelo_carro, ano_carro, cor_carro || 'Não informado', placa, 
+   modelo_carro, ano_carro, cor_carro || 'NÃ£o informado', placa, 
    cpf, renavam, crlv_base64 || null, 
    cnh_frente_base64 || null, cnh_verso_base64 || null, cnh_digital_base64 || null, foto_base64 || null, 
    tipo_chave_pix || null, chave_pix || null, 
@@ -71,17 +63,14 @@ export default async function driversRoutes(fastify) {
    data_nascimento || null 
  ]) 
 
-      return { id: result.rows[0].id, mensagem: 'Cadastro enviado para aprovação' } 
+      return { id: result.rows[0].id, mensagem: 'Cadastro enviado para aprovaÃ§Ã£o' } 
     } catch (err) { 
-      if (err.message.includes('unique') || err.message.includes('UNIQUE')) { 
-        return reply.code(409).send({ error: 'Telegram ID já cadastrado como motorista' }) 
-      } 
       throw err 
     } 
   }) 
 
   fastify.get('/api/drivers', { preHandler: requireAuth }, async () => { 
-    const result = await query(`SELECT id, nome, telefone, email, telegram_id, modelo_carro, ano_carro, cor_carro, placa, 
+    const result = await query(`SELECT id, nome, telefone, email, modelo_carro, ano_carro, cor_carro, placa, 
       total_viagens, media_avaliacao, total_avaliacoes, ativo, foto_base64, token_perfil, created_at, status_cadastro,
       cpf, renavam, crlv_base64, cnh_frente_base64, cnh_verso_base64, cnh_digital_base64,
       tipo_chave_pix, chave_pix, asaas_id, mobihub_id,
@@ -92,33 +81,24 @@ export default async function driversRoutes(fastify) {
  
   fastify.post('/api/drivers', { preHandler: requireAuth }, async (request, reply) => { 
     const { 
-      nome, telefone, telegram_id, 
+      nome, telefone, 
       modelo_carro, ano_carro, cor_carro, placa, foto_base64 
     } = request.body 
 
-    if (!nome || !telegram_id || !modelo_carro || !ano_carro || !cor_carro || !placa) { 
-      return reply.code(400).send({ error: 'Todos os campos são obrigatórios' }) 
+    if (!nome || !telefone || !modelo_carro || !ano_carro || !cor_carro || !placa) { 
+      return reply.code(400).send({ error: 'Todos os campos sÃ£o obrigatÃ³rios' }) 
     } 
 
     try { 
-      // Verifica se já existe motorista com esse telegram_id
-      const check = await query('SELECT id FROM drivers WHERE telegram_id = $1', [telegram_id])
-      if (check.rows.length > 0) {
-        return reply.code(409).send({ error: 'Telegram ID já cadastrado como motorista' }) 
-      }
-
       const result = await query(` 
         INSERT INTO drivers 
-          (nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, foto_base64) 
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+          (nome, telefone, modelo_carro, ano_carro, cor_carro, placa, foto_base64) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7) 
         RETURNING id
-      `, [nome, telefone, telegram_id, modelo_carro, ano_carro, cor_carro, placa, foto_base64 || null]) 
+      `, [nome, telefone, modelo_carro, ano_carro, cor_carro, placa, foto_base64 || null]) 
 
       return { id: result.rows[0].id, mensagem: 'Motorista cadastrado com sucesso' } 
     } catch (err) { 
-      if (err.message.includes('unique') || err.message.includes('UNIQUE')) { 
-        return reply.code(409).send({ error: 'Telegram ID já cadastrado como motorista' }) 
-      } 
       throw err 
     } 
   }) 
@@ -127,7 +107,7 @@ export default async function driversRoutes(fastify) {
     const { id } = request.params 
     const driverResult = await query('SELECT id FROM drivers WHERE id = $1', [id])
     const driver = driverResult.rows[0]
-    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
+    if (!driver) return reply.code(404).send({ error: 'Motorista nÃ£o encontrado' }) 
 
     await query('UPDATE drivers SET ativo = 0 WHERE id = $1', [id]) 
     return { mensagem: 'Motorista desativado' } 
@@ -142,7 +122,7 @@ export default async function driversRoutes(fastify) {
     const driver = driverResult.rows[0]
     console.log('[GERAR-TOKEN] Driver encontrado:', driver) 
     
-    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
+    if (!driver) return reply.code(404).send({ error: 'Motorista nÃ£o encontrado' }) 
     
     try { 
       const { v4: uuidv4 } = await import('uuid') 
@@ -160,13 +140,13 @@ export default async function driversRoutes(fastify) {
     const { id } = request.params 
     const driverResult = await query('SELECT * FROM drivers WHERE id = $1', [id])
     const driver = driverResult.rows[0]
-    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
+    if (!driver) return reply.code(404).send({ error: 'Motorista nÃ£o encontrado' }) 
     await query('DELETE FROM driver_transactions WHERE driver_id = $1', [id]) 
     await query('DELETE FROM driver_locations WHERE driver_id = $1', [id]) 
     await query('DELETE FROM ratings WHERE ride_id IN (SELECT id FROM rides WHERE driver_id = $1)', [id]) 
     await query('UPDATE rides SET driver_id = NULL WHERE driver_id = $1', [id]) 
     await query('DELETE FROM drivers WHERE id = $1', [id]) 
-    return { mensagem: 'Motorista excluído com sucesso' } 
+    return { mensagem: 'Motorista excluÃ­do com sucesso' } 
   }) 
 
   // Gerar link de convite para motorista 
@@ -200,12 +180,12 @@ export default async function driversRoutes(fastify) {
     const { id } = request.params 
     const driverResult = await query('SELECT * FROM drivers WHERE id = $1', [id]) 
     const driver = driverResult.rows[0]
-    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' })
+    if (!driver) return reply.code(404).send({ error: 'Motorista nÃ£o encontrado' })
 
     const { v4: uuidv4 } = await import('uuid')
     const token = driver.token_perfil || uuidv4()
     
-    // Gerar mobihub_id se não existir
+    // Gerar mobihub_id se nÃ£o existir
     let mobihubId = driver.mobihub_id
     if (!mobihubId) {
       const lastId = (await query("SELECT mobihub_id FROM drivers WHERE mobihub_id IS NOT NULL ORDER BY mobihub_id DESC LIMIT 1")).rows[0]
@@ -217,18 +197,7 @@ export default async function driversRoutes(fastify) {
       UPDATE drivers SET status_cadastro = 'aprovado', ativo = 1, token_perfil = $1, mobihub_id = $2 WHERE id = $3 
     `, [token, mobihubId, id]) 
 
-
-
-    // Notifica motorista via Telegram 
-    if (driver?.telegram_id) { 
-      const { getBot } = await import('../telegram.js') 
-      const bot = getBot() 
-      const linkPerfil = `${process.env.BASE_URL}/motorista/${token}` 
-      bot?.sendMessage(driver.telegram_id, 
-        `✅ Seu cadastro foi *aprovado!*\n\nBem-vindo ao MobiHub!\n\n👤 Acesse seu painel:\n${linkPerfil}`, 
-        { parse_mode: 'Markdown' } 
-      ).catch(() => {}) 
-    } 
+    // telegram removido
 
     // Disparar webhook motorista.aprovado para Make
     const { dispararWebhook } = await import('../webhook.js')
@@ -251,16 +220,7 @@ export default async function driversRoutes(fastify) {
       UPDATE drivers SET status_cadastro = 'reprovado', ativo = 0, motivo_reprovacao = $1 WHERE id = $2 
     `, [motivo || null, id]) 
 
-    const driverResult = await query('SELECT * FROM drivers WHERE id = $1', [id]) 
-    const driver = driverResult.rows[0]
-    if (driver?.telegram_id) { 
-      const { getBot } = await import('../telegram.js') 
-      const bot = getBot() 
-      bot?.sendMessage(driver.telegram_id, 
-        `❌ Seu cadastro não foi aprovado.\n${motivo ? `\nMotivo: ${motivo}` : ''}`, 
-        { parse_mode: 'Markdown' } 
-      ).catch(() => {}) 
-    } 
+    // telegram removido
 
     return { mensagem: 'Motorista reprovado' } 
   })
@@ -279,12 +239,12 @@ export default async function driversRoutes(fastify) {
     const { id } = request.params
     const driverResult = await query('SELECT * FROM drivers WHERE id = $1', [id])
     const driver = driverResult.rows[0]
-    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' })
+    if (!driver) return reply.code(404).send({ error: 'Motorista nÃ£o encontrado' })
     
     const { v4: uuidv4 } = await import('uuid')
     const token = driver.token_perfil || uuidv4()
     
-    // Gerar mobihub_id se não existir
+    // Gerar mobihub_id se nÃ£o existir
     let mobihubId = driver.mobihub_id
     if (!mobihubId) {
       const lastId = (await query("SELECT mobihub_id FROM drivers WHERE mobihub_id IS NOT NULL ORDER BY mobihub_id DESC LIMIT 1")).rows[0]
@@ -322,12 +282,12 @@ export default async function driversRoutes(fastify) {
   })
 
   fastify.put('/api/drivers/:id', { preHandler: requireAuth }, async (request, reply) => { 
-    const { nome, telefone, email, telegram_id, modelo_carro, ano_carro, cor_carro, placa, ativo, foto_base64, status_cadastro, tipo_chave_pix, chave_pix, asaas_id, cep, logradouro, numero, complemento, bairro, cidade, estado, cpf, renavam, data_nascimento } = request.body 
+    const { nome, telefone, email, modelo_carro, ano_carro, cor_carro, placa, ativo, foto_base64, status_cadastro, tipo_chave_pix, chave_pix, asaas_id, cep, logradouro, numero, complemento, bairro, cidade, estado, cpf, renavam, data_nascimento } = request.body 
     const { id } = request.params 
 
     const driverResult = await query('SELECT id, status_cadastro FROM drivers WHERE id = $1', [id])
     const driver = driverResult.rows[0]
-    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
+    if (!driver) return reply.code(404).send({ error: 'Motorista nÃ£o encontrado' }) 
 
     let novoAtivo = ativo
     const novoStatus = status_cadastro || driver.status_cadastro
@@ -343,29 +303,28 @@ export default async function driversRoutes(fastify) {
         nome = COALESCE($1, nome), 
         telefone = COALESCE($2, telefone), 
         email = COALESCE($3, email),
-        telegram_id = COALESCE($4, telegram_id),
-        modelo_carro = COALESCE($5, modelo_carro), 
-        ano_carro = COALESCE($6, ano_carro), 
-        cor_carro = COALESCE($7, cor_carro), 
-        placa = COALESCE($8, placa), 
-        ativo = $9, 
-        foto_base64 = COALESCE($10, foto_base64),
-        status_cadastro = COALESCE($11, status_cadastro),
-        tipo_chave_pix = COALESCE($12, tipo_chave_pix),
-        chave_pix = COALESCE($13, chave_pix),
-        asaas_id = COALESCE($14, asaas_id),
-        cep = COALESCE($15, cep),
-        logradouro = COALESCE($16, logradouro),
-        numero = COALESCE($17, numero),
-        complemento = COALESCE($18, complemento),
-        bairro = COALESCE($19, bairro),
-        cidade = COALESCE($20, cidade),
-        estado = COALESCE($21, estado),
-        cpf = COALESCE($22, cpf),
-        renavam = COALESCE($23, renavam),
-        data_nascimento = COALESCE($24, data_nascimento)
-      WHERE id = $25 
-    `, [nome, telefone, email, telegram_id, modelo_carro, ano_carro, cor_carro, placa, novoAtivo, foto_base64, novoStatus, tipo_chave_pix, chave_pix, asaas_id, cep, logradouro, numero, complemento, bairro, cidade, estado, cpf, renavam, data_nascimento, id]) 
+        modelo_carro = COALESCE($4, modelo_carro), 
+        ano_carro = COALESCE($5, ano_carro), 
+        cor_carro = COALESCE($6, cor_carro), 
+        placa = COALESCE($7, placa), 
+        ativo = $8, 
+        foto_base64 = COALESCE($9, foto_base64),
+        status_cadastro = COALESCE($10, status_cadastro),
+        tipo_chave_pix = COALESCE($11, tipo_chave_pix),
+        chave_pix = COALESCE($12, chave_pix),
+        asaas_id = COALESCE($13, asaas_id),
+        cep = COALESCE($14, cep),
+        logradouro = COALESCE($15, logradouro),
+        numero = COALESCE($16, numero),
+        complemento = COALESCE($17, complemento),
+        bairro = COALESCE($18, bairro),
+        cidade = COALESCE($19, cidade),
+        estado = COALESCE($20, estado),
+        cpf = COALESCE($21, cpf),
+        renavam = COALESCE($22, renavam),
+        data_nascimento = COALESCE($23, data_nascimento)
+      WHERE id = $24 
+    `, [nome, telefone, email, modelo_carro, ano_carro, cor_carro, placa, novoAtivo, foto_base64, novoStatus, tipo_chave_pix, chave_pix, asaas_id, cep, logradouro, numero, complemento, bairro, cidade, estado, cpf, renavam, data_nascimento, id]) 
 
     return { mensagem: 'Motorista atualizado' } 
   }) 
@@ -440,7 +399,7 @@ export default async function driversRoutes(fastify) {
 
       const motoristaResult = await query('SELECT * FROM drivers WHERE token_perfil = $1', [token])
       const motorista = motoristaResult.rows[0]
-      if (!motorista) return reply.code(404).send({ error: 'Motorista não encontrado' })
+      if (!motorista) return reply.code(404).send({ error: 'Motorista nÃ£o encontrado' })
 
       const termoResult = await query('SELECT * FROM termos_versoes WHERE versao = $1', [versaoTermos])
       const termo = termoResult.rows[0]
@@ -474,7 +433,7 @@ export default async function driversRoutes(fastify) {
     const { online } = request.body 
     const driverResult = await query('SELECT id, aceitou_termos FROM drivers WHERE token_perfil = $1', [request.params.token]) 
     const driver = driverResult.rows[0]
-    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
+    if (!driver) return reply.code(404).send({ error: 'Motorista nÃ£o encontrado' }) 
     
     if (online && !driver.aceitou_termos) {
       return reply.code(400).send({ error: 'Aceite os termos primeiro' })
@@ -487,7 +446,7 @@ export default async function driversRoutes(fastify) {
        WHERE id = $2 
      `, [online ? 1 : 0, driver.id]) 
    
-    return { mensagem: online ? 'Você está online' : 'Você está offline', online } 
+    return { mensagem: online ? 'VocÃª estÃ¡ online' : 'VocÃª estÃ¡ offline', online } 
   }) 
  
   // Atualizar perfil do motorista
@@ -497,7 +456,7 @@ export default async function driversRoutes(fastify) {
 
     const driverResult = await query('SELECT id FROM drivers WHERE token_perfil = $1', [token_perfil])
     const driver = driverResult.rows[0]
-    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' })
+    if (!driver) return reply.code(404).send({ error: 'Motorista nÃ£o encontrado' })
 
     await query(`
       UPDATE drivers SET
@@ -517,13 +476,13 @@ export default async function driversRoutes(fastify) {
     return { mensagem: 'Dados atualizados com sucesso' }
   })
 
-  // Listar veículos do motorista 
+  // Listar veÃ­culos do motorista 
   fastify.get('/api/motorista/:token/veiculos', async (request, reply) => { 
     const driver = (await query( 
       'SELECT id FROM drivers WHERE token_perfil = $1', 
       [request.params.token] 
     )).rows[0] 
-    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
+    if (!driver) return reply.code(404).send({ error: 'Motorista nÃ£o encontrado' }) 
 
     const veiculos = (await query( 
       'SELECT * FROM vehicles WHERE driver_id = $1 ORDER BY ativo DESC, created_at ASC', 
@@ -533,33 +492,33 @@ export default async function driversRoutes(fastify) {
     return veiculos 
   }) 
  
-  // Adicionar veículo 
+  // Adicionar veÃ­culo 
   fastify.post('/api/motorista/:token/veiculos', async (request, reply) => { 
     const { modelo, ano, cor, placa } = request.body 
     if (!modelo || !ano || !cor || !placa) { 
-      return reply.code(400).send({ error: 'Todos os campos são obrigatórios' }) 
+      return reply.code(400).send({ error: 'Todos os campos sÃ£o obrigatÃ³rios' }) 
     } 
  
     const driver = (await query( 
       'SELECT id FROM drivers WHERE token_perfil = $1', 
       [request.params.token] 
     )).rows[0] 
-    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
+    if (!driver) return reply.code(404).send({ error: 'Motorista nÃ£o encontrado' }) 
  
-    // Verifica se placa já existe 
+    // Verifica se placa jÃ¡ existe 
     const existing = (await query( 
       'SELECT id FROM vehicles WHERE placa = $1', 
       [placa.toUpperCase()] 
     )).rows[0] 
-    if (existing) return reply.code(409).send({ error: 'Placa já cadastrada' }) 
+    if (existing) return reply.code(409).send({ error: 'Placa jÃ¡ cadastrada' }) 
  
-    // Conta quantos veículos o motorista tem 
+    // Conta quantos veÃ­culos o motorista tem 
     const total = (await query( 
       'SELECT COUNT(*) as total FROM vehicles WHERE driver_id = $1', 
       [driver.id] 
     )).rows[0] 
  
-    // Primeiro veículo é automaticamente ativo 
+    // Primeiro veÃ­culo Ã© automaticamente ativo 
     const primeiroVeiculo = parseInt(total.total) === 0 
  
     const result = await query(` 
@@ -568,17 +527,17 @@ export default async function driversRoutes(fastify) {
       RETURNING * 
     `, [driver.id, modelo, ano, cor.toLowerCase(), placa.toUpperCase(), primeiroVeiculo ? 1 : 0]) 
  
-    // Se for o primeiro, atualiza também o driver 
+    // Se for o primeiro, atualiza tambÃ©m o driver 
     if (primeiroVeiculo) { 
       await query(` 
         UPDATE drivers SET modelo_carro = $1, ano_carro = $2, cor_carro = $3, placa = $4 WHERE id = $5 
       `, [modelo, ano, cor, placa.toUpperCase(), driver.id]) 
     } 
  
-    return { mensagem: 'Veículo cadastrado!', veiculo: result.rows[0] } 
+    return { mensagem: 'VeÃ­culo cadastrado!', veiculo: result.rows[0] } 
   }) 
  
-  // Selecionar veículo ativo 
+  // Selecionar veÃ­culo ativo 
   fastify.put('/api/motorista/:token/veiculos/:vehicleId/ativar', async (request, reply) => { 
     const { token, vehicleId } = request.params 
  
@@ -586,7 +545,7 @@ export default async function driversRoutes(fastify) {
       'SELECT id, online FROM drivers WHERE token_perfil = $1', 
       [token] 
     )).rows[0] 
-    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
+    if (!driver) return reply.code(404).send({ error: 'Motorista nÃ£o encontrado' }) 
  
     // Verifica se tem corrida em andamento 
     const corridaAtiva = (await query( 
@@ -594,23 +553,23 @@ export default async function driversRoutes(fastify) {
       [driver.id] 
     )).rows[0] 
     if (corridaAtiva) { 
-      return reply.code(400).send({ error: 'Não é possível trocar de veículo com corrida em andamento' }) 
+      return reply.code(400).send({ error: 'NÃ£o Ã© possÃ­vel trocar de veÃ­culo com corrida em andamento' }) 
     } 
  
-    // Verifica se o veículo pertence ao motorista 
+    // Verifica se o veÃ­culo pertence ao motorista 
     const veiculo = (await query( 
       'SELECT * FROM vehicles WHERE id = $1 AND driver_id = $2', 
       [vehicleId, driver.id] 
     )).rows[0] 
-    if (!veiculo) return reply.code(404).send({ error: 'Veículo não encontrado' }) 
+    if (!veiculo) return reply.code(404).send({ error: 'VeÃ­culo nÃ£o encontrado' }) 
  
-    // Desativa todos os veículos do motorista 
+    // Desativa todos os veÃ­culos do motorista 
     await query('UPDATE vehicles SET ativo = 0 WHERE driver_id = $1', [driver.id]) 
  
     // Ativa o selecionado 
     await query('UPDATE vehicles SET ativo = 1 WHERE id = $1', [vehicleId]) 
  
-    // Atualiza dados do motorista com o veículo ativo 
+    // Atualiza dados do motorista com o veÃ­culo ativo 
     await query(` 
       UPDATE drivers SET 
         modelo_carro = $1, 
@@ -620,10 +579,10 @@ export default async function driversRoutes(fastify) {
       WHERE id = $5 
     `, [veiculo.modelo, veiculo.ano, veiculo.cor, veiculo.placa, driver.id]) 
  
-    return { mensagem: `Veículo ${veiculo.modelo} ${veiculo.placa} ativado!` } 
+    return { mensagem: `VeÃ­culo ${veiculo.modelo} ${veiculo.placa} ativado!` } 
   }) 
  
-  // Remover veículo 
+  // Remover veÃ­culo 
   fastify.delete('/api/motorista/:token/veiculos/:vehicleId', async (request, reply) => { 
     const { token, vehicleId } = request.params 
  
@@ -631,42 +590,42 @@ export default async function driversRoutes(fastify) {
       'SELECT id FROM drivers WHERE token_perfil = $1', 
       [token] 
     )).rows[0] 
-    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' }) 
+    if (!driver) return reply.code(404).send({ error: 'Motorista nÃ£o encontrado' }) 
  
     const veiculo = (await query( 
       'SELECT * FROM vehicles WHERE id = $1 AND driver_id = $2', 
       [vehicleId, driver.id] 
     )).rows[0] 
-    if (!veiculo) return reply.code(404).send({ error: 'Veículo não encontrado' }) 
+    if (!veiculo) return reply.code(404).send({ error: 'VeÃ­culo nÃ£o encontrado' }) 
  
     if (veiculo.ativo) { 
-      return reply.code(400).send({ error: 'Não é possível remover o veículo ativo. Ative outro primeiro.' }) 
+      return reply.code(400).send({ error: 'NÃ£o Ã© possÃ­vel remover o veÃ­culo ativo. Ative outro primeiro.' }) 
     } 
  
-    // Verifica se tem apenas 1 veículo 
+    // Verifica se tem apenas 1 veÃ­culo 
     const total = (await query( 
       'SELECT COUNT(*) as total FROM vehicles WHERE driver_id = $1', 
       [driver.id] 
     )).rows[0] 
     if (parseInt(total.total) <= 1) { 
-      return reply.code(400).send({ error: 'Você precisa ter pelo menos 1 veículo cadastrado' }) 
+      return reply.code(400).send({ error: 'VocÃª precisa ter pelo menos 1 veÃ­culo cadastrado' }) 
     } 
  
     await query('DELETE FROM vehicles WHERE id = $1', [vehicleId]) 
-    return { mensagem: 'Veículo removido' } 
+    return { mensagem: 'VeÃ­culo removido' } 
   }) 
  
-  // Rota admin — adicionar veículo para motorista 
+  // Rota admin â€” adicionar veÃ­culo para motorista 
   fastify.post('/api/drivers/:id/veiculos', { preHandler: requireAuth }, async (request, reply) => { 
     const { modelo, ano, cor, placa } = request.body 
     const { id } = request.params 
  
     if (!modelo || !ano || !cor || !placa) { 
-      return reply.code(400).send({ error: 'Todos os campos são obrigatórios' }) 
+      return reply.code(400).send({ error: 'Todos os campos sÃ£o obrigatÃ³rios' }) 
     } 
  
     const existing = (await query('SELECT id FROM vehicles WHERE placa = $1', [placa.toUpperCase()])).rows[0] 
-    if (existing) return reply.code(409).send({ error: 'Placa já cadastrada' }) 
+    if (existing) return reply.code(409).send({ error: 'Placa jÃ¡ cadastrada' }) 
  
     const total = (await query('SELECT COUNT(*) as total FROM vehicles WHERE driver_id = $1', [id])).rows[0] 
     const primeiroVeiculo = parseInt(total.total) === 0 
@@ -682,14 +641,14 @@ export default async function driversRoutes(fastify) {
       `, [modelo, ano, cor, placa.toUpperCase(), id]) 
     } 
  
-    return { mensagem: 'Veículo cadastrado!', veiculo: result.rows[0] } 
+    return { mensagem: 'VeÃ­culo cadastrado!', veiculo: result.rows[0] } 
   }) 
 
   // Extrato financeiro do motorista (admin)
   fastify.get('/api/admin/drivers/:id/extrato', { preHandler: requireAuth }, async (request, reply) => {
     const { id } = request.params
     const driver = (await query('SELECT id FROM drivers WHERE id = $1', [id])).rows[0]
-    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' })
+    if (!driver) return reply.code(404).send({ error: 'Motorista nÃ£o encontrado' })
     
     const transactions = (await query(
       'SELECT * FROM driver_transactions WHERE driver_id = $1 ORDER BY created_at ASC',
@@ -724,7 +683,7 @@ export default async function driversRoutes(fastify) {
     const dataDe = de || hoje
     const dataAte = ate || hoje
     
-    // 1. Buscar motoristas base (mesmo query original, só com date params nas subqueries)
+    // 1. Buscar motoristas base (mesmo query original, sÃ³ com date params nas subqueries)
     const result = await query(` 
       SELECT 
         d.id, d.nome, d.modelo_carro, d.cor_carro, d.placa, d.telefone,
@@ -794,11 +753,11 @@ export default async function driversRoutes(fastify) {
     return finalDrivers 
   })
 
-  // Rota pública: app motorista consulta status e token pelo CPF
+  // Rota pÃºblica: app motorista consulta status e token pelo CPF
   fastify.get('/api/motorista/status-cadastro', async (request, reply) => {
     const { cpf } = request.query
     if (!cpf) {
-      return reply.code(400).send({ error: 'CPF obrigatório' })
+      return reply.code(400).send({ error: 'CPF obrigatÃ³rio' })
     }
     try {
       const cpfLimpo = cpf.replace(/\D/g, '')
@@ -820,3 +779,4 @@ export default async function driversRoutes(fastify) {
     }
   })
 }
+
