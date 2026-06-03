@@ -92,6 +92,15 @@
     const token = () => localStorage.getItem('mobihub_token')
     const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` })
 
+    function handleAuthError(response) {
+      if (response.status === 401) {
+        localStorage.removeItem('mobihub_token')
+        window.location.href = '/admin/login'
+        return true
+      }
+      return false
+    }
+
 document.addEventListener('DOMContentLoaded', () => { 
   const token = localStorage.getItem('mobihub_token') 
   if (!token) { 
@@ -107,6 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function carregarTarifas() {
       try {
         const r = await fetch('/api/tarifas', { headers: headers() })
+        if (handleAuthError(r)) return
         const tarifas = await r.json()
         const tbody = document.getElementById('lista-tarifas')
         
@@ -179,6 +189,8 @@ document.addEventListener('DOMContentLoaded', () => {
           body: JSON.stringify(body)
         })
 
+        if (handleAuthError(r)) return
+
         if (r.ok) {
           alert('Tarifa atualizada com sucesso!')
         } else {
@@ -196,6 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function carregarFeriados() {
       try {
         const r = await fetch('/api/feriados', { headers: headers() })
+        if (handleAuthError(r)) return
         const feriados = await r.json()
         const tbody = document.getElementById('lista-feriados')
         
@@ -301,6 +314,8 @@ document.addEventListener('DOMContentLoaded', () => {
           body: JSON.stringify({ data, nome, tipo, horario_inicio, horario_fim, valor_minimo, valor_km, km_minimo })
         })
 
+        if (handleAuthError(r)) return
+
         if (r.ok) {
           await carregarFeriados()
         } else {
@@ -315,6 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function aplicarTarifaFimSemana() {
       try {
         const r = await fetch('/api/tarifas', { headers: headers() })
+        if (handleAuthError(r)) return
         const tarifas = await r.json()
         const tarifaFimSemana = tarifas.find(t => t.aplicar_feriados)
 
@@ -324,6 +340,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const rFeriados = await fetch('/api/feriados', { headers: headers() })
+        if (handleAuthError(rFeriados)) return
         const feriados = await rFeriados.json()
 
         for (const feriado of feriados) {
@@ -332,7 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (diaSemana === 0 || diaSemana === 6) {
             continue
           }
-          await fetch(`/api/feriados/${feriado.id}`, {
+          const putResponse = await fetch(`/api/feriados/${feriado.id}`, {
             method: 'PUT',
             headers: headers(),
             body: JSON.stringify({
@@ -341,6 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {
               km_minimo: tarifaFimSemana.km_minimo
             })
           })
+          if (handleAuthError(putResponse)) return
         }
 
         alert('Tarifa aplicada aos feriados que não são fim de semana!')
@@ -367,6 +385,8 @@ document.addEventListener('DOMContentLoaded', () => {
           body: JSON.stringify({ data, nome, tipo })
         })
 
+        if (handleAuthError(r)) return
+
         if (r.ok) {
           document.getElementById('novo-feriado-data').value = ''
           document.getElementById('novo-feriado-nome').value = ''
@@ -387,6 +407,8 @@ document.addEventListener('DOMContentLoaded', () => {
           method: 'DELETE',
           headers: headers()
         })
+
+        if (handleAuthError(r)) return
 
         if (r.ok) {
           await carregarFeriados()
