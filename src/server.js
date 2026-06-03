@@ -58,7 +58,13 @@ fastify.addHook('onRequest', async (request, reply) => {
   const ip = request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.ip
   const agora = Date.now()
   const janela = 60000 // 1 minuto
-  const limite = request.url === '/api/login' ? 5 : 100
+  
+  // Rotas de polling não contam no rate limit
+  const rotasExcluidas = ['/api/motorista/', '/api/ride/', '/api/motoristas-online']
+  const isPolling = rotasExcluidas.some(r => request.url.includes(r))
+  if (isPolling) return
+
+  const limite = request.url === '/api/login' ? 5 : 300
 
   if (!ipRequests.has(ip)) ipRequests.set(ip, [])
   const reqs = ipRequests.get(ip).filter(t => agora - t < janela)
