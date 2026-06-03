@@ -1860,5 +1860,39 @@ export default async function publicRoutes(fastify) {
     return { success: true }
   })
 
+  fastify.get('/api/tarifa-ativa', async (request, reply) => {
+    const agora = new Date()
+    const diaSemana = ['dom','seg','ter','qua','qui','sex','sab'][agora.getDay()]
+    const horaAtual = `${String(agora.getHours()).padStart(2,'0')}:${String(agora.getMinutes()).padStart(2,'0')}`
+    const tarifas = (await query('SELECT * FROM tarifas WHERE ativo = true')).rows
+    let tarifaAtiva = null
+    for (const t of tarifas) {
+      const dias = t.dias || []
+      if (!dias.some(d => d?.toLowerCase() === diaSemana)) continue
+      const inicio = t.hora_inicio
+      const fim = t.hora_fim
+      const ativa = inicio <= fim ? (horaAtual >= inicio && horaAtual <= fim) : (horaAtual >= inicio || horaAtual <= fim)
+      if (ativa) { tarifaAtiva = t; break }
+    }
+    if (tarifaAtiva) return { ativa: true, tarifa: tarifaAtiva }
+    let proxima = null
+    let menorDiff = Infinity
+    for (const t of tarifas) {
+      const dias = t.dias || []
+      for (let d = 0; d <= 6; d++) {
+        const diaNome = ['dom','seg','ter','qua','qui','sex','sab'][d]
+        if (!dias.some(x => x?.toLowerCase() === diaNome)) continue
+        const [h, m] = t.hora_inicio.split(':').map(Number)
+        const candidata = new Date(agora)
+        candidata.setDate(agora.getDate() + ((d - agora.getDay() + 7) % 7))
+        candidata.setHours(h, m, 0, 0)
+        if (candidata <= agora) candidata.setDate(candidata.getDate() + 7)
+        const diff = candidata - agora
+        if (diff < menorDiff) { menorDiff = diff; proxima = { tarifa: t, inicio: candidata } }
+      }
+    }
+    return { ativa: false, proxima_hora: proxima?.inicio?.toISOString(), proxima_tarifa: proxima?.tarifa?.nome }
+  })
+
 } 
 
