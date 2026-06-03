@@ -125,44 +125,39 @@ export default async function agendamentosRoutes(fastify) {
     let pixPayload = null
     let chargeId = null
 
-    if (process.env.ASAAS_API_KEY) {
-      try {
-        const dueDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-        
-        // Se forma_pagamento = '3' e cliente tem cartão, cobrar no cartão
-        let billingType = 'PIX'
-        let creditCardToken = null
-        let asaasCustomerId = null
-        
-        if (forma_pagamento === '3' && clientId) {
-          const clientInfo = (await query('SELECT asaas_credit_card_token, asaas_customer_id FROM clients WHERE id = $1', [clientId])).rows[0]
-          if (clientInfo?.asaas_credit_card_token) {
-            billingType = 'CREDIT_CARD'
-            creditCardToken = clientInfo.asaas_credit_card_token
-            asaasCustomerId = clientInfo.asaas_customer_id
-          }
-        }
-        
-        const charge = await criarCobrancaAsaas(
-          sinalValor,
-          `Sinal agendamento MobiHub #${rideId} - ${origem} → ${destino}`,
-          `sinal_${rideId}`,
-          dueDate,
-          billingType,
-          asaasCustomerId,
-          creditCardToken
-        )
-        if (charge?.id) {
-          chargeId = charge.id
-          pixPayload = await buscarPixPayload(chargeId)
+    try {
+      const gatewayConfig = (await query('SELECT * FROM gateway_config LIMIT 1')).rows[0]
+      if (gatewayConfig?.ativo && gatewayConfig?.gateway === 'zighu') {
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 15000)
+        const zighuRes = await fetch(`${gatewayConfig.url}/zighu/cobranca-sinal`, {
+          signal: controller.signal,
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': gatewayConfig.api_key
+          },
+          body: JSON.stringify({
+            corrida_id: rideId,
+            valor: sinalValor,
+            descricao: `Sinal agendamento MobiHub #${rideId} - ${origem} → ${destino}`,
+            app_origem: 'mobihub'
+          })
+        })
+        const zighuData = await zighuRes.json()
+        clearTimeout(timeout)
+        console.log('[ZIGHU SINAL] resposta:', JSON.stringify(zighuData))
+        if (zighuData.pix_copia_cola) {
+          pixPayload = zighuData.pix_copia_cola
+          chargeId = zighuData.cobranca_id
           await query(
             'UPDATE rides SET sinal_charge_id = $1, sinal_pix_payload = $2 WHERE id = $3',
             [chargeId, pixPayload, rideId]
           )
         }
-      } catch (err) {
-        console.error('[AGENDAR] Erro Asaas:', err.message)
       }
+    } catch (err) {
+      console.error('[AGENDAR] Erro Zighu:', err.message)
     }
 
     return {
