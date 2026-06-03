@@ -846,9 +846,7 @@ socket.on('agendamentos:atualizar', (data) => {
 
 socket.on('agendamento:alerta_30min', (data) => { 
   tocarAlerta() 
-  if (confirm(`⏰ ${data.mensagem}\n\n📍 ${data.origem || ''}\n🏁 ${data.destino || ''}\n\nConfirmar presença agora?`)) { 
-    abrirModalAgendamentos() 
-  } 
+  mostrarModalConfirmacaoPresenca(data) 
 }) 
  
  // BUG FIX 1: Áudio Motorista 
@@ -2586,6 +2584,44 @@ async function confirmarCancelamento() {
   } 
 } 
 
+let timerConfirmacao = null 
+let rideIdConfirmacao = null 
+ 
+function mostrarModalConfirmacaoPresenca(data) { 
+  rideIdConfirmacao = data.rideId 
+  document.getElementById('modal-confirmacao-presenca').classList.remove('hidden') 
+  document.getElementById('confirmacao-origem').textContent = data.origem || '' 
+  document.getElementById('confirmacao-destino').textContent = data.destino || '' 
+  let segundos = 300 // 5 minutos 
+  const timerEl = document.getElementById('confirmacao-timer') 
+  timerEl.textContent = '5:00' 
+  if (timerConfirmacao) clearInterval(timerConfirmacao) 
+  timerConfirmacao = setInterval(() => { 
+    segundos-- 
+    const m = Math.floor(segundos / 60) 
+    const s = segundos % 60 
+    timerEl.textContent = `${m}:${s.toString().padStart(2, '0')}` 
+    if (segundos <= 0) { 
+      clearInterval(timerConfirmacao) 
+      document.getElementById('modal-confirmacao-presenca').classList.add('hidden') 
+      alert('⚠️ Tempo esgotado! Corrida redistribuída para outro motorista.') 
+    } 
+  }, 1000) 
+} 
+ 
+async function confirmarPresencaAlerta() { 
+  if (!rideIdConfirmacao) return 
+  clearInterval(timerConfirmacao) 
+  document.getElementById('modal-confirmacao-presenca').classList.add('hidden') 
+  const r = await fetch(`/api/motorista/${tokenMotorista}/agendamentos/${rideIdConfirmacao}/confirmar-presenca`, { method: 'POST' }) 
+  const d = await r.json() 
+  if (r.ok) { 
+    alert('✅ Presença confirmada! O passageiro foi notificado.') 
+  } else { 
+    alert(d.error || 'Erro ao confirmar presença.') 
+  } 
+}
+
 // Verificar agendamentos disponíveis a cada 60 segundos 
 setInterval(verificarAgendamentosDisponiveis, 60000) 
 
@@ -2593,6 +2629,28 @@ setInterval(verificarAgendamentosDisponiveis, 60000)
  verificarAgendamentosDisponiveis()
  setTimeout(polling, 3000) 
 </script> 
+<!-- Modal Confirmação Presença Agendamento --> 
+ <div id="modal-confirmacao-presenca" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center px-4" style="z-index:9999"> 
+   <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl"> 
+     <div class="text-center mb-4"> 
+       <div class="text-4xl mb-2">⏰</div> 
+       <h3 class="text-xl font-bold text-gray-900">Confirme sua presença!</h3> 
+       <p class="text-sm text-gray-500 mt-1">Sua corrida agendada começa em 30 minutos</p> 
+     </div> 
+     <div class="bg-gray-50 rounded-xl p-3 mb-4 space-y-1"> 
+       <p class="text-sm text-gray-700">📍 <span id="confirmacao-origem"></span></p> 
+       <p class="text-sm text-gray-700">🏁 <span id="confirmacao-destino"></span></p> 
+     </div> 
+     <div class="text-center mb-4"> 
+       <p class="text-sm text-gray-500">Tempo para confirmar:</p> 
+       <p id="confirmacao-timer" class="text-3xl font-bold text-red-600">5:00</p> 
+     </div> 
+     <button onclick="confirmarPresencaAlerta()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl text-lg mb-2"> 
+       ✅ Confirmado — Estou a caminho! 
+     </button> 
+     <p class="text-xs text-center text-gray-400">Se não confirmar em 5 minutos, a corrida será redistribuída</p> 
+   </div> 
+ </div>
 </div>
 </body> 
 </html>
