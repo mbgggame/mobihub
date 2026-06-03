@@ -44,6 +44,30 @@ class MainActivity : AppCompatActivity() {
         setupWebView()
         checkLocationPermission()
 
+        // Registra token FCM
+        com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                val fcmToken = task.result
+                val prefs = getSharedPreferences("mobihub_motorista", Context.MODE_PRIVATE)
+                prefs.edit().putString("fcm_token", fcmToken).apply()
+                val motoristToken = getSavedToken()
+                if (motoristToken != null && fcmToken != null) {
+                    Thread {
+                        try {
+                            val url = java.net.URL("https://mobihub-s9yl.onrender.com/api/motorista/$motoristToken/fcm-token")
+                            val conn = url.openConnection() as java.net.HttpURLConnection
+                            conn.requestMethod = "POST"
+                            conn.setRequestProperty("Content-Type", "application/json")
+                            conn.doOutput = true
+                            conn.outputStream.write("""{"fcm_token":"$fcmToken"}""".toByteArray())
+                            conn.responseCode
+                            conn.disconnect()
+                        } catch (e: Exception) {}
+                    }.start()
+                }
+            }
+        }
+
         val token = getSavedToken()
         val cpf = getSavedCpf()
 
@@ -240,6 +264,24 @@ class MainActivity : AppCompatActivity() {
     private fun saveToken(token: String) {
         getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit().putString(TOKEN_KEY, token).apply()
+        
+        // Envia FCM token para o servidor quando salva o token do motorista
+        val prefs = getSharedPreferences("mobihub_motorista", Context.MODE_PRIVATE)
+        val fcmToken = prefs.getString("fcm_token", null)
+        if (fcmToken != null) {
+            Thread {
+                try {
+                    val url = java.net.URL("https://mobihub-s9yl.onrender.com/api/motorista/$token/fcm-token")
+                    val conn = url.openConnection() as java.net.HttpURLConnection
+                    conn.requestMethod = "POST"
+                    conn.setRequestProperty("Content-Type", "application/json")
+                    conn.doOutput = true
+                    conn.outputStream.write("""{"fcm_token":"$fcmToken"}""".toByteArray())
+                    conn.responseCode
+                    conn.disconnect()
+                } catch (e: Exception) {}
+            }.start()
+        }
     }
 
     private fun getSavedToken(): String? {
