@@ -951,21 +951,20 @@ export default async function publicRoutes(fastify) {
 
     const percentualLider = temLider ? (splitRule?.percentual_lider ?? 0) : 0 
 
-    // CÃ¡lculo detalhado para memÃ³ria de cÃ¡lculo 
+    // Cálculo detalhado para memória de cálculo 
     const waitInfo = calculateInitialWaitCost(ride.tempo_espera_inicial_min || 0, config) 
     const valorFinal = calculateTotalRideCost(valorBase, waitInfo.cost, ride.custo_paradas || 0, config) 
-
+ 
     // Split em duas faixas usando valor_minimo da tarifa como limite 
     const { calcularSplitFaixas, getH3Id } = await import('../h3split.js') 
-    const splitH3 = calcularSplitFaixas(valorFinal, tarifaAtiva, temLider) 
+    const splitH3 = await calcularSplitFaixas(valorFinal, tarifaAtiva, temLider) 
     const h3Id = getH3Id(ride.origem_lat, ride.origem_lng) 
-
+ 
     let valorMotorista = splitH3.motorista_total 
     let valorPlataforma = splitH3.plataforma_total 
-    const valorLider = parseFloat((valorFinal * percentualLider / 100).toFixed(2)) 
-    valorMotorista = parseFloat((valorMotorista - valorLider).toFixed(2)) 
-
-    console.log(`[SPLIT H3] ${h3Id} | Total: R$${valorFinal} | Limite: R$${splitH3.valor_limite} | Motorista: R$${valorMotorista} | Plataforma: R$${valorPlataforma}`)
+    const valorLider = splitH3.lider_total
+ 
+    console.log(`[SPLIT H3] ${h3Id} | Total: R$${valorFinal} | Limite: R$${tarifaAtiva?.valor_minimo || 0} | Motorista: R$${valorMotorista} | Plataforma: R$${valorPlataforma} | Líder: R$${valorLider}`)
 
     // Verificar e aplicar abatimento de saldo devedor (ANTES do split do Asaas!)
     let abatimento = 0
@@ -1028,7 +1027,7 @@ export default async function publicRoutes(fastify) {
                 valor: valorFinal,
                 motorista_id: driver.id,
                 chave_pix: driver.chave_pix,
-                percentual_motorista: Math.round((splitH3.motorista_total / valorFinal) * 100),
+                percentual_motorista: Math.round(splitH3.percentuais.motorista),
                 app_origem: 'mobihub'
               })
             })

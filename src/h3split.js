@@ -1,59 +1,50 @@
+import { query } from './db.js' 
 import { latLngToCell } from 'h3-js' 
  
- // Calcula split em duas faixas usando valor_minimo da tarifa como limite 
- export function calcularSplitFaixas(valorFinal, tarifaAtiva, temLider = false) { 
-   const valorLimite = tarifaAtiva ? parseFloat(tarifaAtiva.valor_minimo || 0) : 0 
+export function getH3Id(lat, lng, resolution = 8) { 
+  try { 
+    return latLngToCell(parseFloat(lat), parseFloat(lng), resolution) 
+  } catch(e) { 
+    return null 
+  } 
+} 
  
-   // Percentuais 
-   const p1motor = 0.82 
-   const p1plat = 0.18 
-   const p2motor = 0.50 
-   const p2plat = 0.50 
+export async function calcularSplitFaixas(valorTotal, tarifaAtiva, temLider = false) { 
+  // Busca regras do banco 
+  const splitRules = (await query( 
+    'SELECT * FROM split_rules WHERE ativo = 1 AND com_lider = $1 ORDER BY id DESC LIMIT 1', 
+    [temLider] 
+  )).rows[0] 
  
-   let faixa1, faixa2 = null 
-   let motorista, plataforma 
+  const pctMotorista = parseFloat(splitRules?.percentual_motorista || (temLider ? 82 : 80)) / 100 
+  const pctPlataforma = parseFloat(splitRules?.percentual_plataforma || (temLider ? 15 : 20)) / 100 
+  const pctLider = parseFloat(splitRules?.percentual_lider || (temLider ? 3 : 0)) / 100 
  
-   if (valorLimite > 0 && valorFinal > valorLimite) { 
-     const excedente = parseFloat((valorFinal - valorLimite).toFixed(2)) 
+  const valorMinimo = parseFloat(tarifaAtiva?.valor_minimo || 0) 
+  const valor = parseFloat(valorTotal) 
  
-     faixa1 = { 
-       valor: valorLimite, 
-       motorista: parseFloat((valorLimite * p1motor).toFixed(2)), 
-       plataforma: parseFloat((valorLimite * p1plat).toFixed(2)) 
-     } 
-     faixa2 = { 
-       valor: excedente, 
-       motorista: parseFloat((excedente * p2motor).toFixed(2)), 
-       plataforma: parseFloat((excedente * p2plat).toFixed(2)) 
-     } 
-     motorista = parseFloat((faixa1.motorista + faixa2.motorista).toFixed(2)) 
-     plataforma = parseFloat((faixa1.plataforma + faixa2.plataforma).toFixed(2)) 
-   } else { 
-     faixa1 = { 
-       valor: valorFinal, 
-       motorista: parseFloat((valorFinal * p1motor).toFixed(2)), 
-       plataforma: parseFloat((valorFinal * p1plat).toFixed(2)) 
-     } 
-     motorista = faixa1.motorista 
-     plataforma = faixa1.plataforma 
-   } 
+  // Faixa 1 — até o valor mínimo 
+  const f1 = Math.min(valor, valorMinimo) 
+  const f1_motorista = parseFloat((f1 * pctMotorista).toFixed(2)) 
+  const f1_plataforma = parseFloat((f1 * pctPlataforma).toFixed(2)) 
+  const f1_lider = parseFloat((f1 * pctLider).toFixed(2)) 
  
-   return { 
-     valor_total: valorFinal, 
-     valor_limite: valorLimite, 
-     faixa1, 
-     faixa2, 
-     motorista_total: motorista, 
-     plataforma_total: plataforma, 
-     teve_excedente: faixa2 !== null 
-   } 
- } 
+  // Faixa 2 — excedente 
+  const f2 = Math.max(0, valor - valorMinimo) 
+  const f2_motorista = parseFloat((f2 * 0.50).toFixed(2)) 
+  const f2_plataforma = parseFloat((f2 * (temLider ? 0.47 : 0.50)).toFixed(2)) 
+  const f2_lider = parseFloat((f2 * (temLider ? 0.03 : 0)).toFixed(2)) 
  
- // Gera H3 ID da origem da corrida 
- export function getH3Id(lat, lng, resolucao = 8) { 
-   try { 
-     return latLngToCell(lat, lng, resolucao) 
-   } catch(e) { 
-     return null 
-   } 
- }
+  const motorista_total = parseFloat((f1_motorista + f2_motorista).toFixed(2)) 
+  const plataforma_total = parseFloat((f1_plataforma + f2_plataforma).toFixed(2)) 
+  const lider_total = parseFloat((f1_lider + f2_lider).toFixed(2)) 
+ 
+  return { 
+    motorista_total, 
+    plataforma_total, 
+    lider_total, 
+    faixa1: { valor: f1, motorista: f1_motorista, plataforma: f1_plataforma, lider: f1_lider }, 
+    faixa2: { valor: f2, motorista: f2_motorista, plataforma: f2_plataforma, lider: f2_lider }, 
+    percentuais: { motorista: pctMotorista * 100, plataforma: pctPlataforma * 100, lider: pctLider * 100 } 
+  } 
+}
