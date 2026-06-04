@@ -223,7 +223,7 @@ async function verificarAlertaVoo() {
     const em31min = new Date(agora.getTime() + 31 * 60 * 1000) 
  
     // Busca tarifas que iniciam nos próximos 30-31 minutos 
-    const tarifas = (await query('SELECT * FROM tarifas WHERE ativo = true')).rows 
+    const tarifas = (await query('SELECT * FROM tarifas WHERE ativo = true ORDER BY valor_minimo DESC')).rows 
     
     for (const tarifa of tarifas) { 
       const dias = String(tarifa.dias || '').split(',').map(Number) 

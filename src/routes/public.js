@@ -845,7 +845,7 @@ export default async function publicRoutes(fastify) {
     const diaSemana = agora.getDay() // 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sab 
     const horaAtual = agora.getHours() * 60 + agora.getMinutes() 
  
-    const tarifas = (await query('SELECT * FROM tarifas WHERE ativo = 1')).rows 
+    const tarifas = (await query('SELECT * FROM tarifas WHERE ativo = 1 ORDER BY valor_minimo DESC')).rows 
  
     let tarifaAtiva = null 
 
@@ -1863,7 +1863,7 @@ export default async function publicRoutes(fastify) {
     const agora = new Date()
     const diaSemanaNum = agora.getDay() // 0=dom, 1=seg...
     const horaAtual = `${String(agora.getHours()).padStart(2,'0')}:${String(agora.getMinutes()).padStart(2,'0')}`
-    const tarifas = (await query('SELECT * FROM tarifas WHERE ativo = true')).rows
+    const tarifas = (await query('SELECT * FROM tarifas WHERE ativo = true ORDER BY valor_minimo DESC')).rows
     let tarifaAtiva = null
     for (const t of tarifas) {
       const dias = String(t.dias || '').split(',').map(Number)
