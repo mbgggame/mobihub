@@ -42,6 +42,12 @@ async function calcularTarifa(dataHoraStr, distanciaKm) {
   // Verificar se usar tarifa de feriado
   const usarFeriado = (await dbQuery("SELECT valor FROM configuracoes WHERE chave = 'usar_tarifa_feriado'")).rows[0]?.valor !== 'false'
 
+  console.log('[CALCULAR] dia:', diaSemana, 'hora:', horaAtualMinutos, 'usarFeriado:', usarFeriado) 
+  tarifas.forEach(t => { 
+    const dias = String(t.dias).split(',').map(Number) 
+    console.log(`[CALCULAR] ID ${t.id} | ${t.nome} | dias:[${t.dias}] | noDia:${dias.includes(diaSemana)} | ${t.hora_inicio}-${t.hora_fim}`) 
+  })
+
   if (usarFeriado) {
     // Verificar se é feriado
     const dataStr = data.toISOString().split('T')[0]
@@ -105,6 +111,8 @@ async function calcularTarifa(dataHoraStr, distanciaKm) {
     const res = await dbQuery('SELECT * FROM tarifas ORDER BY valor_minimo ASC LIMIT 1')
     tarifaAplicada = res.rows[0]
   } 
+
+  console.log('[CALCULAR] Tarifa selecionada:', tarifaAplicada ? `ID ${tarifaAplicada.id} | Nome: ${tarifaAplicada.nome}` : 'Nenhuma') 
 
   const excedente = Math.max(0, distanciaKm - tarifaAplicada.km_minimo) 
   const valor = tarifaAplicada.valor_minimo + (excedente * tarifaAplicada.valor_km) 
