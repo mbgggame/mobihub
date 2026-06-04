@@ -465,6 +465,35 @@
 </div> 
 <script> 
  console.log('[SOLICITAR] Página carregada') 
+
+// Recebe localização do app nativo Android
+window.receberLocalizacaoNativa = async function(lat, lng) {
+  if (window._locNativaUsada) return
+  window._locNativaUsada = true
+  setTimeout(() => { window._locNativaUsada = false }, 30000)
+  try {
+    const configR = await fetch('/api/config/mapbox')
+    const { token: mbToken } = await configR.json()
+    const geo = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${mbToken}&country=br&language=pt&limit=1`)
+    const geoData = await geo.json()
+    const endereco = geoData.features?.[0]?.place_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`
+    window.origemLat = lat
+    window.origemLng = lng
+    window.origemEndereco = endereco.substring(0, 60)
+    window.origem = window.origemEndereco
+    document.getElementById('busca-orig').value = window.origemEndereco
+    window.mostrarOrigemNoMapa(lat, lng, window.origemEndereco)
+    window.marcarPonto(lat, lng, window.origemEndereco, 'origem')
+    window.verificarBotaoSolicitar()
+    if (window.destinoLat) window.calcularValor()
+    const erroEl = document.getElementById('erro-solicitar')
+    erroEl.classList.add('hidden')
+    console.log('[GPS NATIVO]', lat, lng, window.origemEndereco)
+  } catch(e) {
+    console.log('[GPS NATIVO ERRO]', e.message)
+  }
+}
+
  function encurtarEndereco(endereco) { 
    try { 
      const obj = JSON.parse(endereco); 
@@ -1102,34 +1131,6 @@ async function salvarCadastro() {
      linhasMotoristas.push(linha) 
    }) 
  } 
-
-// Recebe localização do app nativo Android
-window.receberLocalizacaoNativa = async function(lat, lng) {
-  if (window._locNativaUsada) return
-  window._locNativaUsada = true
-  setTimeout(() => { window._locNativaUsada = false }, 30000)
-  try {
-    const configR = await fetch('/api/config/mapbox')
-    const { token: mbToken } = await configR.json()
-    const geo = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${mbToken}&country=br&language=pt&limit=1`)
-    const geoData = await geo.json()
-    const endereco = geoData.features?.[0]?.place_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`
-    origemLat = lat
-    origemLng = lng
-    origemEndereco = endereco.substring(0, 60)
-    origem = origemEndereco
-    document.getElementById('busca-orig').value = origemEndereco
-    mostrarOrigemNoMapa(lat, lng, origemEndereco)
-    marcarPonto(lat, lng, origemEndereco, 'origem')
-    verificarBotaoSolicitar()
-    if (destinoLat) calcularValor()
-    const erroEl = document.getElementById('erro-solicitar')
-    erroEl.classList.add('hidden')
-    console.log('[GPS NATIVO]', lat, lng, origemEndereco)
-  } catch(e) {
-    console.log('[GPS NATIVO ERRO]', e.message)
-  }
-}
 
  function usarLocalizacaoAtual() { 
   const erroEl = document.getElementById('erro-solicitar');
