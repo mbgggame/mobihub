@@ -33,7 +33,7 @@ async function calcularTarifa(dataHoraStr, distanciaKm) {
   const minuto = data.getMinutes() 
   const horaDecimal = hora + minuto / 60 
 
-  const resultTarifas = await dbQuery('SELECT * FROM tarifas WHERE ativo = 1') 
+  const resultTarifas = await dbQuery('SELECT * FROM tarifas WHERE ativo = 1 ORDER BY valor_minimo DESC') 
   const tarifas = resultTarifas.rows
 
   let tarifaAplicada = null 
