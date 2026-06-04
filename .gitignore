@@ -1,5 +1,6 @@
 node_modules/
 .env
+.env.backup
 mobihub.db
 mobihub.db-shm
 mobihub.db-wal
@@ -8,6 +9,14 @@ android-motorista/keystore.properties
 android-passageiro/keystore.properties
 fix_*.js
 check_*.js
+dados_render.sql
+exportar_banco.js
+get_schema.js
+importar_supabase.js
+migrar_dados.js
+migrar_supabase.js
+test_*.js
+update_*.js
 
 # Android
 *.apk
