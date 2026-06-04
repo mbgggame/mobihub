@@ -851,11 +851,18 @@ export default async function publicRoutes(fastify) {
     const config = {} 
     configs.forEach(c => config[c.chave] = c.valor) 
 
-    // Buscar tarifa ativa para o horÃ¡rio de criaÃ§Ã£o da corrida 
-    const agora = new Date() 
-    const diaSemana = agora.getDay() // 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sab 
-    const horaAtual = agora.getHours() * 60 + agora.getMinutes() 
- 
+    // Buscar tarifa ativa para o horário de criação da corrida 
+    const agoraOriginal = new Date() 
+    const options = { timeZone: 'America/Sao_Paulo' }
+    const diaSemana = parseInt(new Intl.DateTimeFormat('en-US', { ...options, weekday: 'numeric' }).format(agoraOriginal)) - 1 // 0=Dom, 1=Seg, etc.
+    const hora = parseInt(new Intl.DateTimeFormat('en-US', { ...options, hour: 'numeric', hour12: false }).format(agoraOriginal))
+    const minuto = parseInt(new Intl.DateTimeFormat('en-US', { ...options, minute: 'numeric' }).format(agoraOriginal))
+    const horaAtual = hora * 60 + minuto
+    const ano = parseInt(new Intl.DateTimeFormat('en-US', { ...options, year: 'numeric' }).format(agoraOriginal))
+    const mes = new Intl.DateTimeFormat('en-US', { ...options, month: '2-digit' }).format(agoraOriginal)
+    const dia = new Intl.DateTimeFormat('en-US', { ...options, day: '2-digit' }).format(agoraOriginal)
+    const hoje = `${ano}-${mes}-${dia}`
+
     const tarifas = (await query('SELECT * FROM tarifas WHERE ativo = 1 ORDER BY valor_minimo DESC')).rows 
 
     let tarifaAtiva = null
@@ -864,8 +871,7 @@ export default async function publicRoutes(fastify) {
     const usarFeriado = (await query("SELECT valor FROM configuracoes WHERE chave = 'usar_tarifa_feriado'")).rows[0]?.valor !== 'false'
 
     if (usarFeriado) {
-      // Verificar se hoje Ã© feriado
-      const hoje = agora.toISOString().split('T')[0]
+      // Verificar se hoje é feriado (usando data em Brasília)
       const feriadoHoje = (await query(
         "SELECT * FROM feriados WHERE data = $1 LIMIT 1",
         [hoje]

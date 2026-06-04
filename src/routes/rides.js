@@ -27,12 +27,20 @@ async function getConfig() {
 
 async function calcularTarifa(dataHoraStr, distanciaKm) { 
   const config = await getConfig()
-  const data = new Date(dataHoraStr) 
-  const diaSemana = data.getDay() 
-  const hora = data.getHours() 
-  const minuto = data.getMinutes() 
+  const dataOriginal = new Date(dataHoraStr) 
+  
+  // Ajustar para fuso horário de Brasília (America/Sao_Paulo)
+  const options = { timeZone: 'America/Sao_Paulo' }
+  const diaSemana = parseInt(new Intl.DateTimeFormat('en-US', { ...options, weekday: 'numeric' }).format(dataOriginal)) - 1
+  const hora = parseInt(new Intl.DateTimeFormat('en-US', { ...options, hour: 'numeric', hour12: false }).format(dataOriginal))
+  const minuto = parseInt(new Intl.DateTimeFormat('en-US', { ...options, minute: 'numeric' }).format(dataOriginal))
+  const ano = parseInt(new Intl.DateTimeFormat('en-US', { ...options, year: 'numeric' }).format(dataOriginal))
+  const mes = new Intl.DateTimeFormat('en-US', { ...options, month: '2-digit' }).format(dataOriginal)
+  const dia = new Intl.DateTimeFormat('en-US', { ...options, day: '2-digit' }).format(dataOriginal)
+  
   const horaDecimal = hora + minuto / 60 
   const horaAtualMinutos = hora * 60 + minuto
+  const dataStr = `${ano}-${mes}-${dia}`
 
   const resultTarifas = await dbQuery('SELECT * FROM tarifas WHERE ativo = 1 ORDER BY valor_minimo DESC') 
   const tarifas = resultTarifas.rows
@@ -49,8 +57,7 @@ async function calcularTarifa(dataHoraStr, distanciaKm) {
   })
 
   if (usarFeriado) {
-    // Verificar se é feriado
-    const dataStr = data.toISOString().split('T')[0]
+    // Verificar se é feriado (usando data em Brasília)
     const feriadoHoje = (await dbQuery(
       "SELECT * FROM feriados WHERE data = $1 LIMIT 1",
       [dataStr]

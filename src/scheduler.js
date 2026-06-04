@@ -217,26 +217,36 @@ function calcularDistancia(lat1, lng1, lat2, lng2) {
 }
 
 async function verificarAlertaVoo() { 
-  try { 
-    const agora = new Date() 
-    const em30min = new Date(agora.getTime() + 30 * 60 * 1000) 
-    const em31min = new Date(agora.getTime() + 31 * 60 * 1000) 
- 
+    try { 
+      const agora = new Date() 
+      const options = { timeZone: 'America/Sao_Paulo' }
+      
+      // Get current time in São Paulo
+      const ano = parseInt(new Intl.DateTimeFormat('en-US', { ...options, year: 'numeric' }).format(agora))
+      const mes = parseInt(new Intl.DateTimeFormat('en-US', { ...options, month: 'numeric' }).format(agora)) - 1 // JS months are 0-indexed
+      const dia = parseInt(new Intl.DateTimeFormat('en-US', { ...options, day: 'numeric' }).format(agora))
+      const horaLocal = parseInt(new Intl.DateTimeFormat('en-US', { ...options, hour: 'numeric', hour12: false }).format(agora))
+      const minutoLocal = parseInt(new Intl.DateTimeFormat('en-US', { ...options, minute: 'numeric' }).format(agora))
+      
+      const agoraLocal = new Date(ano, mes, dia, horaLocal, minutoLocal)
+      const em30min = new Date(agoraLocal.getTime() + 30 * 60 * 1000) 
+      const em31min = new Date(agoraLocal.getTime() + 31 * 60 * 1000) 
+
     // Busca tarifas que iniciam nos próximos 30-31 minutos 
     const tarifas = (await query('SELECT * FROM tarifas WHERE ativo = 1 ORDER BY valor_minimo DESC')).rows 
     
     for (const tarifa of tarifas) { 
       const dias = String(tarifa.dias || '').split(',').map(Number) 
-      const diaSemana = agora.getDay() // 0=Dom, 1=Seg... 
+      const diaSemana = parseInt(new Intl.DateTimeFormat('en-US', { ...options, weekday: 'numeric' }).format(agora)) - 1 // 0=Dom, 1=Seg... 
       
       const tarifaAtivaNoDia = dias.includes(diaSemana) 
       if (!tarifaAtivaNoDia) continue 
- 
+
       // Verifica se o horário de início está em 30-31 minutos 
       const [hInicio, mInicio] = tarifa.hora_inicio.split(':').map(Number) 
-      const inicioDaCorrente = new Date(agora) 
-      inicioDaCorrente.setHours(hInicio, mInicio, 0, 0) 
- 
+      
+      const inicioDaCorrente = new Date(ano, mes, dia, hInicio, mInicio) 
+
       if (inicioDaCorrente >= em30min && inicioDaCorrente <= em31min) { 
         console.log(`[SCHEDULER] Alerta de voo — tarifa ${tarifa.nome} inicia às ${tarifa.hora_inicio}`) 
  
