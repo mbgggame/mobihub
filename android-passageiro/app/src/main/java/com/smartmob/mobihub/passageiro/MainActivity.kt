@@ -50,8 +50,16 @@ class MainActivity : AppCompatActivity() {
             }
 
             webChromeClient = object : WebChromeClient() {
-                override fun onGeolocationPermissionsShowPrompt(origin: String?, callback: GeolocationPermissions.Callback?) {
-                    callback?.invoke(origin, true, false)
+                override fun onGeolocationPermissionsShowPrompt(
+                    origin: String?,
+                    callback: GeolocationPermissions.Callback?
+                ) {
+                    callback?.invoke(origin, true, true)
+                }
+
+                @android.annotation.TargetApi(android.os.Build.VERSION_CODES.LOLLIPOP)
+                override fun onPermissionRequest(request: android.webkit.PermissionRequest?) {
+                    request?.grant(request.resources)
                 }
             }
         }
