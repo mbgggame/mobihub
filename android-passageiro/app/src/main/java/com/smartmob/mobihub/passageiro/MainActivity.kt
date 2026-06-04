@@ -2,6 +2,9 @@ package com.smartmob.mobihub.passageiro
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.os.Bundle
 import android.webkit.CookieManager
 import android.webkit.GeolocationPermissions
@@ -18,6 +21,52 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private val LOCATION_PERMISSION_REQUEST_CODE = 100
+    private var locationManager: LocationManager? = null
+
+    private fun iniciarGPS() {
+        locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
+        try {
+            locationManager?.requestLocationUpdates(
+                LocationManager.GPS_PROVIDER, 5000, 10f,
+                object : LocationListener {
+                    override fun onLocationChanged(location: Location) {
+                        val lat = location.latitude
+                        val lng = location.longitude
+                        binding.webView.post {
+                            binding.webView.evaluateJavascript(
+                                "if(window.receberLocalizacaoNativa) window.receberLocalizacaoNativa($lat, $lng);",
+                                null
+                            )
+                        }
+                    }
+                    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+                    override fun onProviderEnabled(provider: String) {}
+                    override fun onProviderDisabled(provider: String) {}
+                }
+            )
+            // Tenta também pelo Network provider
+            locationManager?.requestLocationUpdates(
+                LocationManager.NETWORK_PROVIDER, 5000, 10f,
+                object : LocationListener {
+                    override fun onLocationChanged(location: Location) {
+                        val lat = location.latitude
+                        val lng = location.longitude
+                        binding.webView.post {
+                            binding.webView.evaluateJavascript(
+                                "if(window.receberLocalizacaoNativa) window.receberLocalizacaoNativa($lat, $lng);",
+                                null
+                            )
+                        }
+                    }
+                    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+                    override fun onProviderEnabled(provider: String) {}
+                    override fun onProviderDisabled(provider: String) {}
+                }
+            )
+        } catch (e: SecurityException) {
+            android.util.Log.e("MobiHub", "GPS erro: ${e.message}")
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -78,6 +127,23 @@ class MainActivity : AppCompatActivity() {
         }
         if (permissoes.isNotEmpty()) {
             ActivityCompat.requestPermissions(this, permissoes.toTypedArray(), LOCATION_PERMISSION_REQUEST_CODE)
+        } else {
+            iniciarGPS()
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
+            val hasLocationPermission = grantResults.isNotEmpty() && 
+                grantResults[0] == PackageManager.PERMISSION_GRANTED
+            if (hasLocationPermission) {
+                iniciarGPS()
+            }
         }
     }
 
