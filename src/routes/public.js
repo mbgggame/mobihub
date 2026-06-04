@@ -886,9 +886,14 @@ export default async function publicRoutes(fastify) {
       }
     }
 
+    console.log(`[TARIFF SELECT] Data/Hora: ${agora.toLocaleString('pt-BR')} | Dia Semana: ${diaSemana} | Hora Atual (min): ${horaAtual}`)
     for (const t of tarifas) { 
       const dias = String(t.dias).split(',').map(Number) 
-      if (!dias.includes(diaSemana)) continue 
+      console.log(`[TARIFF SELECT] Verificando: ID ${t.id} | Nome: ${t.nome} | Dias: ${t.dias} | Horário: ${t.hora_inicio} - ${t.hora_fim}`)
+      if (!dias.includes(diaSemana)) {
+        console.log(`[TARIFF SELECT] → Pulando: dia ${diaSemana} não está na lista [${t.dias}]`)
+        continue 
+      }
       const [hIni, mIni] = t.hora_inicio.split(':').map(Number) 
       const [hFim, mFim] = t.hora_fim.split(':').map(Number) 
       const inicio = hIni * 60 + mIni 
@@ -897,8 +902,14 @@ export default async function publicRoutes(fastify) {
       const ativa = fim < inicio 
         ? (horaAtual >= inicio || horaAtual < fim) 
         : (horaAtual >= inicio && horaAtual < fim) 
-      if (ativa) { tarifaAtiva = t; break } 
+      console.log(`[TARIFF SELECT] → Horário: ${horaAtual} | Início: ${inicio} | Fim: ${fim} | Ativa: ${ativa}`)
+      if (ativa) { 
+        tarifaAtiva = t; 
+        console.log(`[TARIFF SELECT] ✅ SELECIONADA: ID ${t.id} | Nome: ${t.nome}`)
+        break 
+      } 
     } 
+    console.log(`[TARIFF SELECT] Tarifa Final:`, tarifaAtiva ? `ID ${tarifaAtiva.id} | ${tarifaAtiva.nome}` : 'Nenhuma') 
  
     let valorBase = parseFloat(ride.valor || 15)
     console.log(`[BILLING] Usando valor aprovado pelo passageiro: R$${valorBase}`)
