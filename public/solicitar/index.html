@@ -1106,7 +1106,7 @@ async function salvarCadastro() {
  function usarLocalizacaoAtual() { 
   const erroEl = document.getElementById('erro-solicitar');
   if (!navigator.geolocation) { 
-    erroEl.textContent = 'Geolocalização não suportada';
+    erroEl.textContent = 'Geolocalização não suportada. Digite o endereço manualmente.';
     erroEl.classList.remove('hidden');
     return 
   } 
@@ -1135,13 +1135,23 @@ async function salvarCadastro() {
         } 
       }) 
       .catch(() => {
-        erroEl.textContent = 'Não foi possível obter sua localização. Digite o endereço manualmente.';
+        erroEl.textContent = 'Não foi possível encontrar seu endereço. Verifique a conexão e tente novamente ou digite manualmente.';
         erroEl.classList.remove('hidden');
       }) 
   }, (err) => { 
-    erroEl.textContent = 'Não foi possível obter sua localização. Digite o endereço manualmente.';
+    let mensagemErro = 'Não foi possível obter sua localização. ';
+    if (err.code === 1) {
+      mensagemErro += 'Permissão de localização negada. Habilite a localização nas configurações do seu dispositivo ou digite o endereço manualmente.';
+    } else if (err.code === 2) {
+      mensagemErro += 'GPS não disponível. Verifique se o GPS está ativado ou digite manualmente.';
+    } else if (err.code === 3) {
+      mensagemErro += 'Tempo esgotado. Verifique o sinal do GPS ou digite o endereço manualmente.';
+    } else {
+      mensagemErro += 'Digite o endereço manualmente.';
+    }
+    erroEl.textContent = mensagemErro;
     erroEl.classList.remove('hidden');
-  }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }) 
+  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }) 
 } 
 
  function marcarPonto(lat, lng, endereco, tipo) { 
