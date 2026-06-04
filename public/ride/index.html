@@ -1351,6 +1351,18 @@ function iniciarPollingAutomatico() {
  } 
 
  iniciarPollingAutomatico(); 
+
+ // Debug temporário — remove depois 
+ console.log('[RIDE] Token:', token, '| URL:', window.location.href) 
+ setInterval(async () => { 
+   try { 
+     const r = await fetch(`/api/ride/${token}`) 
+     const d = await r.json() 
+     console.log('[RIDE POLL]', d.status, d.driver_nome) 
+   } catch(e) { 
+     console.log('[RIDE POLL ERROR]', e.message) 
+   } 
+ }, 3000) 
  </script> 
  </body> 
  </html> 
