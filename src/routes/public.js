@@ -595,7 +595,7 @@ export default async function publicRoutes(fastify) {
         if (gatewayConfig?.ativo && gatewayConfig?.gateway === 'zighu') {
           try {
             const controller = new AbortController()
-            const timeout = setTimeout(() => controller.abort(), 15000)
+            const timeout = setTimeout(() => controller.abort(), 10000)
             const zighuRes = await fetch(`${gatewayConfig.url}/zighu/cobranca-sinal`, {
               signal: controller.signal,
               method: 'POST',
@@ -1045,7 +1045,7 @@ export default async function publicRoutes(fastify) {
         if (gatewayConfig?.ativo && gatewayConfig?.gateway === 'zighu') {
           try {
             const controller = new AbortController()
-            const timeout = setTimeout(() => controller.abort(), 15000)
+            const timeout = setTimeout(() => controller.abort(), 10000)
             const zighuRes = await fetch(`${gatewayConfig.url}/zighu/cobranca`, {
               signal: controller.signal,
               method: 'POST',
