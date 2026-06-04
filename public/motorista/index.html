@@ -1890,7 +1890,7 @@ async function carregar() {
    document.getElementById('corrida-destino').textContent = encurtarEndereco(corrida.destino) 
    document.getElementById('corrida-passageiro').textContent = corrida.client_nome || 'Novo passageiro' 
    document.getElementById('corrida-valor').textContent = moeda(corrida.valor) 
-   document.getElementById('corrida-ganho').textContent = moeda(corrida.valor_motorista || (corrida.valor * 0.82)) 
+   document.getElementById('corrida-ganho').textContent = moeda(corrida.valor_motorista || (corrida.valor * 0.80)) 
    document.getElementById('card-nova-corrida').classList.remove('hidden') 
    document.getElementById('card-sem-corrida').classList.add('hidden') 
    document.getElementById('badge-nova-corrida').classList.remove('hidden') 
@@ -1928,7 +1928,7 @@ async function carregar() {
  function mostrarCorridaAtiva(corrida) { 
    document.getElementById('ativa-origem').textContent = encurtarEndereco(corrida.origem) 
    document.getElementById('ativa-destino').textContent = encurtarEndereco(corrida.destino) 
-   document.getElementById('ativa-valor').textContent = `💰 ${moeda(corrida.valor_motorista || corrida.valor * 0.70)}` 
+   document.getElementById('ativa-valor').textContent = `💰 ${moeda(corrida.valor_motorista || corrida.valor * 0.80)}` 
    document.getElementById('card-corrida-ativa').classList.remove('hidden') 
    document.getElementById('card-chat-motorista').classList.remove('hidden') 
    document.getElementById('card-sem-corrida').classList.add('hidden') 
@@ -2243,7 +2243,7 @@ async function carregar() {
        origem = encurtarEndereco(origem);
        destino = encurtarEndereco(destino);
        // Calcular valor líquido do motorista (75%)
-       const valorLiquido = c.status === 'cancelada' ? 0 : (c.valor_motorista || (c.valor ? (c.valor * 0.75).toFixed(2) : null));
+       const valorLiquido = c.status === 'cancelada' ? 0 : (c.valor_motorista || (c.valor ? (c.valor * 0.80).toFixed(2) : null));
        return `<div class="border border-gray-100 rounded-xl px-3 py-3">
          <div class="flex justify-between items-start mb-1">
            <div class="flex-1 min-w-0">
