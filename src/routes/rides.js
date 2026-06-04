@@ -39,38 +39,43 @@ async function calcularTarifa(dataHoraStr, distanciaKm) {
 
   let tarifaAplicada = null 
 
-  // Verificar se é feriado
-  const dataStr = data.toISOString().split('T')[0]
-  const feriadoHoje = (await dbQuery(
-    "SELECT * FROM feriados WHERE data = $1 LIMIT 1",
-    [dataStr]
-  )).rows[0]
+  // Verificar se usar tarifa de feriado
+  const usarFeriado = (await dbQuery("SELECT valor FROM configuracoes WHERE chave = 'usar_tarifa_feriado'")).rows[0]?.valor !== 'false'
 
-  if (feriadoHoje) {
-    let feriadoAtivo = true
-    if (feriadoHoje.horario_inicio && feriadoHoje.horario_fim) {
-      const [hIni, mIni] = feriadoHoje.horario_inicio.split(':').map(Number)
-      const [hFim, mFim] = feriadoHoje.horario_fim.split(':').map(Number)
-      const inicio = hIni * 60 + mIni
-      const fim = hFim * 60 + mFim
-      feriadoAtivo = fim < inicio
-        ? (horaAtualMinutos >= inicio || horaAtualMinutos < fim)
-        : (horaAtualMinutos >= inicio && horaAtualMinutos <= fim)
-    }
+  if (usarFeriado) {
+    // Verificar se é feriado
+    const dataStr = data.toISOString().split('T')[0]
+    const feriadoHoje = (await dbQuery(
+      "SELECT * FROM feriados WHERE data = $1 LIMIT 1",
+      [dataStr]
+    )).rows[0]
 
-    if (feriadoAtivo) {
-      if (feriadoHoje.valor_minimo && feriadoHoje.valor_km) {
-        tarifaAplicada = {
-          valor_minimo: feriadoHoje.valor_minimo,
-          valor_km: feriadoHoje.valor_km,
-          km_minimo: feriadoHoje.km_minimo || 7.5,
-          nome: feriadoHoje.nome
+    if (feriadoHoje) {
+      let feriadoAtivo = true
+      if (feriadoHoje.horario_inicio && feriadoHoje.horario_fim) {
+        const [hIni, mIni] = feriadoHoje.horario_inicio.split(':').map(Number)
+        const [hFim, mFim] = feriadoHoje.horario_fim.split(':').map(Number)
+        const inicio = hIni * 60 + mIni
+        const fim = hFim * 60 + mFim
+        feriadoAtivo = fim < inicio
+          ? (horaAtualMinutos >= inicio || horaAtualMinutos < fim)
+          : (horaAtualMinutos >= inicio && horaAtualMinutos <= fim)
+      }
+
+      if (feriadoAtivo) {
+        if (feriadoHoje.valor_minimo && feriadoHoje.valor_km) {
+          tarifaAplicada = {
+            valor_minimo: feriadoHoje.valor_minimo,
+            valor_km: feriadoHoje.valor_km,
+            km_minimo: feriadoHoje.km_minimo || 7.5,
+            nome: feriadoHoje.nome
+          }
+        } else {
+          const tarifaFeriado = (await dbQuery(
+            "SELECT * FROM tarifas WHERE aplicar_feriados = true AND ativo = 1 LIMIT 1"
+          )).rows[0]
+          if (tarifaFeriado) tarifaAplicada = tarifaFeriado
         }
-      } else {
-        const tarifaFeriado = (await dbQuery(
-          "SELECT * FROM tarifas WHERE aplicar_feriados = true AND ativo = 1 LIMIT 1"
-        )).rows[0]
-        if (tarifaFeriado) tarifaAplicada = tarifaFeriado
       }
     }
   }

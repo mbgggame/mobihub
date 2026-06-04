@@ -10,6 +10,17 @@ export default async function publicRoutes(fastify) {
     return { token: process.env.MAPBOX_TOKEN };
   });
 
+  fastify.get('/api/config/usar-tarifa-feriado', { preHandler: requireAuth }, async () => { 
+    const r = (await query("SELECT valor FROM configuracoes WHERE chave = 'usar_tarifa_feriado'")).rows[0] 
+    return { valor: r?.valor || 'true' } 
+  }) 
+  
+  fastify.put('/api/config/usar-tarifa-feriado', { preHandler: requireAuth }, async (request) => { 
+    const { valor } = request.body 
+    await query("UPDATE configuracoes SET valor = $1 WHERE chave = 'usar_tarifa_feriado'", [valor]) 
+    return { success: true } 
+  })
+
   // Verifica se cliente tem corrida nÃ£o paga
   fastify.get('/api/client/:telefone/corrida-pendente', async (request, reply) => {
     const { telefone } = request.params
@@ -846,42 +857,47 @@ export default async function publicRoutes(fastify) {
     const horaAtual = agora.getHours() * 60 + agora.getMinutes() 
  
     const tarifas = (await query('SELECT * FROM tarifas WHERE ativo = 1 ORDER BY valor_minimo DESC')).rows 
- 
-    let tarifaAtiva = null 
 
-    // Verificar se hoje Ã© feriado
-    const hoje = agora.toISOString().split('T')[0]
-    const feriadoHoje = (await query(
-      "SELECT * FROM feriados WHERE data = $1 LIMIT 1",
-      [hoje]
-    )).rows[0]
+    let tarifaAtiva = null
 
-    if (feriadoHoje) {
-      // Verificar se hora atual estÃ¡ dentro do horÃ¡rio do feriado
-      let feriadoAtivo = true
-      if (feriadoHoje.horario_inicio && feriadoHoje.horario_fim) {
-        const [hIni, mIni] = feriadoHoje.horario_inicio.split(':').map(Number)
-        const [hFim, mFim] = feriadoHoje.horario_fim.split(':').map(Number)
-        const inicio = hIni * 60 + mIni
-        const fim = hFim * 60 + mFim
-        feriadoAtivo = fim < inicio
-          ? (horaAtual >= inicio || horaAtual < fim)
-          : (horaAtual >= inicio && horaAtual <= fim)
-      }
+    // Verificar se usar tarifa de feriado
+    const usarFeriado = (await query("SELECT valor FROM configuracoes WHERE chave = 'usar_tarifa_feriado'")).rows[0]?.valor !== 'false'
 
-      if (feriadoAtivo) {
-        if (feriadoHoje.valor_minimo && feriadoHoje.valor_km) {
-          tarifaAtiva = {
-            valor_minimo: feriadoHoje.valor_minimo,
-            valor_km: feriadoHoje.valor_km,
-            km_minimo: feriadoHoje.km_minimo || 7.5,
-            nome: feriadoHoje.nome
+    if (usarFeriado) {
+      // Verificar se hoje Ã© feriado
+      const hoje = agora.toISOString().split('T')[0]
+      const feriadoHoje = (await query(
+        "SELECT * FROM feriados WHERE data = $1 LIMIT 1",
+        [hoje]
+      )).rows[0]
+
+      if (feriadoHoje) {
+        // Verificar se hora atual estÃ¡ dentro do horÃ¡rio do feriado
+        let feriadoAtivo = true
+        if (feriadoHoje.horario_inicio && feriadoHoje.horario_fim) {
+          const [hIni, mIni] = feriadoHoje.horario_inicio.split(':').map(Number)
+          const [hFim, mFim] = feriadoHoje.horario_fim.split(':').map(Number)
+          const inicio = hIni * 60 + mIni
+          const fim = hFim * 60 + mFim
+          feriadoAtivo = fim < inicio
+            ? (horaAtual >= inicio || horaAtual < fim)
+            : (horaAtual >= inicio && horaAtual <= fim)
+        }
+
+        if (feriadoAtivo) {
+          if (feriadoHoje.valor_minimo && feriadoHoje.valor_km) {
+            tarifaAtiva = {
+              valor_minimo: feriadoHoje.valor_minimo,
+              valor_km: feriadoHoje.valor_km,
+              km_minimo: feriadoHoje.km_minimo || 7.5,
+              nome: feriadoHoje.nome
+            }
+          } else {
+            const tarifaFeriado = (await query(
+              "SELECT * FROM tarifas WHERE aplicar_feriados = true AND ativo = 1 LIMIT 1"
+            )).rows[0]
+            if (tarifaFeriado) tarifaAtiva = tarifaFeriado
           }
-        } else {
-          const tarifaFeriado = (await query(
-            "SELECT * FROM tarifas WHERE aplicar_feriados = true AND ativo = 1 LIMIT 1"
-          )).rows[0]
-          if (tarifaFeriado) tarifaAtiva = tarifaFeriado
         }
       }
     }

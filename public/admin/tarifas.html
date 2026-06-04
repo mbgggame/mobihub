@@ -43,6 +43,21 @@
     </div>
 
     <!-- SEÇÃO DE FERIADOS -->
+    <div class="mt-4 bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex items-center justify-between">
+      <div>
+        <p class="font-semibold text-gray-800">🗓️ Tarifa especial em feriados</p>
+        <p class="text-sm text-gray-500">Quando ativo, usa tarifa marcada como "Feriados". Quando inativo, usa tarifa normal do dia.</p>
+      </div>
+      <label class="flex items-center gap-2 cursor-pointer">
+        <div class="relative">
+          <input type="checkbox" id="toggle-feriado" class="sr-only" onchange="alternarTarifaFeriado()">
+          <div id="toggle-feriado-bg" class="w-12 h-6 rounded-full bg-gray-300 transition-colors"></div>
+          <div id="toggle-feriado-dot" class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform"></div>
+        </div>
+        <span id="toggle-feriado-label" class="text-sm font-medium text-gray-600">Inativo</span>
+      </label>
+    </div>
+
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mt-6">
       <div class="px-4 py-4 border-b border-gray-100 flex items-center justify-between">
         <h2 class="font-bold text-gray-900">🗓️ Feriados</h2>
@@ -109,9 +124,32 @@ document.addEventListener('DOMContentLoaded', () => {
   } 
   carregarTarifas()
   carregarFeriados()
+  carregarConfigFeriado()
 })
 
     const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+
+    async function carregarConfigFeriado() { 
+      const r = await fetch('/api/config/usar-tarifa-feriado', { headers: headers() }) 
+      const { valor } = await r.json() 
+      const ativo = valor === 'true' 
+      document.getElementById('toggle-feriado').checked = ativo 
+      document.getElementById('toggle-feriado-bg').className = `w-12 h-6 rounded-full transition-colors ${ativo ? 'bg-green-500' : 'bg-gray-300'}` 
+      document.getElementById('toggle-feriado-dot').style.transform = ativo ? 'translateX(24px)' : 'translateX(0)' 
+      document.getElementById('toggle-feriado-label').textContent = ativo ? '🟢 Ativo' : 'Inativo' 
+    } 
+    
+    async function alternarTarifaFeriado() { 
+      const ativo = document.getElementById('toggle-feriado').checked 
+      await fetch('/api/config/usar-tarifa-feriado', { 
+        method: 'PUT', 
+        headers: headers(), 
+        body: JSON.stringify({ valor: ativo ? 'true' : 'false' }) 
+      }) 
+      document.getElementById('toggle-feriado-bg').className = `w-12 h-6 rounded-full transition-colors ${ativo ? 'bg-green-500' : 'bg-gray-300'}` 
+      document.getElementById('toggle-feriado-dot').style.transform = ativo ? 'translateX(24px)' : 'translateX(0)' 
+      document.getElementById('toggle-feriado-label').textContent = ativo ? '🟢 Ativo' : 'Inativo' 
+    }
 
     async function carregarTarifas() {
       try {
