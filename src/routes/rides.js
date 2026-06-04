@@ -29,14 +29,14 @@ async function calcularTarifa(dataHoraStr, distanciaKm) {
   const config = await getConfig()
   const dataOriginal = new Date(dataHoraStr) 
   
-  // Ajustar para fuso horário de Brasília (America/Sao_Paulo)
-  const options = { timeZone: 'America/Sao_Paulo' }
-  const diaSemana = parseInt(new Intl.DateTimeFormat('en-US', { ...options, weekday: 'numeric' }).format(dataOriginal)) - 1
-  const hora = parseInt(new Intl.DateTimeFormat('en-US', { ...options, hour: 'numeric', hour12: false }).format(dataOriginal))
-  const minuto = parseInt(new Intl.DateTimeFormat('en-US', { ...options, minute: 'numeric' }).format(dataOriginal))
-  const ano = parseInt(new Intl.DateTimeFormat('en-US', { ...options, year: 'numeric' }).format(dataOriginal))
-  const mes = new Intl.DateTimeFormat('en-US', { ...options, month: '2-digit' }).format(dataOriginal)
-  const dia = new Intl.DateTimeFormat('en-US', { ...options, day: '2-digit' }).format(dataOriginal)
+  // Horário de Brasília (UTC-3) 
+  const brasilia = new Date(dataOriginal.getTime() - 3 * 60 * 60 * 1000) 
+  const diaSemana = brasilia.getUTCDay() 
+  const hora = brasilia.getUTCHours() 
+  const minuto = brasilia.getUTCMinutes()
+  const ano = brasilia.getUTCFullYear()
+  const mes = String(brasilia.getUTCMonth() + 1).padStart(2, '0')
+  const dia = String(brasilia.getUTCDate()).padStart(2, '0')
   
   const horaDecimal = hora + minuto / 60 
   const horaAtualMinutos = hora * 60 + minuto

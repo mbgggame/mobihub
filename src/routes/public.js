@@ -852,15 +852,13 @@ export default async function publicRoutes(fastify) {
     configs.forEach(c => config[c.chave] = c.valor) 
 
     // Buscar tarifa ativa para o horário de criação da corrida 
-    const agoraOriginal = new Date() 
-    const options = { timeZone: 'America/Sao_Paulo' }
-    const diaSemana = parseInt(new Intl.DateTimeFormat('en-US', { ...options, weekday: 'numeric' }).format(agoraOriginal)) - 1 // 0=Dom, 1=Seg, etc.
-    const hora = parseInt(new Intl.DateTimeFormat('en-US', { ...options, hour: 'numeric', hour12: false }).format(agoraOriginal))
-    const minuto = parseInt(new Intl.DateTimeFormat('en-US', { ...options, minute: 'numeric' }).format(agoraOriginal))
-    const horaAtual = hora * 60 + minuto
-    const ano = parseInt(new Intl.DateTimeFormat('en-US', { ...options, year: 'numeric' }).format(agoraOriginal))
-    const mes = new Intl.DateTimeFormat('en-US', { ...options, month: '2-digit' }).format(agoraOriginal)
-    const dia = new Intl.DateTimeFormat('en-US', { ...options, day: '2-digit' }).format(agoraOriginal)
+    // Horário de Brasília (UTC-3) 
+    const brasilia = new Date(Date.now() - 3 * 60 * 60 * 1000) 
+    const diaSemana = brasilia.getUTCDay() 
+    const horaAtual = brasilia.getUTCHours() * 60 + brasilia.getUTCMinutes()
+    const ano = brasilia.getUTCFullYear()
+    const mes = String(brasilia.getUTCMonth() + 1).padStart(2, '0')
+    const dia = String(brasilia.getUTCDate()).padStart(2, '0')
     const hoje = `${ano}-${mes}-${dia}`
 
     const tarifas = (await query('SELECT * FROM tarifas WHERE ativo = 1 ORDER BY valor_minimo DESC')).rows 
