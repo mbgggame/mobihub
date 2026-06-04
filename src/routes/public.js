@@ -824,8 +824,10 @@ export default async function publicRoutes(fastify) {
   })
 
   fastify.put('/api/rides/:id/finalizar-motorista', async (request, reply) => { 
+    console.log('[FINALIZAR-MOTORISTA] Iniciando endpoint:', { rideId: request.params.id, token_motorista: request.body.token_motorista, body: request.body })
     const { token_motorista } = request.body 
-    const { id } = request.params 
+    const { id } = request.params
+    const agora = new Date() 
     const driver = (await query('SELECT * FROM drivers WHERE token_perfil = $1', [token_motorista])).rows[0] 
     if (!driver) return reply.code(404).send({ error: 'Motorista nÃ£o encontrado' }) 
     const ride = (await query(` 
