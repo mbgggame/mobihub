@@ -6,6 +6,8 @@ mobihub.db-wal
 keystore/
 android-motorista/keystore.properties
 android-passageiro/keystore.properties
+fix_*.js
+check_*.js
 
 # Android
 *.apk
