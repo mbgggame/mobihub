@@ -1,4 +1,4 @@
-﻿import { query, pool } from '../db.js' 
+import { query, pool } from '../db.js' 
 import { requireAuth } from '../middleware/auth.js'
 import { getIo } from '../server.js'
 import crypto from 'crypto' 
@@ -1861,13 +1861,13 @@ export default async function publicRoutes(fastify) {
 
   fastify.get('/api/tarifa-ativa', async (request, reply) => {
     const agora = new Date()
-    const diaSemana = ['dom','seg','ter','qua','qui','sex','sab'][agora.getDay()]
+    const diaSemanaNum = agora.getDay() // 0=dom, 1=seg...
     const horaAtual = `${String(agora.getHours()).padStart(2,'0')}:${String(agora.getMinutes()).padStart(2,'0')}`
     const tarifas = (await query('SELECT * FROM tarifas WHERE ativo = true')).rows
     let tarifaAtiva = null
     for (const t of tarifas) {
-      const dias = t.dias || []
-      if (!dias.some(d => d?.toLowerCase() === diaSemana)) continue
+      const dias = String(t.dias || '').split(',').map(Number)
+      if (!dias.includes(diaSemanaNum)) continue
       const inicio = t.hora_inicio
       const fim = t.hora_fim
       const ativa = inicio <= fim ? (horaAtual >= inicio && horaAtual <= fim) : (horaAtual >= inicio || horaAtual <= fim)
@@ -1877,10 +1877,9 @@ export default async function publicRoutes(fastify) {
     let proxima = null
     let menorDiff = Infinity
     for (const t of tarifas) {
-      const dias = t.dias || []
+      const dias = String(t.dias || '').split(',').map(Number)
       for (let d = 0; d <= 6; d++) {
-        const diaNome = ['dom','seg','ter','qua','qui','sex','sab'][d]
-        if (!dias.some(x => x?.toLowerCase() === diaNome)) continue
+        if (!dias.includes(d)) continue
         const [h, m] = t.hora_inicio.split(':').map(Number)
         const candidata = new Date(agora)
         candidata.setDate(agora.getDate() + ((d - agora.getDay() + 7) % 7))

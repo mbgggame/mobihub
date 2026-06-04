@@ -221,28 +221,27 @@ async function verificarAlertaVoo() {
     const agora = new Date() 
     const em30min = new Date(agora.getTime() + 30 * 60 * 1000) 
     const em31min = new Date(agora.getTime() + 31 * 60 * 1000) 
-
+ 
     // Busca tarifas que iniciam nos próximos 30-31 minutos 
     const tarifas = (await query('SELECT * FROM tarifas WHERE ativo = true')).rows 
     
     for (const tarifa of tarifas) { 
-      const dias = tarifa.dias || [] 
+      const dias = String(tarifa.dias || '').split(',').map(Number) 
       const diaSemana = agora.getDay() // 0=Dom, 1=Seg... 
-      const diasMap = { dom: 0, seg: 1, ter: 2, qua: 3, qui: 4, sex: 5, sab: 6 } 
       
-      const tarifaAtivaNoDia = dias.some(d => diasMap[d?.toLowerCase()] === diaSemana) 
+      const tarifaAtivaNoDia = dias.includes(diaSemana) 
       if (!tarifaAtivaNoDia) continue 
-
+ 
       // Verifica se o horário de início está em 30-31 minutos 
       const [hInicio, mInicio] = tarifa.hora_inicio.split(':').map(Number) 
       const inicioDaCorrente = new Date(agora) 
       inicioDaCorrente.setHours(hInicio, mInicio, 0, 0) 
-
+ 
       if (inicioDaCorrente >= em30min && inicioDaCorrente <= em31min) { 
         console.log(`[SCHEDULER] Alerta de voo — tarifa ${tarifa.nome} inicia às ${tarifa.hora_inicio}`) 
-
+ 
         const horaFormatada = tarifa.hora_inicio 
-
+ 
         // Busca motoristas online (com fcm_token) 
         const motoristasOnline = (await query(` 
           SELECT d.fcm_token FROM drivers d 
@@ -250,7 +249,7 @@ async function verificarAlertaVoo() {
           WHERE d.ativo = 1 AND d.fcm_token IS NOT NULL 
           AND dl.updated_at >= NOW() - INTERVAL '2 minutes' 
         `)).rows.map(r => r.fcm_token) 
-
+ 
         // Busca motoristas offline (com fcm_token) 
         const motoristasOffline = (await query(` 
           SELECT d.fcm_token FROM drivers d 
@@ -258,7 +257,7 @@ async function verificarAlertaVoo() {
           WHERE d.ativo = 1 AND d.fcm_token IS NOT NULL 
           AND (dl.updated_at IS NULL OR dl.updated_at < NOW() - INTERVAL '2 minutes') 
         `)).rows.map(r => r.fcm_token) 
-
+ 
         // Push para offline 
         if (motoristasOffline.length > 0) { 
           await enviarPushVarios( 
@@ -267,7 +266,7 @@ async function verificarAlertaVoo() {
             `Fique online! Atendimento inicia às ${horaFormatada}. Vamos embarcar passageiros!` 
           ) 
         } 
-
+ 
         // Socket para online 
         const io = getIo() 
         if (io && motoristasOnline.length > 0) { 
@@ -277,7 +276,7 @@ async function verificarAlertaVoo() {
             tarifa_nome: tarifa.nome 
           }) 
         } 
-
+ 
         // Push também para online (reforço) 
         if (motoristasOnline.length > 0) { 
           await enviarPushVarios( 
