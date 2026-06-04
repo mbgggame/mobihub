@@ -38,3 +38,5 @@ android-motorista/build/
 MobiHub.apk
 !public/MobiHub-Passageiro.apk
 !public/MobiHub-Motorista.apk
+.idea/
+*/.idea/
