@@ -2,6 +2,11 @@ import { query, pool } from './db.js'
 import { getIo } from './server.js'
 import { enviarPush, enviarPushVarios } from './firebase.js'
 
+const AEROAPI_BASE  = 'https://aeroapi.flightaware.com/aeroapi';
+const API_KEY       = process.env.FLIGHTAWARE_API_KEY;
+const AIRPORT       = 'SBVT';
+const TAXA_OCUPACAO = 0.82;
+
 async function getConfig(chave) { 
   try { 
     const r = await query('SELECT valor FROM configuracoes WHERE chave = $1', [chave]) 
@@ -16,6 +21,14 @@ export function initScheduler() {
     await verificarChegada()
     await verificarAlertaVoo()
   }, 30 * 1000) // verifica a cada 30 segundos
+
+  // Verifica se radar VIX em tempo real está ativado e inicia intervalo
+  setInterval(async () => {
+    const radarAtivo = await getConfig('radar_vix_tempo_real') === 'true'
+    if (radarAtivo) {
+      await verificarRadarVIXRealTime()
+    }
+  }, 10 * 60 * 1000) // verifica a cada 10 minutos
 
   console.log('[SCHEDULER] Iniciado — verifica a cada 30 segundos')
 } 
@@ -293,5 +306,151 @@ async function verificarAlertaVoo() {
     } 
   } catch(err) { 
     console.error('[SCHEDULER] Erro verificarAlertaVoo:', err.message) 
+  } 
+}
+
+// Nova função para radar VIX em tempo real (usa AeroAPI)
+async function verificarRadarVIXRealTime() {
+  try {
+    if (!API_KEY) {
+      console.warn('[SCHEDULER] FLIGHTAWARE_API_KEY não definida — radar VIX desativado')
+      return
+    }
+
+    const agora = new Date()
+    const brasilia = new Date(agora.getTime() - 3 * 60 * 60 * 1000)
+    const em30min = new Date(agora.getTime() + 30 * 60 * 1000)
+    const em31min = new Date(agora.getTime() + 31 * 60 * 1000)
+    const formatDate = (d) => d.toISOString().replace(/\.\d{3}Z$/, 'Z')
+
+    // 1. Busca voos de chegada e partida no próximo período
+    const fetchFlights = async (tipo) => {
+      const ep = tipo === 'chegada' ? 'arrivals' : 'departures'
+      const url = `${AEROAPI_BASE}/airports/${AIRPORT}/flights/${ep}?start=${formatDate(agora)}&end=${formatDate(em31min)}&type=Airline&max_pages=3`
+      const res = await fetch(url, { headers: { 'x-apikey': API_KEY } })
+      if (!res.ok) throw new Error(`AeroAPI ${res.status}: ${await res.text()}`)
+      const data = await res.json()
+      return data.arrivals || data.departures || []
+    }
+
+    const voosChegada = await fetchFlights('chegada')
+    const voosPartida = await fetchFlights('partida')
+
+    // 2. Filtra voos que chegam/partem em 30-31 minutos
+    const processarVoo = (voo, tipo) => {
+      const horarioRaw = tipo === 'chegada' 
+        ? (voo.estimated_in || voo.scheduled_in || voo.actual_in) 
+        : (voo.estimated_out || voo.scheduled_out || voo.actual_out)
+      if (!horarioRaw) return null
+
+      const horario = new Date(horarioRaw)
+      if (horario >= em30min && horario <= em31min) {
+        return {
+          ...voo,
+          tipo,
+          horario,
+          horario_bsb: new Date(horario.getTime() - 3 * 60 * 60 * 1000),
+          flight_id: voo.fa_flight_id
+        }
+      }
+      return null
+    }
+
+    const voosRelevantes = [
+      ...voosChegada.map(v => processarVoo(v, 'chegada')).filter(Boolean),
+      ...voosPartida.map(v => processarVoo(v, 'partida')).filter(Boolean)
+    ]
+
+    if (voosRelevantes.length === 0) {
+      console.log('[SCHEDULER] Radar VIX — nenhum voo relevante nos próximos 30min')
+      return
+    }
+
+    console.log(`[SCHEDULER] Radar VIX — ${voosRelevantes.length} voo(s) chegando/partindo em 30min`)
+
+    // 3. Busca motoristas online/offline para enviar notificações
+    const motoristasOnline = (await query(`
+      SELECT d.fcm_token FROM drivers d 
+      JOIN driver_locations dl ON dl.driver_id = d.id 
+      WHERE d.ativo = 1 AND d.fcm_token IS NOT NULL 
+      AND dl.updated_at >= NOW() - INTERVAL '2 minutes' 
+    `)).rows.map(r => r.fcm_token)
+
+    const motoristasOffline = (await query(`
+      SELECT d.fcm_token FROM drivers d 
+      LEFT JOIN driver_locations dl ON dl.driver_id = d.id 
+      WHERE d.ativo = 1 AND d.fcm_token IS NOT NULL 
+      AND (dl.updated_at IS NULL OR dl.updated_at < NOW() - INTERVAL '2 minutes') 
+    `)).rows.map(r => r.fcm_token)
+
+    const io = getIo()
+
+    for (const voo of voosRelevantes) {
+      const tipoTexto = voo.tipo === 'chegada' ? 'Chegando' : 'Partindo'
+      const horaFormatada = voo.horario_bsb.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      const mensagem = `✈️ Voo ${voo.ident} ${tipoTexto} em VIX às ${horaFormatada}!`
+
+      // 4. Envia push para motoristas offline
+      if (motoristasOffline.length > 0) {
+        await enviarPushVarios(
+          motoristasOffline,
+          '✈️ Voo em VIX!',
+          mensagem
+        )
+      }
+
+      // 5. Envia socket para motoristas online
+      if (io && motoristasOnline.length > 0) {
+        io.emit('alerta:voo_real_time', {
+          mensagem,
+          voo: {
+            ident: voo.ident,
+            tipo: voo.tipo,
+            horario_bsb: voo.horario_bsb.toISOString(),
+            operator: voo.operator_friendly_name || voo.operator,
+            origem_iata: voo.origin?.code_iata,
+            destino_iata: voo.destination?.code_iata
+          }
+        })
+      }
+
+      // 6. Push também para online (reforço)
+      if (motoristasOnline.length > 0) {
+        await enviarPushVarios(
+          motoristasOnline,
+          '✈️ Voo em VIX!',
+          mensagem
+        )
+      }
+    }
+
+    // 7. Salva voos relevantes no banco (opcional, para histórico)
+    // Reutiliza getCapacity e processarVoo do script collect-vix-history
+    const getCapacity = async (aircraftType) => {
+      if (!aircraftType) return null
+      const res = await query('SELECT max_pax FROM aircraft_capacity WHERE aircraft_type = $1', [aircraftType])
+      return res.rows[0]?.max_pax || null
+    }
+    for (const voo of voosRelevantes) {
+      const maxPax = await getCapacity(voo.aircraft_type)
+      await query(`
+        INSERT INTO flight_history (
+          flight_id, ident, operator, operator_iata, operator_icao, 
+          aircraft_type, max_pax, pax_estimado, tipo, origem_iata, 
+          destino_iata, horario, horario_bsb, dia_semana, hora_slot, 
+          status
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        ON CONFLICT (flight_id) DO NOTHING
+      `, [
+        voo.fa_flight_id, voo.ident, voo.operator_friendly_name || voo.operator, voo.operator_iata,
+        voo.operator_icao, voo.aircraft_type, maxPax, maxPax ? Math.round(maxPax * TAXA_OCUPACAO) : null,
+        voo.tipo, voo.origin?.code_iata, voo.destination?.code_iata,
+        voo.horario.toISOString(), voo.horario_bsb.toISOString(), voo.horario_bsb.getDay(),
+        voo.horario_bsb.getHours(), voo.status
+      ])
+    }
+
+  } catch(err) { 
+    console.error('[SCHEDULER] Erro verificarRadarVIXRealTime:', err.message) 
   } 
 } 
