@@ -2682,13 +2682,11 @@ function cor(total) {
   return { ic:'🟢', lb:'DEMANDA MUITO BAIXA', bg:'#f0fdf4', br:'#86efac', tx:'#166534' }
 }
 
-function score(total, dist) {
-  let s = 0
-  if (total >= 300) s += 6
-  else if (total >= 150) s += 4
-  else if (total >= 50) s += 2
-  if (dist <= RAIO_KM) s += 4
-  return Math.min(s, 10)
+function score(t, k) {
+  if (!t || t === 0) return 0;
+  const fDist = k === null ? 0.5 : k <= 5 ? 1.0 : k <= 10 ? 0.8 : k <= 15 ? 0.5 : k <= 20 ? 0.3 : 0;
+  const fTemp = t < 300 ? 0.2 : t < 700 ? 0.5 : t < 1200 ? 0.8 : 1.0;
+  return Math.min(10, Math.round(t / 200 * fDist * fTemp * 10) / 10);
 }
 
 async function buscarTarifa() {
@@ -2712,8 +2710,10 @@ async function iniciarRadarVIX() {
     const agora = new Date()
     const ds = dsEf(agora)
     const hora = agora.getHours()
+    const minutos = agora.getMinutes(); 
+    const horaConsulta = minutos >= 55 ? hora + 1 : hora; 
     const sl = slots[ds]
-    const sa = sl ? sl.find(s=>s.h===hora) : null
+    const sa = sl ? sl.find(s=>s.h===horaConsulta) : { h: horaConsulta, l:0, b:0 }
     const total = sa ? (sa.l + sa.b) : 0
     const c = cor(total)
     const sc = score(total, distKm)
