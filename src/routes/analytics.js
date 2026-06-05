@@ -14,19 +14,36 @@ export default async function analyticsRoutes(fastify) {
   }, async (request, reply) => {
     const { tipo = 'ambos' } = request.query
 
-    let sql = `
+    let sqlMatriz = `
       SELECT dia_semana, hora_slot, pax_estimado, tipo, operator_iata
       FROM flight_history
       WHERE horario_bsb IS NOT NULL AND pax_estimado IS NOT NULL
     `
-    const params = []
+    const paramsMatriz = []
 
     if (tipo !== 'ambos') {
-      sql += ' AND tipo = $1'
-      params.push(tipo)
+      sqlMatriz += ' AND tipo = $1'
+      paramsMatriz.push(tipo)
     }
 
-    const { rows } = await query(sql, params)
+    const { rows: rowsMatriz } = await query(sqlMatriz, paramsMatriz)
+    
+    let sqlDetalhe = `
+      SELECT 
+        dia_semana, hora_slot, tipo, ident, operator, operator_iata,
+        aircraft_type, pax_estimado, origem_iata, destino_iata 
+      FROM flight_history 
+      WHERE pax_estimado > 0
+    `
+    const paramsDetalhe = []
+    
+    if (tipo !== 'ambos') {
+      sqlDetalhe += ' AND tipo = $1'
+      paramsDetalhe.push(tipo)
+    }
+    
+    sqlDetalhe += ' ORDER BY dia_semana, hora_slot, tipo, ident'
+    const { rows: voosDetalhe } = await query(sqlDetalhe, paramsDetalhe)
 
     const dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
     const matriz = {}
@@ -37,7 +54,7 @@ export default async function analyticsRoutes(fastify) {
       }
     }
 
-    for (const row of rows) {
+    for (const row of rowsMatriz) {
       const slot = matriz[row.dia_semana]?.horas[row.hora_slot]
       if (!slot) continue
       slot[row.tipo] += row.pax_estimado
@@ -46,7 +63,7 @@ export default async function analyticsRoutes(fastify) {
     }
 
     const porCia = {}
-    for (const row of rows) {
+    for (const row of rowsMatriz) {
       const op = row.operator_iata || 'N/D'
       porCia[op] = (porCia[op] || 0) + (row.pax_estimado || 0)
     }
@@ -67,10 +84,11 @@ export default async function analyticsRoutes(fastify) {
 
     return reply.send({
       tipo,
-      total_registros: rows.length,
+      total_registros: rowsMatriz.length,
       pico_semana: pico,
       top_companhias: topCompanhias,
-      matriz
+      matriz,
+      voos_detalhe: voosDetalhe
     })
   })
 

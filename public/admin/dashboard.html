@@ -208,6 +208,7 @@
      <p class="text-xs text-gray-400 mt-3"> 
        * Passageiros estimados: capacidade máxima × 82% (taxa média Anac 2024) 
      </p> 
+     <div id="detalhe-voo" class="mt-6"></div>
    </div>
 </div>
 
@@ -733,7 +734,8 @@ document.addEventListener('DOMContentLoaded', () => {
 <script> 
 const HORAS = [6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22]; 
 const DIAS  = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']; 
- 
+let dadosDemanda = null;
+
 function corCelula(val, max) { 
   if (!val) return 'bg-gray-100 text-gray-400'; 
   const p = val / max; 
@@ -742,35 +744,90 @@ function corCelula(val, max) {
   if (p >= 0.25) return 'bg-yellow-300 text-gray-800'; 
   return 'bg-green-100 text-gray-700'; 
 } 
- 
+
+function mostrarDetalhes(dia, hora) { 
+  if (!dadosDemanda || !dadosDemanda.voos_detalhe) { 
+    return;
+  }
+  
+  const voosFiltrados = dadosDemanda.voos_detalhe.filter(v => 
+    v.dia_semana === dia && v.hora_slot === hora
+  );
+  
+  const div = document.getElementById('detalhe-voo');
+  
+  if (voosFiltrados.length === 0) {
+    div.innerHTML = '';
+    return;
+  }
+  
+  let tabelaHtml = `
+    <h3 class="text-sm font-medium text-gray-700 mb-3">Voos — ${DIAS[dia]} ${String(hora).padStart(2,'0')}h</h3>
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs border-collapse">
+        <thead>
+          <tr class="bg-gray-50">
+            <th class="p-2 text-left text-gray-500">Voo</th>
+            <th class="p-2 text-left text-gray-500">Cia</th>
+            <th class="p-2 text-left text-gray-500">Tipo</th>
+            <th class="p-2 text-left text-gray-500">Origem → Destino</th>
+            <th class="p-2 text-right text-gray-500">Pax estimado</th>
+          </tr>
+        </thead>
+        <tbody>
+  `;
+  
+  voosFiltrados.forEach(v => {
+    tabelaHtml += `
+      <tr class="border-t border-gray-100">
+        <td class="p-2 text-sm font-medium text-gray-800">${v.ident || '—'}</td>
+        <td class="p-2 text-sm text-gray-600">${v.operator_iata || v.operator || '—'}</td>
+        <td class="p-2 text-sm text-gray-600">${v.tipo === 'chegada' ? 'Chegada' : 'Partida'}</td>
+        <td class="p-2 text-sm text-gray-600">${v.origem_iata || '—'} → ${v.destino_iata || '—'}</td>
+        <td class="p-2 text-sm font-medium text-blue-700 text-right">${v.pax_estimado || 0}</td>
+      </tr>
+    `;
+  });
+  
+  tabelaHtml += `
+        </tbody>
+      </table>
+    </div>
+  `;
+  
+  div.innerHTML = tabelaHtml;
+}
+
 async function carregarDemanda() { 
   const tipo = document.getElementById('filtroTipo').value; 
- 
+
   const head = document.getElementById('heatmapHead'); 
   head.innerHTML = '<th class="p-2 text-left text-gray-500 w-12">Dia \\ Hora</th>'; 
   HORAS.forEach(h => { 
     head.innerHTML += `<th class="p-1 text-center text-gray-500">${String(h).padStart(2,'0')}h</th>`; 
   }); 
- 
+
   document.getElementById('heatmapBody').innerHTML = 
     '<tr><td colspan="20" class="text-center py-8 text-gray-400">Carregando...</td></tr>'; 
- 
+  document.getElementById('detalhe-voo').innerHTML = '';
+
   try { 
     const json = await fetch(`/api/analytics/demanda-vix?tipo=${tipo}`).then(r => r.json()); 
- 
+    dadosDemanda = json;
+
     if (!json.matriz) { 
       document.getElementById('heatmapBody').innerHTML = 
         '<tr><td colspan="20" class="text-center py-8 text-red-400">Sem dados. Execute a coleta primeiro.</td></tr>'; 
       return; 
     } 
- 
+
     let max = 0; 
     for (let d = 0; d <= 6; d++) 
       for (const h of HORAS) { 
         const v = json.matriz[d]?.horas[h]?.total || 0; 
         if (v > max) max = v; 
       } 
- 
+
     let tbody = '', totalPax = 0; 
     for (let d = 0; d <= 6; d++) { 
       tbody += `<tr class="border-t border-gray-100"><td class="p-2 font-semibold text-gray-600">${DIAS[d]}</td>`; 
@@ -779,26 +836,28 @@ async function carregarDemanda() {
         const val  = slot?.total || 0; 
         totalPax  += val; 
         const tip  = val > 0 ? `↓${slot.chegada||0} ↑${slot.partida||0} (${slot.voos||0} voos)` : ''; 
-        tbody += `<td class="p-1 text-center rounded cursor-default ${corCelula(val, max)}" title="${tip}"> 
+        const cursorClass = val > 0 ? 'cursor-pointer hover:opacity-80' : 'cursor-default';
+        const onClick = val > 0 ? `onclick="mostrarDetalhes(${d}, ${h})"` : '';
+        tbody += `<td class="p-1 text-center rounded ${cursorClass} ${corCelula(val, max)}" title="${tip}" ${onClick}> 
           ${val > 0 ? val : ''} 
         </td>`; 
       } 
       tbody += `</tr>`; 
     } 
- 
+
     document.getElementById('heatmapBody').innerHTML = tbody; 
     document.getElementById('totalVoos').textContent  = json.total_registros; 
     document.getElementById('totalPax').textContent   = totalPax.toLocaleString('pt-BR'); 
     document.getElementById('picoInfo').textContent   = 
       json.pico_semana?.dia ? `${json.pico_semana.dia} ${String(json.pico_semana.hora).padStart(2,'0')}h` : '—'; 
     document.getElementById('topCia').textContent     = json.top_companhias?.[0]?.iata || '—'; 
- 
+
   } catch (err) { 
     document.getElementById('heatmapBody').innerHTML = 
       `<tr><td colspan="20" class="text-center py-8 text-red-400">Erro: ${err.message}</td></tr>`; 
   } 
 } 
- 
+
 document.addEventListener('DOMContentLoaded', carregarDemanda); 
 </script>
 
