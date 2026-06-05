@@ -2684,9 +2684,10 @@ function cor(total) {
 
 function score(t, k) {
   if (!t || t === 0) return 0;
-  const fDist = k === null ? 0.5 : k <= 5 ? 1.0 : k <= 10 ? 0.8 : k <= 15 ? 0.5 : k <= 20 ? 0.3 : 0;
-  const fTemp = t < 300 ? 0.2 : t < 700 ? 0.5 : t < 1200 ? 0.8 : 1.0;
-  return Math.min(10, Math.round(t / 200 * fDist * fTemp * 10) / 10);
+  const fDist = k === null ? 0.8 : k <= 5 ? 1.0 : k <= 10 ? 0.85 : k <= 15 ? 0.65 : k <= 20 ? 0.4 : 0.1;
+  const base = t < 300 ? 2 : t < 700 ? 4 : t < 1200 ? 7 : 9.5;
+  const ajuste = fDist;
+  return Math.min(10, Math.round(base * ajuste * 10) / 10);
 }
 
 async function buscarTarifa() {
@@ -2728,22 +2729,22 @@ async function iniciarRadarVIX() {
       ? `📍 ${distKm.toFixed(1)}km do VIX ${distKm<=RAIO_KM?'✅':'⚠️ fora do raio'}`
       : '📍 Toque em Localizar'
 
-    let recom='', recomCor='#374151'
-    if (distKm!==null && distKm>RAIO_KM) {
-      recom=`Você está ${Math.round(distKm)}km do VIX — fora do raio de ${RAIO_KM}km.`
-      recomCor='#7a3900'
-    } else if (sc>=8) {
-      recom='🚨 VÁ AO VIX AGORA! Alta demanda neste momento.'
-      recomCor='#7f0000'
-    } else if (sc>=5) {
-      recom='🔥 Vale se posicionar próximo ao VIX.'
-      recomCor='#7a3900'
-    } else if (sc>=2) {
-      recom='🌤 Demanda moderada. Monitore a próxima hora.'
-      recomCor='#6d5c00'
+    let recom = '', recomCor = '#374151';
+    if (distKm !== null && distKm > RAIO_KM) {
+      recom = 'Voce esta ' + Math.round(distKm) + 'km do VIX — fora do raio de ' + RAIO_KM + 'km.';
+      recomCor = '#7a3900';
+    } else if (total >= 1200) {
+      recom = '🚨 VÁ AO VIX AGORA! Alta demanda neste momento.';
+      recomCor = '#7f0000';
+    } else if (total >= 700) {
+      recom = '🔥 Vale se posicionar próximo ao VIX.';
+      recomCor = '#7a3900';
+    } else if (total >= 300) {
+      recom = '🌤 Demanda moderada. Monitore a próxima hora.';
+      recomCor = '#6d5c00';
     } else {
-      recom='🧊 Demanda baixa. Prefira corridas na cidade.'
-      recomCor='#1b5e20'
+      recom = '🧊 Demanda baixa. Prefira corridas na cidade.';
+      recomCor = '#1b5e20';
     }
 
     const barW = Math.round(sc*10)
