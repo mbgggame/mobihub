@@ -2749,20 +2749,22 @@ function iniciarRadarVIX() {
       +'<div style="font-size:13px;font-weight:600;color:#111;margin-bottom:10px;">Próximas janelas hoje</div>'
       +proxHTML
       +'</div>'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
-      +'<button onclick="radarGPS()" class="w-full bg-white border border-gray-300 rounded-xl py-3 text-sm font-semibold text-gray-700;">📍 Localizar GPS</button>'
-      +'<button onclick="radarAtualizar()" class="w-full bg-white border border-gray-300 rounded-xl py-3 text-sm font-semibold text-gray-700;">🔄 Atualizar</button>'
-      +'</div>';
+      +'<div id="radar-btns" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"></div>';
 
-    const btnGps = container.querySelector('[onclick="radarGPS()"]'); 
-    if (btnGps) { 
-      btnGps.removeAttribute('onclick'); 
-      btnGps.addEventListener('click', function() { window.radarGPS(); }); 
-    } 
-    const btnAtualizar = container.querySelector('[onclick="radarAtualizar()"]'); 
-    if (btnAtualizar) { 
-      btnAtualizar.removeAttribute('onclick'); 
-      btnAtualizar.addEventListener('click', function() { window.radarAtualizar(); }); 
+    const btnDiv = document.getElementById('radar-btns'); 
+    if (btnDiv) { 
+      const b1 = document.createElement('button'); 
+      b1.textContent = '📍 Localizar GPS'; 
+      b1.style.cssText = 'width:100%;background:white;border:1px solid #d1d5db;border-radius:12px;padding:12px;font-size:14px;font-weight:600;color:#374151;cursor:pointer;'; 
+      b1.addEventListener('click', function(e) { e.preventDefault(); window.radarGPS(); }); 
+      
+      const b2 = document.createElement('button'); 
+      b2.textContent = '🔄 Atualizar'; 
+      b2.style.cssText = 'width:100%;background:white;border:1px solid #d1d5db;border-radius:12px;padding:12px;font-size:14px;font-weight:600;color:#374151;cursor:pointer;'; 
+      b2.addEventListener('click', function(e) { e.preventDefault(); window.radarAtualizar(); }); 
+      
+      btnDiv.appendChild(b1); 
+      btnDiv.appendChild(b2); 
     } 
   }
 
