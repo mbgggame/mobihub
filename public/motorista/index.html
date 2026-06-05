@@ -2706,6 +2706,15 @@ async function iniciarRadarVIX() {
   const container = document.getElementById('conteudo-radar-vix')
   if (!container) return
 
+  // MUDANÇA 2 — Event delegation
+  container.addEventListener('click', function(e) { 
+    const btn = e.target.closest('[data-action]'); 
+    if (!btn) return; 
+    const action = btn.getAttribute('data-action'); 
+    if (action === 'gps') window._gpsRadar(); 
+    if (action === 'atualizar') window._atualizarRadar(); 
+  }); 
+
   // 4. buscarLocalizacaoPorIP
   async function buscarLocalizacaoPorIP() {
     try {
@@ -2866,11 +2875,11 @@ async function iniciarRadarVIX() {
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        <button onclick="window._gpsRadar()"
+        <button data-action="gps"
           style="background:white;border:1px solid #d1d5db;border-radius:10px; padding:12px;font-size:12px;color:#374151;cursor:pointer;font-weight:500;">
           📍 Localizar GPS
         </button>
-        <button onclick="window._atualizarRadar()"
+        <button data-action="atualizar"
           style="background:white;border:1px solid #d1d5db;border-radius:10px; padding:12px;font-size:12px;color:#374151;cursor:pointer;font-weight:500;">
           🔄 Atualizar
         </button>
