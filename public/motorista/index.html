@@ -1059,6 +1059,7 @@ async function carregar() {
          modal.style.display = 'flex'
          modal.classList.remove('hidden')
          conteudoPrincipal.classList.add('hidden')
+         inicializarScrollTermos()
        } else {
          // Aceitou no banco — salvar no localStorage
          localStorage.setItem(STORAGE_KEY, 'true')
@@ -1216,6 +1217,28 @@ async function carregar() {
     btn.disabled = true 
     btn.className = 'w-full bg-gray-300 text-gray-500 rounded-xl py-3 font-bold text-base cursor-not-allowed transition-all' 
   } 
+ } 
+
+ function inicializarScrollTermos() { 
+   const scrollDiv = document.getElementById('scroll-termos'); 
+   if (!scrollDiv) return; 
+   
+   function checarScroll() { 
+     const chegouFim = scrollDiv.scrollTop + scrollDiv.clientHeight >= scrollDiv.scrollHeight - 10; 
+     if (chegouFim) { 
+       scrollDiv.removeEventListener('scroll', checarScroll); 
+       document.getElementById('check-termos-gerais').disabled = false; 
+       document.getElementById('check-arbitragem').disabled = false; 
+       verificarAceiteTermos(); 
+     } 
+   } 
+   
+   // Desabilitar checkboxes até rolar 
+   document.getElementById('check-termos-gerais').disabled = true; 
+   document.getElementById('check-arbitragem').disabled = true; 
+   
+   scrollDiv.addEventListener('scroll', checarScroll); 
+   checarScroll(); // verifica se já está no fim 
  } 
 
  async function aceitarTermos() { 
