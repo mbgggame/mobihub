@@ -24,11 +24,15 @@ async function main() {
   console.log('🔧 Iniciando correção de pax_estimado...\n');
   for (const update of updates) {
     const result = await pool.query(
-      'UPDATE flight_history SET pax_estimado = $1, max_pax = $2 WHERE aircraft_type = $3 AND pax_estimado IS NULL',
+      'UPDATE flight_history SET pax_estimado = $1, max_pax = $2 WHERE aircraft_type = $3 AND pax_estimado = 0',
       [update.pax_estimado, update.max_pax, update.type]
     );
     console.log(`✈️ ${update.type}: ${result.rowCount} linhas atualizadas`);
   }
+  
+  const checkResult = await pool.query('SELECT COUNT(*) as com_pax FROM flight_history WHERE pax_estimado > 0');
+  console.log(`\n✅ Total de registros com pax_estimado > 0: ${checkResult.rows[0].com_pax}`);
+  
   await pool.end();
   console.log('\n✅ Concluído!');
 }
