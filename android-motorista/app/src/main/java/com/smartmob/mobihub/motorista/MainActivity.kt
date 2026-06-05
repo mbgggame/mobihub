@@ -121,6 +121,7 @@ class MainActivity : AppCompatActivity() {
             allowFileAccess = true
             cacheMode = WebSettings.LOAD_DEFAULT
             mediaPlaybackRequiresUserGesture = false
+            setGeolocationEnabled(true)
         }
         CookieManager.getInstance().apply {
             setAcceptCookie(true)
