@@ -24,7 +24,7 @@ async function main() {
   console.log('🔧 Iniciando correção de pax_estimado...\n');
   for (const update of updates) {
     const result = await pool.query(
-      'UPDATE flight_history SET pax_estimado = $1, max_pax = $2 WHERE aircraft_type = $3 AND pax_estimado = 0',
+      'UPDATE flight_history SET pax_estimado = $1, max_pax = $2 WHERE TRIM(aircraft_type) = $3 AND pax_estimado = 0',
       [update.pax_estimado, update.max_pax, update.type]
     );
     console.log(`✈️ ${update.type}: ${result.rowCount} linhas atualizadas`);
