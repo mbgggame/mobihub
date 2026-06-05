@@ -2706,7 +2706,39 @@ async function iniciarRadarVIX() {
   const container = document.getElementById('conteudo-radar-vix')
   if (!container) return
 
-  // CONTINUA NA PARTE 2
+  // 4. buscarLocalizacaoPorIP
+  async function buscarLocalizacaoPorIP() {
+    try {
+      const r = await fetch('https://ipapi.co/json/');
+      const d = await r.json();
+      if (d.latitude && d.longitude) {
+        distKm = calcularDistanciaHaversine(d.latitude, d.longitude, VIX_LAT, VIX_LON);
+        render();
+      }
+    } catch(e) {
+      render();
+    }
+  }
+
+  // 5. window._gpsRadar
+  window._gpsRadar = function() {
+    if (!navigator.geolocation) {
+      buscarLocalizacaoPorIP();
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        distKm = calcularDistanciaHaversine(pos.coords.latitude, pos.coords.longitude, VIX_LAT, VIX_LON);
+        render();
+      },
+      () => {
+        buscarLocalizacaoPorIP();
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
+    );
+  };
+
+  // 7. function render
   function render() {
     const agora = new Date()
     const ds = dsEf(agora)
@@ -2846,41 +2878,13 @@ async function iniciarRadarVIX() {
     `
   }
 
+  // 6. window._atualizarRadar (após declarar render)
   window._atualizarRadar = render
 
-  window._gpsRadar = function() {
-    if (!navigator.geolocation) {
-      buscarLocalizacaoPorIP();
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        distKm = calcularDistanciaHaversine(pos.coords.latitude, pos.coords.longitude, VIX_LAT, VIX_LON);
-        render();
-      },
-      () => {
-        buscarLocalizacaoPorIP();
-      },
-      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
-    );
-  };
-
-  async function buscarLocalizacaoPorIP() {
-    try {
-      const r = await fetch('https://ipapi.co/json/');
-      const d = await r.json();
-      if (d.latitude && d.longitude) {
-        distKm = calcularDistanciaHaversine(d.latitude, d.longitude, VIX_LAT, VIX_LON);
-        render();
-      }
-    } catch(e) {
-      render();
-    }
-  }
-
+  // 8. await buscarTarifa()
   await buscarTarifa()
 
-  // Busca os dados históricos
+  // 9. Busca os dados históricos e carrega slots/totalDia
   try {
     const r = await fetch('/api/analytics/demanda-vix')
     if (r.ok) {
@@ -2909,9 +2913,14 @@ async function iniciarRadarVIX() {
     }
   } catch(e) {}
 
+  // 10. render()
   render()
+  
+  // 11. timer = setInterval(render, 60000)
   if (timerRadar) clearInterval(timerRadar)
   timerRadar = setInterval(render, 60000)
+  
+  // 12. window._gpsRadar()
   window._gpsRadar()
 }
 // 🔹 RADAR VIX - FIM
