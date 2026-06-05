@@ -453,6 +453,13 @@
     </div>
   </button>
 
+  <!-- RADAR VIX -->
+  <div id="card-radar-vix" class="bg-white border border-gray-200 rounded-xl p-4">
+    <p class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-3">✈️ Radar Aeroporto (VIX)</p>
+    <div id="conteudo-radar-vix">
+      <p class="text-sm text-gray-500">Carregando...</p>
+    </div>
+  </div>
   <!-- INDICAÇÕES -->
   <div id="card-indicacoes" class="bg-white border border-gray-200 rounded-xl p-4">
     <p class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-3">🎯 Indicações</p>
@@ -2651,10 +2658,254 @@ async function confirmarPresencaAlerta() {
   } 
 }
 
+// 🔹 RADAR VIX - INÍCIO
+const VIX_LAT = -20.2566
+const VIX_LON = -40.2836
+const RAIO_KM = 15
+const DIST_TIPICA = 10
+const TEMPO_CORRIDA = 20
+const COMISSAO = 0.82
+
+let distKm = null
+let tarifa = null
+let timerRadar = null
+let slots = {}
+let totalDia = {}
+const diasAbrev = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
+
+function pad(n) { return String(n).padStart(2,'0') }
+
+function cor(total) {
+  if (total >= 300) return { ic:'🔴', lb:'ALTA DEMANDA', bg:'#fee2e2', br:'#fca5a5', tx:'#991b1b' }
+  if (total >= 150) return { ic:'🟠', lb:'DEMANDA MODERADA', bg:'#fffbeb', br:'#fcd34d', tx:'#92400e' }
+  if (total >= 50)  return { ic:'🟡', lb:'DEMANDA BAIXA', bg:'#fffbeb', br:'#fcd34d', tx:'#92400e' }
+  return { ic:'🟢', lb:'DEMANDA MUITO BAIXA', bg:'#f0fdf4', br:'#86efac', tx:'#166534' }
+}
+
+function score(total, dist) {
+  let s = 0
+  if (total >= 300) s += 6
+  else if (total >= 150) s += 4
+  else if (total >= 50) s += 2
+  if (dist <= RAIO_KM) s += 4
+  return Math.min(s, 10)
+}
+
+async function buscarTarifa() {
+  try {
+    const r = await fetch('/api/tarifas/calcular?distancia_km='+DIST_TIPICA)
+    if (r.ok) tarifa = await r.json()
+  } catch(e) {}
+}
+
+function dsEf(d) {
+  const br = new Date(d.getTime() - 3*60*60*1000)
+  return br.getDay()
+}
+
+async function iniciarRadarVIX() {
+  const container = document.getElementById('conteudo-radar-vix')
+  if (!container) return
+
+  // CONTINUA NA PARTE 2
+  function render() {
+    const agora = new Date()
+    const ds = dsEf(agora)
+    const hora = agora.getHours()
+    const sl = slots[ds]
+    const sa = sl ? sl.find(s=>s.h===hora) : null
+    const total = sa ? (sa.l + sa.b) : 0
+    const c = cor(total)
+    const sc = score(total, distKm)
+    const proximas = sl ? sl.filter(s=>s.h>hora && (s.l+s.b)>0).slice(0,4) : []
+
+    const corridasPossiveis = Math.floor(60/TEMPO_CORRIDA)
+    const valorCorrida = tarifa ? (tarifa.valor||58.80) : 58.80
+    const valorMotorista = tarifa ? (tarifa.valor_motorista||(valorCorrida*COMISSAO)) : 48.22
+    const ganhoHora = Math.round(corridasPossiveis * valorMotorista)
+
+    const distInfo = distKm!==null
+      ? `📍 ${distKm.toFixed(1)}km do VIX ${distKm<=RAIO_KM?'✅':'⚠️ fora do raio'}`
+      : '📍 Toque em Localizar'
+
+    let recom='', recomCor='#374151'
+    if (distKm!==null && distKm>RAIO_KM) {
+      recom=`Você está ${Math.round(distKm)}km do VIX — fora do raio de ${RAIO_KM}km.`
+      recomCor='#7a3900'
+    } else if (sc>=8) {
+      recom='🚨 VÁ AO VIX AGORA! Alta demanda neste momento.'
+      recomCor='#7f0000'
+    } else if (sc>=5) {
+      recom='🔥 Vale se posicionar próximo ao VIX.'
+      recomCor='#7a3900'
+    } else if (sc>=2) {
+      recom='🌤 Demanda moderada. Monitore a próxima hora.'
+      recomCor='#6d5c00'
+    } else {
+      recom='🧊 Demanda baixa. Prefira corridas na cidade.'
+      recomCor='#1b5e20'
+    }
+
+    const barW = Math.round(sc*10)
+    const barCor = sc>=8?'#dc2626':sc>=5?'#f97316':sc>=2?'#eab308':'#22c55e'
+
+    const proxHTML = proximas.length===0
+      ? '<p style="font-size:12px;color:#888;margin:0">Sem mais voos hoje.</p>'
+      : proximas.map(s=>{
+          const t=s.l+s.b, cc=cor(t)
+          const gp=Math.round(Math.floor(60/TEMPO_CORRIDA)*valorMotorista)
+          return `<div style="display:flex;align-items:center;justify-content:space-between; padding:8px 10px;background:${cc.bg};border:1px solid ${cc.br}; border-radius:10px;margin-bottom:6px;">
+            <span style="font-size:13px;font-weight:600;color:${cc.tx};">${pad(s.h)}h</span>
+            <span style="font-size:11px;color:${cc.tx};">
+              ↑${s.l>0?s.l.toLocaleString('pt-BR'):'—'} • ↓${s.b>0?s.b.toLocaleString('pt-BR'):'—'} pax
+            </span>
+            <span style="font-size:11px;font-weight:600;color:${cc.tx};">~R$${gp}</span>
+          </div>`
+        }).join('')
+
+    const semanaHTML = diasAbrev.map((nm,i)=>{
+      const d=new Date(agora); d.setDate(agora.getDate()+((i-agora.getDay()+7)%7))
+      const tot=totalDia[dsEf(d)] || 0
+      const ehHoje=i===agora.getDay()
+      const cc=cor(tot/5)
+      return `<div style="background:${ehHoje?cc.bg:'#f9fafb'}; border:${ehHoje?'2px solid '+cc.br:'1px solid #e5e7eb'}; border-radius:8px;padding:6px 2px;text-align:center;">
+        <div style="font-size:10px;font-weight:600;color:${ehHoje?cc.tx:'#6b7280'};">${nm}</div>
+        <div style="font-size:11px;color:${ehHoje?cc.tx:'#374151'}; font-weight:${ehHoje?'700':'400'};">${(tot/1000).toFixed(1)}k</div>
+      </div>`
+    }).join('')
+
+    container.innerHTML = `
+      <div style="background:${c.bg};border:1px solid ${c.br};border-radius:16px;padding:16px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <span style="font-size:11px;color:${c.tx};opacity:.8;">
+            ${agora.getDate()}/${agora.getMonth()+1} — ${diasAbrev[agora.getDay()]} ${pad(hora)}h${pad(agora.getMinutes())}
+          </span>
+          <span style="font-size:11px;color:${c.tx};">${distInfo}</span>
+        </div>
+        <div style="font-size:22px;font-weight:700;color:${c.tx};">${c.ic} ${c.lb.charAt(0).toUpperCase()+c.lb.slice(1)}</div>
+        <div style="font-size:12px;color:${c.tx};margin:2px 0 10px;">
+          ${total.toLocaleString('pt-BR')} passageiros estimados • ${distKm!==null && distKm<=RAIO_KM?'você está no raio':'ative o GPS'}
+        </div>
+
+        <div style="font-size:11px;color:${c.tx};opacity:.8;margin-bottom:3px;">Score de oportunidade</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <div style="flex:1;background:rgba(0,0,0,0.1);border-radius:4px;height:8px;">
+            <div style="width:${barW}%;background:${barCor};height:8px;border-radius:4px;"></div>
+          </div>
+          <span style="font-size:14px;font-weight:700;color:${c.tx};min-width:40px;">${sc}/10</span>
+        </div>
+
+        <div style="font-size:13px;font-weight:600;color:${recomCor};margin-bottom:12px;">${recom}</div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div style="background:rgba(255,255,255,0.6);border-radius:10px;padding:10px;text-align:center;">
+            <div style="font-size:10px;color:${c.tx};opacity:.8;">Levar ao VIX</div>
+            <div style="font-size:18px;font-weight:700;color:${c.tx};">${sa && sa.l>0?sa.l.toLocaleString('pt-BR'):'—'}</div>
+            <div style="font-size:10px;color:${c.tx};opacity:.7;">pax embarque</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.6);border-radius:10px;padding:10px;text-align:center;">
+            <div style="font-size:10px;color:${c.tx};opacity:.8;">Buscar no VIX</div>
+            <div style="font-size:18px;font-weight:700;color:${c.tx};">${sa && sa.b>0?sa.b.toLocaleString('pt-BR'):'—'}</div>
+            <div style="font-size:10px;color:${c.tx};opacity:.7;">pax desembarque</div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(0,0,0,0.1);">
+          <div style="font-size:11px;color:${c.tx};opacity:.8;">Estimativa financeira (~${DIST_TIPICA}km)</div>
+          <div style="font-size:13px;color:${c.tx};margin-top:2px;">
+            Corrida: <strong>R$ ${valorCorrida.toFixed(2)}</strong> →
+            sua parte: <strong>R$ ${valorMotorista.toFixed(2)}</strong>
+          </div>
+          <div style="font-size:13px;color:${c.tx};">
+            Esta hora: <strong>~${corridasPossiveis} corridas • R$ ${ganhoHora}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:white;border:1px solid #e5e7eb;border-radius:16px;padding:16px;margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:600;color:#111;margin-bottom:10px;">Próximas janelas hoje</div>
+        ${proxHTML}
+      </div>
+
+      <div style="background:white;border:1px solid #e5e7eb;border-radius:16px;padding:16px;margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:600;color:#111;margin-bottom:10px;">Resumo da semana</div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;">${semanaHTML}</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button onclick="window._gpsRadar()"
+          style="background:white;border:1px solid #d1d5db;border-radius:10px; padding:12px;font-size:12px;color:#374151;cursor:pointer;font-weight:500;">
+          📍 Localizar GPS
+        </button>
+        <button onclick="window._atualizarRadar()"
+          style="background:white;border:1px solid #d1d5db;border-radius:10px; padding:12px;font-size:12px;color:#374151;cursor:pointer;font-weight:500;">
+          🔄 Atualizar
+        </button>
+      </div>
+    `
+  }
+
+  window._atualizarRadar = render
+
+  window._gpsRadar = function() {
+    if (!navigator.geolocation) {
+      alert('GPS não disponível neste dispositivo.')
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        distKm = calcularDistanciaHaversine(pos.coords.latitude, pos.coords.longitude, VIX_LAT, VIX_LON)
+        render()
+      },
+      () => alert('Não foi possível obter localização. Verifique as permissões.'),
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }
+
+  await buscarTarifa()
+
+  // Busca os dados históricos
+  try {
+    const r = await fetch('/api/analytics/demanda-vix')
+    if (r.ok) {
+      const d = await r.json()
+      if (d.voos_detalhe) {
+        // Agrupa por dia e hora
+        const grupos = {}
+        d.voos_detalhe.forEach(v => {
+          const k = `${v.dia_semana}-${v.hora_slot}`
+          if (!grupos[k]) grupos[k] = { h:v.hora_slot, l:0, b:0 }
+          if (v.tipo === 'partida') grupos[k].l += v.pax_estimado || 0
+          if (v.tipo === 'chegada') grupos[k].b += v.pax_estimado || 0
+        })
+        // Monta o objeto slots
+        for (let dia=0; dia<=6; dia++) {
+          slots[dia] = []
+          totalDia[dia] = 0
+          for (let h=0; h<=23; h++) {
+            const k = `${dia}-${h}`
+            const g = grupos[k] || { h, l:0, b:0 }
+            slots[dia].push(g)
+            totalDia[dia] += g.l + g.b
+          }
+        }
+      }
+    }
+  } catch(e) {}
+
+  render()
+  if (timerRadar) clearInterval(timerRadar)
+  timerRadar = setInterval(render, 60000)
+  window._gpsRadar()
+}
+// 🔹 RADAR VIX - FIM
+
 // Verificar agendamentos disponíveis a cada 60 segundos 
 setInterval(verificarAgendamentosDisponiveis, 60000) 
 
  carregar() 
+ // Inicia o Radar VIX assim que o app carregar
+ setTimeout(iniciarRadarVIX, 1000) 
  verificarAgendamentosDisponiveis()
  setTimeout(polling, 3000) 
 </script> 
