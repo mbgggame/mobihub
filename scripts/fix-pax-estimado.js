@@ -1,44 +1,50 @@
-import 'dotenv/config';
 import pg from 'pg';
-const { Pool } = pg;
+import 'dotenv/config';
 
-const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL, 
-  ssl: process.env.DATABASE_URL?.includes('render.com') 
-    ? { rejectUnauthorized: false } 
-    : false 
+const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL?.includes('render.com')
+    ? { rejectUnauthorized: false }
+    : false
 });
-
-const updates = [
-  { type: 'A20N', max_pax: 174, pax_estimado: 143 },
-  { type: 'A319', max_pax: 144, pax_estimado: 118 },
-  { type: 'A320', max_pax: 180, pax_estimado: 148 },
-  { type: 'A321', max_pax: 220, pax_estimado: 180 },
-  { type: 'B38M', max_pax: 189, pax_estimado: 155 },
-  { type: 'B737', max_pax: 149, pax_estimado: 123 },
-  { type: 'B738', max_pax: 189, pax_estimado: 155 },
-  { type: 'E295', max_pax: 136, pax_estimado: 112 }
-];
 
 async function main() {
-  console.log('🔧 Iniciando correção de pax_estimado...\n');
-  for (const update of updates) {
-    const result = await pool.query(
-      'UPDATE flight_history SET pax_estimado = $1, max_pax = $2 WHERE TRIM(aircraft_type) = $3 AND pax_estimado = 0',
-      [update.pax_estimado, update.max_pax, update.type]
-    );
-    console.log(`✈️ ${update.type}: ${result.rowCount} linhas atualizadas`);
-  }
-  
-  const checkResult = await pool.query('SELECT COUNT(*) as com_pax FROM flight_history WHERE pax_estimado > 0');
-  console.log(`\n✅ Total de registros com pax_estimado > 0: ${checkResult.rows[0].com_pax}`);
-  
+  const check = await pool.query('SELECT COUNT(*) as total FROM flight_history WHERE pax_estimado IS NULL');
+  console.log('Registros com pax_estimado NULL:', check.rows[0].total);
+
+  const result = await pool.query(`
+    UPDATE flight_history
+    SET pax_estimado = CASE TRIM(aircraft_type)
+      WHEN 'A20N' THEN 143
+      WHEN 'A319' THEN 118
+      WHEN 'A320' THEN 148
+      WHEN 'A321' THEN 180
+      WHEN 'B38M' THEN 155
+      WHEN 'B737' THEN 123
+      WHEN 'B738' THEN 155
+      WHEN 'E295' THEN 112
+      ELSE pax_estimado
+    END,
+    max_pax = CASE TRIM(aircraft_type)
+      WHEN 'A20N' THEN 174
+      WHEN 'A319' THEN 144
+      WHEN 'A320' THEN 180
+      WHEN 'A321' THEN 220
+      WHEN 'B38M' THEN 189
+      WHEN 'B737' THEN 149
+      WHEN 'B738' THEN 189
+      WHEN 'E295' THEN 136
+      ELSE max_pax
+    END
+    WHERE pax_estimado IS NULL
+  `);
+
+  console.log('Linhas atualizadas:', result.rowCount);
+
+  const confirm = await pool.query('SELECT COUNT(*) as com_pax FROM flight_history WHERE pax_estimado IS NOT NULL');
+  console.log('Total com pax_estimado:', confirm.rows[0].com_pax);
+
   await pool.end();
-  console.log('\n✅ Concluído!');
 }
 
-main().catch(async err => {
-  console.error('❌ Erro:', err);
-  await pool.end();
-  process.exit(1);
-});
+main().catch(console.error);
