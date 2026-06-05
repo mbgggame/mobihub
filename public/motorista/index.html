@@ -2753,6 +2753,17 @@ function iniciarRadarVIX() {
       +'<button onclick="radarGPS()" class="w-full bg-white border border-gray-300 rounded-xl py-3 text-sm font-semibold text-gray-700;">📍 Localizar GPS</button>'
       +'<button onclick="radarAtualizar()" class="w-full bg-white border border-gray-300 rounded-xl py-3 text-sm font-semibold text-gray-700;">🔄 Atualizar</button>'
       +'</div>';
+
+    const btnGps = container.querySelector('[onclick="radarGPS()"]'); 
+    if (btnGps) { 
+      btnGps.removeAttribute('onclick'); 
+      btnGps.addEventListener('click', function() { window.radarGPS(); }); 
+    } 
+    const btnAtualizar = container.querySelector('[onclick="radarAtualizar()"]'); 
+    if (btnAtualizar) { 
+      btnAtualizar.removeAttribute('onclick'); 
+      btnAtualizar.addEventListener('click', function() { window.radarAtualizar(); }); 
+    } 
   }
 
   window.radarAtualizar = function(){ renderRadar(); };
