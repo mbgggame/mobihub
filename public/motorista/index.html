@@ -2703,8 +2703,12 @@ function dsEf(d) {
 }
 
 async function iniciarRadarVIX() {
+  console.log('[RADAR] iniciando...')
   const container = document.getElementById('conteudo-radar-vix')
-  if (!container) return
+  if (!container) { 
+    console.log('[RADAR] container nao encontrado'); 
+    return; 
+  }
 
   // Event delegation attached to tab-painel (fixed container)
   const tabPainel = document.getElementById('tab-painel'); 
@@ -2752,6 +2756,7 @@ async function iniciarRadarVIX() {
 
   // 7. function render
   function render() {
+    console.log('[RADAR] render executando, slots:', Object.keys(slots).length)
     const agora = new Date()
     const ds = dsEf(agora)
     const hora = agora.getHours()
@@ -2970,6 +2975,7 @@ async function iniciarRadarVIX() {
   }).catch(()=>{});
 
   // 10. render()
+  console.log('[RADAR] chamando render...')
   render()
   
   // 11. timer = setInterval(render, 60000)
