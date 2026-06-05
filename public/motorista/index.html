@@ -2658,334 +2658,94 @@ async function confirmarPresencaAlerta() {
   } 
 }
 
-// 🔹 RADAR VIX - INÍCIO
-const VIX_LAT = -20.2566
-const VIX_LON = -40.2836
-const RAIO_KM = 15
-const DIST_TIPICA = 10
-const TEMPO_CORRIDA = 20
-const COMISSAO = 0.82
+function iniciarRadarVIX() {
+  const container = document.getElementById('conteudo-radar-vix');
+  if (!container) return;
+  if (container.dataset.ok === '1') return;
+  container.dataset.ok = '1';
 
-let distKm = null
-let tarifa = null
-let timerRadar = null
-let slots = {}
-let totalDia = {}
-const diasAbrev = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
+  const VIX_LAT = -20.2581, VIX_LON = -40.2860, RAIO_KM = 20;
+  const COMISSAO = 0.82, TEMPO_CORRIDA = 25;
+  let distKm = null;
 
-function pad(n) { return String(n).padStart(2,'0') }
+  const SL = {
+    0:[{h:6,l:638,b:415},{h:7,l:372,b:267},{h:8,l:335,b:335},{h:9,l:155,b:112},{h:10,l:112,b:155},{h:11,l:155,b:148},{h:12,l:296,b:303},{h:13,l:148,b:451},{h:14,l:458,b:0},{h:15,l:267,b:570},{h:16,l:451,b:408},{h:17,l:260,b:310},{h:18,l:155,b:0},{h:20,l:0,b:303},{h:21,l:0,b:403},{h:22,l:0,b:118}],
+    1:[{h:6,l:451,b:595},{h:7,l:595,b:155},{h:8,l:490,b:490},{h:9,l:155,b:0},{h:10,l:112,b:112},{h:11,l:303,b:712},{h:12,l:409,b:180},{h:13,l:0,b:310},{h:14,l:310,b:0},{h:15,l:335,b:267},{h:16,l:551,b:587},{h:17,l:260,b:422},{h:18,l:465,b:0},{h:19,l:0,b:148},{h:20,l:0,b:559},{h:21,l:0,b:1123},{h:22,l:0,b:458}],
+    2:[{h:6,l:898,b:1021},{h:7,l:829,b:601},{h:8,l:911,b:583},{h:9,l:310,b:0},{h:10,l:0,b:224},{h:11,l:677,b:1306},{h:12,l:853,b:298},{h:13,l:0,b:310},{h:14,l:1098,b:980},{h:15,l:714,b:707},{h:16,l:631,b:562},{h:17,l:669,b:720},{h:18,l:310,b:0},{h:19,l:0,b:112},{h:20,l:0,b:862},{h:21,l:0,b:665},{h:22,l:0,b:391}],
+    3:[{h:6,l:1078,b:650},{h:7,l:972,b:744},{h:8,l:613,b:761},{h:9,l:458,b:0},{h:10,l:0,b:224},{h:11,l:714,b:1553},{h:12,l:1063,b:148},{h:13,l:0,b:613},{h:14,l:613,b:155},{h:15,l:415,b:558},{h:16,l:589,b:847},{h:17,l:816,b:732},{h:18,l:155,b:0},{h:20,l:0,b:416},{h:21,l:0,b:558}],
+    4:[{h:6,l:483,b:390},{h:7,l:533,b:478},{h:8,l:483,b:458},{h:9,l:155,b:0},{h:10,l:112,b:112},{h:11,l:267,b:779},{h:12,l:624,b:180},{h:13,l:0,b:303},{h:14,l:638,b:310},{h:15,l:155,b:260},{h:16,l:408,b:444},{h:17,l:408,b:422},{h:18,l:155,b:0},{h:20,l:0,b:421},{h:21,l:0,b:410},{h:22,l:0,b:148}],
+    5:[{h:6,l:483,b:303},{h:7,l:148,b:451},{h:8,l:729,b:458},{h:9,l:155,b:0},{h:10,l:0,b:292},{h:11,l:292,b:421},{h:12,l:569,b:328},{h:13,l:0,b:310},{h:14,l:490,b:155},{h:15,l:155,b:112},{h:16,l:378,b:414},{h:17,l:148,b:570},{h:18,l:415,b:0},{h:20,l:0,b:298},{h:21,l:0,b:528},{h:22,l:0,b:148}],
+    6:[{h:6,l:310,b:267},{h:7,l:260,b:260},{h:8,l:155,b:793},{h:9,l:638,b:112},{h:11,l:148,b:444},{h:12,l:296,b:180},{h:13,l:0,b:155},{h:14,l:155,b:0},{h:15,l:180,b:415},{h:16,l:595,b:471},{h:17,l:291,b:155},{h:19,l:0,b:118},{h:20,l:0,b:155},{h:21,l:0,b:255},{h:22,l:0,b:148}]
+  };
 
-function cor(total) {
-  if (total >= 300) return { ic:'🔴', lb:'ALTA DEMANDA', bg:'#fee2e2', br:'#fca5a5', tx:'#991b1b' }
-  if (total >= 150) return { ic:'🟠', lb:'DEMANDA MODERADA', bg:'#fffbeb', br:'#fcd34d', tx:'#92400e' }
-  if (total >= 50)  return { ic:'🟡', lb:'DEMANDA BAIXA', bg:'#fffbeb', br:'#fcd34d', tx:'#92400e' }
-  return { ic:'🟢', lb:'DEMANDA MUITO BAIXA', bg:'#f0fdf4', br:'#86efac', tx:'#166534' }
-}
+  function pad(n){return String(n).padStart(2,'0');}
+  function hav(a,b,c,e){const R=6371,dL=(c-a)*Math.PI/180,dO=(e-b)*Math.PI/180;const x=Math.sin(dL/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dO/2)**2;return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));}
+  function cor(t){if(!t)return{bg:'#f5f5f5',tx:'#888',br:'#ddd',lb:'sem voos',ic:''};if(t<300)return{bg:'#e8f5e9',tx:'#1b5e20',br:'#a5d6a7',lb:'Demanda baixa',ic:'🧊'};if(t<700)return{bg:'#fff9c4',tx:'#6d5c00',br:'#f9e87f',lb:'Demanda moderada',ic:'🌤'};if(t<1200)return{bg:'#ffe0b2',tx:'#7a3900',br:'#ffb74d',lb:'Alta demanda',ic:'🔥'};return{bg:'#ef9f9f',tx:'#7f0000',br:'#e57373',lb:'Alta demanda',ic:'🚨'};}
 
-function score(t, k) {
-  if (!t || t === 0) return 0;
-  const fDist = k === null ? 0.8 : k <= 5 ? 1.0 : k <= 10 ? 0.85 : k <= 15 ? 0.65 : k <= 20 ? 0.4 : 0.1;
-  const base = t < 300 ? 2 : t < 700 ? 4 : t < 1200 ? 7 : 9.5;
-  const ajuste = fDist;
-  return Math.min(10, Math.round(base * ajuste * 10) / 10);
-}
+  function renderRadar() {
+    const agora = new Date();
+    const ds = agora.getDay();
+    const hora = agora.getHours();
+    const min = agora.getMinutes();
+    const hc = min >= 55 ? hora+1 : hora;
+    const sl = SL[ds] || [];
+    const sa = sl.find(s=>s.h===hc) || {h:hc,l:0,b:0};
+    const total = sa.l + sa.b;
+    const c = cor(total);
+    const proximas = sl.filter(s=>s.h>hora&&(s.l+s.b)>0).slice(0,4);
+    const ganho = Math.round(Math.floor(60/TEMPO_CORRIDA) * 48.22);
 
-async function buscarTarifa() {
-  try {
-    const r = await fetch('/api/tarifas/calcular?distancia_km='+DIST_TIPICA)
-    if (r.ok) tarifa = await r.json()
-  } catch(e) {}
-}
+    let recom='';
+    if(distKm!==null&&distKm>RAIO_KM) recom='Voce esta '+Math.round(distKm)+'km do VIX — fora do raio.';
+    else if(total>=1200) recom='🚨 VÁ AO VIX AGORA! Alta demanda.';
+    else if(total>=700) recom='🔥 Vale se posicionar próximo ao VIX.';
+    else if(total>=300) recom='🌤 Demanda moderada. Monitore a próxima hora.';
+    else recom='🧊 Demanda baixa. Prefira corridas na cidade.';
 
-function dsEf(d) {
-  const br = new Date(d.getTime() - 3*60*60*1000)
-  return br.getDay()
-}
+    const distInfo = distKm!==null ? '📍 '+distKm.toFixed(1)+'km do VIX '+(distKm<=RAIO_KM?'✅':'⚠️') : '📍 Toque em Localizar';
 
-async function iniciarRadarVIX() {
-  console.log('[RADAR] iniciando...')
-  const container = document.getElementById('conteudo-radar-vix')
-  if (!container) { 
-    console.log('[RADAR] container nao encontrado'); 
-    return; 
+    const proxHTML = proximas.length===0
+      ? '<p style="font-size:12px;color:#888;margin:0;">Sem mais voos hoje.</p>'
+      : proximas.map(s=>{const t=s.l+s.b;const cc=cor(t);return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:'+cc.bg+';border:1px solid '+cc.br+';border-radius:10px;margin-bottom:6px;"><span style="font-size:13px;font-weight:600;color:'+cc.tx+';">'+pad(s.h)+'h</span><span style="font-size:11px;color:'+cc.tx+';">↑'+(s.l>0?s.l:'—')+' · ↓'+(s.b>0?s.b:'—')+' pax</span><span style="font-size:11px;font-weight:600;color:'+cc.tx+';">~R$'+ganho+'</span></div>';}).join('');
+
+    container.innerHTML =
+      '<div style="background:'+c.bg+';border:1px solid '+c.br+';border-radius:16px;padding:16px;margin-bottom:10px;">'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
+      +'<span style="font-size:11px;color:'+c.tx+';opacity:.8;">'+agora.getDate()+'/'+(agora.getMonth()+1)+' — '+pad(hora)+'h'+pad(min)+'</span>'
+      +'<span style="font-size:11px;color:'+c.tx+';">'+distInfo+'</span></div>'
+      +'<div style="font-size:22px;font-weight:700;color:'+c.tx+';">'+c.ic+' '+c.lb+'</div>'
+      +'<div style="font-size:12px;color:'+c.tx+';margin:4px 0 8px;">'+total.toLocaleString('pt-BR')+' passageiros estimados</div>'
+      +'<div style="font-size:13px;font-weight:600;color:'+c.tx+';margin-bottom:12px;">'+recom+'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+      +'<div style="background:rgba(255,255,255,0.6);border-radius:10px;padding:10px;text-align:center;"><div style="font-size:10px;color:'+c.tx+';">Levar ao VIX</div><div style="font-size:18px;font-weight:700;color:'+c.tx+';">'+(sa.l>0?sa.l:'—')+'</div><div style="font-size:10px;color:'+c.tx+';">pax embarque</div></div>'
+      +'<div style="background:rgba(255,255,255,0.6);border-radius:10px;padding:10px;text-align:center;"><div style="font-size:10px;color:'+c.tx+';">Buscar no VIX</div><div style="font-size:18px;font-weight:700;color:'+c.tx+';">'+(sa.b>0?sa.b:'—')+'</div><div style="font-size:10px;color:'+c.tx+';">pax desembarque</div></div>'
+      +'</div>'
+      +'<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,.1);font-size:12px;color:'+c.tx+';">Estimativa: ~'+Math.floor(60/TEMPO_CORRIDA)+' corridas · R$ '+ganho+' esta hora</div>'
+      +'</div>'
+      +'<div style="background:white;border:1px solid #e5e7eb;border-radius:16px;padding:16px;margin-bottom:10px;">'
+      +'<div style="font-size:13px;font-weight:600;color:#111;margin-bottom:10px;">Próximas janelas hoje</div>'
+      +proxHTML
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+      +'<button onclick="radarGPS()" class="w-full bg-white border border-gray-300 rounded-xl py-3 text-sm font-semibold text-gray-700;">📍 Localizar GPS</button>'
+      +'<button onclick="radarAtualizar()" class="w-full bg-white border border-gray-300 rounded-xl py-3 text-sm font-semibold text-gray-700;">🔄 Atualizar</button>'
+      +'</div>';
   }
 
-  // Event delegation attached to tab-painel (fixed container)
-  const tabPainel = document.getElementById('tab-painel'); 
-  if (tabPainel) {
-    tabPainel.addEventListener('click', function(e) { 
-      const btn = e.target.closest('[data-action]'); 
-      if (!btn) return; 
-      const action = btn.getAttribute('data-action'); 
-      if (action === 'gps') window._gpsRadar(); 
-      if (action === 'atualizar') window._atualizarRadar(); 
-    }); 
-  }
-
-  // 4. buscarLocalizacaoPorIP
-  async function buscarLocalizacaoPorIP() {
-    try {
-      const r = await fetch('https://ipapi.co/json/');
-      const d = await r.json();
-      if (d.latitude && d.longitude) {
-        distKm = calcularDistanciaHaversine(d.latitude, d.longitude, VIX_LAT, VIX_LON);
-        render();
-      }
-    } catch(e) {
-      render();
-    }
-  }
-
-  // 5. window._gpsRadar
-  window._gpsRadar = function() {
-    if (!navigator.geolocation) {
-      buscarLocalizacaoPorIP();
-      return;
-    }
+  window.radarAtualizar = function(){ renderRadar(); };
+  window.radarGPS = function(){
+    if(!navigator.geolocation){ renderRadar(); return; }
     navigator.geolocation.getCurrentPosition(
-      pos => {
-        distKm = calcularDistanciaHaversine(pos.coords.latitude, pos.coords.longitude, VIX_LAT, VIX_LON);
-        render();
-      },
-      () => {
-        buscarLocalizacaoPorIP();
-      },
-      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
+      function(pos){ distKm=hav(pos.coords.latitude,pos.coords.longitude,VIX_LAT,VIX_LON); renderRadar(); },
+      function(){ renderRadar(); },
+      {enableHighAccuracy:false,timeout:8000,maximumAge:60000}
     );
   };
 
-  // 7. function render
-  function render() {
-    console.log('[RADAR] render executando, slots:', Object.keys(slots).length)
-    const agora = new Date()
-    const ds = dsEf(agora)
-    const hora = agora.getHours()
-    const minutos = agora.getMinutes(); 
-    const horaConsulta = minutos >= 55 ? hora + 1 : hora; 
-    const sl = slots[ds]
-    const sa = sl ? sl.find(s=>s.h===horaConsulta) : { h: horaConsulta, l:0, b:0 }
-    const total = sa ? (sa.l + sa.b) : 0
-    const c = cor(total)
-    const sc = score(total, distKm)
-    const proximas = sl ? sl.filter(s=>s.h>hora && (s.l+s.b)>0).slice(0,4) : []
-
-    const corridasPossiveis = Math.floor(60/TEMPO_CORRIDA)
-    const valorCorrida = tarifa ? (tarifa.valor||58.80) : 58.80
-    const valorMotorista = tarifa ? (tarifa.valor_motorista||(valorCorrida*COMISSAO)) : 48.22
-    const ganhoHora = Math.round(corridasPossiveis * valorMotorista)
-
-    const distInfo = distKm!==null
-      ? `📍 ${distKm.toFixed(1)}km do VIX ${distKm<=RAIO_KM?'✅':'⚠️ fora do raio'}`
-      : '📍 Toque em Localizar'
-
-    let recom = '', recomCor = '#374151';
-    if (distKm !== null && distKm > RAIO_KM) {
-      recom = 'Voce esta ' + Math.round(distKm) + 'km do VIX — fora do raio de ' + RAIO_KM + 'km.';
-      recomCor = '#7a3900';
-    } else if (total >= 1200) {
-      recom = '🚨 VÁ AO VIX AGORA! Alta demanda neste momento.';
-      recomCor = '#7f0000';
-    } else if (total >= 700) {
-      recom = '🔥 Vale se posicionar próximo ao VIX.';
-      recomCor = '#7a3900';
-    } else if (total >= 300) {
-      recom = '🌤 Demanda moderada. Monitore a próxima hora.';
-      recomCor = '#6d5c00';
-    } else {
-      recom = '🧊 Demanda baixa. Prefira corridas na cidade.';
-      recomCor = '#1b5e20';
-    }
-
-    const barW = Math.round(sc*10)
-    const barCor = sc>=8?'#dc2626':sc>=5?'#f97316':sc>=2?'#eab308':'#22c55e'
-
-    const proxHTML = proximas.length===0
-      ? '<p style="font-size:12px;color:#888;margin:0">Sem mais voos hoje.</p>'
-      : proximas.map(s=>{
-          const t=s.l+s.b, cc=cor(t)
-          const gp=Math.round(Math.floor(60/TEMPO_CORRIDA)*valorMotorista)
-          return `<div style="display:flex;align-items:center;justify-content:space-between; padding:8px 10px;background:${cc.bg};border:1px solid ${cc.br}; border-radius:10px;margin-bottom:6px;">
-            <span style="font-size:13px;font-weight:600;color:${cc.tx};">${pad(s.h)}h</span>
-            <span style="font-size:11px;color:${cc.tx};">
-              ↑${s.l>0?s.l.toLocaleString('pt-BR'):'—'} • ↓${s.b>0?s.b.toLocaleString('pt-BR'):'—'} pax
-            </span>
-            <span style="font-size:11px;font-weight:600;color:${cc.tx};">~R$${gp}</span>
-          </div>`
-        }).join('')
-
-    const semanaHTML = diasAbrev.map((nm,i)=>{
-      const d=new Date(agora); d.setDate(agora.getDate()+((i-agora.getDay()+7)%7))
-      const tot=totalDia[dsEf(d)] || 0
-      const ehHoje=i===agora.getDay()
-      const cc=cor(tot/5)
-      return `<div style="background:${ehHoje?cc.bg:'#f9fafb'}; border:${ehHoje?'2px solid '+cc.br:'1px solid #e5e7eb'}; border-radius:8px;padding:6px 2px;text-align:center;">
-        <div style="font-size:10px;font-weight:600;color:${ehHoje?cc.tx:'#6b7280'};">${nm}</div>
-        <div style="font-size:11px;color:${ehHoje?cc.tx:'#374151'}; font-weight:${ehHoje?'700':'400'};">${(tot/1000).toFixed(1)}k</div>
-      </div>`
-    }).join('')
-
-    container.innerHTML = `
-      <div style="background:${c.bg};border:1px solid ${c.br};border-radius:16px;padding:16px;margin-bottom:10px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-          <span style="font-size:11px;color:${c.tx};opacity:.8;">
-            ${agora.getDate()}/${agora.getMonth()+1} — ${diasAbrev[agora.getDay()]} ${pad(hora)}h${pad(agora.getMinutes())}
-          </span>
-          <span style="font-size:11px;color:${c.tx};">${distInfo}</span>
-        </div>
-        <div style="font-size:22px;font-weight:700;color:${c.tx};">${c.ic} ${c.lb.charAt(0).toUpperCase()+c.lb.slice(1)}</div>
-        <div style="font-size:12px;color:${c.tx};margin:2px 0 10px;">
-          ${total.toLocaleString('pt-BR')} passageiros estimados • ${distKm!==null && distKm<=RAIO_KM?'você está no raio':'ative o GPS'}
-        </div>
-
-        <div style="font-size:11px;color:${c.tx};opacity:.8;margin-bottom:3px;">Score de oportunidade</div>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-          <div style="flex:1;background:rgba(0,0,0,0.1);border-radius:4px;height:8px;">
-            <div style="width:${barW}%;background:${barCor};height:8px;border-radius:4px;"></div>
-          </div>
-          <span style="font-size:14px;font-weight:700;color:${c.tx};min-width:40px;">${sc}/10</span>
-        </div>
-
-        <div style="font-size:13px;font-weight:600;color:${recomCor};margin-bottom:12px;">${recom}</div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <div style="background:rgba(255,255,255,0.6);border-radius:10px;padding:10px;text-align:center;">
-            <div style="font-size:10px;color:${c.tx};opacity:.8;">Levar ao VIX</div>
-            <div style="font-size:18px;font-weight:700;color:${c.tx};">${sa && sa.l>0?sa.l.toLocaleString('pt-BR'):'—'}</div>
-            <div style="font-size:10px;color:${c.tx};opacity:.7;">pax embarque</div>
-          </div>
-          <div style="background:rgba(255,255,255,0.6);border-radius:10px;padding:10px;text-align:center;">
-            <div style="font-size:10px;color:${c.tx};opacity:.8;">Buscar no VIX</div>
-            <div style="font-size:18px;font-weight:700;color:${c.tx};">${sa && sa.b>0?sa.b.toLocaleString('pt-BR'):'—'}</div>
-            <div style="font-size:10px;color:${c.tx};opacity:.7;">pax desembarque</div>
-          </div>
-        </div>
-
-        <div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(0,0,0,0.1);">
-          <div style="font-size:11px;color:${c.tx};opacity:.8;">Estimativa financeira (~${DIST_TIPICA}km)</div>
-          <div style="font-size:13px;color:${c.tx};margin-top:2px;">
-            Corrida: <strong>R$ ${valorCorrida.toFixed(2)}</strong> →
-            sua parte: <strong>R$ ${valorMotorista.toFixed(2)}</strong>
-          </div>
-          <div style="font-size:13px;color:${c.tx};">
-            Esta hora: <strong>~${corridasPossiveis} corridas • R$ ${ganhoHora}</strong>
-          </div>
-        </div>
-      </div>
-
-      <div style="background:white;border:1px solid #e5e7eb;border-radius:16px;padding:16px;margin-bottom:10px;">
-        <div style="font-size:13px;font-weight:600;color:#111;margin-bottom:10px;">Próximas janelas hoje</div>
-        ${proxHTML}
-      </div>
-
-      <div style="background:white;border:1px solid #e5e7eb;border-radius:16px;padding:16px;margin-bottom:10px;">
-        <div style="font-size:13px;font-weight:600;color:#111;margin-bottom:10px;">Resumo da semana</div>
-        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;">${semanaHTML}</div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;"> 
-        <button data-action="gps" 
-          class="w-full bg-white border border-gray-300 rounded-xl py-3 text-sm font-semibold text-gray-700 active:bg-gray-100"> 
-          📍 Localizar GPS 
-        </button> 
-        <button data-action="atualizar" 
-          class="w-full bg-white border border-gray-300 rounded-xl py-3 text-sm font-semibold text-gray-700 active:bg-gray-100"> 
-          🔄 Atualizar 
-        </button> 
-      </div>
-    `
-  }
-
-  // 6. window._atualizarRadar (após declarar render)
-  window._atualizarRadar = render
-
-  // 8. await buscarTarifa()
-  await buscarTarifa()
-
-  const slotsHC = { 
-    0:[{h:6,l:638,b:415},{h:7,l:372,b:267},{h:8,l:335,b:335}, 
-        {h:9,l:155,b:112},{h:10,l:112,b:155},{h:11,l:155,b:148}, 
-        {h:12,l:296,b:303},{h:13,l:148,b:451},{h:14,l:458,b:0}, 
-        {h:15,l:267,b:570},{h:16,l:451,b:408},{h:17,l:260,b:310}, 
-        {h:18,l:155,b:0},{h:20,l:0,b:303},{h:21,l:0,b:403},{h:22,l:0,b:118}], 
-    1:[{h:6,l:451,b:595},{h:7,l:595,b:155},{h:8,l:490,b:490}, 
-        {h:9,l:155,b:0},{h:10,l:112,b:112},{h:11,l:303,b:712}, 
-        {h:12,l:409,b:180},{h:13,l:0,b:310},{h:14,l:310,b:0}, 
-        {h:15,l:335,b:267},{h:16,l:551,b:587},{h:17,l:260,b:422}, 
-        {h:18,l:465,b:0},{h:19,l:0,b:148},{h:20,l:0,b:559}, 
-        {h:21,l:0,b:1123},{h:22,l:0,b:458}], 
-    2:[{h:6,l:898,b:1021},{h:7,l:829,b:601},{h:8,l:911,b:583}, 
-        {h:9,l:310,b:0},{h:10,l:0,b:224},{h:11,l:677,b:1306}, 
-        {h:12,l:853,b:298},{h:13,l:0,b:310},{h:14,l:1098,b:980}, 
-        {h:15,l:714,b:707},{h:16,l:631,b:562},{h:17,l:669,b:720}, 
-        {h:18,l:310,b:0},{h:19,l:0,b:112},{h:20,l:0,b:862}, 
-        {h:21,l:0,b:665},{h:22,l:0,b:391}], 
-    3:[{h:6,l:1078,b:650},{h:7,l:972,b:744},{h:8,l:613,b:761}, 
-        {h:9,l:458,b:0},{h:10,l:0,b:224},{h:11,l:714,b:1553}, 
-        {h:12,l:1063,b:148},{h:13,l:0,b:613},{h:14,l:613,b:155}, 
-        {h:15,l:415,b:558},{h:16,l:589,b:847},{h:17,l:816,b:732}, 
-        {h:18,l:155,b:0},{h:20,l:0,b:416},{h:21,l:0,b:558}], 
-    4:[{h:6,l:483,b:390},{h:7,l:533,b:478},{h:8,l:483,b:458}, 
-        {h:9,l:155,b:0},{h:10,l:112,b:112},{h:11,l:267,b:779}, 
-        {h:12,l:624,b:180},{h:13,l:0,b:303},{h:14,l:638,b:310}, 
-        {h:15,l:155,b:260},{h:16,l:408,b:444},{h:17,l:408,b:422}, 
-        {h:18,l:155,b:0},{h:20,l:0,b:421},{h:21,l:0,b:410},{h:22,l:0,b:148}], 
-    5:[{h:6,l:483,b:303},{h:7,l:148,b:451},{h:8,l:729,b:458}, 
-        {h:9,l:155,b:0},{h:10,l:0,b:292},{h:11,l:292,b:421}, 
-        {h:12,l:569,b:328},{h:13,l:0,b:310},{h:14,l:490,b:155}, 
-        {h:15,l:155,b:112},{h:16,l:378,b:414},{h:17,l:148,b:570}, 
-        {h:18,l:415,b:0},{h:20,l:0,b:298},{h:21,l:0,b:528},{h:22,l:0,b:148}], 
-    6:[{h:6,l:310,b:267},{h:7,l:260,b:260},{h:8,l:155,b:793}, 
-        {h:9,l:638,b:112},{h:11,l:148,b:444},{h:12,l:296,b:180}, 
-        {h:13,l:0,b:155},{h:14,l:155,b:0},{h:15,l:180,b:415}, 
-        {h:16,l:595,b:471},{h:17,l:291,b:155}, 
-        {h:19,l:0,b:118},{h:20,l:0,b:155},{h:21,l:0,b:255},{h:22,l:0,b:148}] 
-  }; 
-  const totHC = {0:3323,1:9547,2:16481,3:14282,4:7637,5:6991,6:5196}; 
- 
-  for (let dia=0; dia<=6; dia++) { 
-    slots[dia] = slotsHC[dia] || []; 
-    totalDia[dia] = totHC[dia] || 0; 
-  } 
- 
-  fetch('/api/analytics/demanda-vix').then(r=>{ 
-    if(!r.ok) return; 
-    return r.json(); 
-  }).then(d=>{ 
-    if(!d||!d.voos_detalhe||d.voos_detalhe.length===0) return; 
-    const grupos={}; 
-    d.voos_detalhe.forEach(v=>{ 
-      const k=`${v.dia_semana}-${v.hora_slot}`; 
-      if(!grupos[k]) grupos[k]={h:v.hora_slot,l:0,b:0}; 
-      if(v.tipo==='partida') grupos[k].l+=v.pax_estimado||0; 
-      if(v.tipo==='chegada') grupos[k].b+=v.pax_estimado||0; 
-    }); 
-    for(let dia=0;dia<=6;dia++){ 
-      slots[dia]=[]; 
-      totalDia[dia]=0; 
-      for(let h=0;h<=23;h++){ 
-        const k=`${dia}-${h}`; 
-        const g=grupos[k]||{h,l:0,b:0}; 
-        if(g.l>0||g.b>0){ 
-          slots[dia].push(g); 
-          totalDia[dia]+=g.l+g.b; 
-        } 
-      } 
-    } 
-    render(); 
-  }).catch(()=>{});
-
-  // 10. render()
-  console.log('[RADAR] chamando render...')
-  render()
-  
-  // 11. timer = setInterval(render, 60000)
-  if (timerRadar) clearInterval(timerRadar)
-  timerRadar = setInterval(render, 60000)
-  
-  // 12. window._gpsRadar()
-  window._gpsRadar()
+  renderRadar();
+  setInterval(renderRadar, 60000);
+  window.radarGPS();
 }
-// 🔹 RADAR VIX - FIM
 
 // Verificar agendamentos disponíveis a cada 60 segundos 
 setInterval(verificarAgendamentosDisponiveis, 60000) 
