@@ -48,7 +48,7 @@ async function getCapacity(aircraftType) {
 async function fetchFlights(tipo, startDate, endDate) {
   const ep  = tipo === 'chegada' ? 'arrivals' : 'departures';
   const url = `${AEROAPI_BASE}/airports/${AIRPORT}/flights/${ep}` +
-              `?start=${formatDate(startDate)}&end=${formatDate(endDate)}&max_pages=1`;
+              `?start=${formatDate(startDate)}&end=${formatDate(endDate)}&type=Airline&max_pages=3`;
   const res = await fetch(url, { headers: { 'x-apikey': API_KEY } });
   if (!res.ok) throw new Error(`AeroAPI ${res.status}: ${await res.text()}`);
   const data = await res.json();
