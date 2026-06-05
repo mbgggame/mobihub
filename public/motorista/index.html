@@ -2706,8 +2706,9 @@ async function iniciarRadarVIX() {
   const container = document.getElementById('conteudo-radar-vix')
   if (!container) return
 
-  // MUDANÇA 2 — Event delegation
-  container.addEventListener('click', function(e) { 
+  // MUDANÇA 2 — Event delegation (moved to tab-radar, which is fixed
+  const tabRadar = document.getElementById('tab-radar'); 
+  tabRadar.addEventListener('click', function(e) { 
     const btn = e.target.closest('[data-action]'); 
     if (!btn) return; 
     const action = btn.getAttribute('data-action'); 
