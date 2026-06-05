@@ -2705,6 +2705,16 @@ function iniciarRadarVIX() {
   function hav(a,b,c,e){const R=6371,dL=(c-a)*Math.PI/180,dO=(e-b)*Math.PI/180;const x=Math.sin(dL/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dO/2)**2;return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));}
   function cor(t){if(!t)return{bg:'#f5f5f5',tx:'#888',br:'#ddd',lb:'sem voos',ic:''};if(t<300)return{bg:'#e8f5e9',tx:'#1b5e20',br:'#a5d6a7',lb:'Demanda baixa',ic:'🧊'};if(t<700)return{bg:'#fff9c4',tx:'#6d5c00',br:'#f9e87f',lb:'Demanda moderada',ic:'🌤'};if(t<1200)return{bg:'#ffe0b2',tx:'#7a3900',br:'#ffb74d',lb:'Alta demanda',ic:'🔥'};return{bg:'#ef9f9f',tx:'#7f0000',br:'#e57373',lb:'Alta demanda',ic:'🚨'};}
 
+  window.radarAtualizar = function(){ renderRadar(); };
+  window.radarGPS = function(){
+    if(!navigator.geolocation){ renderRadar(); return; }
+    navigator.geolocation.getCurrentPosition(
+      function(pos){ distKm=hav(pos.coords.latitude,pos.coords.longitude,VIX_LAT,VIX_LON); renderRadar(); },
+      function(){ renderRadar(); },
+      {enableHighAccuracy:false,timeout:8000,maximumAge:60000}
+    );
+  };
+
   function renderRadar() {
     const agora = new Date();
     const ds = agora.getDay();
@@ -2751,7 +2761,7 @@ function iniciarRadarVIX() {
       +'</div>'
       +'<div id="radar-btns" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"></div>';
 
-    const btnDiv = document.getElementById('radar-btns'); 
+    const btnDiv = container.querySelector('#radar-btns'); 
     if (btnDiv) { 
       const b1 = document.createElement('button'); 
       b1.textContent = '📍 Localizar GPS'; 
@@ -2767,16 +2777,6 @@ function iniciarRadarVIX() {
       btnDiv.appendChild(b2); 
     } 
   }
-
-  window.radarAtualizar = function(){ renderRadar(); };
-  window.radarGPS = function(){
-    if(!navigator.geolocation){ renderRadar(); return; }
-    navigator.geolocation.getCurrentPosition(
-      function(pos){ distKm=hav(pos.coords.latitude,pos.coords.longitude,VIX_LAT,VIX_LON); renderRadar(); },
-      function(){ renderRadar(); },
-      {enableHighAccuracy:false,timeout:8000,maximumAge:60000}
-    );
-  };
 
   renderRadar();
   setInterval(renderRadar, 60000);
