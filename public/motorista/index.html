@@ -2706,15 +2706,17 @@ async function iniciarRadarVIX() {
   const container = document.getElementById('conteudo-radar-vix')
   if (!container) return
 
-  // MUDANÇA 2 — Event delegation (moved to tab-radar, which is fixed
-  const tabRadar = document.getElementById('tab-radar'); 
-  tabRadar.addEventListener('click', function(e) { 
-    const btn = e.target.closest('[data-action]'); 
-    if (!btn) return; 
-    const action = btn.getAttribute('data-action'); 
-    if (action === 'gps') window._gpsRadar(); 
-    if (action === 'atualizar') window._atualizarRadar(); 
-  }); 
+  // Event delegation attached to tab-painel (fixed container)
+  const tabPainel = document.getElementById('tab-painel'); 
+  if (tabPainel) {
+    tabPainel.addEventListener('click', function(e) { 
+      const btn = e.target.closest('[data-action]'); 
+      if (!btn) return; 
+      const action = btn.getAttribute('data-action'); 
+      if (action === 'gps') window._gpsRadar(); 
+      if (action === 'atualizar') window._atualizarRadar(); 
+    }); 
+  }
 
   // 4. buscarLocalizacaoPorIP
   async function buscarLocalizacaoPorIP() {
