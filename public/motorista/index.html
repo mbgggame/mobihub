@@ -2850,17 +2850,32 @@ async function iniciarRadarVIX() {
 
   window._gpsRadar = function() {
     if (!navigator.geolocation) {
-      alert('GPS não disponível neste dispositivo.')
-      return
+      buscarLocalizacaoPorIP();
+      return;
     }
     navigator.geolocation.getCurrentPosition(
       pos => {
-        distKm = calcularDistanciaHaversine(pos.coords.latitude, pos.coords.longitude, VIX_LAT, VIX_LON)
-        render()
+        distKm = calcularDistanciaHaversine(pos.coords.latitude, pos.coords.longitude, VIX_LAT, VIX_LON);
+        render();
       },
-      () => alert('Não foi possível obter localização. Verifique as permissões.'),
-      { enableHighAccuracy: true, timeout: 10000 }
-    )
+      () => {
+        buscarLocalizacaoPorIP();
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
+    );
+  };
+
+  async function buscarLocalizacaoPorIP() {
+    try {
+      const r = await fetch('https://ipapi.co/json/');
+      const d = await r.json();
+      if (d.latitude && d.longitude) {
+        distKm = calcularDistanciaHaversine(d.latitude, d.longitude, VIX_LAT, VIX_LON);
+        render();
+      }
+    } catch(e) {
+      render();
+    }
   }
 
   await buscarTarifa()
