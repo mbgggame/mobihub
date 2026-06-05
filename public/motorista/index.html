@@ -2894,34 +2894,78 @@ async function iniciarRadarVIX() {
   // 8. await buscarTarifa()
   await buscarTarifa()
 
-  // 9. Busca os dados históricos e carrega slots/totalDia
-  try {
-    const r = await fetch('/api/analytics/demanda-vix')
-    if (r.ok) {
-      const d = await r.json()
-      if (d.voos_detalhe) {
-        // Agrupa por dia e hora
-        const grupos = {}
-        d.voos_detalhe.forEach(v => {
-          const k = `${v.dia_semana}-${v.hora_slot}`
-          if (!grupos[k]) grupos[k] = { h:v.hora_slot, l:0, b:0 }
-          if (v.tipo === 'partida') grupos[k].l += v.pax_estimado || 0
-          if (v.tipo === 'chegada') grupos[k].b += v.pax_estimado || 0
-        })
-        // Monta o objeto slots
-        for (let dia=0; dia<=6; dia++) {
-          slots[dia] = []
-          totalDia[dia] = 0
-          for (let h=0; h<=23; h++) {
-            const k = `${dia}-${h}`
-            const g = grupos[k] || { h, l:0, b:0 }
-            slots[dia].push(g)
-            totalDia[dia] += g.l + g.b
-          }
-        }
-      }
-    }
-  } catch(e) {}
+  const slotsHC = { 
+    0:[{h:6,l:638,b:415},{h:7,l:372,b:267},{h:8,l:335,b:335}, 
+        {h:9,l:155,b:112},{h:10,l:112,b:155},{h:11,l:155,b:148}, 
+        {h:12,l:296,b:303},{h:13,l:148,b:451},{h:14,l:458,b:0}, 
+        {h:15,l:267,b:570},{h:16,l:451,b:408},{h:17,l:260,b:310}, 
+        {h:18,l:155,b:0},{h:20,l:0,b:303},{h:21,l:0,b:403},{h:22,l:0,b:118}], 
+    1:[{h:6,l:451,b:595},{h:7,l:595,b:155},{h:8,l:490,b:490}, 
+        {h:9,l:155,b:0},{h:10,l:112,b:112},{h:11,l:303,b:712}, 
+        {h:12,l:409,b:180},{h:13,l:0,b:310},{h:14,l:310,b:0}, 
+        {h:15,l:335,b:267},{h:16,l:551,b:587},{h:17,l:260,b:422}, 
+        {h:18,l:465,b:0},{h:19,l:0,b:148},{h:20,l:0,b:559}, 
+        {h:21,l:0,b:1123},{h:22,l:0,b:458}], 
+    2:[{h:6,l:898,b:1021},{h:7,l:829,b:601},{h:8,l:911,b:583}, 
+        {h:9,l:310,b:0},{h:10,l:0,b:224},{h:11,l:677,b:1306}, 
+        {h:12,l:853,b:298},{h:13,l:0,b:310},{h:14,l:1098,b:980}, 
+        {h:15,l:714,b:707},{h:16,l:631,b:562},{h:17,l:669,b:720}, 
+        {h:18,l:310,b:0},{h:19,l:0,b:112},{h:20,l:0,b:862}, 
+        {h:21,l:0,b:665},{h:22,l:0,b:391}], 
+    3:[{h:6,l:1078,b:650},{h:7,l:972,b:744},{h:8,l:613,b:761}, 
+        {h:9,l:458,b:0},{h:10,l:0,b:224},{h:11,l:714,b:1553}, 
+        {h:12,l:1063,b:148},{h:13,l:0,b:613},{h:14,l:613,b:155}, 
+        {h:15,l:415,b:558},{h:16,l:589,b:847},{h:17,l:816,b:732}, 
+        {h:18,l:155,b:0},{h:20,l:0,b:416},{h:21,l:0,b:558}], 
+    4:[{h:6,l:483,b:390},{h:7,l:533,b:478},{h:8,l:483,b:458}, 
+        {h:9,l:155,b:0},{h:10,l:112,b:112},{h:11,l:267,b:779}, 
+        {h:12,l:624,b:180},{h:13,l:0,b:303},{h:14,l:638,b:310}, 
+        {h:15,l:155,b:260},{h:16,l:408,b:444},{h:17,l:408,b:422}, 
+        {h:18,l:155,b:0},{h:20,l:0,b:421},{h:21,l:0,b:410},{h:22,l:0,b:148}], 
+    5:[{h:6,l:483,b:303},{h:7,l:148,b:451},{h:8,l:729,b:458}, 
+        {h:9,l:155,b:0},{h:10,l:0,b:292},{h:11,l:292,b:421}, 
+        {h:12,l:569,b:328},{h:13,l:0,b:310},{h:14,l:490,b:155}, 
+        {h:15,l:155,b:112},{h:16,l:378,b:414},{h:17,l:148,b:570}, 
+        {h:18,l:415,b:0},{h:20,l:0,b:298},{h:21,l:0,b:528},{h:22,l:0,b:148}], 
+    6:[{h:6,l:310,b:267},{h:7,l:260,b:260},{h:8,l:155,b:793}, 
+        {h:9,l:638,b:112},{h:11,l:148,b:444},{h:12,l:296,b:180}, 
+        {h:13,l:0,b:155},{h:14,l:155,b:0},{h:15,l:180,b:415}, 
+        {h:16,l:595,b:471},{h:17,l:291,b:155}, 
+        {h:19,l:0,b:118},{h:20,l:0,b:155},{h:21,l:0,b:255},{h:22,l:0,b:148}] 
+  }; 
+  const totHC = {0:3323,1:9547,2:16481,3:14282,4:7637,5:6991,6:5196}; 
+ 
+  for (let dia=0; dia<=6; dia++) { 
+    slots[dia] = slotsHC[dia] || []; 
+    totalDia[dia] = totHC[dia] || 0; 
+  } 
+ 
+  fetch('/api/analytics/demanda-vix').then(r=>{ 
+    if(!r.ok) return; 
+    return r.json(); 
+  }).then(d=>{ 
+    if(!d||!d.voos_detalhe||d.voos_detalhe.length===0) return; 
+    const grupos={}; 
+    d.voos_detalhe.forEach(v=>{ 
+      const k=`${v.dia_semana}-${v.hora_slot}`; 
+      if(!grupos[k]) grupos[k]={h:v.hora_slot,l:0,b:0}; 
+      if(v.tipo==='partida') grupos[k].l+=v.pax_estimado||0; 
+      if(v.tipo==='chegada') grupos[k].b+=v.pax_estimado||0; 
+    }); 
+    for(let dia=0;dia<=6;dia++){ 
+      slots[dia]=[]; 
+      totalDia[dia]=0; 
+      for(let h=0;h<=23;h++){ 
+        const k=`${dia}-${h}`; 
+        const g=grupos[k]||{h,l:0,b:0}; 
+        if(g.l>0||g.b>0){ 
+          slots[dia].push(g); 
+          totalDia[dia]+=g.l+g.b; 
+        } 
+      } 
+    } 
+    render(); 
+  }).catch(()=>{});
 
   // 10. render()
   render()
