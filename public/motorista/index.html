@@ -2688,7 +2688,7 @@ async function confirmarPresencaAlerta() {
 
 function iniciarRadarVIX() {
   const container = document.getElementById('conteudo-radar-vix'); 
-  console.log('[RADAR] container:', !!container, 'ok:', container?.dataset?.ok, 'display:', document.getElementById('conteudo-principal')?.classList?.contains('hidden'));
+  if (container) container.innerHTML = '<p style="font-size:11px;color:red;">DEBUG: iniciarRadarVIX executou. ok=' + container.dataset.ok + ' principal_hidden=' + document.getElementById("conteudo-principal").classList.contains("hidden") + '</p>';
   if (!container) return;
   if (container.dataset.ok === '1') { window._renderRadar && window._renderRadar(); return; }
   container.dataset.ok = '1';
