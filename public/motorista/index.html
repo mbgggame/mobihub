@@ -1270,6 +1270,7 @@ async function carregar() {
          document.getElementById('modal-termos').classList.add('hidden') 
          document.getElementById('modal-termos').style.display = 'none' 
          document.getElementById('conteudo-principal').classList.remove('hidden') 
+         setTimeout(iniciarRadarVIX, 500)
          // Atualiza os dados do driver em memória para evitar reload com cache 
          if (window.driverData) { 
            console.log('[DEBUG] Updating window.driverData')
