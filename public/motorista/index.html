@@ -2769,7 +2769,14 @@ setInterval(verificarAgendamentosDisponiveis, 60000)
 
  carregar() 
  // Inicia o Radar VIX assim que o app carregar
- setTimeout(iniciarRadarVIX, 1000) 
+ setTimeout(function() { 
+   var el = document.getElementById('conteudo-radar-vix'); 
+   if (el) { 
+     iniciarRadarVIX(); 
+   } else { 
+     setTimeout(iniciarRadarVIX, 2000); 
+   } 
+ }, 1000) 
  verificarAgendamentosDisponiveis()
  setTimeout(polling, 3000) 
 </script> 
