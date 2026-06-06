@@ -459,9 +459,8 @@
     <div id="conteudo-radar-vix">
       <p class="text-sm text-gray-500">Carregando...</p>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;">
-      <button onclick="radarGPS()" style="background:white;border:1px solid #d1d5db;border-radius:12px;padding:12px;font-size:13px;font-weight:600;color:#374151;width:100%;">📍 Localizar GPS</button>
-      <button onclick="radarAtualizar()" style="background:white;border:1px solid #d1d5db;border-radius:12px;padding:12px;font-size:13px;font-weight:600;color:#374151;width:100%;">🔄 Atualizar</button>
+    <div style="margin-top:8px;text-align:right;"> 
+      <button onclick="radarAtualizar()" style="background:white;border:1px solid #d1d5db;border-radius:12px;padding:8px 16px;font-size:12px;font-weight:600;color:#374151;">🔄 Atualizar</button> 
     </div>
   </div>
   <!-- INDICAÇÕES -->
@@ -2777,8 +2776,14 @@ function iniciarRadarVIX() {
   window._renderRadar = renderRadar;
 
   renderRadar();
-  setInterval(renderRadar, 60000);
-  radarGPS();
+  setInterval(function(){ 
+    if(typeof minhaPos!=='undefined'&&minhaPos&&minhaPos.lat){ 
+      var R=6371,dL=(-20.2581-minhaPos.lat)*Math.PI/180,dO=(-40.2860-minhaPos.lng)*Math.PI/180; 
+      var a=Math.sin(dL/2)*Math.sin(dL/2)+Math.cos(minhaPos.lat*Math.PI/180)*Math.cos(-20.2581*Math.PI/180)*Math.sin(dO/2)*Math.sin(dO/2); 
+      window._radarDist=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)); 
+    } 
+    renderRadar(); 
+  }, 30000);
 }
 
 // Verificar agendamentos disponíveis a cada 60 segundos 
