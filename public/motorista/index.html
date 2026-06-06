@@ -2689,7 +2689,7 @@ async function confirmarPresencaAlerta() {
 function iniciarRadarVIX() {
   const container = document.getElementById('conteudo-radar-vix');
   if (!container) return;
-  if (container.dataset.ok === '1') return;
+  if (container.dataset.ok === '1') { renderRadar(); return; }
   container.dataset.ok = '1';
 
   const VIX_LAT = -20.2581, VIX_LON = -40.2860, RAIO_KM = 20;
