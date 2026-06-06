@@ -2687,7 +2687,8 @@ async function confirmarPresencaAlerta() {
 }
 
 function iniciarRadarVIX() {
-  const container = document.getElementById('conteudo-radar-vix');
+  const container = document.getElementById('conteudo-radar-vix'); 
+  console.log('[RADAR] container:', !!container, 'ok:', container?.dataset?.ok, 'display:', document.getElementById('conteudo-principal')?.classList?.contains('hidden'));
   if (!container) return;
   if (container.dataset.ok === '1') { window._renderRadar && window._renderRadar(); return; }
   container.dataset.ok = '1';
