@@ -925,13 +925,28 @@ socket.on('agendamento:alerta_30min', (data) => {
  function moeda(val) { return `R$ ${Number(val || 0).toFixed(2)}` } 
 
  function radarGPS() { 
+   if (typeof minhaPos !== 'undefined' && minhaPos && minhaPos.lat) { 
+     var R=6371; 
+     var dL=(-20.2581-minhaPos.lat)*Math.PI/180; 
+     var dO=(-40.2860-minhaPos.lng)*Math.PI/180; 
+     var a=Math.sin(dL/2)*Math.sin(dL/2)+ 
+           Math.cos(minhaPos.lat*Math.PI/180)* 
+           Math.cos(-20.2581*Math.PI/180)* 
+           Math.sin(dO/2)*Math.sin(dO/2); 
+     window._radarDist=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)); 
+     radarAtualizar(); 
+     return; 
+   } 
    if (!navigator.geolocation) { radarAtualizar(); return; } 
    navigator.geolocation.getCurrentPosition( 
      function(pos) { 
        var R=6371; 
        var dL=(-20.2581-pos.coords.latitude)*Math.PI/180; 
        var dO=(-40.2860-pos.coords.longitude)*Math.PI/180; 
-       var a=Math.sin(dL/2)*Math.sin(dL/2)+Math.cos(pos.coords.latitude*Math.PI/180)*Math.cos(-20.2581*Math.PI/180)*Math.sin(dO/2)*Math.sin(dO/2); 
+       var a=Math.sin(dL/2)*Math.sin(dL/2)+ 
+             Math.cos(pos.coords.latitude*Math.PI/180)* 
+             Math.cos(-20.2581*Math.PI/180)* 
+             Math.sin(dO/2)*Math.sin(dO/2); 
        window._radarDist=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)); 
        radarAtualizar(); 
      }, 
