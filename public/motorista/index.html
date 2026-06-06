@@ -2724,13 +2724,13 @@ function iniciarRadarVIX() {
     const ganho = Math.round(Math.floor(60/TEMPO_CORRIDA) * 48.22);
 
     let recom='';
-    if(window._radarDist!==null&&window._radarDist>RAIO_KM) recom='Voce esta '+Math.round(window._radarDist)+'km do VIX — fora do raio.';
+    if(window._radarDist!=null&&window._radarDist>RAIO_KM) recom='Voce esta '+Math.round(window._radarDist)+'km do VIX — fora do raio.';
     else if(total>=1200) recom='🚨 VÁ AO VIX AGORA! Alta demanda.';
     else if(total>=700) recom='🔥 Vale se posicionar próximo ao VIX.';
     else if(total>=300) recom='🌤 Demanda moderada. Monitore a próxima hora.';
     else recom='🧊 Demanda baixa. Prefira corridas na cidade.';
 
-    const distInfo = window._radarDist!==null ? '📍 '+window._radarDist.toFixed(1)+'km do VIX '+(window._radarDist<=RAIO_KM?'✅':'⚠️') : '📍 Toque em Localizar';
+    const distInfo = window._radarDist!=null ? '📍 '+window._radarDist.toFixed(1)+'km do VIX '+(window._radarDist<=RAIO_KM?'✅':'⚠️') : '📍 Toque em Localizar';
 
     const proxHTML = proximas.length===0
       ? '<p style="font-size:12px;color:#888;margin:0;">Sem mais voos hoje.</p>'
