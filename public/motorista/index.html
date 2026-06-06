@@ -1223,27 +1223,7 @@ async function carregar() {
   } 
  } 
 
- function inicializarScrollTermos() { 
-   const scrollDiv = document.getElementById('scroll-termos'); 
-   if (!scrollDiv) return; 
-   
-   function checarScroll() { 
-     const chegouFim = scrollDiv.scrollTop + scrollDiv.clientHeight >= scrollDiv.scrollHeight - 10; 
-     if (chegouFim) { 
-       scrollDiv.removeEventListener('scroll', checarScroll); 
-       document.getElementById('check-termos-gerais').disabled = false; 
-       document.getElementById('check-arbitragem').disabled = false; 
-       verificarAceiteTermos(); 
-     } 
-   } 
-   
-   // Desabilitar checkboxes até rolar 
-   document.getElementById('check-termos-gerais').disabled = true; 
-   document.getElementById('check-arbitragem').disabled = true; 
-   
-   scrollDiv.addEventListener('scroll', checarScroll); 
-   checarScroll(); // verifica se já está no fim 
- } 
+ function inicializarScrollTermos() {} 
 
  async function aceitarTermos() { 
      console.log('[DEBUG] aceitarTermos() called')
