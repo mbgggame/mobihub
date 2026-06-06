@@ -459,6 +459,10 @@
     <div id="conteudo-radar-vix">
       <p class="text-sm text-gray-500">Carregando...</p>
     </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;">
+      <button onclick="radarGPS()" style="background:white;border:1px solid #d1d5db;border-radius:12px;padding:12px;font-size:13px;font-weight:600;color:#374151;width:100%;">📍 Localizar GPS</button>
+      <button onclick="radarAtualizar()" style="background:white;border:1px solid #d1d5db;border-radius:12px;padding:12px;font-size:13px;font-weight:600;color:#374151;width:100%;">🔄 Atualizar</button>
+    </div>
   </div>
   <!-- INDICAÇÕES -->
   <div id="card-indicacoes" class="bg-white border border-gray-200 rounded-xl p-4">
@@ -2689,7 +2693,6 @@ function iniciarRadarVIX() {
 
   const VIX_LAT = -20.2581, VIX_LON = -40.2860, RAIO_KM = 20;
   const COMISSAO = 0.82, TEMPO_CORRIDA = 25;
-  let distKm = null;
 
   const SL = {
     0:[{h:6,l:638,b:415},{h:7,l:372,b:267},{h:8,l:335,b:335},{h:9,l:155,b:112},{h:10,l:112,b:155},{h:11,l:155,b:148},{h:12,l:296,b:303},{h:13,l:148,b:451},{h:14,l:458,b:0},{h:15,l:267,b:570},{h:16,l:451,b:408},{h:17,l:260,b:310},{h:18,l:155,b:0},{h:20,l:0,b:303},{h:21,l:0,b:403},{h:22,l:0,b:118}],
@@ -2705,16 +2708,6 @@ function iniciarRadarVIX() {
   function hav(a,b,c,e){const R=6371,dL=(c-a)*Math.PI/180,dO=(e-b)*Math.PI/180;const x=Math.sin(dL/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dO/2)**2;return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));}
   function cor(t){if(!t)return{bg:'#f5f5f5',tx:'#888',br:'#ddd',lb:'sem voos',ic:''};if(t<300)return{bg:'#e8f5e9',tx:'#1b5e20',br:'#a5d6a7',lb:'Demanda baixa',ic:'🧊'};if(t<700)return{bg:'#fff9c4',tx:'#6d5c00',br:'#f9e87f',lb:'Demanda moderada',ic:'🌤'};if(t<1200)return{bg:'#ffe0b2',tx:'#7a3900',br:'#ffb74d',lb:'Alta demanda',ic:'🔥'};return{bg:'#ef9f9f',tx:'#7f0000',br:'#e57373',lb:'Alta demanda',ic:'🚨'};}
 
-  window.radarAtualizar = function(){ renderRadar(); };
-  window.radarGPS = function(){
-    if(!navigator.geolocation){ renderRadar(); return; }
-    navigator.geolocation.getCurrentPosition(
-      function(pos){ distKm=hav(pos.coords.latitude,pos.coords.longitude,VIX_LAT,VIX_LON); renderRadar(); },
-      function(){ renderRadar(); },
-      {enableHighAccuracy:false,timeout:8000,maximumAge:60000}
-    );
-  };
-
   function renderRadar() {
     const agora = new Date();
     const ds = agora.getDay();
@@ -2729,13 +2722,13 @@ function iniciarRadarVIX() {
     const ganho = Math.round(Math.floor(60/TEMPO_CORRIDA) * 48.22);
 
     let recom='';
-    if(distKm!==null&&distKm>RAIO_KM) recom='Voce esta '+Math.round(distKm)+'km do VIX — fora do raio.';
+    if(window._radarDistKm!==null&&window._radarDistKm>RAIO_KM) recom='Voce esta '+Math.round(window._radarDistKm)+'km do VIX — fora do raio.';
     else if(total>=1200) recom='🚨 VÁ AO VIX AGORA! Alta demanda.';
     else if(total>=700) recom='🔥 Vale se posicionar próximo ao VIX.';
     else if(total>=300) recom='🌤 Demanda moderada. Monitore a próxima hora.';
     else recom='🧊 Demanda baixa. Prefira corridas na cidade.';
 
-    const distInfo = distKm!==null ? '📍 '+distKm.toFixed(1)+'km do VIX '+(distKm<=RAIO_KM?'✅':'⚠️') : '📍 Toque em Localizar';
+    const distInfo = window._radarDistKm!==null ? '📍 '+window._radarDistKm.toFixed(1)+'km do VIX '+(window._radarDistKm<=RAIO_KM?'✅':'⚠️') : '📍 Toque em Localizar';
 
     const proxHTML = proximas.length===0
       ? '<p style="font-size:12px;color:#888;margin:0;">Sem mais voos hoje.</p>'
@@ -2758,25 +2751,36 @@ function iniciarRadarVIX() {
       +'<div style="background:white;border:1px solid #e5e7eb;border-radius:16px;padding:16px;margin-bottom:10px;">'
       +'<div style="font-size:13px;font-weight:600;color:#111;margin-bottom:10px;">Próximas janelas hoje</div>'
       +proxHTML
-      +'</div>'
-      +'<div id="radar-btns" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">' 
-      +'<button id="btn-r-gps" style="background:white;border:1px solid #d1d5db;border-radius:12px;padding:12px;font-size:13px;font-weight:600;color:#374151;width:100%;">📍 Localizar GPS</button>' 
-      +'<button id="btn-r-atualizar" style="background:white;border:1px solid #d1d5db;border-radius:12px;padding:12px;font-size:13px;font-weight:600;color:#374151;width:100%;">🔄 Atualizar</button>' 
       +'</div>';
-
-    const bg = document.getElementById('btn-r-gps'); 
-    const ba = document.getElementById('btn-r-atualizar'); 
-    if(bg) bg.onclick = function(){ window.radarGPS(); }; 
-    if(ba) ba.onclick = function(){ window.radarAtualizar(); }; 
   }
+
+  window._renderRadar = renderRadar;
 
   renderRadar();
   setInterval(renderRadar, 60000);
-  window.radarGPS();
+  radarGPS();
 }
 
 // Verificar agendamentos disponíveis a cada 60 segundos 
 setInterval(verificarAgendamentosDisponiveis, 60000) 
+
+function radarGPS() {
+  if(!navigator.geolocation){ return; }
+  navigator.geolocation.getCurrentPosition(
+    function(pos){
+      window._radarDistKm = 6371*2*Math.atan2(
+        Math.sqrt(Math.sin(((pos.coords.latitude-(-20.2581))*Math.PI/180)/2)**2+Math.cos(pos.coords.latitude*Math.PI/180)*Math.cos(-20.2581*Math.PI/180)*Math.sin(((pos.coords.longitude-(-40.2860))*Math.PI/180)/2)**2),
+        Math.sqrt(1-Math.sin(((pos.coords.latitude-(-20.2581))*Math.PI/180)/2)**2-Math.cos(pos.coords.latitude*Math.PI/180)*Math.cos(-20.2581*Math.PI/180)*Math.sin(((pos.coords.longitude-(-40.2860))*Math.PI/180)/2)**2)
+      );
+      radarAtualizar();
+    },
+    function(){ radarAtualizar(); },
+    {enableHighAccuracy:false,timeout:8000,maximumAge:60000}
+  );
+}
+function radarAtualizar() {
+  if(window._renderRadar) window._renderRadar();
+}
 
  carregar() 
  // Inicia o Radar VIX assim que o app carregar
