@@ -42,31 +42,51 @@ export async function gerarCobrancaRestante(ride) {
   const restante = parseFloat((valorTotal - parseFloat(ride.sinal_valor)).toFixed(2))
   if (restante <= 0) return null
 
-  const dueDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-  const charge = await criarCobrancaAsaas(
-    restante,
-    `Saldo corrida MobiHub #${ride.id} - ${ride.origem} → ${ride.destino}`,
-    `restante_${ride.id}`,
-    dueDate
-  )
-  if (!charge?.id) return null
+  try {
+    const gatewayConfig = (await query('SELECT * FROM gateway_config LIMIT 1')).rows[0]
+    if (!gatewayConfig?.ativo || gatewayConfig?.gateway !== 'zighu') return null
 
-  const pixPayload = await buscarPixPayload(charge.id)
-  await query(
-    'UPDATE rides SET asaas_payment_id = $1, asaas_pix_payload = $2, pagamento_status = $3 WHERE id = $4',
-    [charge.id, pixPayload, 'aguardando_pagamento', ride.id]
-  )
-
-  const io = getIo()
-  if (io) {
-    io.to(`ride:${ride.id}`).emit('agendamento:cobranca_restante', {
-      rideId: ride.id,
-      valor_restante: restante,
-      pix_payload: pixPayload
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 15000)
+    const zighuRes = await fetch(`${gatewayConfig.url}/zighu/cobranca`, {
+      signal: controller.signal,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': gatewayConfig.api_key
+      },
+      body: JSON.stringify({
+        corrida_id: ride.id,
+        valor: restante,
+        motorista_id: ride.driver_id,
+        chave_pix: ride.chave_pix_motorista || null,
+        percentual_motorista: 82,
+        app_origem: 'mobihub'
+      })
     })
-  }
+    const zighuData = await zighuRes.json()
+    clearTimeout(timeout)
+    console.log('[ZIGHU RESTANTE] resposta:', JSON.stringify(zighuData))
 
-  return { charge_id: charge.id, pix_payload: pixPayload, valor_restante: restante }
+    if (zighuData.pix_copia_cola) {
+      await query(
+        'UPDATE rides SET zighu_payment_id = $1, zighu_pix_payload = $2, zighu_pix_qrcode = $3, pagamento_status = $4 WHERE id = $5',
+        [String(zighuData.cobranca_id), zighuData.pix_copia_cola, zighuData.qr_code, 'aguardando_pagamento', ride.id]
+      )
+      const io = getIo()
+      if (io) {
+        io.to(`ride:${ride.id}`).emit('agendamento:cobranca_restante', {
+          rideId: ride.id,
+          valor_restante: restante,
+          pix_payload: zighuData.pix_copia_cola
+        })
+      }
+      return { pix_payload: zighuData.pix_copia_cola, valor_restante: restante }
+    }
+  } catch(e) {
+    console.error('[ZIGHU RESTANTE] Erro:', e.message)
+  }
+  return null
 }
 
 export default async function agendamentosRoutes(fastify) {
