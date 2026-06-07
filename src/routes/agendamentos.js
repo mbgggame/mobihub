@@ -210,7 +210,7 @@ export default async function agendamentosRoutes(fastify) {
       WHERE r.tipo = 'agendada'
         AND r.status = 'agendada'
         AND r.sinal_pago = true
-        AND r.agendada_para > NOW()
+        AND r.agendada_para > NOW() AT TIME ZONE 'America/Sao_Paulo'
       ORDER BY r.agendada_para ASC
     `)).rows
 
@@ -223,7 +223,7 @@ export default async function agendamentosRoutes(fastify) {
       WHERE r.tipo = 'agendada'
         AND r.driver_id = $1
         AND r.status = 'agendada_aceita'
-        AND r.agendada_para > NOW()
+        AND r.agendada_para > NOW() AT TIME ZONE 'America/Sao_Paulo'
       ORDER BY r.agendada_para ASC
     `, [driver.id])).rows
 
@@ -267,7 +267,7 @@ export default async function agendamentosRoutes(fastify) {
       const disponiveis = (await query(` 
         SELECT COUNT(*) as total FROM rides 
         WHERE tipo = 'agendada' AND status = 'agendada' 
-        AND sinal_pago = true AND driver_id IS NULL AND agendada_para > NOW() 
+        AND sinal_pago = true AND driver_id IS NULL AND agendada_para > NOW() AT TIME ZONE 'America/Sao_Paulo' 
       `)).rows[0] 
       io.emit('agendamentos:atualizar', { count: parseInt(disponiveis.total) }) 
     }
@@ -300,7 +300,7 @@ export default async function agendamentosRoutes(fastify) {
       const disponiveis = (await query(` 
         SELECT COUNT(*) as total FROM rides 
         WHERE tipo = 'agendada' AND status = 'agendada' 
-        AND sinal_pago = true AND driver_id IS NULL AND agendada_para > NOW() 
+        AND sinal_pago = true AND driver_id IS NULL AND agendada_para > NOW() AT TIME ZONE 'America/Sao_Paulo' 
       `)).rows[0] 
       io.emit('agendamentos:atualizar', { count: parseInt(disponiveis.total) }) 
     }
@@ -509,7 +509,7 @@ export default async function agendamentosRoutes(fastify) {
       const disponiveis = (await query(` 
         SELECT COUNT(*) as total FROM rides 
         WHERE tipo = 'agendada' AND status = 'agendada' 
-        AND sinal_pago = true AND driver_id IS NULL AND agendada_para > NOW() 
+        AND sinal_pago = true AND driver_id IS NULL AND agendada_para > NOW() AT TIME ZONE 'America/Sao_Paulo' 
       `)).rows[0] 
       io.emit('agendamentos:atualizar', { count: parseInt(disponiveis.total) }) 
     } 
