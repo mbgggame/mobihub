@@ -158,9 +158,12 @@ export default async function integracoesRoutes(fastify) {
       const ride = rideResult.rows[0]
       if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' })
 
-      // Verifica se é sinal de agendamento ou corrida completa
-      if (ride.tipo === 'agendada' && ride.sinal_pix_payload) {
-        // É sinal de agendamento
+      // Verifica se é sinal de agendamento ou corrida completa 
+    const isSinalAgendamento = ride.tipo === 'agendada' 
+      && ride.sinal_pix_payload 
+      && !ride.sinal_pago; 
+    if (isSinalAgendamento) { 
+      // É sinal de agendamento
         await query(
           "UPDATE rides SET sinal_pago = true, updated_at = CURRENT_TIMESTAMP WHERE id = $1",
           [corrida_id]
