@@ -857,6 +857,7 @@ socket.on('agendamentos:atualizar', (data) => {
   if (badge) { 
     badge.textContent = data.count || 0 
     badge.classList.toggle('hidden', !data.count) 
+    if (data.count > 0) tocarAgendamentoDisponivel(); 
   } 
 })
 
@@ -2195,9 +2196,10 @@ async function carregar() {
  function ignorarCorrida() { pararAudio(); document.getElementById('card-nova-corrida').classList.add('hidden') } 
  
  async function acaoCorridaAtiva(acao) { 
-   if (!corridaAtualId) return 
-   let url = '', method = 'PUT' 
-   if (acao === 'chegou') url = `/api/rides/${corridaAtualId}/motorista-chegou` 
+  if (!corridaAtualId) return 
+  let url = '', method = 'PUT' 
+  if (acao === 'chegou') tocarConfirmacao(); 
+  if (acao === 'chegou') url = `/api/rides/${corridaAtualId}/motorista-chegou` 
    else if (acao === 'embarcou') {
      url = `/api/motorista/${tokenMotorista}/embarcou/${corridaAtualId}`
      method = 'POST'
@@ -2504,6 +2506,43 @@ async function carregar() {
  function pararLocalizacao() { if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null } } 
  function desbloquearAudio() { const a = document.getElementById('audio-corrida'); a.volume = 0; a.play().then(() => { a.pause(); a.currentTime = 0; a.volume = 1; document.getElementById('card-audio-bloqueado').classList.add('hidden') }) } 
  
+ function tocarBeep(frequencia, duracao, volume) { 
+   try { 
+     const ctx = new (window.AudioContext || window.webkitAudioContext)(); 
+     const osc = ctx.createOscillator(); 
+     const gain = ctx.createGain(); 
+     osc.connect(gain); 
+     gain.connect(ctx.destination); 
+     osc.frequency.value = frequencia || 880; 
+     gain.gain.value = volume || 0.5; 
+     osc.start(); 
+     osc.stop(ctx.currentTime + (duracao || 0.3)); 
+     setTimeout(() => ctx.close(), (duracao || 0.3) * 1000 + 100); 
+   } catch(e) {} 
+ } 
+ 
+ function tocarAlerta() { 
+   // Alerta forte — novo agendamento ou 60min antes 
+   tocarBeep(880, 0.3, 0.8); 
+   setTimeout(() => tocarBeep(1100, 0.3, 0.8), 400); 
+   setTimeout(() => tocarBeep(880, 0.5, 0.8), 800); 
+ } 
+ 
+ function tocarConfirmacao() { 
+   // Som positivo — aceite ou chegada 
+   tocarBeep(523, 0.15, 0.5); 
+   setTimeout(() => tocarBeep(659, 0.15, 0.5), 180); 
+   setTimeout(() => tocarBeep(784, 0.3, 0.5), 360); 
+ } 
+ 
+ function tocarAgendamentoDisponivel() { 
+   // Som diferente para novo agendamento disponível 
+   tocarBeep(440, 0.2, 0.6); 
+   setTimeout(() => tocarBeep(550, 0.2, 0.6), 250); 
+   setTimeout(() => tocarBeep(440, 0.2, 0.6), 500); 
+   setTimeout(() => tocarBeep(550, 0.4, 0.6), 750); 
+ } 
+ 
  function fecharModalAgendamentos() { 
   document.getElementById('modal-agendamentos')?.classList.add('hidden') 
 } 
@@ -2566,6 +2605,7 @@ async function abrirModalAgendamentos() {
 } 
 
 async function aceitarAgendamento(id) { 
+  tocarConfirmacao(); 
   const r = await fetch(`/api/motorista/${tokenMotorista}/agendamentos/${id}/aceitar`, { method: 'POST' }) 
   const d = await r.json() 
   alert(d.mensagem || d.error) 
