@@ -462,6 +462,35 @@
     </div> 
   </div> 
 
+  <!-- MODAL POLÍTICA DE CANCELAMENTO --> 
+  <div id="modal-politica-cancelamento" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4"> 
+    <div class="bg-white rounded-2xl w-full max-w-sm p-6 space-y-4"> 
+      <div class="text-center"> 
+        <div class="text-4xl mb-2">📋</div> 
+        <h3 class="text-lg font-bold text-gray-900">Política de Cancelamento</h3> 
+      </div> 
+      <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 space-y-2"> 
+        <p class="text-sm text-yellow-800">⚠️ Ao confirmar o agendamento, você concorda com:</p> 
+        <ul class="text-sm text-yellow-700 space-y-1 list-disc list-inside"> 
+          <li>Cancelamento com mais de 1h de antecedência: <strong>sem taxa</strong></li> 
+          <li>Cancelamento com menos de 1h: <strong>taxa de R$ 10,00</strong></li> 
+          <li>Não comparecimento: <strong>cobrança integral</strong></li> 
+        </ul> 
+      </div> 
+      <p class="text-xs text-gray-500 text-center">O sinal de 30% é cobrado agora para confirmar sua reserva.</p> 
+      <div class="flex gap-3"> 
+        <button onclick="document.getElementById('modal-politica-cancelamento').classList.add('hidden')" 
+          class="flex-1 border border-gray-300 text-gray-600 rounded-xl py-3 text-sm font-medium"> 
+          Cancelar 
+        </button> 
+        <button onclick="confirmarAgendamentoComPolitica()" 
+          class="flex-1 bg-green-600 text-white rounded-xl py-3 text-sm font-bold"> 
+          ✅ Confirmar 
+        </button> 
+      </div> 
+    </div> 
+  </div> 
+
 </div> 
 <script> 
  console.log('[SOLICITAR] Página carregada') 
@@ -1296,8 +1325,12 @@ async function salvarCadastro() {
   if (pontos.origem && pontos.destino) await calcularDistancia() 
 } 
 
- async function solicitar() { 
-   const termosAceitos = localStorage.getItem('passageiro_termos_aceitos_2.0')
+ async function solicitar(confirmado = false) { 
+  if (tipoCorreida === 'agendada' && !confirmado) { 
+    document.getElementById('modal-politica-cancelamento').classList.remove('hidden'); 
+    return; 
+  } 
+  const termosAceitos = localStorage.getItem('passageiro_termos_aceitos_2.0')
    if (termosAceitos !== 'true') {
      alert('Por favor aceite os termos de uso antes de solicitar uma corrida!')
      verificarTermosPassageiro()
@@ -1453,6 +1486,11 @@ async function salvarCadastro() {
      btn.disabled = false 
      btn.textContent = 'Solicitar corrida' 
    } 
+ } 
+
+ async function confirmarAgendamentoComPolitica() { 
+  document.getElementById('modal-politica-cancelamento').classList.add('hidden'); 
+  await solicitar(true); 
  } 
 
  function copiarLink() { 
