@@ -494,12 +494,13 @@ export default async function publicRoutes(fastify) {
     if (!cpf) { 
       return reply.code(400).send({ error: 'CPF Ã© obrigatÃ³rio para solicitar uma corrida.' }) 
     } 
+    let agendadaParaDate = null
     if (tipo === 'agendada') { 
       if (!agendada_para) { 
         return reply.code(400).send({ error: 'Data/hora do agendamento Ã© obrigatÃ³ria' }) 
       } 
       // Frontend envia sem timezone â€” interpretar como horÃ¡rio de BrasÃ­lia (UTC-3) 
-      const agendadaParaDate = new Date(agendada_para + '-03:00') 
+      agendadaParaDate = new Date(agendada_para + '-03:00') 
       const agora = new Date() 
       
       // DiferenÃ§a em horas 
@@ -574,7 +575,7 @@ export default async function publicRoutes(fastify) {
     const result = await query(` 
       INSERT INTO rides (token, client_id, origem, origem_lat, origem_lng, destino, destino_lat, destino_lng, valor, valor_final, valor_motorista, valor_mobihub, tipo, agendada_para, status, forma_pagamento, sinal_valor, sinal_pago, desconto_aplicado) 
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING id 
-    `, [token, client.id, origem, origem_lat, origem_lng, destino, destino_lat, destino_lng, valor, valorFinal, valorMotorista, valorMobihub, tipo || 'normal', agendada_para || null, statusInicial, forma_pagamento || '1', sinalValor, false, valorDesconto])
+    `, [token, client.id, origem, origem_lat, origem_lng, destino, destino_lat, destino_lng, valor, valorFinal, valorMotorista, valorMobihub, tipo || 'normal', agendadaParaDate ? agendadaParaDate.toISOString() : null, statusInicial, forma_pagamento || '1', sinalValor, false, valorDesconto])
     
     // Mark discount as used if applicable
     if (hasDesconto) {
