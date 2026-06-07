@@ -439,6 +439,19 @@ export default async function agendamentosRoutes(fastify) {
     }
   })
 
+  // Passageiro lista seus agendamentos
+  fastify.get('/api/cliente/:clienteId/agendamentos', async (request, reply) => {
+    const agendamentos = (await query(`
+      SELECT r.id, r.token, r.origem, r.destino, r.valor, r.agendada_para, r.status,
+             d.nome as driver_nome
+      FROM rides r
+      LEFT JOIN drivers d ON r.driver_id = d.id
+      WHERE r.client_id = $1 AND r.tipo = 'agendada'
+      ORDER BY r.agendada_para DESC
+    `, [request.params.clienteId])).rows
+    return { agendamentos }
+  })
+
   // Admin: listar agendamentos
   fastify.get('/api/admin/agendamentos', { preHandler: requireAuth }, async (request, reply) => {
     const { status } = request.query
