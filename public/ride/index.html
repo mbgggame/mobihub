@@ -429,6 +429,52 @@
  let dadosAtuais = null
  let wakeLock = null
 
+ function tocarBeepPassageiro(frequencia, duracao, volume) {
+   try {
+     const ctx = new (window.AudioContext || window.webkitAudioContext)();
+     const osc = ctx.createOscillator();
+     const gain = ctx.createGain();
+     osc.connect(gain);
+     gain.connect(ctx.destination);
+     osc.frequency.value = frequencia || 880;
+     gain.gain.value = volume || 0.5;
+     osc.start();
+     osc.stop(ctx.currentTime + (duracao || 0.3));
+     setTimeout(() => ctx.close(), (duracao || 0.3) * 1000 + 100);
+   } catch(e) {}
+ }
+
+ function somMotoristAceitou() {
+   // Motorista encontrado!
+   tocarBeepPassageiro(523, 0.15, 0.6);
+   setTimeout(() => tocarBeepPassageiro(659, 0.15, 0.6), 180);
+   setTimeout(() => tocarBeepPassageiro(784, 0.3, 0.6), 360);
+ }
+
+ function somMotoristAcaminho() {
+   // Motorista a caminho
+   tocarBeepPassageiro(440, 0.2, 0.5);
+   setTimeout(() => tocarBeepPassageiro(660, 0.4, 0.5), 300);
+ }
+
+ function somMotoristChegou() {
+   // Motorista chegou — alerta forte
+   tocarBeepPassageiro(880, 0.2, 0.8);
+   setTimeout(() => tocarBeepPassageiro(880, 0.2, 0.8), 300);
+   setTimeout(() => tocarBeepPassageiro(1100, 0.4, 0.8), 600);
+ }
+
+ function somPagamentoConfirmado() {
+   // Pagamento confirmado — som positivo
+   tocarBeepPassageiro(523, 0.1, 0.5);
+   setTimeout(() => tocarBeepPassageiro(659, 0.1, 0.5), 150);
+   setTimeout(() => tocarBeepPassageiro(784, 0.1, 0.5), 300);
+   setTimeout(() => tocarBeepPassageiro(1047, 0.4, 0.5), 450);
+ }
+
+ let ultimoStatus = null
+ let ultimoPagamentoStatus = null
+
  function copiarPixPendente() {
    const txt = document.getElementById('txt-pix-pendente')
    txt.select()
@@ -455,6 +501,12 @@
    if (pendenteCard) pendenteCard.classList.add('hidden')
    if (confirmadoCard) confirmadoCard.classList.remove('hidden')
  }) 
+
+ // Listen for agendamento presenca confirmada
+ socket.on('agendamento:presenca_confirmada', (data) => {
+   console.log('[RIDE] Presença de agendamento confirmada recebida:', data)
+   somMotoristAcaminho()
+ })
  
  async function ativarWakeLock() { 
    try { 
@@ -613,6 +665,20 @@
  
  function renderizar(ride, rating, paradas, config) { 
    console.log('[RENDER] status:', ride.status, '| detalhe:', ride.status_detalhe) 
+
+   // Play sounds on status changes
+   if (ride.status !== ultimoStatus) {
+     if (ride.status === 'aceita') somMotoristAceitou();
+     if (ride.status_detalhe === 'aguardando_passageiro') somMotoristChegou();
+     ultimoStatus = ride.status;
+   }
+   
+   if (ride.pagamento_status === 'pago' && ultimoPagamentoStatus !== 'pago') {
+     somPagamentoConfirmado();
+     ultimoPagamentoStatus = ride.pagamento_status;
+   } else {
+     ultimoPagamentoStatus = ride.pagamento_status;
+   }
 
    // CORREÇÃO 6: Renderizar Timeline
    if (ride.created_at) {
