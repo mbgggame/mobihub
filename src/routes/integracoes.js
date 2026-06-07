@@ -177,7 +177,7 @@ export default async function integracoesRoutes(fastify) {
             SELECT COUNT(*) as total FROM rides
             WHERE tipo = 'agendada' AND status = 'agendada'
             AND sinal_pago = true AND driver_id IS NULL
-            AND agendada_para > NOW()
+            AND agendada_para > NOW() AT TIME ZONE 'America/Sao_Paulo'
           `)).rows[0]
           io.emit('agendamentos:atualizar', { count: parseInt(disponiveis.total) })
         }
