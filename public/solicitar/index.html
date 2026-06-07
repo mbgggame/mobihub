@@ -351,7 +351,7 @@
       </div> 
     </div> 
 
-    <div class="rounded-xl overflow-hidden border border-gray-200" style="z-index: 1;"> 
+    <div class="rounded-xl overflow-hidden border border-gray-200" style="position:relative;z-index:1;"> 
       <div id="map" style="height:200px; width:100%; border-radius:12px;"></div> 
     </div> 
     <p id="txt-motoristas-online" class="text-xs text-center text-gray-400 py-1">Carregando motoristas...</p>
@@ -777,6 +777,7 @@ async function salvarCadastro() {
        headers: { 'Content-Type': 'application/json' },
        body: JSON.stringify({ nome, telefone: celular, email, cpf })
      });
+     const d = await r.json();
      
      if (codigoIndicacao) {
        await fetch('/api/indicacao/aplicar', {
@@ -785,15 +786,17 @@ async function salvarCadastro() {
          body: JSON.stringify({ telefone: celular, codigo: codigoIndicacao })
        });
      }
+     
+     const clientId = d.clientId || null
+     localStorage.setItem('cliente_nome', nome)
+     localStorage.setItem('cliente_telefone', celular)
+     if (email) localStorage.setItem('cliente_email', email)
+     localStorage.setItem('cliente_cpf', cpf)
+     localStorage.setItem('mobihub_client_id', clientId)
+     localStorage.setItem(STORAGE_CLIENTE, JSON.stringify({ id: clientId, nome, celular, email, cpf }))
    } catch (e) {
      console.error('[SALVAR CADASTRO] Erro ao salvar no banco:', e);
-   }
-   
-   localStorage.setItem('cliente_nome', nome)
-   localStorage.setItem('cliente_telefone', celular)
-   if (email) localStorage.setItem('cliente_email', email)
-   localStorage.setItem('cliente_cpf', cpf)
-   localStorage.setItem(STORAGE_CLIENTE, JSON.stringify({ nome, celular, email, cpf })) 
+   } 
    verificarTermosPassageiro() 
  } 
 
@@ -848,7 +851,16 @@ async function salvarCadastro() {
        else localStorage.removeItem('cliente_cpf')
        
        const cliente_email = localStorage.getItem('cliente_email')
+       const mobihub_client_id = localStorage.getItem('mobihub_client_id')
+       let clienteObj = null
+       try {
+         clienteObj = JSON.parse(localStorage.getItem(STORAGE_CLIENTE) || '{}')
+       } catch(e) {
+         clienteObj = {}
+       }
+       
        localStorage.setItem(STORAGE_CLIENTE, JSON.stringify({ 
+         id: mobihub_client_id || clienteObj.id || null,
          nome, 
          celular: cliente_telefone, 
          email: cliente_email, 
@@ -1658,9 +1670,8 @@ async function salvarCadastro() {
    const lista = document.getElementById('lista-agendamentos-passageiro'); 
    lista.innerHTML = '<p class="text-center text-gray-400 py-8">Carregando...</p>'; 
    try { 
-     const dadosCliente = localStorage.getItem('mobi_cliente'); 
-     const clienteObj = dadosCliente ? JSON.parse(dadosCliente) : null; 
-     const clienteId = clienteObj?.id || clienteObj?.client_id || null; 
+     const clienteId = localStorage.getItem('mobihub_client_id') || 
+       (() => { try { return JSON.parse(localStorage.getItem('mobi_cliente'))?.id } catch(e) { return null } })(); 
      
      if (!clienteId) { 
        lista.innerHTML = '<p class="text-center text-gray-400 py-8">Faça login para ver seus agendamentos</p>'; 
