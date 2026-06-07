@@ -364,7 +364,7 @@ export default async function agendamentosRoutes(fastify) {
 
   // Passageiro cancela agendamento (>2h antes = reembolso disponível)
   fastify.post('/api/ride/:token/cancelar-agendamento', async (request, reply) => {
-    const { opcao_reembolso } = request.body // 'estorno' | 'creditos'
+    const { opcao_reembolso } = request.body || {} // 'estorno' | 'creditos'
 
     const ride = (await query(
       "SELECT * FROM rides WHERE token = $1 AND tipo = 'agendada' AND status IN ('agendada', 'agendada_aceita')",
