@@ -551,4 +551,13 @@ export default async function agendamentosRoutes(fastify) {
 
     return { mensagem: 'Sinal simulado com sucesso!', corrida_id: id, sinal_valor: ride.sinal_valor } 
   })
+
+  // Admin: gerar cobrança restante manualmente
+  fastify.post('/api/admin/agendamentos/:id/gerar-restante', { preHandler: requireAuth }, async (request, reply) => { 
+    const ride = (await query('SELECT * FROM rides WHERE id = $1', [request.params.id])).rows[0] 
+    if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
+    const resultado = await gerarCobrancaRestante(ride) 
+    if (!resultado) return reply.code(400).send({ error: 'Não foi possível gerar cobrança restante' }) 
+    return { sucesso: true, ...resultado } 
+  })
 }
