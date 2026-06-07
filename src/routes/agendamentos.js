@@ -354,7 +354,7 @@ export default async function agendamentosRoutes(fastify) {
 
     const horasRestantes = (new Date(ride.agendada_para) - new Date()) / (1000 * 60 * 60)
     const sinalValor = parseFloat(ride.sinal_valor || 0)
-    const temDireitoReembolso = horasRestantes > 2 && ride.sinal_pago && sinalValor > 0
+    const temDireitoReembolso = ride.sinal_pago && sinalValor > 0
 
     let reembolsoFeito = false
     let mensagemReembolso = ''
