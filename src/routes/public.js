@@ -347,7 +347,7 @@ export default async function publicRoutes(fastify) {
 
   fastify.get('/api/motorista/:token/corrida-disponivel', async (request, reply) => { 
     const driver = (await query( 
-      "SELECT id FROM drivers WHERE token_perfil = $1 AND ativo = 1 AND online = 1 AND status_cadastro = 'aprovado'", 
+      "SELECT id FROM drivers WHERE token_perfil = $1 AND ativo = 1 AND online = 1 AND status_cadastro = 'aprovado' AND (bloqueado_agendamento IS NULL OR bloqueado_agendamento = false OR bloqueado_agendamento_ate < NOW())", 
       [request.params.token] 
     )).rows[0] 
     if (!driver) return { corrida: null } 
@@ -436,6 +436,11 @@ export default async function publicRoutes(fastify) {
       AND NOT EXISTS ( 
         SELECT 1 FROM rides r 
         WHERE r.driver_id = d.id AND r.status IN ('aceita', 'em_viagem') 
+      ) 
+      AND ( 
+        d.bloqueado_agendamento IS NULL 
+        OR d.bloqueado_agendamento = false 
+        OR d.bloqueado_agendamento_ate < NOW() 
       ) 
     `)).rows 
   
@@ -650,7 +655,7 @@ export default async function publicRoutes(fastify) {
   fastify.put('/api/rides/:id/aceitar-motorista', async (request, reply) => { 
     const { token_motorista } = request.body 
     const { id } = request.params 
-    const driver = (await query("SELECT * FROM drivers WHERE token_perfil = $1 AND ativo = 1 AND status_cadastro = 'aprovado'", [token_motorista])).rows[0] 
+    const driver = (await query("SELECT * FROM drivers WHERE token_perfil = $1 AND ativo = 1 AND status_cadastro = 'aprovado' AND (bloqueado_agendamento IS NULL OR bloqueado_agendamento = false OR bloqueado_agendamento_ate < NOW())", [token_motorista])).rows[0] 
     if (!driver) return reply.code(404).send({ error: 'Motorista nÃ£o encontrado' }) 
     
     // Verificar bloqueio total por inadimplÃªncia
