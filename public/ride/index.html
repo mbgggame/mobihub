@@ -491,8 +491,8 @@
  ] 
  
  const statusConfig = { 
-  aberta:          { label: 'Aguardando motorista...', cls: 'bg-blue-100 text-blue-700' }, 
-  aceita:          { label: '🚗 Motorista a caminho!', cls: 'bg-yellow-100 text-yellow-700' }, 
+ aberta:          { label: '🚗 Motorista a caminho!', cls: 'bg-yellow-100 text-yellow-700' }, 
+ aceita:          { label: '🚗 Motorista a caminho!', cls: 'bg-yellow-100 text-yellow-700' }, 
   agendada:        { label: '🗓️ Aguardando motorista aceitar...', cls: 'bg-purple-100 text-purple-700' }, 
   agendada_aceita: { label: '✅ Motorista confirmado! Aguarde o dia agendado.', cls: 'bg-green-100 text-green-700' }, 
   concluida:       { label: '✅ Corrida concluída',    cls: 'bg-green-100 text-green-700' }, 
@@ -721,7 +721,7 @@
    const waitingSection = document.getElementById('waiting-section')
    const waitingMessageEl = document.getElementById('waiting-message')
    
-   if (ride.status === 'aberta') {
+   if (ride.status === 'aberta' && ride.tipo !== 'agendada') {
      waitingSection.classList.remove('hidden')
      if (!waitingMessageInterval) {
        waitingMessageEl.textContent = waitingMessages[0]
