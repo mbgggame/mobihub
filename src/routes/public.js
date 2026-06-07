@@ -618,6 +618,7 @@ export default async function publicRoutes(fastify) {
                 'UPDATE rides SET sinal_charge_id = $1, sinal_pix_payload = $2 WHERE id = $3',
                 [zighuData.cobranca_id, zighuData.pix_copia_cola, ride.id]
               )
+              pixPayload = zighuData.pix_copia_cola
             }
           } catch(e) {
             console.log('[ZIGHU SINAL] Erro ao gerar QR:', e.message)
