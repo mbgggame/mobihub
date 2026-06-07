@@ -553,7 +553,7 @@ export default async function agendamentosRoutes(fastify) {
   })
 
   // Admin: gerar cobrança restante manualmente
-  fastify.post('/api/admin/agendamentos/:id/gerar-restante', { preHandler: requireAuth }, async (request, reply) => { 
+  fastify.post('/api/admin/agendamentos/:id/gerar-restante', async (request, reply) => { 
     const ride = (await query('SELECT * FROM rides WHERE id = $1', [request.params.id])).rows[0] 
     if (!ride) return reply.code(404).send({ error: 'Corrida não encontrada' }) 
     const resultado = await gerarCobrancaRestante(ride) 
