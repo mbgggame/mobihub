@@ -506,8 +506,8 @@ export default async function publicRoutes(fastify) {
       // DiferenÃ§a em horas 
       const diferencaHoras = (agendadaParaDate - agora) / (1000 * 60 * 60) 
       
-      if (diferencaHoras < 2) { 
-        return reply.code(400).send({ error: 'Agendamento deve ser com mÃ­nimo 2 horas de antecedÃªncia' }) 
+      if (diferencaHoras < 0.25) { 
+        return reply.code(400).send({ error: 'Agendamento deve ser com mínimo 15 minutos de antecedência' }) 
       } 
       if (diferencaHoras > 15 * 24) { 
         return reply.code(400).send({ error: 'Agendamento deve ser com mÃ¡ximo 15 dias de antecedÃªncia' }) 
