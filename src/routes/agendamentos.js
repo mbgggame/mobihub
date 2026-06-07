@@ -446,8 +446,10 @@ export default async function agendamentosRoutes(fastify) {
              d.nome as driver_nome
       FROM rides r
       LEFT JOIN drivers d ON r.driver_id = d.id
-      WHERE r.client_id = $1 AND r.tipo = 'agendada'
-      ORDER BY r.agendada_para DESC
+      WHERE r.client_id = $1 
+      AND r.tipo = 'agendada' 
+      AND r.status NOT IN ('concluida', 'cancelada') 
+      ORDER BY r.agendada_para ASC
     `, [request.params.clienteId])).rows
     return { agendamentos }
   })
