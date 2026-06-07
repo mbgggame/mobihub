@@ -2539,7 +2539,7 @@ async function abrirModalAgendamentos() {
         <p class="text-xs text-green-700">💰 R$ ${Number(ag.valor).toFixed(2)}</p> 
         ${podeConfirmar ? ` 
           <div class="flex gap-2"> 
-            <button onclick="confirmarPresenca(${ag.id})" class="flex-1 bg-blue-600 text-white rounded-lg py-1.5 text-xs font-semibold">✅ Confirmar presença</button> 
+            <button onclick="confirmarPresenca(${ag.id})" class="flex-1 bg-green-600 text-white rounded-lg py-1.5 text-xs font-semibold">🚗 Iniciar Deslocamento</button> 
             <button onclick="recusarAgendamento(${ag.id})" class="flex-1 border border-red-300 text-red-600 rounded-lg py-1.5 text-xs">Desistir</button> 
           </div> 
         ` : ` 
@@ -2821,8 +2821,8 @@ setInterval(verificarAgendamentosDisponiveis, 60000)
        <p id="confirmacao-timer" class="text-3xl font-bold text-red-600">5:00</p> 
      </div> 
      <button onclick="confirmarPresencaAlerta()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl text-lg mb-2"> 
-       ✅ Confirmado — Estou a caminho! 
-     </button> 
+      🚗 Iniciar Deslocamento — Estou a caminho! 
+    </button> 
      <p class="text-xs text-center text-gray-400">Se não confirmar em 5 minutos, a corrida será redistribuída</p> 
    </div> 
  </div>
