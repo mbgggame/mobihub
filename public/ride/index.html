@@ -708,7 +708,7 @@
      return 
    } 
 
-   if (ride.status === 'concluida') {
+   if (ride.status === 'concluida' && ride.pagamento_status === 'pago') {
      pollingAtivo = false 
      document.getElementById('card-cancelar-passageiro')?.classList.add('hidden') 
      document.getElementById('card-motorista')?.classList.add('hidden') 
