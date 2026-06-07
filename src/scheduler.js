@@ -14,12 +14,45 @@ async function getConfig(chave) {
   } catch { return null } 
 } 
  
+async function bloquearCorridasProximasAgendamento() { 
+  try { 
+    const agora = new Date() 
+    const em90min = new Date(agora.getTime() + 90 * 60 * 1000) 
+    const em60min = new Date(agora.getTime() + 60 * 60 * 1000) 
+ 
+    const agendamentos = (await query(` 
+      SELECT r.driver_id, r.id, r.agendada_para 
+      FROM rides r 
+      WHERE r.tipo = 'agendada' 
+      AND r.status = 'agendada_aceita' 
+      AND r.agendada_para AT TIME ZONE 'America/Sao_Paulo' <= $1 
+      AND r.agendada_para AT TIME ZONE 'America/Sao_Paulo' >= $2 
+      AND r.driver_id IS NOT NULL 
+    `, [em90min.toISOString(), em60min.toISOString()])).rows 
+ 
+    for (const ag of agendamentos) { 
+      await query(` 
+        UPDATE drivers 
+        SET bloqueado_agendamento = true, 
+            bloqueado_agendamento_ate = $1 
+        WHERE id = $2 
+        AND (bloqueado_agendamento IS NULL OR bloqueado_agendamento = false) 
+      `, [ag.agendada_para, ag.driver_id]) 
+ 
+      console.log(`[SCHEDULER] Motorista #${ag.driver_id} bloqueado para corridas comuns — agendamento #${ag.id} em ${ag.agendada_para}`) 
+    } 
+  } catch(err) { 
+    console.error('[SCHEDULER] Erro bloquearCorridasProximasAgendamento:', err.message) 
+  } 
+}
+
 export function initScheduler() {
   setInterval(async () => {
     await verificarAgendamentos()
     await verificarNaoComparecimento()
     await verificarChegada()
     await verificarAlertaVoo()
+    await bloquearCorridasProximasAgendamento()
   }, 30 * 1000) // verifica a cada 30 segundos
 
   // Verifica se radar VIX em tempo real está ativado e inicia intervalo
@@ -52,10 +85,10 @@ async function verificarAgendamentos() {
       io.emit('agendamentos:atualizar', { count: parseInt(disponiveis.total) }) 
     } 
 
-    // 2. Alertar 30 minutos antes para corridas aceitas 
-    const limite31min = new Date(agora.getTime() + 31 * 60 * 1000) 
-    const limite29min = new Date(agora.getTime() + 29 * 60 * 1000) 
-
+    // 2. Alertar 60 minutos antes para corridas aceitas 
+    const limite61min = new Date(agora.getTime() + 61 * 60 * 1000) 
+    const limite59min = new Date(agora.getTime() + 59 * 60 * 1000) 
+ 
     const proximasCorreidas = (await query(` 
       SELECT r.*, d.nome as driver_nome, d.id as driver_id_val, 
              c.nome as client_nome 
@@ -67,7 +100,7 @@ async function verificarAgendamentos() {
       AND r.alerta_30min_enviado IS NULL 
       AND r.agendada_para <= $1 
       AND r.agendada_para >= $2 
-    `, [limite31min.toISOString(), limite29min.toISOString()])).rows 
+    `, [limite61min.toISOString(), limite59min.toISOString()])).rows 
 
     for (const ride of proximasCorreidas) { 
       console.log(`[SCHEDULER] Alerta 30min corrida agendada #${ride.id}`) 
@@ -76,7 +109,7 @@ async function verificarAgendamentos() {
         io.to(`motorista:${ride.driver_id_val}`).emit('agendamento:alerta_30min', { 
           rideId: ride.id, 
           token: ride.token, 
-          mensagem: '⏰ Sua corrida agendada começa em 30 minutos! Confirme sua presença.', 
+          mensagem: '⏰ Sua corrida agendada começa em 60 minutos! Inicie o deslocamento.', 
           origem: ride.origem, 
           destino: ride.destino, 
           agendada_para: ride.agendada_para 
@@ -84,7 +117,7 @@ async function verificarAgendamentos() {
         
         io.to(`ride:${ride.id}`).emit('agendamento:alerta_30min', { 
           rideId: ride.id, 
-          mensagem: '⏰ Seu motorista chega em 30 minutos!', 
+          mensagem: '⏰ Seu motorista está a caminho! Chegará em aproximadamente 60 minutos.', 
           driver_nome: ride.driver_nome, 
           agendada_para: ride.agendada_para 
         }) 
