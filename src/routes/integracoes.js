@@ -166,6 +166,21 @@ export default async function integracoesRoutes(fastify) {
           [corrida_id]
         )
         console.log(`[ZIGHU PAY] Sinal confirmado — Corrida #${corrida_id} | R$ ${valor_total}`)
+
+        const io = getIo()
+        if (io) {
+          io.to(`ride:${corrida_id}`).emit('agendamento:sinal_confirmado', {
+            rideId: corrida_id,
+            sinal_valor: ride.sinal_valor
+          })
+          const disponiveis = (await query(`
+            SELECT COUNT(*) as total FROM rides
+            WHERE tipo = 'agendada' AND status = 'agendada'
+            AND sinal_pago = true AND driver_id IS NULL
+            AND agendada_para > NOW()
+          `)).rows[0]
+          io.emit('agendamentos:atualizar', { count: parseInt(disponiveis.total) })
+        }
       } else {
         // É corrida completa
         await query(
