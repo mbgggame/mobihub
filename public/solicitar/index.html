@@ -351,7 +351,7 @@
       </div> 
     </div> 
 
-    <div class="rounded-xl overflow-hidden border border-gray-200"> 
+    <div class="rounded-xl overflow-hidden border border-gray-200" style="z-index: 1;"> 
       <div id="map" style="height:200px; width:100%; border-radius:12px;"></div> 
     </div> 
     <p id="txt-motoristas-online" class="text-xs text-center text-gray-400 py-1">Carregando motoristas...</p>
@@ -1658,12 +1658,15 @@ async function salvarCadastro() {
    const lista = document.getElementById('lista-agendamentos-passageiro'); 
    lista.innerHTML = '<p class="text-center text-gray-400 py-8">Carregando...</p>'; 
    try { 
-     const cliente = JSON.parse(localStorage.getItem(STORAGE_CLIENTE) || 'null'); 
-     if (!cliente || !cliente.id) { 
+     const dadosCliente = localStorage.getItem('mobi_cliente'); 
+     const clienteObj = dadosCliente ? JSON.parse(dadosCliente) : null; 
+     const clienteId = clienteObj?.id || clienteObj?.client_id || null; 
+     
+     if (!clienteId) { 
        lista.innerHTML = '<p class="text-center text-gray-400 py-8">Faça login para ver seus agendamentos</p>'; 
        return; 
      } 
-     const r = await fetch(`/api/cliente/${cliente.id}/agendamentos`); 
+     const r = await fetch(`/api/cliente/${clienteId}/agendamentos`); 
      if (!r.ok) throw new Error('Erro'); 
      const { agendamentos } = await r.json(); 
      if (!agendamentos || agendamentos.length === 0) { 
