@@ -497,7 +497,7 @@ export default async function ridesRoutes(fastify) {
   
     const ride = (await query('SELECT * FROM rides WHERE id = $1', [id])).rows[0] 
     if (!ride) return reply.code(404).send({ error: 'Corrida nÃ£o encontrada' }) 
-    if (ride.status !== 'aceita') return reply.code(400).send({ error: 'Corrida nÃ£o estÃ¡ aceita' }) 
+    if (ride.status !== 'aceita' && ride.status !== 'aberta') return reply.code(400).send({ error: 'Corrida não está aceita' }) 
   
     await query(` 
       UPDATE rides SET 
