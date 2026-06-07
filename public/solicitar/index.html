@@ -1468,6 +1468,7 @@ async function salvarCadastro() {
      // Salva ride ID para avaliação
      const rideId = d.rideId || d.id
      localStorage.setItem(STORAGE_RIDE_ID, rideId)
+     await ativarWakeLockPassageiro()
 
      // Entra na sala do socket da corrida
      if (socket) {
@@ -1749,6 +1750,33 @@ async function salvarCadastro() {
    } 
  } 
 
+ let wakeLockPassageiro = null; 
+ 
+ async function ativarWakeLockPassageiro() { 
+   try { 
+     if ('wakeLock' in navigator) { 
+       wakeLockPassageiro = await navigator.wakeLock.request('screen'); 
+       console.log('[WAKE LOCK] Tela passageiro acesa'); 
+     } 
+   } catch(e) { 
+     console.warn('[WAKE LOCK] Não suportado:', e.message); 
+   } 
+ } 
+ 
+ async function liberarWakeLockPassageiro() { 
+   if (wakeLockPassageiro) { 
+     await wakeLockPassageiro.release(); 
+     wakeLockPassageiro = null; 
+   } 
+ } 
+ 
+ document.addEventListener('visibilitychange', async () => { 
+   if (document.visibilityState === 'visible' && wakeLockPassageiro === null) { 
+     const rideId = localStorage.getItem('mobi_ride_id'); 
+     if (rideId) await ativarWakeLockPassageiro(); 
+   } 
+ }); 
+ 
  // Funções do Histórico Modal
  async function carregarHistoricoCorridas() {
    const cliente = JSON.parse(localStorage.getItem(STORAGE_CLIENTE) || 'null')
@@ -1996,10 +2024,11 @@ async function salvarCadastro() {
  function initSocket() {
    socket = io()
    socket.on('corrida:concluida', async (data) => {
-     console.log('[SOCKET] corrida:concluida', data)
-     rideIdAvaliacao = data.rideId
-     abrirModalAvaliacao(data.rideId)
-   })
+    console.log('[SOCKET] corrida:concluida', data)
+    await liberarWakeLockPassageiro()
+    rideIdAvaliacao = data.rideId
+    abrirModalAvaliacao(data.rideId)
+  })
    socket.on('corrida:aceita', (data) => {
      console.log('[SOCKET] corrida:aceita', data)
      location.href = '/r/' + data.token
