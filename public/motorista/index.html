@@ -826,8 +826,14 @@ let corridasJaAvaliadas = new Set()
  
  // Reativa o Wake Lock se o app voltar para primeiro plano 
  document.addEventListener('visibilitychange', async () => { 
-   if (wakeLock !== null && document.visibilityState === 'visible' && motoristOnline) { 
+   if (document.visibilityState === 'visible' && motoristOnline) { 
      await ativarWakeLock() 
+   } 
+ })
+ 
+ document.addEventListener('visibilitychange', () => { 
+   if (document.visibilityState === 'visible') { 
+     if (socket.disconnected) socket.connect(); 
    } 
  })
 
