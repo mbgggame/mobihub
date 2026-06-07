@@ -1742,8 +1742,8 @@ async function salvarCadastro() {
        d = await r.json(); 
      } 
      
-     alert(d.mensagem + (d.reembolso ? '\n' + d.reembolso : '')); 
-     carregarAgendamentosPassageiro(); 
+     alert(d.mensagem || d.error || 'Agendamento cancelado com sucesso!'); 
+    carregarAgendamentosPassageiro(); 
    } catch(e) { 
      alert('Erro ao cancelar'); 
    } 
