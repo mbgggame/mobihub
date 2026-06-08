@@ -230,6 +230,12 @@ export default async function agendamentosRoutes(fastify) {
     const bloqueadoAte = driver.bloqueado_agendamento_ate
     const bloqueado = bloqueadoAte && new Date(bloqueadoAte) > new Date()
 
+    const driverInfo = (await query(
+      'SELECT prioritario FROM drivers WHERE id = $1',
+      [driver.id]
+    )).rows[0]
+    const isPrioritario = driverInfo?.prioritario || false
+
     const disponiveis = (await query(`
       SELECT r.id, r.token, r.origem, r.destino, r.valor, r.sinal_valor,
              r.agendada_para, r.status,
@@ -239,7 +245,9 @@ export default async function agendamentosRoutes(fastify) {
       WHERE r.tipo = 'agendada'
         AND r.status = 'agendada'
         AND r.sinal_pago = true
+        AND r.driver_id IS NULL
         AND r.agendada_para > NOW() AT TIME ZONE 'America/Sao_Paulo'
+        ${isPrioritario ? '' : 'AND r.recusado_prioritario = true'}
       ORDER BY r.agendada_para ASC
     `)).rows
 
@@ -256,7 +264,7 @@ export default async function agendamentosRoutes(fastify) {
       ORDER BY r.agendada_para ASC
     `, [driver.id])).rows
 
-    return { disponiveis, meus_agendamentos: meus, bloqueado, bloqueado_ate: bloqueadoAte }
+    return { disponiveis, meus_agendamentos: meus, bloqueado, bloqueado_ate: bloqueadoAte, isPrioritario }
   })
 
   // Motorista aceita agendamento
@@ -302,6 +310,44 @@ export default async function agendamentosRoutes(fastify) {
     }
 
     return { mensagem: 'Agendamento aceito com sucesso!' }
+  })
+
+  fastify.post('/api/motorista/:token/agendamentos/:id/indisponivel', async (request, reply) => {
+    const driver = (await query(
+      'SELECT id, prioritario FROM drivers WHERE token_perfil = $1 AND ativo = 1',
+      [request.params.token]
+    )).rows[0]
+    if (!driver) return reply.code(404).send({ error: 'Motorista não encontrado' })
+    if (!driver.prioritario) return reply.code(403).send({ error: 'Apenas motorista prioritário pode usar esta ação' })
+
+    const ride = (await query(
+      "SELECT * FROM rides WHERE id = $1 AND status = 'agendada' AND sinal_pago = true",
+      [request.params.id]
+    )).rows[0]
+    if (!ride) return reply.code(404).send({ error: 'Agendamento não encontrado' })
+
+    await query(
+      'UPDATE rides SET recusado_prioritario = true WHERE id = $1',
+      [ride.id]
+    )
+
+    const io = getIo()
+    if (io) {
+      const disponiveis = (await query(`
+        SELECT COUNT(*) as total FROM rides
+        WHERE tipo = 'agendada' AND status = 'agendada'
+        AND sinal_pago = true AND driver_id IS NULL
+        AND recusado_prioritario = true
+        AND agendada_para > NOW() AT TIME ZONE 'America/Sao_Paulo'
+      `)).rows[0]
+      io.emit('agendamentos:atualizar', { count: parseInt(disponiveis.total) })
+      io.to(`ride:${ride.id}`).emit('agendamento:buscando_motorista', {
+        mensagem: 'Buscando motorista disponível na região...'
+      })
+    }
+
+    console.log(`[AGENDAMENTO] Prioritário recusou #${ride.id} — abrindo para todos`)
+    return { mensagem: 'Agendamento liberado para outros motoristas' }
   })
 
   // Motorista recusa/desiste do agendamento (volta para a fila)
