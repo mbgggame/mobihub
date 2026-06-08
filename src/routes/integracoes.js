@@ -192,10 +192,11 @@ export default async function integracoesRoutes(fastify) {
         )
 
         // Registra split no driver_transactions — igual ao webhook do Asaas
-        if (ride.driver_id && valor_motorista) {
+        const valorMotoristaFinal = ride.valor_motorista || valor_motorista
+        if (ride.driver_id && valorMotoristaFinal) {
           await query(
             'INSERT INTO driver_transactions (driver_id, ride_id, tipo, descricao, valor) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING',
-            [ride.driver_id, ride.id, 'credito', `Corrida #${ride.id} paga via Zighu Pay`, Number(valor_motorista)]
+            [ride.driver_id, ride.id, 'credito', `Corrida #${ride.id} paga via Zighu Pay`, Number(valorMotoristaFinal)]
           )
         }
       }
@@ -209,8 +210,8 @@ export default async function integracoesRoutes(fastify) {
           // Notifica motorista — para isso precisamos buscar o driver's room? Let's just emit to ride room as well, or find driver token?
           // For now, let's emit to ride room which motorista is in too
           io.to(`ride:${corrida_id}`).emit('pagamento:confirmado', { 
-            valor_motorista: Number(valor_motorista || 0), 
-            mensagem: `Pix recebido! R$ ${Number(valor_motorista || 0).toFixed(2)} transferido para sua chave` 
+            valor_motorista: Number(valorMotoristaFinal || 0), 
+            mensagem: `Pix recebido! R$ ${Number(valorMotoristaFinal || 0).toFixed(2)} transferido para sua chave` 
           })
         }
       } catch(e) {}

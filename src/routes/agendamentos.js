@@ -81,6 +81,15 @@ export async function gerarCobrancaRestante(ride) {
           pix_payload: zighuData.pix_copia_cola
         })
       }
+      const valorTotalCorrida = parseFloat(ride.valor_final || ride.valor || 0)
+      const valorMotorista = parseFloat((valorTotalCorrida * 0.80).toFixed(2))
+      if (ride.driver_id && valorMotorista > 0) {
+        await query(
+          'UPDATE rides SET valor_motorista = $1 WHERE id = $2',
+          [valorMotorista, ride.id]
+        )
+        console.log(`[AGENDAMENTO] Split registrado — Motorista #${ride.driver_id}: R$ ${valorMotorista}`)
+      }
       return { pix_payload: zighuData.pix_copia_cola, valor_restante: restante }
     }
   } catch(e) {
