@@ -2567,7 +2567,10 @@ async function abrirModalAgendamentos() {
       <p class="text-xs text-gray-500">📅 ${new Date(ag.agendada_para).toLocaleString('pt-BR')}</p> 
       <p class="text-xs text-green-700">💰 R$ ${Number(ag.valor).toFixed(2)} • Sinal pago: R$ ${Number(ag.sinal_valor).toFixed(2)}</p> 
       <p class="text-xs text-gray-500">👤 ${ag.client_nome || 'Passageiro'}</p> 
-      <button onclick="aceitarAgendamento(${ag.id})" class="w-full bg-green-600 text-white rounded-lg py-2 text-sm font-semibold">✅ Aceitar</button> 
+      <div class="flex gap-2"> 
+        <button onclick="aceitarAgendamento(${ag.id})" class="flex-1 bg-green-600 text-white rounded-lg py-2 text-sm font-semibold">✅ Aceitar</button> 
+        ${d.isPrioritario ? `<button onclick="recusarPrioritario(${ag.id})" class="flex-1 bg-orange-500 text-white rounded-lg py-2 text-sm font-semibold">⚠️ Indisponível</button>` : ''} 
+      </div> 
     </div> 
   `).join('') : '<p class="text-sm text-gray-400 text-center py-4">Nenhum agendamento disponível</p>' 
 
@@ -2601,6 +2604,18 @@ async function abrirModalAgendamentos() {
   if (badge) { 
     badge.textContent = d.disponiveis?.length || 0 
     badge.classList.toggle('hidden', !d.disponiveis?.length) 
+  } 
+} 
+
+async function recusarPrioritario(id) { 
+  if (!confirm('Confirma que está indisponível? O agendamento será liberado para outros motoristas.')) return; 
+  try { 
+    const r = await fetch(`/api/motorista/${tokenMotorista}/agendamentos/${id}/indisponivel`, { method: 'POST' }); 
+    const d = await r.json(); 
+    alert(d.mensagem || d.error); 
+    abrirModalAgendamentos(); 
+  } catch(e) { 
+    alert('Erro ao recusar agendamento'); 
   } 
 } 
 
