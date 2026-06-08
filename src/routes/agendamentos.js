@@ -60,7 +60,7 @@ export async function gerarCobrancaRestante(ride) {
         valor: restante,
         motorista_id: ride.driver_id,
         chave_pix: ride.chave_pix_motorista || null,
-        percentual_motorista: 82,
+        percentual_motorista: 80,
         app_origem: 'mobihub'
       })
     })
